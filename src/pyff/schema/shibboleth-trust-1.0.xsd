@@ -1,0 +1,60 @@
+<schema targetNamespace="urn:mace:shibboleth:trust:1.0"
+	xmlns="http://www.w3.org/2001/XMLSchema"
+	xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+	xmlns:trust="urn:mace:shibboleth:trust:1.0"
+	elementFormDefault="unqualified"
+	attributeFormDefault="unqualified"
+	version="1.0">
+	
+    <import namespace="http://www.w3.org/2000/09/xmldsig#" schemaLocation="xmldsig-core-schema.xsd"/>
+
+	<annotation>
+		<documentation>
+		Trust metadata binds keys or authority lists to system entities.
+		The metadata consumer is responsible for associating the names of system entities
+		to the application context in an appropriate way.
+		</documentation>
+	</annotation>
+    
+	<element name="Trust">
+		<annotation>
+			<documentation>
+			An optionally signed collection of trust binding elements.
+			ds:KeyInfo is by definition a binding of a key to a specific entity,
+			which may be specified in various ways such as KeyName or X509SubjectName.
+			</documentation>
+		</annotation>
+		<complexType>
+			<sequence>
+				<choice maxOccurs="unbounded">
+					<element ref="ds:KeyInfo"/>
+					<element ref="trust:KeyAuthority"/>
+				</choice>
+				<element ref="ds:Signature" minOccurs="0"/>
+			</sequence>
+	        <attribute name="lastChanged" type="dateTime" use="optional"/>
+	        <attribute name="validUntil" type="dateTime" use="optional"/>
+	        <attribute name="cacheDuration" type="duration" use="optional"/>
+	        <anyAttribute namespace="##other" processContents="lax"/>
+		</complexType>
+	</element>
+
+	<element name="KeyAuthority" type="trust:KeyAuthorityType"/>
+	<complexType name="KeyAuthorityType">
+		<annotation>
+			<documentation>
+			Binds keying authorities to one or more named system entities.
+			Omitting ds:KeyName will apply the authorities to all transactions, unless
+			another specific match applies. This is risky, so use wisely, in conjunction
+			with constraints on acceptable messages using other forms of metadata or policy.
+			</documentation>
+		</annotation>
+		<sequence>
+			<element ref="ds:KeyName" minOccurs="0" maxOccurs="unbounded"/>
+			<element ref="ds:KeyInfo"/>
+		</sequence>
+		<attribute name="VerifyDepth" type="unsignedByte" use="optional"/>
+		<anyAttribute namespace="##other" processContents="lax"/>
+	</complexType>
+	
+</schema>
