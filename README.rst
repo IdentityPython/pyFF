@@ -1,23 +1,6 @@
-This file requires editing
-==========================
+python SAML metadata aggregator
+===============================
 
-Note to the author: Please add something informative to this README *before*
-releasing your software, as `a little documentation goes a long way`_.  Both
-README.rst (this file) and NEWS.txt (release notes) will be included in your
-package metadata which gets displayed in the PyPI page for your project.
+This is a SAML metadata aggregator written in python. It is based on the model 
+for metadata exchange by Ian Young: http://iay.org.uk/blog/2008/10/metadata_interc.html
 
-You can take a look at the README.txt of other projects, such as repoze.bfg
-(http://bfg.repoze.org/trac/browser/trunk/README.txt) for some ideas.
-
-.. _`a little documentation goes a long way`: http://www.martinaspeli.net/articles/a-little-documentation-goes-a-long-way
-
-Credits
--------
-
-- `Distribute`_
-- `Buildout`_
-- `modern-package-template`_
-
-.. _Buildout: http://www.buildout.org/
-.. _Distribute: http://pypi.python.org/pypi/distribute
-.. _`modern-package-template`: http://pypi.python.org/pypi/modern-package-template
