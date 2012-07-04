@@ -1,15 +1,13 @@
 import sys
 import getopt
 import os
-import hashlib
-import lxml.etree as etree
 from pyff.feed import import_feed
-from pyff.utils import resource_string
-from pyff.mdrepo import NS,MDRepository
+from pyff.mdrepo import  MDRepository
+from pyff.piping import loader
 
 def process(fn,md,stdout):
     """
-    Load one feed specifier and process it
+    Load a feed and process it
     """
     feed = import_feed(fn)
     name = feed.get('Name',fn)
@@ -28,49 +26,11 @@ def process(fn,md,stdout):
 
     t = md.entity_set(md,feed.get('entities',md.keys()),name,feed.get('cacheDuration',None),feed.get('validUntil',None))
     for ts in feed.get('pipeline',[]):
-        # apply an xslt stylesheet
-        stylesheet = ts.pop('stylesheet',None)
-        if stylesheet is not None:
-            xslt = etree.parse(resource_string(stylesheet,"xslt"))
-            transform = etree.XSLT(xslt)
-            # this is to make sure the parameters are passed as xslt strings
-            d = dict((k,"\'%s\'" % v) for (k,v) in ts.items())
-            ot = transform(t,**d)
-            t = ot
-            # split into EntityDescriptor-parts and save in target_dir/sha1(@entityID).xml
-        target_dir = ts.pop('store',None)
-        if target_dir is not None:
-            if not os.path.isdir(target_dir):
-                os.makedirs(target_dir)
-            for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
-                eid = e.get('entityID')
-                if eid is None or len(eid) == 0:
-                    raise Exception,"Missing entityID in %s" % e
-                m = hashlib.sha1()
-                m.update(eid)
-                d = m.hexdigest()
-                with open("%s.xml" % os.path.join(target_dir,d),"w") as fn:
-                    fn.write(etree.tostring(e,encoding='UTF-8',xml_declaration=True,pretty_print=True))
-            # sign
-        key_name = ts.pop("sign",None)
-        if key_name is not None:
-            # TODO sign
-            #t = ot
-            pass
-            # write to file
-        output_file = ts.pop("publish",None)
-        if output_file is not None:
-            out = output_file
-            if os.path.isdir(output_file):
-                out = os.path.join(output_file,os.path.splitext(fn)[0])
-            with open(out,"w") as fo:
-                fo.write(etree.tostring(t,encoding='UTF-8',xml_declaration=True,pretty_print=True))
-            # print entityIDs on stdout
-        if ts.has_key('showeids'):
-            for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
-                print e.get('entityID')
-
-
+        pipe = loader.load_pipe(ts)
+        ot = pipe.run(ts,t,feed=feed,name=name)
+        if ts.get('break',False):
+            break
+        t = ot
     md[name] = t
 
 def main():
