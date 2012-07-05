@@ -2,6 +2,7 @@ from datetime import timedelta
 import os
 import pkg_resources
 import re
+from lxml import etree
 
 __author__ = 'leifj'
 
@@ -31,3 +32,6 @@ def tdelta(input):
     for k,v in re.match(regex, input).groupdict(default="0").items():
         kwargs[k] = int(v)
     return timedelta(**kwargs)
+
+def dumptree(t):
+    return etree.tostring(t,encoding='UTF-8',xml_declaration=True,pretty_print=True)
