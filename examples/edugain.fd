@@ -1,0 +1,21 @@
+- remote:
+     - https://federation.belnet.be/edugain-metadata.xml
+     - https://ds.cafe.rnp.br/metadata/edugain-metadata.signed.xml
+     - https://login.aaiedu.hr/sso/module.php/aggregator/?id=aaieduhr_edugain&mimetype=application/xml
+     - https://metadata.eduid.cz/entities/eduid2edugain
+     - https://haka.funet.fi/metadata/edugain-metadata.xml
+     - https://www.aai.dfn.de/fileadmin/metadata/DFN-AAI-4eduGAIN-metadata.xml
+     - http://aai.grnet.gr/edugain-metadata.xml
+     - https://metadata.eduid.hu/2011/href-edugain.xml
+     - https://www.idem.garr.it/docs/conf/signed-edugain.metadata.xml
+     - http://metadata.feide.no/feide-edugain-metadata.xml
+     - https://www.rediris.es/sir/edugain-sir-metadata.xml
+     - http://md2.swamid.se/md/swamid-edugain-1.0.xml
+     - http://metadata.aai.switch.ch/metadata.edugain.xml
+     - https://wayf.surfnet.nl/federate/surfnet/edugain
+- select
+- store: 
+     directory: /tmp/edugain
+- publish:
+     output: /tmp/edugain.xml
+- stats
