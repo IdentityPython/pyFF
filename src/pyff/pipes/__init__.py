@@ -1,6 +1,7 @@
 import os
 import yaml
 from pyff.utils import resource_string
+import logging
 
 """
 Pipes and plumbing
@@ -111,9 +112,11 @@ signed (using signer.key) and finally published in /var/metadata/public/metadata
         return self.pipeline
 
     def process(self,md):
+        logging.debug('Processing %s' % self)
         t = None
         for p in self.pipeline:
             pipe,name,args = loader.load_pipe(p)
+            logging.debug("Found pipe %s,%s,%s" % (pipe,name,args))
             ot = pipe.run(md,t,name,args,self.id)
             if ot is not None:
                 t = ot
