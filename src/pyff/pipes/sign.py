@@ -1,6 +1,6 @@
 __author__ = 'leifj'
 
-def run(ts,t,**kwargs):
+def run(md,t,name,args,id):
     """
     Return a signed tree
     """

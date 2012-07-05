@@ -1,18 +1,18 @@
-from pyff import resource_string
+from pyff.utils import resource_string
 from lxml import etree
 
 __author__ = 'leifj'
 
-def run(ts,t,**kwargs):
+def run(md,t,name,args,id):
     """
     Apply an XSLT stylesheet
     """
-    stylesheet = ts.pop('stylesheet',None)
+    stylesheet = args.pop('stylesheet',None)
     if stylesheet is not None:
-        xslt = etree.parse(resource_string(stylesheet,"xslt"))
+        xslt = etree.fromstring(resource_string(stylesheet,"xslt"))
         transform = etree.XSLT(xslt)
         # this is to make sure the parameters are passed as xslt strings
-        d = dict((k,"\'%s\'" % v) for (k,v) in ts.items())
+        d = dict((k,"\'%s\'" % v) for (k,v) in args.items())
         ot = transform(t,**d)
         t = ot
     return t

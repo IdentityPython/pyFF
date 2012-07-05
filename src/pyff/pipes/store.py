@@ -5,11 +5,11 @@ from pyff.mdrepo import NS
 
 __author__ = 'leifj'
 
-def run(ts,t,**kwargs):
+def run(md,t,name,args,id):
     """
     Split into EntityDescriptor-parts and save in directory/sha1(@entityID).xml
     """
-    target_dir = ts.pop('directory',None)
+    target_dir = args.pop('directory',None)
     if target_dir is not None:
         if not os.path.isdir(target_dir):
             os.makedirs(target_dir)
