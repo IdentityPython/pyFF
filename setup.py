@@ -11,7 +11,7 @@ version = '0.1'
 install_requires = [
     'lxml',
     'dm.xmlsec.binding',
-    'yaml'
+    'pyyaml'
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
@@ -40,7 +40,7 @@ setup(name='pyFF',
     install_requires=install_requires,
     entry_points={
         'console_scripts':
-            ['pyFF=pyff:main']
+            ['pyff=pyff:main']
     },
     requires=install_requires
 )
