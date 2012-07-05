@@ -11,7 +11,8 @@ version = '0.1'
 install_requires = [
     'lxml',
     'dm.xmlsec.binding',
-    'pyyaml'
+    'pyyaml',
+    'eventlet'
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
