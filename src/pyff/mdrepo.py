@@ -5,6 +5,7 @@ import os
 from copy import deepcopy
 import urllib2
 from pyff.decorators import retry
+import logging
 
 __author__ = 'leifj'
 
@@ -79,6 +80,7 @@ class MDRepository(DictMixin):
     @retry(Exception,tries=10)
     def load_url(self,url=None,verify=None):
         if url is not None:
+            logging.info("loading %s ..." % url)
             request = urllib2.Request(url)
             response = urllib2.urlopen(request)
             # TODO figure out what to stick in md
