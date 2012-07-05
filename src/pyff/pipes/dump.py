@@ -1,6 +1,11 @@
 from pyff.utils import dumptree
 from pyff.mdrepo import NS
 
+"""
+Print a representation of the entities set on stdout.
+"""
+
+
 __author__ = 'leifj'
 
 

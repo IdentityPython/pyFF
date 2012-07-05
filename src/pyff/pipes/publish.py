@@ -6,7 +6,7 @@ __author__ = 'leifj'
 
 def run(md,t,name,args,id):
     """
-    Publish the tree
+    Publish the working tree.
     """
     output_file = args.get("output",None)
     if output_file is not None:
