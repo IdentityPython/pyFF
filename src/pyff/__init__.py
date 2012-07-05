@@ -1,11 +1,10 @@
 import sys
 import getopt
 import os
-from pyff.feed import import_feed
 from pyff.mdrepo import  MDRepository
-from pyff.piping import loader
+from pyff.pipes import loader, plumbing
 
-def process(fn,md,stdout):
+def process_old(fn,md):
     """
     Load a feed and process it
     """
@@ -51,8 +50,8 @@ def main():
 
     # process arguments
 
-    for arg in args:
-        process(arg,md)
+    for p in args:
+        plumbing(p).process(md)
 
 if __name__ == "__main__":
     main()
