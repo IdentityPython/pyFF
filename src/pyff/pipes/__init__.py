@@ -113,10 +113,9 @@ signed (using signer.key) and finally published in /var/metadata/public/metadata
     def process(self,md):
         t = None
         for p in self.pipeline:
-            print p
             pipe,name,args = loader.load_pipe(p)
             ot = pipe.run(md,t,name,args,self.id)
-            if ot:
+            if ot is not None:
                 t = ot
         return t
 
