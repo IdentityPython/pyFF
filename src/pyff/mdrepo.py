@@ -1,3 +1,4 @@
+from UserDict import DictMixin
 from lxml import etree
 import dm.xmlsec.binding as xmlsec
 import os
@@ -10,7 +11,7 @@ __author__ = 'leifj'
 #NS={"md": "urn:oasis:names:tc:SAML:2.0:metadata","ds": "http://www.w3.org/2000/09/xmldsig#"}
 NS={"md": "urn:oasis:names:tc:SAML:2.0:metadata"}
 
-class MDRepository(object):
+class MDRepository(DictMixin):
     def __init__(self):
         self.md = {}
 
@@ -63,9 +64,22 @@ class MDRepository(object):
 
         return t
 
+    def keys(self):
+        return self.md.keys()
+
+    def __getitem__(self, item):
+        return self.md[item]
+
+    def __setitem__(self, key, value):
+        self.md[key] = value
+
+    def __delitem__(self, key):
+        del self.md[key]
+
     @retry(Exception,tries=10)
-    def load_url(self,u,verify=None):
-        request = urllib2.Request(u)
-        response = urllib2.urlopen(request)
-        # TODO figure out what to stick in md
-        self.parse_metadata(response,verify)
+    def load_url(self,url=None,verify=None):
+        if url is not None:
+            request = urllib2.Request(url)
+            response = urllib2.urlopen(request)
+            # TODO figure out what to stick in md
+            self.parse_metadata(response,verify)
