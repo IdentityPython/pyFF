@@ -9,6 +9,8 @@ def run(md,t,name,args,id):
     """
     stylesheet = args.pop('stylesheet',None)
     if stylesheet is not None:
+        if t is None:
+            raise Exception,"Your plumbing is missing a select statement."
         xslt = etree.fromstring(resource_string(stylesheet,"xslt"))
         transform = etree.XSLT(xslt)
         # this is to make sure the parameters are passed as xslt strings
