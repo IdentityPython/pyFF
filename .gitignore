@@ -10,3 +10,5 @@ tmp
 build
 dist
 .idea
+
+_build
