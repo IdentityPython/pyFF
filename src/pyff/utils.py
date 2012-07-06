@@ -3,6 +3,7 @@ import os
 import pkg_resources
 import re
 from lxml import etree
+from time import gmtime, strftime
 
 __author__ = 'leifj'
 
@@ -68,3 +69,9 @@ Return a string representation of the tree.
 :param t: An ElemenTree to serialize
     """
     return etree.tostring(t,encoding='UTF-8',xml_declaration=True,pretty_print=True)
+
+def iso_now():
+    """
+Current time in ISO format
+    """
+    return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
