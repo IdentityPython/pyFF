@@ -116,7 +116,7 @@ signed (using signer.key) and finally published in /var/metadata/public/metadata
         t = None
         for p in self.pipeline:
             pipe,name,args = loader.load_pipe(p)
-            logging.debug("Found pipe %s,%s,%s" % (pipe,name,args))
+            logging.debug("traversing pipe %s,%s,%s" % (pipe,name,args))
             ot = pipe.run(md,t,name,args,self.id)
             if ot is not None:
                 t = ot
