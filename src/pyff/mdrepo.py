@@ -137,12 +137,3 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
     def __delitem__(self, key):
         del self.md[key]
-
-    @retry(Exception,tries=10)
-    def load_url(self,url=None,verify=None):
-        if url is not None:
-            logging.info("loading %s ..." % url)
-            request = urllib2.Request(url)
-            response = urllib2.urlopen(request)
-            # TODO figure out what to stick in md
-            self.parse_metadata(response,verify)
