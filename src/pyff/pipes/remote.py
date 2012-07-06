@@ -10,11 +10,17 @@ from StringIO import StringIO
 
 def _fetch(md,url,verify):
     logging.debug("open %s" % url)
-    return (urllib2.urlopen(url).read(),verify)
+    try:
+        return (urllib2.urlopen(url).read(),verify)
+    except Exception,ex:
+        logging.error("%s: %s" % (url,ex))
+        return (None,None)
 
-def run(md,t,name,args,id):
-    pool = eventlet.GreenPool()
-    pile = eventlet.GreenPile(pool)
+def _load(md,pile,args):
+    """
+    Recursively spawn _fetch for all URLs. A line on the form file:fn is treated
+    as a file of URLs - one per line.
+    """
     for d in args:
         url = None
         verify = None
@@ -23,6 +29,9 @@ def run(md,t,name,args,id):
             d = None
             if len(lst) == 1:
                 url = lst[0]
+                if url.startswith("file:"):
+                    with open(url.split(":")[1]) as fd:
+                        _load(md,pile,[line.strip() for line in fd.readlines()])
             elif len(lst) > 1:
                 url = lst[0]
                 verify = lst[1]
@@ -34,5 +43,14 @@ def run(md,t,name,args,id):
             logging.debug("spawning %s" % url)
             pile.spawn(_fetch,md,url,verify)
 
+def run(md,t,name,args,id):
+    pool = eventlet.GreenPool()
+    pile = eventlet.GreenPile(pool)
+    if type(args) is str or type(args) is unicode:
+        args = [args]
+
+    _load(md,pile,args)
+
     for r,verify in pile:
-        md.parse_metadata(StringIO(r),verify)
+        if r is not None:
+            md.parse_metadata(StringIO(r),verify)
