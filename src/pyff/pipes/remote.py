@@ -1,8 +1,8 @@
 from pyff import MDRepository
+from pyff.utils import iso_now
 
 __author__ = 'leifj'
 
-import urlparse
 import logging
 import eventlet
 from eventlet.green import urllib2
@@ -11,10 +11,9 @@ from StringIO import StringIO
 def _fetch(md,url,verify):
     logging.debug("open %s" % url)
     try:
-        return (urllib2.urlopen(url).read(),verify)
+        return (url,urllib2.urlopen(url).read(),verify,None)
     except Exception,ex:
-        logging.error("%s: %s" % (url,ex))
-        return (None,None)
+        return (url,None,None,ex)
 
 def _load(md,pile,args):
     """
@@ -51,6 +50,10 @@ def run(md,t,name,args,id):
 
     _load(md,pile,args)
 
-    for r,verify in pile:
+    for url,r,verify,ex in pile:
         if r is not None:
-            md.parse_metadata(StringIO(r),verify)
+            logging.debug("url=%s: read %s bytes" % (url,len(r)))
+            eids = md.parse_metadata(StringIO(r),verify,url)
+            logging.info("url=%s: got %d entities" % (url,len(eids)))
+        else:
+            logging.error("url=%s: FAILED to load: %s" % (url,ex))
