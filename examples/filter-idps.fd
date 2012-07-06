@@ -1,0 +1,8 @@
+- remote: 
+   - http://mds.edugain.org
+   - http://md.swamid.se/md/swamid-2.0.xml
+- select: "http://mds.edugain.org!md:EntityDescriptor[md:IDPSSODescriptor]"
+- publish:
+     output: /tmp/idp.xml
+- stats
+- info
