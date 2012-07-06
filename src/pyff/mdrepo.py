@@ -97,9 +97,8 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             raise Exception,"What about %s ??" % member
 
     def lookup(self,member,xp=None):
-        print "lookup %s" % member
+        logging.debug("lookup %s" % member)
         l = self._lookup(member,xp)
-        print l
         return list(set(filter(lambda x: x is not None,l)))
 
 
@@ -119,7 +118,6 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             attrs['validUntil'] = validUntil
         t = etree.Element("{urn:oasis:names:tc:SAML:2.0:metadata}EntitiesDescriptor",**attrs)
         for member in entities:
-            print member
             for ent in self.lookup(member):
                 if ent is not None:
                     t.append(deepcopy(ent))

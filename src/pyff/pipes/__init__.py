@@ -51,7 +51,6 @@ for d are allowed:
         elif hasattr(d,'__iter__') and not type(d) is dict:
             if not len(d):
                 raise Exception,"This does not look like a length of pipe... \n%s" % repr(d)
-            print d
             name = d[0]
             args = d[1:]
         elif type(d) is dict:
