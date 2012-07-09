@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema targetNamespace="aggregate" xmlns="http://www.w3.org/2001/XMLSchema" version="1.2">
+<import namespace="http://docs.oasis-open.org/wsfed/federation/200706" schemaLocation="ws-federation.xsd"/>
+<import namespace="http://docs.oasis-open.org/wsfed/authorization/200706" schemaLocation="ws-authorization.xsd"/>
+<import namespace="urn:oasis:names:tc:SAML:2.0:assertion" schemaLocation="sstc-saml-schema-assertion-2.0.xsd"/>
+<import namespace="urn:oasis:names:tc:SAML:2.0:metadata" schemaLocation="sstc-saml-schema-metadata-2.0.xsd"/>
+<import namespace="urn:oasis:names:tc:SAML:1.0:assertion" schemaLocation="cs-sstc-schema-assertion-1.1.xsd"/>
+<import namespace="urn:oasis:names:tc:SAML:2.0:metadata:ui" schemaLocation="sstc-saml-metadata-ui-v1.0.xsd"/>
+<import namespace="http://schemas.xmlsoap.org/ws/2004/09/mex" schemaLocation="MetadataExchange.xsd"/>
+<import namespace="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" schemaLocation="oasis-200401-wss-wssecurity-secext-1.0.xsd"/>
+<import namespace="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" schemaLocation="oasis-200401-wss-wssecurity-utility-1.0.xsd"/>
+<import namespace="http://docs.oasis-open.org/wsfed/privacy/200706" schemaLocation="privacy.xsd"/>
+<import namespace="urn:mace:shibboleth:metadata:1.0" schemaLocation="shibboleth-metadata-1.0.xsd"/>
+<import namespace="urn:mace:shibboleth:trust:1.0" schemaLocation="shibboleth-trust-1.0.xsd"/>
+<import namespace="urn:mace:shibboleth:1.0" schemaLocation="shibboleth.xsd"/>
+<import namespace="urn:oasis:names:tc:SAML:metadata:attribute" schemaLocation="sstc-metadata-attr.xsd"/>
+<import namespace="urn:oasis:names:tc:SAML:metadata:algsupport" schemaLocation="sstc-saml-metadata-algsupport.xsd"/>
+<import namespace="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" schemaLocation="sstc-saml-idp-discovery.xsd"/>
+</schema>

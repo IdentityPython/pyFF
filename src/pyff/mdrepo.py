@@ -6,6 +6,7 @@ from copy import deepcopy
 import urllib2
 from pyff.decorators import retry
 import logging
+from pyff.utils import schema
 
 __author__ = 'leifj'
 
@@ -122,6 +123,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                 if ent is not None:
                     t.append(deepcopy(ent))
 
+        schema().assertValid(t)
         return t
 
     def keys(self):

@@ -1,3 +1,4 @@
+from StringIO import StringIO
 from datetime import timedelta
 import os
 import pkg_resources
@@ -75,3 +76,33 @@ def iso_now():
 Current time in ISO format
     """
     return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
+
+class ResourceResolver(etree.Resolver):
+    def resolve(self, system_url, public_id, context):
+        """
+        Resolves URIs using the resource API
+        """
+        print "system_url %s" % system_url
+        path = system_url.split("/")
+        fn = path[len(path)-1]
+        if pkg_resources.resource_exists(__name__,fn):
+            return self.resolve_file(pkg_resources.resource_stream(__name__,fn),context)
+        elif pkg_resources.resource_exists(__name__,"schema/%s" % fn):
+            return self.resolve_file(pkg_resources.resource_stream(__name__,"schema/%s" % fn),context)
+        else:
+            raise ValueError("Unable to locate %s" % fn)
+
+_SCHEMA = None
+
+def schema():
+    global _SCHEMA
+    if _SCHEMA is None:
+        try:
+            parser = etree.XMLParser()
+            parser.resolvers.add(ResourceResolver())
+            st = etree.parse(pkg_resources.resource_stream(__name__,"schema/schema.xsd"),parser)
+            _SCHEMA = etree.XMLSchema(st)
+        except etree.XMLSchemaParseError, e:
+            print e.error_log
+            raise e
+    return _SCHEMA
