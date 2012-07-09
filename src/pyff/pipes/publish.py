@@ -1,6 +1,6 @@
 import os
 from lxml import etree
-from pyff.utils import dumptree
+from pyff.utils import dumptree, schema
 
 __author__ = 'leifj'
 
@@ -8,6 +8,7 @@ def run(md,t,name,args,id):
     """
     Publish the working tree.
     """
+    schema().assertValid(t)
     output_file = args.get("output",None)
     if output_file is not None:
         out = output_file
