@@ -2,6 +2,7 @@
    - http://mds.edugain.org
    - http://md.swamid.se/md/swamid-2.0.xml
 - select: "http://mds.edugain.org!md:EntityDescriptor[md:IDPSSODescriptor]"
+- validate
 - publish:
      output: /tmp/idp.xml
 - stats
