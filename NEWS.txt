@@ -9,3 +9,10 @@ News
 * This is the first unreleased version of the code
 * http://github.com/leifj/pyFF
 
+0.4
+----
+
+*Release date: Tue Jul 10 15:48:07 CEST 2012*
+
+* Schema validation
+* Refactor dynamic loading framework
