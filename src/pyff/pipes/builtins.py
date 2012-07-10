@@ -206,3 +206,11 @@ def xslt(md,t,name,args,id):
         ot = transform(t,**d)
         t = ot
     return t
+
+def validate(md,t,name,args,id):
+    """
+    Generate an exception unless the working tree validates. Validation is done automatically
+    during publication and loading of metadata.
+    """
+    if t is not None:
+        schema().assertValid(t)
