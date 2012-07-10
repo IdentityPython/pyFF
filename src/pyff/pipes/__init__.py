@@ -62,7 +62,20 @@ for d are allowed:
         if name is None:
             raise Exception,"Anonymous length of pipe... \n%s" % repr(d)
 
-        return __import__("pyff.pipes.%s" % name, fromlist=["pyff.pipes"]),name,args
+        print name
+        mname = "pyff.pipes.builtins"
+        fn = name
+        if ':' in name:
+            (mname,sep,fn) = name.rpartition(":")
+        pm = mname
+        if '.' in mname:
+            (pm,sep,mn) = mname.rpartition('.')
+
+        module = __import__(mname,fromlist=[pm])
+        if hasattr(module,fn) and hasattr(getattr(module,fn),'__call__'):
+            return getattr(module,fn),fn,args
+
+        #return __import__("pyff.pipes.%s" % name, fromlist=["pyff.pipes"]),name,args
 
 class Plumbing(object):
     """
@@ -116,7 +129,7 @@ signed (using signer.key) and finally published in /var/metadata/public/metadata
         for p in self.pipeline:
             pipe,name,args = loader.load_pipe(p)
             logging.debug("traversing pipe %s,%s,%s" % (pipe,name,args))
-            ot = pipe.run(md,t,name,args,self.id)
+            ot = pipe(md,t,name,args,self.id)
             if ot is not None:
                 t = ot
         return t
