@@ -70,10 +70,12 @@ for d are allowed:
         pm = mname
         if '.' in mname:
             (pm,sep,mn) = mname.rpartition('.')
-
+        logging.debug("importing %s from %s to find %s" % (mn,pm,fn))
         module = __import__(mname,fromlist=[pm])
         if hasattr(module,fn) and hasattr(getattr(module,fn),'__call__'):
             return getattr(module,fn),fn,args
+        else:
+            raise ValueError("No such method %s in %s" % (fn,mname))
 
         #return __import__("pyff.pipes.%s" % name, fromlist=["pyff.pipes"]),name,args
 
