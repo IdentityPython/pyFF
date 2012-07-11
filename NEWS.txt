@@ -16,3 +16,16 @@ News
 
 * Schema validation
 * Refactor dynamic loading framework
+
+0.5
+----
+
+*Release date: Wed Jul 11 16:31:06 CEST 2012*
+
+* XML signing and validation using http://pypi.python.org/pypi/dm.xmlsec.binding (requires M2Crypto at present)
+
+Because of the way OpenSSL handles self-signed certificates the XML validation extracts
+the public key from the certificate and uses that instead of the X509 certificate to 
+validate an XML signature. Right now this introduces a dependency on M2Crypto which will
+be removed in the fugure. Note that ubuntu/debian users should install python-m2crypto
+instead of installing M2Crypto (http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=637904)
