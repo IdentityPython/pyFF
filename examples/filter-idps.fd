@@ -1,9 +1,12 @@
 - remote: 
    - http://mds.edugain.org
-   - http://md.swamid.se/md/swamid-2.0.xml
+   - http://md.swamid.se/md/swamid-2.0.xml examples/mdsigner.crt
 - select: "http://mds.edugain.org!md:EntityDescriptor[md:IDPSSODescriptor]"
-- validate
+- xslt:
+    stylesheet: tidy.xsl
+- sign: 
+    key: sign.key
+    cert: sign.crt
 - publish:
-     output: /tmp/idp.xml
+    output: /tmp/idp.xml
 - stats
-- info
