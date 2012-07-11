@@ -1,6 +1,6 @@
 - remote: 
    - http://mds.edugain.org
-   - http://md.swamid.se/md/swamid-2.0.xml examples/mdsigner.crt
+   - http://md.swamid.se/md/swamid-2.0.xml examples/md-signer.crt
 - select: "http://mds.edugain.org!md:EntityDescriptor[md:IDPSSODescriptor]"
 - xslt:
     stylesheet: tidy.xsl
