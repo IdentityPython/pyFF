@@ -13,3 +13,5 @@ dist
 
 _build
 doc/api
+sign.crt
+sign.key
