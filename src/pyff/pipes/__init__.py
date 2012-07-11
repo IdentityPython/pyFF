@@ -62,7 +62,6 @@ for d are allowed:
         if name is None:
             raise Exception,"Anonymous length of pipe... \n%s" % repr(d)
 
-        print name
         mname = "pyff.pipes.builtins"
         fn = name
         if ':' in name:
