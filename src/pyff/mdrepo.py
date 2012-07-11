@@ -1,34 +1,41 @@
 from UserDict import DictMixin
 from lxml import etree
-import dm.xmlsec.binding as xmlsec
 import os
+import re
 from copy import deepcopy
-import urllib2
-from pyff.decorators import retry
 import logging
 from pyff.utils import schema
+import pyff.xmlsec as xmlsec
+from pyff.constants import NS
 
 __author__ = 'leifj'
 
-#NS={"md": "urn:oasis:names:tc:SAML:2.0:metadata","ds": "http://www.w3.org/2000/09/xmldsig#"}
-NS={"md": "urn:oasis:names:tc:SAML:2.0:metadata"}
+def _is_self_signed_err(ebuf):
+    for e in ebuf:
+        if e['func'] == 'xmlSecOpenSSLX509StoreVerify' and re.match('err=18',e['message']):
+            return True
+    return False
 
 class MDRepository(DictMixin):
     def __init__(self):
         self.md = {}
 
-    def parse_metadata(self,fn,verify=None,url=None):
+    def parse_metadata(self,fn,key=None,url=None):
         """
 Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
 is stored in the MDRepository instance.
 
 :param fn: a file-like object containing SAML metadata
-:param verify: a certificate to use for signature verification
+:param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
         """
         logging.debug("parsing %s" % fn)
         t = etree.parse(fn)
-        if verify is not None:
-            pass # TODO verify signature
+        if key is not None:
+            try:
+                xmlsec.verify(t,key)
+            except Exception,ex:
+                logging.error(ex)
+                return []
         if url is None:
             top = t.xpath("//md:EntitiesDescriptor",namespaces=NS)
             if top is not None and len(top) == 1:

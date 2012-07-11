@@ -11,6 +11,7 @@ import hashlib
 from eventlet.green import urllib2
 from StringIO import StringIO
 from lxml import etree
+import pyff.xmlsec as xmlsec
 
 __author__ = 'leifj'
 
@@ -135,7 +136,7 @@ def remote(md,t,name,args,id):
     for url,r,verify,ex in pile:
         if r is not None:
             logging.debug("url=%s: read %s bytes" % (url,len(r)))
-            eids = md.parse_metadata(StringIO(r),verify,url)
+            eids = md.parse_metadata(StringIO(r),key=verify,url=url)
             logging.info("url=%s: got %d entities" % (url,len(eids)))
         else:
             logging.error("url=%s: FAILED to load: %s" % (url,ex))
@@ -156,6 +157,18 @@ def sign(md,t,name,args,id):
     """
     if t is None:
         raise Exception,"Your plumbing is missing a select statement."
+
+    if not type(args) is dict:
+        raise ValueError("Missing key and cert arguments to sign pipe")
+
+    key_file = args.get('key',None)
+    cert_file = args.get('cert',None)
+
+    if key_file is None or cert_file is None:
+        raise ValueError("Empty key and cert arguments to sign pipe")
+
+    xmlsec.sign(t,key_file,cert_file)
+
     return t
 
 def stats(md,t,name,args,id):
@@ -204,7 +217,7 @@ def xslt(md,t,name,args,id):
         # this is to make sure the parameters are passed as xslt strings
         d = dict((k,"\'%s\'" % v) for (k,v) in args.items())
         ot = transform(t,**d)
-        t = ot
+        t = ot.getroot()
     return t
 
 def validate(md,t,name,args,id):

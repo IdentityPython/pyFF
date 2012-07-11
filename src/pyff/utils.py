@@ -1,10 +1,10 @@
-from StringIO import StringIO
 from datetime import timedelta
 import os
 import pkg_resources
 import re
 from lxml import etree
 from time import gmtime, strftime
+import logging
 
 __author__ = 'leifj'
 
@@ -69,7 +69,7 @@ Return a string representation of the tree.
 
 :param t: An ElemenTree to serialize
     """
-    return etree.tostring(t,encoding='UTF-8',xml_declaration=True,pretty_print=True)
+    return etree.tostring(t,encoding='UTF-8',xml_declaration=True)#,pretty_print=True)
 
 def iso_now():
     """
@@ -82,7 +82,7 @@ class ResourceResolver(etree.Resolver):
         """
         Resolves URIs using the resource API
         """
-        print "system_url %s" % system_url
+        #print "system_url %s" % system_url
         path = system_url.split("/")
         fn = path[len(path)-1]
         if pkg_resources.resource_exists(__name__,fn):
@@ -103,6 +103,6 @@ def schema():
             st = etree.parse(pkg_resources.resource_stream(__name__,"schema/schema.xsd"),parser)
             _SCHEMA = etree.XMLSchema(st)
         except etree.XMLSchemaParseError, e:
-            print e.error_log
+            logging.error(e.error_log)
             raise e
     return _SCHEMA
