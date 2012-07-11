@@ -6,8 +6,8 @@ import logging
 """
 Pipes and plumbing
 
-Plumbing instances are sequences of pipes. Each pipe is called in order to load, select, transform
-and output SAML metadata.
+Plumbing instances are sequences of pipes. Each pipe is called in order to load, select,
+transform, sign or output SAML metadata.
 """
 
 __author__ = 'leifj'
