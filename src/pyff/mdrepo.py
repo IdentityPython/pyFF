@@ -20,7 +20,7 @@ class MDRepository(DictMixin):
     def __init__(self):
         self.md = {}
 
-    def parse_metadata(self,fn,key=None,url=None):
+    def parse_metadata(self,fn,key=None,url=None,fail=False):
         """
 Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
 is stored in the MDRepository instance.
@@ -29,7 +29,14 @@ is stored in the MDRepository instance.
 :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
         """
         logging.debug("parsing %s" % fn)
-        t = etree.parse(fn)
+        try:
+            t = etree.parse(fn)
+            schema().assertValid(t)
+        except Exception,ex:
+            logging.error(ex)
+            if fail:
+                raise ex
+            return []
         if key is not None:
             try:
                 xmlsec.verify(t,key)
@@ -71,7 +78,7 @@ Files ending in the specified extension are included. Directories starting with 
                 for nm in files:
                     if nm.endswith(ext):
                         fn = os.path.join(top, nm)
-                        entities.extend(self.parse_metadata(fn))
+                        entities.extend(self.parse_metadata(fn,fail=True)) #local metadata is assumed to be ok
             self.md[url] = self.entity_set(entities,url)
         return self.md[url]
 
@@ -110,7 +117,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
         return list(set(filter(lambda x: x is not None,l)))
 
 
-    def entity_set(self,entities,name,cacheDuration=None,validUntil=None):
+    def entity_set(self,entities,name,cacheDuration=None,validUntil=None,validate=True):
         """
 Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
 
@@ -130,7 +137,8 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                 if ent is not None:
                     t.append(deepcopy(ent))
 
-        schema().assertValid(t)
+        if validate:
+            schema().assertValid(t)
         return t
 
     def keys(self):
