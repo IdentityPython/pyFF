@@ -12,6 +12,8 @@ from eventlet.green import urllib2
 from StringIO import StringIO
 from lxml import etree
 import pyff.xmlsec as xmlsec
+import base64
+from datetime import datetime
 
 __author__ = 'leifj'
 
@@ -93,7 +95,7 @@ def _fetch(md,url,verify):
     try:
         return (url,urllib2.urlopen(url).read(),verify,None)
     except Exception,ex:
-        return (url,None,None,ex)
+        return url,None,None,ex
 
 def _load(md,pile,args):
     """
@@ -109,7 +111,7 @@ def _load(md,pile,args):
             if len(lst) == 1:
                 url = lst[0]
                 if url.startswith("file:"):
-                    with open(url.split(":")[1]) as fd:
+                    with open(url.partition(":")[2]) as fd:
                         _load(md,pile,[line.strip() for line in fd.readlines()])
             elif len(lst) > 1:
                 url = lst[0]
@@ -150,6 +152,16 @@ def select(md,t,name,args,id):
     if type(args) is str or type(args) is unicode:
         args = [args]
     return md.entity_set(args,id)
+
+def pick(md,t,name,args,id):
+    """
+    Select a working set of EntityDescriptor elements but don't validate it. Useful for testing.
+    """
+    if args is None:
+        args = md.keys()
+    if type(args) is str or type(args) is unicode:
+        args = [args]
+    return md.entity_set(args,id,validate=False)
 
 def sign(md,t,name,args,id):
     """
@@ -211,7 +223,7 @@ def xslt(md,t,name,args,id):
     stylesheet = args.pop('stylesheet',None)
     if stylesheet is not None:
         if t is None:
-            raise Exception,"Your plumbing is missing a select statement."
+            raise ValueError("Your plumbing is missing a select statement.")
         xslt = etree.fromstring(resource_string(stylesheet,"xslt"))
         transform = etree.XSLT(xslt)
         # this is to make sure the parameters are passed as xslt strings
@@ -227,3 +239,37 @@ def validate(md,t,name,args,id):
     """
     if t is not None:
         schema().assertValid(t)
+
+def certreport(md,t,name,args,id):
+    """
+    Generate a report of the certificates (optionally limited by expiration time) found in the selection.
+    """
+    try:
+        from OpenSSL import crypto
+    except ImportError,ex:
+        logging.error("certreport requires pyOpenSSL")
+        return t
+
+    if t is None:
+        raise ValueError("Your plumbing is missing a select statement.")
+
+    seen = {}
+    for eid in t.xpath("//md:EntityDescriptor/@entityID",namespaces=NS):
+        for cd in t.xpath("md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid,namespaces=NS):
+            cert_pem = cd.text
+            cert_der = base64.b64decode(cert_pem)
+            m = hashlib.sha1()
+            m.update(cert_der)
+            fp = m.hexdigest
+            if not seen.get(fp,False):
+                seen[fp] = True
+                cert = crypto.load_certificate(crypto.FILETYPE_ASN1,cert_der)
+                et = datetime.strptime(cert.get_notAfter(),"%Y%m%d%H%M%SZ")
+                now = datetime.now()
+                dt = et - now
+                if dt.total_seconds() < 0:
+                    logging.error("%s expired %s ago" % (eid,-dt))
+                elif dt.total_seconds() < 864000:
+                    logging.warn("%s expires in %s" % (eid,dt))
+
+
