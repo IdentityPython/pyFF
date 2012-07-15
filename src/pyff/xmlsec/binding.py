@@ -5,9 +5,25 @@ import os
 import hashlib
 import base64
 from pyff.constants import NS
-from M2Crypto import X509
 
 __author__ = 'leifj'
+
+def _find_matching_cert(t,fp):
+    cn = t.xpath('//ds:X509Certificate',namespaces=NS)
+    if cn is None or len(cn) == 0:
+        return None
+
+    for cd in cn:
+        fp = fp.lower().replace(":","")
+        cert_pem = cd.text
+        cert_der = base64.b64decode(cert_pem)
+        m = hashlib.sha1()
+        m.update(cert_der)
+        fingerprint = m.hexdigest().lower()
+        if fingerprint == fp:
+            return cert_der
+    return None
+
 
 def verify(t,key):
     """
@@ -15,47 +31,28 @@ def verify(t,key):
     """
     xmlsec.initialize()
     xmlsec.set_error_callback(log_error)
+    xmlsec.addIDs(t.find('.'),['ID'])
+
     sn = t.find('.//{%s}Signature' % xmlsec.DSigNs)
     if sn is None:
-        logging.error('cannot find signature node')
-        return []
-    if os.path.isfile(key):
-        dsigCtx = xmlsec.DSigCtx()
-        cert = X509.load_cert(key)
-        pub_key = cert.get_pubkey().get_rsa()
-        sk = xmlsec.Key.loadMemory(pub_key.as_pem(cipher=None),xmlsec.KeyDataFormatPem)
-        sk.name = key
-        logging.debug("Key name %s" % sk.name)
-        dsigCtx.signKey = sk
-        dsigCtx.verify(sn)
-    elif ":" in key: # looks like a fingerprint
-        cn = t.xpath('//ds:X509Certificate',namespaces=NS)
-        if cn:
-            for cd in cn:
-                try:
-                    mngr = xmlsec.KeysMngr()
-                    dsigCtx = xmlsec.DSigCtx(mngr)
-                    certpem = cd.text()
-                    certder = base64.b64decode(certpem)
-                    m = hashlib.sha1()
-                    m.update(certder)
-                    fingerprint = m.hexdigest()
-                    logging.info("checking fingerprint %s" % fingerprint)
-                    if fingerprint.tolower() == key.tolower():
-                        mngr.loadCertMemory(certder,xmlsec.KeyDataFormatDer,xmlsec.KeyDataTypeTrusted)
-                        logging.debug('fingerprint OK')
-                        dsigCtx.verify(sn)
-                    else:
-                        raise ValueError('fingerprint missmatch %s != %s' % (fingerprint,key))
-                except Exception,ex:
-                    raise ex
-        else:
-            raise ValueError('unable to verify without embedded X.509 certificate!')
-    else:
-        raise ValueError('don\'t know how to verify using %s' % key)
+        raise ValueError('cannot find signature node')
 
-    #logging.debug('verifying at %s' % sn)
-    #dsigCtx.verify(sn)
+    if os.path.isfile(key):
+        mngr = xmlsec.KeysMngr()
+        dsigCtx = xmlsec.DSigCtx(mngr)
+        mngr.loadCert(key,xmlsec.KeyDataFormatPem,xmlsec.KeyDataTypeTrusted)
+        dsigCtx.verify(sn)
+    elif ":" in key: # looks like a fingerprint - untested, probably doesn't work
+        cert_der = _find_matching_cert(t,key)
+        if cert_der:
+            mngr = xmlsec.KeysMngr()
+            dsigCtx = xmlsec.DSigCtx(mngr)
+            mngr.loadCertMemory(cert_der,xmlsec.KeyDataFormatDer,xmlsec.KeyDataTypeTrusted)
+            dsigCtx.verify(sn)
+        else:
+            raise ValueError("unable to find a certificate matching fingerprint in signature")
+    else:
+        raise ValueError("don't know how to validate signatures using %s" % key)
 
 def sign(t,key,cert):
     """
@@ -64,6 +61,7 @@ def sign(t,key,cert):
     """
     xmlsec.initialize()
     xmlsec.set_error_callback(log_error)
+    xmlsec.addIDs(t.find('.'),['ID'])
     signature = Signature(xmlsec.TransformExclC14NWithComments,xmlsec.TransformRsaSha1)
     cm = signature.find("{%s}SignedInfo/{%s}CanonicalizationMethod" % (xmlsec.DSigNs,xmlsec.DSigNs))
     cm.set('Algorithm','http://www.w3.org/TR/2001/REC-xml-c14n-20010315')
