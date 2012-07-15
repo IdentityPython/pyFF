@@ -49,6 +49,10 @@ is stored in the MDRepository instance.
                 url = top[0].get("Name",None)
         if url is not None:
             self[url] = t
+        # we always clean incoming ID
+        for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
+            if e.attrib.has_key('ID'):
+                del e.attrib['ID']
         return t.xpath("//md:EntityDescriptor",namespaces=NS)
         #for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
         #    eid = e.get('entityID')
