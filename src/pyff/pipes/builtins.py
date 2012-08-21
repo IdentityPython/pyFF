@@ -1,3 +1,8 @@
+"""
+Package that contains the basic set of pipes - functions that can be used to put
+together a processing pipeling for pyFF.
+"""
+
 from pyff.utils import dumptree, schema, resource_string
 from pyff.mdrepo import NS
 from pyff.pipes import Plumbing

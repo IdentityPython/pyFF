@@ -1,3 +1,47 @@
+"""
+pyFF is a SAML metadata aggregator. The processing model is a pipeline:
+
+        -----------------                                       -----------------
+        |               |                                       |               |
+        |     remote    |                                       |    publish    |
+        |               |                                       |               |
+        -----------------                                       -----------------
+                |                                                       ^
+                |                                                       |
+                |                                                       |
+                |                 pyFF processing chaing                |
+                |                                                       |
+                |                                                       |
+                |                                                       |
+        -----------------           -----------------           -----------------
+        |               |           |               |           |               |
+        |    select     | --------> |     xslt      | --------> |     fork      |
+        |               |           |               |           |               |
+        -----------------           -----------------           -----------------
+
+pyFF pipelines are represented using python objects and serialized as yaml files.
+
+An example pipeline:
+
+        - remote:
+            - https://mds.edugain.org edugain.crt
+        - select "/tmp/edugain!md:EntityDescriptor[md:IDPSSODescriptor]"
+        - store:
+            directory: /var/spool/edugain
+        - certreport
+        - publish:
+            output: /tmp/edugain-annotated.xml
+
+This pipline...
+
+ - downloads the edugain metadata and validates the signature
+ - selects the IdPs
+ - splits the IdPs into EntityDescriptor pieces and saves each in a separate file
+ - annotates metadata with certificate expiration information
+ - saves the annotated metadata as a combined file
+
+"""
+
 import sys
 import getopt
 from pyff.mdrepo import  MDRepository

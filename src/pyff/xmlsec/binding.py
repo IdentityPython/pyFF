@@ -1,3 +1,7 @@
+"""
+XML security implementation using on dm.xmlsec.binding
+"""
+
 from dm.xmlsec.binding.tmpl import Signature
 import dm.xmlsec.binding as xmlsec
 import logging

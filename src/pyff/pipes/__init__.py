@@ -1,14 +1,14 @@
-import os
-import yaml
-from pyff.utils import resource_string
-import logging
-
 """
 Pipes and plumbing
 
 Plumbing instances are sequences of pipes. Each pipe is called in order to load, select,
 transform, sign or output SAML metadata.
 """
+
+import os
+import yaml
+from pyff.utils import resource_string
+import logging
 
 __author__ = 'leifj'
 

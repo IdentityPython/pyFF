@@ -1,0 +1,8 @@
+- remote:
+    - https://mds.edugain.org examples/edugain.crt
+- select "/tmp/edugain!md:EntityDescriptor[md:IDPSSODescriptor]"
+- store:
+    directory: /var/spool/edugain
+- certreport
+- publish:
+    output: /tmp/edugain-annotated.xml
