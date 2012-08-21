@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import timedelta
 import os
 import pkg_resources

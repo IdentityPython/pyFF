@@ -93,9 +93,9 @@ def publish(md,t,name,args,id):
 def _fetch(md,url,verify):
     logging.debug("open %s" % url)
     try:
-        return (url,urllib2.urlopen(url).read(),verify,None)
+        return url,urllib2.urlopen(url).read(),verify,None,datetime.now()
     except Exception,ex:
-        return url,None,None,ex
+        return url,None,None,ex,datetime.now()
 
 def _load(md,pile,args):
     """
@@ -126,7 +126,7 @@ def _load(md,pile,args):
 
 def remote(md,t,name,args,id):
     """
-    Load a (set of) remote URLs
+    Load a (set of) remote URLs, validate (XSD) and optionally verify signature
     """
     pool = eventlet.GreenPool()
     pile = eventlet.GreenPile(pool)
@@ -135,7 +135,8 @@ def remote(md,t,name,args,id):
 
     _load(md,pile,args)
 
-    for url,r,verify,ex in pile:
+    for url,r,verify,ex,ts_start in pile:
+        ts_end = datetime.now()
         if r is not None:
             logging.debug("url=%s: read %s bytes" % (url,len(r)))
             eids = md.parse_metadata(StringIO(r),key=verify,url=url)
@@ -240,6 +241,9 @@ def validate(md,t,name,args,id):
     if t is not None:
         schema().assertValid(t)
 
+def _subject(cert):
+    return "/".join(["%s=%s" % (c[0],c[1]) for c in cert.get_subject().get_components()])
+
 def certreport(md,t,name,args,id):
     """
     Generate a report of the certificates (optionally limited by expiration time) found in the selection.
@@ -256,20 +260,27 @@ def certreport(md,t,name,args,id):
     seen = {}
     for eid in t.xpath("//md:EntityDescriptor/@entityID",namespaces=NS):
         for cd in t.xpath("md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid,namespaces=NS):
-            cert_pem = cd.text
-            cert_der = base64.b64decode(cert_pem)
-            m = hashlib.sha1()
-            m.update(cert_der)
-            fp = m.hexdigest
-            if not seen.get(fp,False):
-                seen[fp] = True
-                cert = crypto.load_certificate(crypto.FILETYPE_ASN1,cert_der)
-                et = datetime.strptime(cert.get_notAfter(),"%Y%m%d%H%M%SZ")
-                now = datetime.now()
-                dt = et - now
-                if dt.total_seconds() < 0:
-                    logging.error("%s expired %s ago" % (eid,-dt))
-                elif dt.total_seconds() < 864000:
-                    logging.warn("%s expires in %s" % (eid,dt))
-
+            try:
+                cert_pem = cd.text
+                cert_der = base64.b64decode(cert_pem)
+                m = hashlib.sha1()
+                m.update(cert_der)
+                fp = m.hexdigest()
+                if not seen.get(fp,False):
+                    seen[fp] = True
+                    cert = crypto.load_certificate(crypto.FILETYPE_ASN1,cert_der)
+                    et = datetime.strptime(cert.get_notAfter(),"%Y%m%d%H%M%SZ")
+                    now = datetime.now()
+                    dt = et - now
+                    if dt.total_seconds() < 0:
+                        e = cd.getparent().getparent().getparent().getparent().getparent()
+                        md.annotate(e,"certificate-error","certificate has expired","%s expired %s ago" % (_subject(cert),-dt))
+                        logging.error("%s expired %s ago" % (eid,-dt))
+                    elif dt.total_seconds() < 864000:
+                        e = cd.getparent().getparent().getparent().getparent().getparent()
+                        print e
+                        md.annotate(e,"certificate-warning","certificate about to expire","%s expires in %s" % (_subject(cert),dt))
+                        logging.warn("%s expires in %s" % (eid,dt))
+            except Exception,ex:
+                logging.error(ex)
 

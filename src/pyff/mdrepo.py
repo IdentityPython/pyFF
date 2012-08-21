@@ -1,5 +1,7 @@
+from datetime import datetime
 from UserDict import DictMixin
 from lxml import etree
+from lxml.builder import ElementMaker
 import os
 import re
 from copy import deepcopy
@@ -18,9 +20,37 @@ def _is_self_signed_err(ebuf):
 
 class MDRepository(DictMixin):
     def __init__(self):
+        """
+        A class representing a set of sets of SAML metadata.
+        """
         self.md = {}
 
-    def parse_metadata(self,fn,key=None,url=None,fail=False):
+    def extensions(self,e):
+        ext = e.find("{%s}Extensions" % NS['md'])
+        if not ext:
+            e.insert(0,etree.Element("{%s}Extensions" % NS['md']))
+            ext = e.find("{%s}Extensions" % NS['md'])
+        return ext
+
+    def annotate(self,e,category,title,message,source=None):
+        print e.tag
+        if e.tag != "{urn:oasis:names:tc:SAML:2.0:metadata}EntityDescriptor" and \
+           e.tag != "{urn:oasis:names:tc:SAML:2.0:metadata}EntitiesDescriptor":
+            raise ValueError("I can only annotate EntityDescriptor or EntitiesDescriptor elements")
+        subject = e.get('Name',e.get('entityID',None))
+        atom = ElementMaker(nsmap={'atom':'http://www.w3.org/2005/Atom'},namespace='http://www.w3.org/2005/Atom')
+        args = [atom.published("%s" % datetime.now().isoformat()),
+                atom.link(href=subject,rel="saml-metadata-subject")]
+        if source is not None:
+                args.append(atom.link(href=source,rel="saml-metadata-source"))
+        args.extend([atom.title(title),
+                     atom.category(term=category),
+                     atom.content(message,type="text/plain")])
+        self.extensions(e).insert(0,atom.entry(*args))
+        print etree.tostring(e)
+
+
+    def parse_metadata(self,fn,key=None,url=None,fail_on_error=False):
         """
 Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
 is stored in the MDRepository instance.
@@ -28,17 +58,21 @@ is stored in the MDRepository instance.
 :param fn: a file-like object containing SAML metadata
 :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
         """
-        logging.debug("parsing %s" % fn)
+        src_desc = "%s" % fn
+        if url is not None:
+            src_desc = url
+        logging.debug("parsing %s" % src_desc)
         try:
             t = etree.parse(fn)
             schema().assertValid(t)
         except Exception,ex:
             logging.error(ex)
-            if fail:
+            if fail_on_error:
                 raise ex
             return []
         if key is not None:
             try:
+                logging.debug("verifying signature using %s" % key)
                 xmlsec.verify(t,key)
             except Exception,ex:
                 logging.error(ex)
@@ -82,7 +116,7 @@ Files ending in the specified extension are included. Directories starting with 
                 for nm in files:
                     if nm.endswith(ext):
                         fn = os.path.join(top, nm)
-                        entities.extend(self.parse_metadata(fn,fail=True)) #local metadata is assumed to be ok
+                        entities.extend(self.parse_metadata(fn,fail_on_error=True)) #local metadata is assumed to be ok
             self.md[url] = self.entity_set(entities,url)
         return self.md[url]
 
@@ -144,6 +178,13 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         if validate:
             schema().assertValid(t)
         return t
+
+    def error_set(self,url,title,ex):
+        """
+        Creates an "error" EntitiesDescriptor - empty but for an annotation about the error that occured
+        """
+        t = etree.Element("{urn:oasis:names:tc:SAML:2.0:metadata}EntitiesDescriptor",Name=url,nsmap=NS)
+        self.annotate(t,"error",title,ex,source=url)
 
     def keys(self):
         return self.md.keys()
