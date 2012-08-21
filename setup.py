@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from setuptools import setup, find_packages
 import sys, os
 
@@ -12,7 +13,7 @@ install_requires = [
     'lxml',
     'dm.xmlsec.binding',
     'pyyaml',
-    'eventlet'
+    'eventlet',
     'pyOpenSSL'
     # List your project dependencies here.
     # For more details, see:
