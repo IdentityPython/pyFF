@@ -9,6 +9,7 @@ import logging
 from pyff.utils import schema
 import pyff.xmlsec as xmlsec
 from pyff.constants import NS
+import traceback
 
 __author__ = 'leifj'
 
@@ -17,6 +18,8 @@ def _is_self_signed_err(ebuf):
         if e['func'] == 'xmlSecOpenSSLX509StoreVerify' and re.match('err=18',e['message']):
             return True
     return False
+
+etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
 class MDRepository(DictMixin):
     def __init__(self):
@@ -63,7 +66,7 @@ is stored in the MDRepository instance.
             src_desc = url
         logging.debug("parsing %s" % src_desc)
         try:
-            t = etree.parse(fn)
+            t = etree.parse(fn,parser=etree.XMLParser(resolve_entities=False))
             schema().assertValid(t)
         except Exception,ex:
             logging.error(ex)
@@ -75,6 +78,8 @@ is stored in the MDRepository instance.
                 logging.debug("verifying signature using %s" % key)
                 xmlsec.verify(t,key)
             except Exception,ex:
+                tb = traceback.format_exc()
+                print tb
                 logging.error(ex)
                 return []
         if url is None:
