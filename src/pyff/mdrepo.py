@@ -30,13 +30,12 @@ class MDRepository(DictMixin):
 
     def extensions(self,e):
         ext = e.find("{%s}Extensions" % NS['md'])
-        if not ext:
+        if ext is None:
             e.insert(0,etree.Element("{%s}Extensions" % NS['md']))
             ext = e.find("{%s}Extensions" % NS['md'])
         return ext
 
     def annotate(self,e,category,title,message,source=None):
-        print e.tag
         if e.tag != "{urn:oasis:names:tc:SAML:2.0:metadata}EntityDescriptor" and \
            e.tag != "{urn:oasis:names:tc:SAML:2.0:metadata}EntitiesDescriptor":
             raise ValueError("I can only annotate EntityDescriptor or EntitiesDescriptor elements")
@@ -50,7 +49,6 @@ class MDRepository(DictMixin):
                      atom.category(term=category),
                      atom.content(message,type="text/plain")])
         self.extensions(e).insert(0,atom.entry(*args))
-        print etree.tostring(e)
 
 
     def parse_metadata(self,fn,key=None,url=None,fail_on_error=False):
