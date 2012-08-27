@@ -7,7 +7,7 @@ import re
 from copy import deepcopy
 import logging
 from pyff.utils import schema
-import pyff.xmlsec as xmlsec
+import xmlsec
 from pyff.constants import NS
 import traceback
 

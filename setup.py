@@ -11,10 +11,10 @@ version = '0.5'
 
 install_requires = [
     'lxml',
-    'dm.xmlsec.binding',
     'pyyaml',
     'eventlet',
-    'pyOpenSSL'
+    'pyOpenSSL',
+    'pyXMLSecurity'
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies

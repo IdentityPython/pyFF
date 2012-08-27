@@ -16,7 +16,7 @@ import hashlib
 from eventlet.green import urllib2
 from StringIO import StringIO
 from lxml import etree
-import pyff.xmlsec as xmlsec
+import xmlsec
 import base64
 from datetime import datetime
 
