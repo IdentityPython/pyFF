@@ -69,7 +69,9 @@ for d are allowed:
         pm = mname
         if '.' in mname:
             (pm,sep,mn) = mname.rpartition('.')
-        logging.debug("importing %s from %s to find %s" % (mn,pm,fn))
+            logging.debug("importing %s from %s to find %s" % (mn,pm,fn))
+        else:
+            logging.debug("importing %s from %s to find %s" % (mname,pm,fn))
         module = __import__(mname,fromlist=[pm])
         if hasattr(module,fn) and hasattr(getattr(module,fn),'__call__'):
             return getattr(module,fn),fn,args
