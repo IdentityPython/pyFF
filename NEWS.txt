@@ -29,3 +29,14 @@ the public key from the certificate and uses that instead of the X509 certificat
 validate an XML signature. Right now this introduces a dependency on M2Crypto which will
 be removed in the fugure. Note that ubuntu/debian users should install python-m2crypto
 instead of installing M2Crypto (http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=637904)
+
+0.6
+---
+
+*Release date: *
+
+* XML signing and validation using pyXMLSecurity
+* Support for PKCS#11-based HSMs using pykcs11
+
+We are now using a (limited) pure-python implmementation of xmlsec which makes it easier
+to sign using HSMs. The only mandatory non-python dependency now is lxml.
