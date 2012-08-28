@@ -47,6 +47,7 @@ import getopt
 from pyff.mdrepo import  MDRepository
 from pyff.pipes import plumbing
 import logging
+import traceback
 
 def main():
     """
@@ -78,8 +79,17 @@ def main():
         log_args['filename'] = logfile
     logging.basicConfig(**log_args)
 
-    for p in args:
-        plumbing(p).process(md)
+    try:
+        for p in args:
+            plumbing(p).process(md)
+        sys.exit(0)
+    except Exception,ex:
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            print "-" * 64
+            traceback.print_exc()
+            print "-" * 64
+        logging.error(ex)
+        sys.exit(-1)
 
 if __name__ == "__main__":
     main()
