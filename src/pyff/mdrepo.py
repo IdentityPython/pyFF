@@ -184,7 +184,11 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                     t.append(deepcopy(ent))
 
         if validate:
-            schema().assertValid(t)
+            try:
+                schema().assertValid(t)
+            except DocumentInvalid,ex:
+                logging.debug(ex.error_log)
+                raise ValueError("XML schema validation failed")
         return t
 
     def error_set(self,url,title,ex):
