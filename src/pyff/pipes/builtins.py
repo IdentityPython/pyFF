@@ -235,7 +235,7 @@ def xslt(md,t,name,args,id):
         # this is to make sure the parameters are passed as xslt strings
         d = dict((k,"\'%s\'" % v) for (k,v) in args.items())
         ot = transform(t,**d)
-        t = ot.getroot()
+        t = ot #.getroot()
     return t
 
 def validate(md,t,name,args,id):
