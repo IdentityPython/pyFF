@@ -140,6 +140,8 @@ signed (using signer.key) and finally published in /var/metadata/public/metadata
 def plumbing(fn):
     id = os.path.splitext(fn)[0]
     ystr = resource_string(fn)
+    if ystr is None:
+        raise ValueError("Plumbing not found: %s" % fn)
     pipeline = yaml.safe_load(ystr)
 
     return Plumbing(pipeline=pipeline,id=id)
