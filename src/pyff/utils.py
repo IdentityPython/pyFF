@@ -29,13 +29,14 @@ This includes certain XSLT and XSD files.
     if os.path.exists(name):
         with open(name) as fd:
             return fd.read()
-    if os.path.exists(os.path.join(pfx,name)):
+    elif pfx and os.path.exists(os.path.join(pfx,name)):
         with open(os.path.join(pfx,name)) as fd:
             return fd.read()
-    if pkg_resources.resource_exists(__name__,name):
+    elif pkg_resources.resource_exists(__name__,name):
         return pkg_resources.resource_string(__name__,name)
     elif pfx and pkg_resources.resource_exists(__name__,"%s/%s" % (pfx,name)):
         return pkg_resources.resource_string(__name__,"%s/%s" % (pfx,name))
+
     return None
 
 def dmerge(a, b):
@@ -83,7 +84,7 @@ class ResourceResolver(etree.Resolver):
         """
         Resolves URIs using the resource API
         """
-        #print "system_url %s" % system_url
+        logging.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url,public_id))
         path = system_url.split("/")
         fn = path[len(path)-1]
         if pkg_resources.resource_exists(__name__,fn):
