@@ -2,6 +2,7 @@
 Package that contains the basic set of pipes - functions that can be used to put
 together a processing pipeling for pyFF.
 """
+from lxml.etree import DocumentInvalid
 
 from pyff.utils import dumptree, schema, resource_string
 from pyff.mdrepo import NS
@@ -85,7 +86,11 @@ def publish(md,t,name,args,id):
     """
     Publish the working tree.
     """
-    schema().assertValid(t)
+    try:
+        schema().assertValid(t)
+    except DocumentInvalid,ex:
+        logging.error(ex.error_log)
+        raise ValueError("XML schema validation failed")
     output_file = args.get("output",None)
     if output_file is not None:
         out = output_file

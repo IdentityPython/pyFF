@@ -2,6 +2,7 @@ from datetime import datetime
 from UserDict import DictMixin
 from lxml import etree
 from lxml.builder import ElementMaker
+from lxml.etree import DocumentInvalid
 import os
 import re
 from copy import deepcopy
@@ -66,7 +67,11 @@ is stored in the MDRepository instance.
         try:
             t = etree.parse(fn,parser=etree.XMLParser(resolve_entities=False))
             schema().assertValid(t)
+        except DocumentInvalid,ex:
+            logging.debug(ex.error_log)
+            raise ValueError("XML schema validation failed")
         except Exception,ex:
+            logging.DEBUG(schema().error_log)
             logging.error(ex)
             if fail_on_error:
                 raise ex
