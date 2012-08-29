@@ -187,8 +187,11 @@ def sign(md,t,name,args,id):
     key_file = args.get('key',None)
     cert_file = args.get('cert',None)
 
-    if key_file is None or cert_file is None:
-        raise ValueError("Empty key and cert arguments to sign pipe")
+    if key_file is None:
+        raise ValueError("Missing key argument for sign pipe")
+
+    if cert_file is None:
+        logging.info("Attempting to extract certificate from token...")
 
     xmlsec.sign(t,key_file,cert_file)
 
