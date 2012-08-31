@@ -33,10 +33,15 @@ instead of installing M2Crypto (http://bugs.debian.org/cgi-bin/bugreport.cgi?bug
 0.6
 ---
 
-*Release date: *
+*Release date: Thu Aug 30 08:00:00 CEST 2012*
 
 * XML signing and validation using pyXMLSecurity
 * Support for PKCS#11-based HSMs using pykcs11
 
 We are now using a (limited) pure-python implmementation of xmlsec which makes it easier
 to sign using HSMs. The only mandatory non-python dependency now is lxml.
+
+0.7
+---
+
+*Release date: UNRELEASED*
