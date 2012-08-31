@@ -11,9 +11,12 @@ Release HOWTO
 
 To make a release, 
 
-  1) Update release date/version in NEWS.txt and setup.py
-  2) Run 'python setup.py sdist'
-  3) Test the generated source distribution in dist/
-  4) Upload to PyPI: 'python setup.py sdist register upload'
-  5) Increase version in setup.py (for next release)
+  1) remove dev suffix on version in setup.py
+  2) set release date in NEWS.txt
+  3) commit the changes to setup.py and NEWS.txt
+  4) git tag <version>
+  5) git push
+  6) Upload to PyPI: 'python setup.py sdist register upload'
+  7) Increase version in setup.py (for next release) with dev suffix
+  8) Create NEWS.txt entry for next release
 
