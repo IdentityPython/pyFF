@@ -72,7 +72,7 @@ def local(md,t,name,args,id):
         args = [args]
     for d in args:
         d = d.strip()
-        m = re.match("(\S+)+\s+as\s+(\S+)")
+        m = re.match("(\S+)+\s+as\s+(\S+)",d)
         if m:
             if os.path.isdir(m.group(0)):
                 md.load_dir(m.group(0),url=m.group(1))
@@ -292,7 +292,7 @@ def certreport(md,t,name,args,id):
                         e = cd.getparent().getparent().getparent().getparent().getparent()
                         md.annotate(e,"certificate-error","certificate has expired","%s expired %s ago" % (_subject(cert),-dt))
                         logging.error("%s expired %s ago" % (eid,-dt))
-                    elif dt.total_seconds() < 864000:
+                    elif dt.total_seconds() < 864000: # TODO : make this an argument
                         e = cd.getparent().getparent().getparent().getparent().getparent()
                         print e
                         md.annotate(e,"certificate-warning","certificate about to expire","%s expires in %s" % (_subject(cert),dt))
