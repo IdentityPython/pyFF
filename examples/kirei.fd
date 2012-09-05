@@ -7,16 +7,16 @@
   - select:
     - "!//md:EntityDescriptor[md:SPSSODescriptor]"
   - sign:
-      key:  idfed-test-signer.key
-      cert: idfed-test-signer.crt
+      key:  sign.key
+      cert: sign.crt
   - publish:
      output: idfed-sp.xml
 - fork:
   - select:
     - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
   - sign:
-      key:  idfed-test-signer.key
-      cert: idfed-test-signer.crt
+      key:  sign.key
+      cert: sign.crt
   - publish:
      output: idfed-xml.xml
 - certreport
