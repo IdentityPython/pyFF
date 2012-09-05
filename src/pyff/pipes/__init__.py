@@ -80,6 +80,9 @@ for d are allowed:
 
         #return __import__("pyff.pipes.%s" % name, fromlist=["pyff.pipes"]),name,args
 
+class PipeException(Exception):
+    pass
+
 class Plumbing(object):
     """
 A plumbing instance represents a basic processing chaing for SAML metadata. A basic example:
@@ -130,11 +133,15 @@ signed (using signer.key) and finally published in /var/metadata/public/metadata
         logging.debug('Processing %s' % self)
         t = None
         for p in self.pipeline:
-            pipe,name,args = loader.load_pipe(p)
-            logging.debug("traversing pipe %s,%s,%s" % (pipe,name,args))
-            ot = pipe(md,t,name,args,self.id)
-            if ot is not None:
-                t = ot
+            try:
+                pipe,name,args = loader.load_pipe(p)
+                logging.debug("traversing pipe %s,%s,%s" % (pipe,name,args))
+                ot= pipe(md,t,name,args,self.id)
+                if ot is not None:
+                    t = ot
+            except PipeException,ex:
+                logging.error(ex)
+                break
         return t
 
 def plumbing(fn):

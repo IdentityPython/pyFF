@@ -6,7 +6,7 @@ from lxml.etree import DocumentInvalid
 
 from pyff.utils import dumptree, schema, resource_string
 from pyff.mdrepo import NS
-from pyff.pipes import Plumbing
+from pyff.pipes import Plumbing, PipeException
 from copy import deepcopy
 import sys
 import os
@@ -162,7 +162,10 @@ def select(md,t,name,args,id):
         args = md.keys()
     if type(args) is str or type(args) is unicode:
         args = [args]
-    return md.entity_set(args,id)
+    ot = md.entity_set(args,id)
+    if ot is None:
+        raise PipeException("empty select '%s' - stop" % ",".join(args))
+    return ot
 
 def pick(md,t,name,args,id):
     """
