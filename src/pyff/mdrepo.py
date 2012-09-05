@@ -139,16 +139,23 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
         if member is None:
             lst = []
             for m in self.keys():
+                logging.debug("resolving %s filtered by %s" % (m,xp))
                 lst.extend(self._lookup(m,xp))
             return lst
         elif hasattr(member,'xpath'):
+            logging.debug("xpath filter %s <- %s" % (xp,member))
             return member.xpath(xp,namespaces=NS)
         elif type(member) is str or type(member) is unicode:
             if "!" in member:
                 (src,xp) = member.split("!")
-                logging.debug("selecting %s filtered by %s" % (src,xp))
+                if len(src) == 0:
+                    src = None
+                    logging.debug("filtering using %s" % xp)
+                else:
+                    logging.debug("selecting %s filtered by %s" % (src,xp))
                 return self._lookup(src,xp)
             else:
+                logging.debug("basic lookup %s (%s)" % (member,{True:'exists',False:'does not exist'}[self.has_key(member)]))
                 return self._lookup(self.get(member,None),xp)
         elif hasattr(member,'__iter__') and type(member) is not dict:
             if not len(member):
@@ -161,7 +168,6 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
         logging.debug("lookup %s" % member)
         l = self._lookup(member,xp)
         return list(set(filter(lambda x: x is not None,l)))
-
 
     def entity_set(self,entities,name,cacheDuration=None,validUntil=None,validate=True):
         """
@@ -178,10 +184,17 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         if validUntil is not None:
             attrs['validUntil'] = validUntil
         t = etree.Element("{urn:oasis:names:tc:SAML:2.0:metadata}EntitiesDescriptor",**attrs)
+        nent = 0
         for member in entities:
             for ent in self.lookup(member):
                 if ent is not None:
                     t.append(deepcopy(ent))
+                    nent += 1
+
+        logging.debug("selecting %d from %d entities before validation" % (nent,len(entities)))
+
+        if not nent:
+            return None
 
         if validate:
             try:
