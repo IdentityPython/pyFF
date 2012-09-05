@@ -1,0 +1,23 @@
+- remote:
+  - https://idp.kirei.se/saml2/idp/metadata.php
+- select
+- store:
+    directory: pyFFstore
+- fork:
+  - select:
+    - "!//md:EntityDescriptor[md:SPSSODescriptor]"
+  - sign:
+      key:  idfed-test-signer.key
+      cert: idfed-test-signer.crt
+  - publish:
+     output: idfed-sp.xml
+- fork:
+  - select:
+    - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+  - sign:
+      key:  idfed-test-signer.key
+      cert: idfed-test-signer.crt
+  - publish:
+     output: idfed-xml.xml
+- certreport
+- stats

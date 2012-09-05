@@ -1,0 +1,12 @@
+- remote:
+  - https://idp.kirei.se/saml2/idp/metadata.php
+- select
+- xslt:
+    stylesheet: tidy.xsl
+- store:
+    directory: pyFFstore
+- sign:
+    key:  sign.key
+    cert: sign.crt
+- publish:
+    output: idfed-test.xml
