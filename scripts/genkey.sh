@@ -1,3 +1,4 @@
 #!/bin/sh
 
-openssl req -x509 -new -newkey rsa:4096 -nodes -keyout sign.key -out sign.crt
+openssl genrsa 4096 > sign.key
+openssl req -x509 -new -subj "/CN=Signer" -key sign.key -out sign.crt
