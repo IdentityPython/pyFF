@@ -76,9 +76,13 @@ def local(md,t,name,args,id):
         if m:
             if os.path.isdir(m.group(0)):
                 md.load_dir(m.group(0),url=m.group(1))
+            else:
+                raise ValueError("%s is not a directory" % m.group(0))
         else:
             if os.path.isdir(d):
                 md.load_dir(d)
+            else:
+                raise ValueError("%s is not a directory" % d)
     return t
 
 
