@@ -6,7 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = python $(shell which sphinx-build)
 SPHINXAPIDOC  = python $(shell which sphinx-apidoc)
 PAPER         =
-BUILDDIR      = _build
+BUILDDIR      = build
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
