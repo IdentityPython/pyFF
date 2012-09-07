@@ -44,4 +44,12 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 0.7
 ---
 
-*Release date: UNRELEASED*
+*Release date: Fri Sep  7 10:13:33 CEST 2012*
+
+* support breaking out of pipelines using exceptions
+* kill the pipeline if selects picks 0 elements
+* more debug logging
+* more robust handling of zero-length selectors
+* completely remove pyOpenSSL dependency
+* many bugfixes and cleanup
+
