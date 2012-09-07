@@ -14,7 +14,15 @@ Fedora or other rpm-based systems:
 
 .. code-block:: bash
 
-  # apt-get install libssl-dev build-essential libxml2-dev libxslt1-dev libxmlsec1-dev libyaml-dev
+  # apt-get install build-essential libxml2-dev libxslt1-dev libyaml-dev
+
+If you want to use OS packages instead of python packages from pypi then
+consider installing the following packages before you begin:
+
+* python-lxml
+* python-yaml
+* python-eventlet
+* python-setuptools
 
 With Sitepackages
 ~~~~~~~~~~~~~~~~~
