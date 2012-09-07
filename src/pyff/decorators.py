@@ -1,3 +1,6 @@
+"""
+Various decorators used in pyFF.
+"""
 __author__ = 'leifj'
 
 

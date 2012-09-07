@@ -1,3 +1,8 @@
+"""
+
+This module contains various utilities.
+
+"""
 from copy import deepcopy
 from datetime import timedelta
 import os

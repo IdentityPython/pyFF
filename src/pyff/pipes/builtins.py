@@ -45,10 +45,12 @@ Exit with optional error code and message.
 
 def fork(md,t,name,args,id):
     """
-    Make a copy of the working tree and process the arguments as a pipleline. This essentially resets the working
-    tree and allows a new pipeline to run. Useful for producing multiple outputs from a single source.
+Make a copy of the working tree and process the arguments as a pipleline. This essentially resets the working
+tree and allows a new pipeline to run. Useful for producing multiple outputs from a single source.
 
-    Examples:
+**Examples**
+
+.. code-block:: yaml
 
     - select  # select all entities
     - fork:
@@ -61,8 +63,8 @@ def fork(md,t,name,args,id):
         - publish:
              output: "/tmp/clean.xml"
 
-    The second fork in this example is strictly speaking not necessary since the main pipeline is still active
-    but it may help to structure your pipelines this way.
+The second fork in this example is strictly speaking not necessary since the main pipeline is still active
+but it may help to structure your pipelines this way.
     """
     if type(args) is str or type(args) is unicode:
         args = [args]
@@ -74,7 +76,7 @@ def fork(md,t,name,args,id):
 
 def info(md,t,name,args,id):
     """
-    Dumps the working document on stdout. Useful for testing.
+Dumps the working document on stdout. Useful for testing.
     """
     if t is None:
         raise Exception,"Your plumbing is missing a select statement."
@@ -85,20 +87,26 @@ def info(md,t,name,args,id):
 
 def local(md,t,name,args,id):
     """
-    Load all entities found in a directory and optionally assign it to a name. When using 'remote' the validated
-    stream is stored locally in the repository as the URI from which the stream was fetched. When using 'local' the
-    name is the filename unless specified in the argument.
+Load all entities found in a directory and optionally assign it to a name. When using 'remote' the validated
+stream is stored locally in the repository as the URI from which the stream was fetched. When using 'local' the
+name is the filename unless specified in the argument.
 
-    Examples
+**Examples**
+
+.. code-block:: yaml
 
     - local: /var/local-metadata
 
-    or with a custom URI
+or with a custom URI
+
+.. code-block:: yaml
 
     - local: /var/local-metadata as http://example.com/metadata.xml
 
-    The name (URI) is used in select statements so that in the second example a select to find all SPs in /var/local-metadata
-    would look like this:
+The name (URI) is used in select statements so that in the second example a select to find all SPs in /var/local-metadata
+would look like this:
+
+.. code-block:: yaml
 
     - local:
         - /var/local-metadata as http://example.com/metadata.xml
@@ -125,9 +133,11 @@ def local(md,t,name,args,id):
 
 def publish(md,t,name,args,id):
     """
-    Publish the working document. Publish takes one argument: a file where the document tree will be written.
+Publish the working document. Publish takes one argument: a file where the document tree will be written.
 
-    Examples:
+**Examples**
+
+.. code-block:: yaml
 
     - publish: /tmp/idp.xml
     """
@@ -159,7 +169,7 @@ def _fetch(md,url,verify):
 
 def _load(md,pile,args):
     """
-    Recursively spawn _fetch for all URLs. A line on the form file:fn is treated as a file of URLs - one per line.
+Recursively spawn _fetch for all URLs. A line on the form file:fn is treated as a file of URLs - one per line.
     """
     for d in args:
         url = None
@@ -185,17 +195,19 @@ def _load(md,pile,args):
 
 def remote(md,t,name,args,id):
     """
-    Load a (set of) remote URLs, validate (XSD) and optionally verify signature. Remote takes a list of pairs
-    of a URI and an optional certificate or fingerprint for validation and loads those resources (validated)
-    into the active repository.
+Load a (set of) remote URLs, validate (XSD) and optionally verify signature. Remote takes a list of pairs
+of a URI and an optional certificate or fingerprint for validation and loads those resources (validated)
+into the active repository.
 
-    Examples:
+**Examples**
+
+.. code-block:: yaml
 
     - remote:
         - http://md.swamid.se/md/swamid-2.0.xml 12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB
 
-    Will download http://md.swamid.se/md/swamid-2.0.xml and validate the signature using a certificate (if found
-    in the Signature-element that has sha1 fingerprint 12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB.
+Will download http://md.swamid.se/md/swamid-2.0.xml and validate the signature using a certificate (if found
+in the Signature-element that has sha1 fingerprint 12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB.
     """
     pool = eventlet.GreenPool()
     pile = eventlet.GreenPile(pool)
@@ -215,42 +227,52 @@ def remote(md,t,name,args,id):
 
 def select(md,t,name,args,id):
     """
-    Select a set of EntityDescriptor elements as the working document. Select picks and expands elements (with
-    optional filtering) from the active repository you setup using calls to 'local' and 'remote'.
+Select a set of EntityDescriptor elements as the working document. Select picks and expands elements (with
+optional filtering) from the active repository you setup using calls to 'local' and 'remote'.
 
-    Select takes a list of selectors as argument. Each selector is on the form [<source>][!<filter]. An empty
-    argument selects all entities
+Select takes a list of selectors as argument. Each selector is on the form [<source>][!<filter]. An empty
+argument selects all entities
 
-    Examples
+**Examples**
+
+.. code-block:: yaml
 
     - select
 
-    select all entities in the active repository.
+This would select all entities in the active repository.
+
+.. code-block:: yaml
 
     - select: /var/local-metadata
 
-    select all entities found in the directory /var/local-metadata. You must have a call to local to load
-    entities from this directory before select statement.
+This would select all entities found in the directory /var/local-metadata. You must have a call to local to load
+entities from this directory before select statement.
+
+.. code-block:: yaml
 
     - select: /var/local-metadata!//md:EntityDescriptor[md:IDPSSODescriptor]
 
-    selects all IdPs from /var/local-metadata
+This would selects all IdPs from /var/local-metadata
+
+.. code-block:: yaml
 
     - select: !//md:EntityDescriptor[md:SPSSODescriptor]
 
-    selects all SPs
+This would select all SPs
 
-    Select statements are not cumulative - a select followed by another select in the pipeline resets the
-    working douments to the result of the second select.
+Select statements are not cumulative - a select followed by another select in the pipeline resets the
+working douments to the result of the second select.
 
-    Most statements except local and remote depend on having a select somewhere in your pipeline and will
-    stop the pipeline if the current working document is empty. For instance, running
+Most statements except local and remote depend on having a select somewhere in your pipeline and will
+stop the pipeline if the current working document is empty. For instance, running
+
+.. code-block:: yaml
 
     - select !//md:EntityDescriptor[md:SPSSODescriptor]
     - stats
 
-    will terminate the pipeline at select if there are no SPs in the local repository. This is useful in
-    combination with fork for handling multiple cases in your pipelines.
+This would terminate the pipeline at select if there are no SPs in the local repository. This is useful in
+combination with fork for handling multiple cases in your pipelines.
     """
     if args is None:
         args = md.keys()
@@ -263,8 +285,8 @@ def select(md,t,name,args,id):
 
 def pick(md,t,name,args,id):
     """
-    Select a set of EntityDescriptor elements as a working document but don't validate it. Useful for testing. See
-    'select' for more information about selecting the document.
+Select a set of EntityDescriptor elements as a working document but don't validate it. Useful for testing. See
+'select' for more information about selecting the document.
     """
     if args is None:
         args = md.keys()
@@ -274,35 +296,40 @@ def pick(md,t,name,args,id):
 
 def sign(md,t,name,args,id):
     """
-    Sign the working document. The 'key' argument references either a PKCS#11 uri or the filename containing
-    a PEM-encoded non-password protected private RSA key. The 'cert' argument may be empty in which case the
-    cert is looked up using the PKCS#11 token, or may point to a file containing a PEM-encoded X.509 certificate.
+Sign the working document. The 'key' argument references either a PKCS#11 uri or the filename containing
+a PEM-encoded non-password protected private RSA key. The 'cert' argument may be empty in which case the
+cert is looked up using the PKCS#11 token, or may point to a file containing a PEM-encoded X.509 certificate.
 
-    PKCS11 URI
+PKCS11 URIs
 
-    A pkcs11 URI has the form
+A pkcs11 URI has the form
 
-        pkcs11://<absolute path to SO/DLL>[:slot]/<object label>[?pin=<pin>]
+.. code-block:
 
+    pkcs11://<absolute path to SO/DLL>[:slot]/<object label>[?pin=<pin>]
 
-    The pin parameter can be used to point to an environment variable containing the pin: "env:<ENV variable>".
-    By default pin is "env:PYKCS11PIN" which tells sign to use the pin found in the PYKCS11PIN environment
-    variable. This is also the default for PyKCS11 which is used to communicate with the PKCS#11 module.
+The pin parameter can be used to point to an environment variable containing the pin: "env:<ENV variable>".
+By default pin is "env:PYKCS11PIN" which tells sign to use the pin found in the PYKCS11PIN environment
+variable. This is also the default for PyKCS11 which is used to communicate with the PKCS#11 module.
 
-    Examples
+**Examples**
 
-    sign:
+.. code-block:: yaml
+
+    - sign:
         key: pkcs11:///usr/lib/libsofthsm.so/signer
 
-    This would sign the document using the key with label 'signer' in slot 0 of the /usr/lib/libsofthsm.so module.
-    Note that you may need to run pyff with env PYKCS11PIN=<pin> .... for this to work. Consult the documentation
-    of your PKCS#11 module to find out about any other configuration you may need.
+This would sign the document using the key with label 'signer' in slot 0 of the /usr/lib/libsofthsm.so module.
+Note that you may need to run pyff with env PYKCS11PIN=<pin> .... for this to work. Consult the documentation
+of your PKCS#11 module to find out about any other configuration you may need.
 
-    sign:
+.. code-block:: yaml
+
+    - sign:
         key: signer.key
         cert: signer.crt
 
-    This example signs the document using the plain key and cert found in the signer.key and signer.crt files.
+This example signs the document using the plain key and cert found in the signer.key and signer.crt files.
     """
     if t is None:
         raise Exception,"Your plumbing is missing a select statement."
@@ -325,7 +352,7 @@ def sign(md,t,name,args,id):
 
 def stats(md,t,name,args,id):
     """
-    Display statistics about the current working document. This doesn't change the working document in any way.
+Display statistics about the current working document. This doesn't change the working document in any way.
     """
     print "---"
     print "total size:     %d" % len(md.keys())
@@ -337,10 +364,12 @@ def stats(md,t,name,args,id):
 
 def store(md,t,name,args,id):
     """
-    Split the working document into EntityDescriptor-parts and save in directory/sha1(@entityID).xml. Note that
-    this does not erase files that may already be in the directory. If you want a "clean" directory, remove it
-    before you call store.
+Split the working document into EntityDescriptor-parts and save in directory/sha1(@entityID).xml. Note that
+this does not erase files that may already be in the directory. If you want a "clean" directory, remove it
+before you call store.
     """
+    if type(args) is str or type(args) is unicode:
+        args = {"directory": args}
     target_dir = args.pop('directory',None)
     if target_dir is not None:
         if not os.path.isdir(target_dir):
@@ -360,13 +389,15 @@ def store(md,t,name,args,id):
 
 def xslt(md,t,name,args,id):
     """
-    Apply an XSLT stylesheet to the working document. The xslt pipe takes a set of keyword arguments. The only required
-    argument is 'stylesheet' which identifies the xslt resource. This is looked up either in the package or as a
-    user-supplied file. The rest of the keyword arguments are made available as string parameters to the XSLT transform.
+Apply an XSLT stylesheet to the working document. The xslt pipe takes a set of keyword arguments. The only required
+argument is 'stylesheet' which identifies the xslt resource. This is looked up either in the package or as a
+user-supplied file. The rest of the keyword arguments are made available as string parameters to the XSLT transform.
 
-    Examples
+**Examples**
 
-    xslt:
+.. code-block:: yaml
+
+    - xslt:
         sylesheet: foo.xsl
         x: foo
         y: bar
@@ -385,25 +416,26 @@ def xslt(md,t,name,args,id):
 
 def validate(md,t,name,args,id):
     """
-    Generate an exception unless the working tree validates. Validation is done automatically
-    during publication and loading of metadata so this call is seldom needed.
+Generate an exception unless the working tree validates. Validation is done automatically
+during publication and loading of metadata so this call is seldom needed.
     """
     if t is not None:
         schema().assertValid(t)
 
 def certreport(md,t,name,args,id):
     """
-    Generate a report of the certificates (optionally limited by expiration time) found in the selection.
+Generate a report of the certificates (optionally limited by expiration time) found in the selection.
 
-    Examples:
+**Examples**
+
+.. code-block:: yaml
 
     - certreport
-
     - certreport:
          error_seconds: 0
          warning_seconds: 864000
 
-    Remember that you need a 'publish' call after certreport in your pipeline to get useful output.
+Remember that you need a 'publish' call after certreport in your pipeline to get useful output.
     """
 
     if t is None:
@@ -446,4 +478,3 @@ def certreport(md,t,name,args,id):
                         logging.warn("%s expires in %s" % (eid,dt))
             except Exception,ex:
                 logging.error(ex)
-

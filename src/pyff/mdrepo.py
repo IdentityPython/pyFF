@@ -1,3 +1,9 @@
+"""
+
+This is the implementation of the active repository of SAML metadata. The 'local' and 'remote' pipes operate on this.
+
+"""
+
 from datetime import datetime
 from UserDict import DictMixin
 from lxml import etree
