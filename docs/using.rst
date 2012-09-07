@@ -26,3 +26,5 @@ statistics.
 
 Processing steps are called pipes. Many pipes take arguments. For instance the sign pipe takes the key and certificate
 as arguments.
+
+Documentation for each pipe is in :ref:api/pyff.pipes

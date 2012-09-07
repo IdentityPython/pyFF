@@ -27,7 +27,7 @@ Contents:
    :maxdepth: 2
 
    install
-   using pyFF
+   using
 
 
 Indices and tables
