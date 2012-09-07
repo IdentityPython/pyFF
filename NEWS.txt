@@ -53,3 +53,7 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * completely remove pyOpenSSL dependency
 * many bugfixes and cleanup
 
+0.8
+---
+
+*Release date: UNRELEASED*
