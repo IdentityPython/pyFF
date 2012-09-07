@@ -27,9 +27,8 @@ Contents:
    :maxdepth: 2
 
    install
-   configuration
-   developers
-   api/pyff
+   using pyFF
+
 
 Indices and tables
 ==================
