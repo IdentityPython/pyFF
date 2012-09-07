@@ -11,7 +11,5 @@ build
 dist
 .idea
 
-_build
-doc/api
 sign.crt
 sign.key
