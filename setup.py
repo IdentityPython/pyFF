@@ -13,7 +13,6 @@ install_requires = [
     'lxml',
     'pyyaml',
     'eventlet',
-    'pyOpenSSL',
     'pyXMLSecurity'
     # List your project dependencies here.
     # For more details, see:
