@@ -4,4 +4,4 @@
 - stats
 - certreport
 - publish:
-    output: /tmp/big.xml
+    output: /tmp/swamid-annotated.xml
