@@ -3,5 +3,4 @@
 - select
 - stats
 - certreport
-- publish:
-    output: /tmp/swamid-annotated.xml
+- publish: /tmp/swamid-annotated.xml
