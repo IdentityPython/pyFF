@@ -17,12 +17,11 @@ Fedora or other rpm-based systems:
   # apt-get install build-essential libxml2-dev libxslt1-dev libyaml-dev
 
 If you want to use OS packages instead of python packages from pypi then
-consider installing the following packages before you begin:
+consider also installing the following packages before you begin:
 
-* python-lxml
-* python-yaml
-* python-eventlet
-* python-setuptools
+.. code-block:: bash
+
+  # apt-get install python-lxml python-yaml python-eventlet python-setuptools
 
 With Sitepackages
 ~~~~~~~~~~~~~~~~~
@@ -36,8 +35,11 @@ fewer worries keeping your python environment in sync with OS-level libraries.
   # mkdir -p /opt/pyff
   # virtualenv /opt/pyff
 
+Choose this method if you want the OS to keep as many of your packages up to
+date for you.
+
 Without Sitepackages
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 This method keeps everything inside your virtualenv. Use this method if you
 are developing pyFF or want to run multiple python-based applications in 
@@ -48,6 +50,8 @@ parallell without having to worry about conflicts between packages.
   # apt-get install python-virtualenv
   # mkdir -p /opt/pyff
   # virtualenv /opt/pyff --no-site-packages
+
+Choose this method for maximum control - ideal for development setups.
 
 Installing 
 ----------
@@ -66,5 +70,5 @@ Next install pyFF:
   # pip install pyFF
 
 This will install a bunch of dependencies and compile bindings for both lxml, pyyaml
-aswell as xmlsec. This may take some time to complete. If there are no errors and if
-you have the *pyff* binary in your path you should be done.
+aswell as pyXMLSecurity. This may take some time to complete. If there are no errors and if
+you have the *pyff* binary in your **$PATH** you should be done.
