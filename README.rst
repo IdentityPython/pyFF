@@ -6,3 +6,13 @@ for metadata exchange by Ian Young: http://iay.org.uk/blog/2008/10/metadata_inte
 
 In order to run this software you only need lxml. If you want to sign using 
 a PKCS#11 token you must install PyKCS11. 
+
+
+Features:
+~~~~~~~~
+
+* Pluggable "piplines" for processing SAML metadata
+* Signature validation and creation
+* Support for using PKCS#11 tokens for signing
+* Certificate expiration checking and reporting
+* Fast parallell fetch of multiple streams
