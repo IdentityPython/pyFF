@@ -262,20 +262,26 @@ def validate(md,t,name,args,id):
         schema().assertValid(t)
 
 def _subject(cert):
-    return "/".join(["%s=%s" % (c[0],c[1]) for c in cert.get_subject().get_components()])
+    return cert.getSubject()
 
 def certreport(md,t,name,args,id):
     """
     Generate a report of the certificates (optionally limited by expiration time) found in the selection.
     """
-    try:
-        from OpenSSL import crypto
-    except ImportError,ex:
-        logging.error("certreport requires pyOpenSSL")
-        return t
 
     if t is None:
         raise ValueError("Your plumbing is missing a select statement.")
+
+    print repr(args)
+
+    if args is None:
+        args = {}
+
+    if type(args) is not dict:
+        raise ValueError("usage: certreport {warning: 864000, error: 0}")
+
+    error_seconds = int(args.get('error',"0"))
+    warning_seconds = int(args.get('warning',"864000"))
 
     seen = {}
     for eid in t.xpath("//md:EntityDescriptor/@entityID",namespaces=NS):
@@ -288,17 +294,17 @@ def certreport(md,t,name,args,id):
                 fp = m.hexdigest()
                 if not seen.get(fp,False):
                     seen[fp] = True
-                    cert = crypto.load_certificate(crypto.FILETYPE_ASN1,cert_der)
-                    et = datetime.strptime(cert.get_notAfter(),"%Y%m%d%H%M%SZ")
+                    cdict = xmlsec.b642cert(cert_pem)
+                    cert = cdict['cert']
+                    et = datetime.strptime("%s" % cert.getNotAfter(),"%Y%m%d%H%M%SZ")
                     now = datetime.now()
                     dt = et - now
-                    if dt.total_seconds() < 0:
+                    if dt.total_seconds() < error_seconds:
                         e = cd.getparent().getparent().getparent().getparent().getparent()
                         md.annotate(e,"certificate-error","certificate has expired","%s expired %s ago" % (_subject(cert),-dt))
                         logging.error("%s expired %s ago" % (eid,-dt))
-                    elif dt.total_seconds() < 864000: # TODO : make this an argument
+                    elif dt.total_seconds() < warning_seconds:
                         e = cd.getparent().getparent().getparent().getparent().getparent()
-                        print e
                         md.annotate(e,"certificate-warning","certificate about to expire","%s expires in %s" % (_subject(cert),dt))
                         logging.warn("%s expires in %s" % (eid,dt))
             except Exception,ex:
