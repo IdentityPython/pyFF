@@ -6,7 +6,8 @@ transform, sign or output SAML metadata.
 import os
 import yaml
 from pyff.utils import resource_string
-import logging
+from pyff.logs import log
+from StringIO import StringIO
 
 __author__ = 'leifj'
 

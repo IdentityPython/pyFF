@@ -3,6 +3,7 @@
 This is the implementation of the active repository of SAML metadata. The 'local' and 'remote' pipes operate on this.
 
 """
+from StringIO import StringIO
 
 from datetime import datetime
 from UserDict import DictMixin
@@ -12,11 +13,14 @@ from lxml.etree import DocumentInvalid
 import os
 import re
 from copy import deepcopy
-import logging
-from pyff.utils import schema
+from pyff.logs import log
+from pyff.utils import schema, URLFetch
 import xmlsec
 from pyff.constants import NS
 import traceback
+import threading
+from Queue import Queue
+
 
 __author__ = 'leifj'
 
@@ -27,6 +31,9 @@ def _is_self_signed_err(ebuf):
     return False
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
+
+def _e(error_log):
+    return "\n".join(filter(lambda x: ":WARNING:" not in x,["%s" % e for e in error_log]))
 
 class MDRepository(DictMixin):
     def __init__(self):
@@ -43,8 +50,8 @@ class MDRepository(DictMixin):
         return ext
 
     def annotate(self,e,category,title,message,source=None):
-        if e.tag != "{urn:oasis:names:tc:SAML:2.0:metadata}EntityDescriptor" and \
-           e.tag != "{urn:oasis:names:tc:SAML:2.0:metadata}EntitiesDescriptor":
+        if e.tag != "{%s}EntityDescriptor" % NS['md'] and \
+           e.tag != "{%s}EntitiesDescriptor" % NS['md']:
             raise ValueError("I can only annotate EntityDescriptor or EntitiesDescriptor elements")
         subject = e.get('Name',e.get('entityID',None))
         atom = ElementMaker(nsmap={'atom':'http://www.w3.org/2005/Atom'},namespace='http://www.w3.org/2005/Atom')
@@ -69,27 +76,27 @@ is stored in the MDRepository instance.
         src_desc = "%s" % fn
         if url is not None:
             src_desc = url
-        logging.debug("parsing %s" % src_desc)
+        log.debug("parsing %s" % src_desc)
         try:
             t = etree.parse(fn,parser=etree.XMLParser(resolve_entities=False))
             schema().assertValid(t)
         except DocumentInvalid,ex:
-            logging.debug(ex.error_log)
+            log.debug(_e(ex.error_log))
             raise ValueError("XML schema validation failed")
         except Exception,ex:
-            logging.DEBUG(schema().error_log)
-            logging.error(ex)
+            log.debug(_e(schema().error_log))
+            log.error(ex)
             if fail_on_error:
                 raise ex
             return []
         if key is not None:
             try:
-                logging.debug("verifying signature using %s" % key)
+                log.debug("verifying signature using %s" % key)
                 xmlsec.verify(t,key)
             except Exception,ex:
                 tb = traceback.format_exc()
                 print tb
-                logging.error(ex)
+                log.error(ex)
                 return []
         if url is None:
             top = t.xpath("//md:EntitiesDescriptor",namespaces=NS)
@@ -145,23 +152,23 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
         if member is None:
             lst = []
             for m in self.keys():
-                logging.debug("resolving %s filtered by %s" % (m,xp))
+                log.debug("resolving %s filtered by %s" % (m,xp))
                 lst.extend(self._lookup(m,xp))
             return lst
         elif hasattr(member,'xpath'):
-            logging.debug("xpath filter %s <- %s" % (xp,member))
+            log.debug("xpath filter %s <- %s" % (xp,member))
             return member.xpath(xp,namespaces=NS)
         elif type(member) is str or type(member) is unicode:
             if "!" in member:
                 (src,xp) = member.split("!")
                 if len(src) == 0:
                     src = None
-                    logging.debug("filtering using %s" % xp)
+                    log.debug("filtering using %s" % xp)
                 else:
-                    logging.debug("selecting %s filtered by %s" % (src,xp))
+                    log.debug("selecting %s filtered by %s" % (src,xp))
                 return self._lookup(src,xp)
             else:
-                logging.debug("basic lookup %s (%s)" % (member,{True:'exists',False:'does not exist'}[self.has_key(member)]))
+                log.debug("basic lookup %s (%s)" % (member,{True:'exists',False:'does not exist'}[self.has_key(member)]))
                 return self._lookup(self.get(member,None),xp)
         elif hasattr(member,'__iter__') and type(member) is not dict:
             if not len(member):
@@ -171,7 +178,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             raise Exception,"What about %s ??" % member
 
     def lookup(self,member,xp=None):
-        logging.debug("lookup %s" % member)
+        log.debug("lookup %s" % member)
         l = self._lookup(member,xp)
         return list(set(filter(lambda x: x is not None,l)))
 
@@ -189,15 +196,18 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             attrs['cacheDuration'] = cacheDuration
         if validUntil is not None:
             attrs['validUntil'] = validUntil
-        t = etree.Element("{urn:oasis:names:tc:SAML:2.0:metadata}EntitiesDescriptor",**attrs)
+        t = etree.Element("{%s}EntitiesDescriptor" % NS['md'],**attrs)
         nent = 0
+        seen = {} # TODO make better de-duplication
         for member in entities:
             for ent in self.lookup(member):
-                if ent is not None:
+                entityID = ent.get('entityID',None)
+                if (ent is not None) and (entityID is not None) and (not seen.get(entityID,False)):
                     t.append(deepcopy(ent))
+                    seen[entityID] = True
                     nent += 1
 
-        logging.debug("selecting %d from %d entities before validation" % (nent,len(entities)))
+        log.debug("selecting %d from %d entities before validation" % (nent,len(entities)))
 
         if not nent:
             return None
@@ -206,7 +216,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             try:
                 schema().assertValid(t)
             except DocumentInvalid,ex:
-                logging.debug(ex.error_log)
+                log.debug(_e(ex.error_log))
                 raise ValueError("XML schema validation failed")
         return t
 

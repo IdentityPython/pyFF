@@ -6,8 +6,8 @@ import sys
 import getopt
 from pyff.mdrepo import  MDRepository
 from pyff.pipes import plumbing
-import logging
 import traceback
+import logging
 
 def main():
     """
