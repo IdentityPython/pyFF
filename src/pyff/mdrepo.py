@@ -41,6 +41,13 @@ class MDRepository(DictMixin):
         A class representing a set of sets of SAML metadata.
         """
         self.md = {}
+        self.create_time = datetime.now()
+
+    def stats(self):
+        return {
+            'number_of_pieces': len(self),
+            'create_time': self.create_time
+        }
 
     def sane(self):
         return len(self.md) > 0
