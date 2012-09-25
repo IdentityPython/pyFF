@@ -7,6 +7,7 @@ from datetime import timedelta, datetime
 import hashlib
 import tempfile
 import cherrypy
+from mako.lookup import TemplateLookup
 from mako.template import Template
 import os
 import pkg_resources
@@ -170,8 +171,11 @@ def safe_write(fn,data):
                 pass
     return False
 
+site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"site")
+templates = TemplateLookup(directories=[os.path.join(site_dir,'templates')])
+
 def template(name):
-    return Template(resource_string(name,"site/templates"))
+    return templates.get_template(name)
 
 class URLFetch(threading.Thread):
     def __init__(self, url, verify, id=None):
