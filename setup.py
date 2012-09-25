@@ -42,7 +42,7 @@ setup(name='pyFF',
     install_requires=install_requires,
     entry_points={
         'console_scripts':
-            ['pyff=pyff:main','pyffd=pyff.mdx:main']
+            ['pyff=pyff:main']
     },
     requires=install_requires
 )
