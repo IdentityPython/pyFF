@@ -84,8 +84,9 @@ the Singature object.
     - publish: /tmp/idp.xml
     - stats
 
-Running this example requires some preparation. Run the 'p11setup.sh' script in the examples directory. This
-This results in a SoftHSM token. Now run pyff:
+Running this example requires some preparation. Run the 'p11setup.sh' script in the examples directory.
+This results in an SoftHSM token begin setup with the PIN 'secret1' and SO_PIN 'secret2'. Now run pyff (assuming
+you are using a unix-like environment).
 
 .. code-block:: bash
 
