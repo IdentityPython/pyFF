@@ -42,6 +42,9 @@ class MDRepository(DictMixin):
         """
         self.md = {}
 
+    def sane(self):
+        return len(self.md) > 0
+
     def extensions(self,e):
         ext = e.find("{%s}Extensions" % NS['md'])
         if ext is None:
@@ -64,6 +67,37 @@ class MDRepository(DictMixin):
                      atom.content(message,type="text/plain")])
         self.extensions(e).insert(0,atom.entry(*args))
 
+    def fetch_metadata(self,resources,qsize=5,timeout=30):
+        def producer(q, resources):
+            for url,verify,id in resources:
+                log.debug("Starting fetcher for %s" % url)
+                thread = URLFetch(url,verify,id)
+                thread.start()
+                q.put(thread, True)
+
+        def consumer(q, njobs):
+            nfinished = 0
+            while nfinished < njobs:
+                try:
+                    thread = q.get(True)
+                    thread.join(timeout)
+                    if thread.ex is None:
+                        self.parse_metadata(StringIO(thread.result),key=thread.verify,url=thread.id)
+                    else:
+                        log.error("Error fetching %s: %s" (thread.url,thread.ex))
+                except Exception,ex:
+                    traceback.print_exc()
+                    log.error("Unexpected error in fetch_metadata: %s. Continuing anyway..." % ex)
+                finally:
+                    nfinished += 1
+
+        q = Queue(qsize)
+        prod_thread = threading.Thread(target=producer, args=(q, resources))
+        cons_thread = threading.Thread(target=consumer, args=(q, len(resources)))
+        prod_thread.start()
+        cons_thread.start()
+        prod_thread.join()
+        cons_thread.join()
 
     def parse_metadata(self,fn,key=None,url=None,fail_on_error=False):
         """
