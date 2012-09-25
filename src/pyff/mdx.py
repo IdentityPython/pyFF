@@ -5,18 +5,20 @@ Usage: pyffd [-C|--no-cache] [-P|--port] [-H|--host] {pipeline-files}+
 
 """
 import getopt
+from mako.lookup import TemplateLookup
+import os
 import sys
 from threading import RLock
 import cherrypy
 from cherrypy._cpdispatch import Dispatcher
 from cherrypy._cperror import NotFound
-from cherrypy.lib import cptools
+from cherrypy.lib import cptools,static
 from cherrypy.process.plugins import Monitor
 from cherrypy.lib import caching
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
-from pyff.utils import resource_string, resource_filename
+from pyff.utils import resource_string, resource_filename, template
 from pyff.logs import log
 import logging
 
@@ -66,6 +68,8 @@ class EncodingDispatcher(object):
         print handler
         return handler
 
+site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"site")
+
 class MDRoot():
     def __init__(self,server):
         self.server = server
@@ -89,12 +93,28 @@ Disallow: /
         return self.server.mdx(path)
 
     @cherrypy.expose
+    def about(self):
+        import pkg_resources  # part of setuptools
+        version = pkg_resources.require("pyFF")[0].version
+        return template("about.html").render(version=version,
+            sysinfo=" ".join(os.uname()),
+            http=cherrypy.request,
+            cmdline=" ".join(sys.argv),
+            stats=self.server.stats(),
+        )
+
+    @cherrypy.expose
     def index(self):
         return self.server.request("")
 
     @cherrypy.expose
+    def static(self):
+        return static.staticdir("/static",site_dir,debug=True)
+
+    @cherrypy.expose
     def default(self,*args):
         path = "/".join(args)
+        log.debug("default %s" % path)
         return self.server.request(path)
 
 class MDServer():
@@ -105,6 +125,11 @@ class MDServer():
         self.plumbings = [plumbing(v) for v in pipes]
         self.refresh = MDUpdate(cherrypy.engine,server=self)
         self.refresh.subscribe()
+
+    def stats(self):
+        return {
+            'md': self.md.stats(),
+        }
 
     def start(self):
         self.refresh.run(self)
@@ -235,7 +260,6 @@ def main():
             return "{base64}%s" % p.encode('base64')
         else:
             return ""
-
     server = MDServer(pipes=args)
     cfg = {
         'global': {
@@ -250,11 +274,12 @@ def main():
             'tools.caching.delay': 3600 # this is how long we keep static stuff
         },
         '/': {
-            'tools.caching.delay': delay
+            'tools.caching.delay': delay,
+            'tools.staticdir.root': site_dir
         },
         '/static': {
             'tools.staticdir.on': True,
-            'tools.staticdir.dir': resource_filename("site","static")
+            'tools.staticdir.dir': 'static'
         },
         '/entities': {
             'tools.caching.delay': delay,
