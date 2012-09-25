@@ -13,7 +13,9 @@ install_requires = [
     'lxml',
     'pyyaml',
     'eventlet',
-    'pyXMLSecurity'
+    'pyXMLSecurity',
+    'cherrypy',
+    'iso8601'
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
