@@ -224,7 +224,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         """
         Creates an "error" EntitiesDescriptor - empty but for an annotation about the error that occured
         """
-        t = etree.Element("{urn:oasis:names:tc:SAML:2.0:metadata}EntitiesDescriptor",Name=url,nsmap=NS)
+        t = etree.Element("{%s}EntitiesDescriptor" % NS['md'],Name=url,nsmap=NS)
         self.annotate(t,"error",title,ex,source=url)
 
     def keys(self):
