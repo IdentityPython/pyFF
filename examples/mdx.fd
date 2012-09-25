@@ -1,0 +1,54 @@
+- when update:
+    - load:
+       - http://md.swamid.se/md/swamid-2.0.xml
+    - break
+- when request /:
+    - redirect: /md/
+    - break
+- when request /md:
+    - page:
+        swamid-idp.xml: "SWAMID Identity Providers"
+        swamid-sp.xml: "SWAMID Relying Parties"
+    - break
+- when request /md/swamid-idp.xml:
+    - select:
+        - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+    - finalize:
+        cacheDuration: PT5H
+        validUntil: P10D
+    - sign:
+        key: sign.key
+        cert: sign.crt
+    - render
+    - break
+- when request /md/swamid-sp.xml:
+    - select:
+        - "!//md:EntityDescriptor[md:SPSSODescriptor]"
+    - xslt:
+        stylesheet: tidy.xsl
+    - finalize:
+        cacheDuration: PT5H
+        validUntil: P10D
+    - sign:
+        key: sign.key
+        cert: sign.crt
+    - render
+    - break
+- when request /entities:
+    - select
+    - stats
+    - pipe:
+        - when accept application/xml:
+             - xslt:
+                 stylesheet: tidy.xsl
+             - sign:
+                 key: sign.key
+                 cert: sign.crt
+             - render
+             - break
+        - when accept application/json:
+             - xslt:
+                 stylesheet: json.xsl
+             - render
+             - break
+
