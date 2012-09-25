@@ -1,15 +1,9 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-        "http://www.w3.org/TR/html4/loose.dtd">
-<html>
-<head>
-    <title>pyFF: ${http.base}</title>
-</head>
-<body>
-    <h1>Metadata Repository</h1>
-    <ul>
-% for a in pyff.args:
-        <li><a href="${a}">${a}</a></li>
-% endfor
-    </ul>
-</body>
-</html>
+<%include file="header.html"/>
+        <h1>Metadata Repository</h1>
+        <dl class="dl-horizontal">
+    % for a in pyff.args:
+            <dt><a href="${a}">${a}</a></dt>
+            <dd>${pyff.args[a]}</dd>
+    % endfor
+        </dl>
+<%include file="footer.html"/>
