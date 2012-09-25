@@ -1,0 +1,39 @@
+- load:
+  - https://wayf.aco.net/aconet-metadata.xml
+  - http://manager.aaf.edu.au/metadata/metadata.aaf.signed.xml
+  - http://metadata.aai.switch.ch/metadata.switchaai.xml
+  - http://www.carsi.edu.cn/carsimetadata/carsifed-metadata.xml
+  - https://www.aai.dfn.de/fileadmin/metadata/DFN-AAI-metadata.xml
+  - https://metadata.eduid.cz/entities/eduid
+  - https://kalmar2.org/simplesaml/module.php/aggregator/?id=kalmarcentral2&set=saml2
+  - https://www.rediris.es/sir/shib1metadata.xml
+  - https://www.rediris.es/sir/shibsir1metadata.xml
+  - https://haka.funet.fi/fed/haka-metadata.xml
+  - https://haka.funet.fi/metadata/haka-metadata.xml
+  - https://services-federation.renater.fr/metadata/renater-metadata.xml
+  - http://aai.grnet.gr/metadata.xml
+  - http://metadata.eduid.hu/metadata.xml
+  - http://mds.edugain.org/
+  - https://edugate.heanet.ie/edugate-metadata-signed.xml
+  - https://www.idem.garr.it/docs/conf/signed-metadata.xml
+  - https://metadata.gakunin.nii.ac.jp/gakunin-metadata.xml
+  - https://laife.lanet.lv/metadata/laife-metadata.xml
+  - http://md.swamid.se/md/swamid-2.0.xml
+  - http://md.swamid.se/md/swamid-1.0.xml
+  - https://wayf.incommonfederation.org/InCommon/InCommon-metadata.xml
+  - http://ds.aai.arnes.si/metadata/aai.arnes.si.signed.xml
+  - https://directory.tuakiri.ac.nz/metadata/tuakiri-metadata-signed.xml
+  - https://caf-shibops.ca/CoreServices/cafshib_metadata_signed.xml
+  - http://geant.edugain.org/geant_metadata.xml
+  - https://federation.belnet.be/federation-metadata.xml
+  - http://metadata.ukfederation.org.uk/ukfederation-metadata.xml
+  - https://wayf.surfnet.nl/federate/metadata
+  - http://shib.kuleuven.be/download/metadata/idp/metadata-kulassoc-sp.xml
+  - https://login.aaiedu.hr/sso/module.php/aggregator/?id=aaieduhr_edugain
+  - http://metadata.feide.no/feide-edugain-metadata.xml
+- stats
+- select
+- store: 
+     directory: /tmp/big
+- publish: /tmp/big.xml
+- stats
