@@ -41,7 +41,7 @@ def main():
 
     try:
         for p in args:
-            plumbing(p).process(md)
+            plumbing(p).process(md,state={'batch': True})
         sys.exit(0)
     except Exception,ex:
         if logging.getLogger().isEnabledFor(logging.DEBUG):
