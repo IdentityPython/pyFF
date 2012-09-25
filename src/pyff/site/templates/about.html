@@ -1,15 +1,30 @@
 <%include file="header.html"/>
-    <h1>About this pyFF server</h1>
-    <dl class="dl-horizontal">
-        <dt>pyFF version</dt>
-        <dd>${version}</dd>
-        <dt>pyFF cmdline</dt>
-        <dd>${cmdline}</dd>
-        <dt>System info</dt>
-        <dd>${sysinfo}</dd>
-        <dt>Repository pieces</dt>
-        <dd>${stats['md']['number_of_pieces']}</dd>
-        <dt>Last update</dt>
-        <dd>${stats['md']['create_time']}</dd>
-    </dl>
+    <h1>About this server</h1>
+    <div class="tabbable">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#info" data-toggle="tab">Server Info</a>
+            <li><a href="#pipeline" data-toggle="tab">Pipeline</a></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane" id="pipeline">
+                % for p in plumbings:
+                <pre>${p}</pre>
+                % endfor
+            </div>
+            <div class="tab-pane active" id="info">
+                <dl class="dl-horizontal">
+                    <dt>pyFF version</dt>
+                    <dd>${version}</dd>
+                    <dt>pyFF cmdline</dt>
+                    <dd>${cmdline}</dd>
+                    <dt>System info</dt>
+                    <dd>${sysinfo}</dd>
+                    <dt>Repository pieces</dt>
+                    <dd>${stats['md']['number_of_pieces']}</dd>
+                    <dt>Last update</dt>
+                    <dd>${stats['md']['create_time']}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
 <%include file="footer.html"/>

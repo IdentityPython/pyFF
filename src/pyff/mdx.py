@@ -101,6 +101,7 @@ Disallow: /
             http=cherrypy.request,
             cmdline=" ".join(sys.argv),
             stats=self.server.stats(),
+            plumbings=["%s" % p for p in self.server.plumbings],
         )
 
     @cherrypy.expose
