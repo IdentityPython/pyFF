@@ -6,6 +6,7 @@ This is the implementation of the active repository of SAML metadata. The 'local
 from StringIO import StringIO
 
 from datetime import datetime
+import hashlib
 from UserDict import DictMixin
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -14,7 +15,7 @@ import os
 import re
 from copy import deepcopy
 from pyff.logs import log
-from pyff.utils import schema, URLFetch
+from pyff.utils import schema, URLFetch, filter_lang
 import xmlsec
 from pyff.constants import NS
 import traceback
@@ -41,7 +42,41 @@ class MDRepository(DictMixin):
         A class representing a set of sets of SAML metadata.
         """
         self.md = {}
+        self.index = {}
         self.create_time = datetime.now()
+
+    def is_idp(self,entity):
+        return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']))
+
+    def is_sp(self,entity):
+        return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']))
+
+    def display(self,entity):
+
+        for mdui in entity.findall(".//{%s}UIInfo" % NS['mdui']):
+            for displayName in filter_lang(mdui.findall(".//{%s}DisplayName" % NS['mdui'])):
+                return displayName.text
+
+        for acs in entity.findall(".//{%s}AttributeConsumingService" % NS['md']):
+            for serviceName in filter_lang(acs.findall(".//{%s}ServiceName" % NS['md'])):
+                return serviceName.text
+
+        for o in entity.findall(".//{%s}Organization" % NS['md']):
+            for organizationDisplayName in filter_lang(o.findall(".//{%s}OrganizationDisplayName" % NS['md'])):
+                return organizationDisplayName.text
+
+        return entity.get('entityID')
+
+    def __iter__(self):
+        for t in [self.md[url] for url in self.md.keys()]:
+            for entity in t.findall(".//{%s}EntityDescriptor" % NS['md']):
+                yield entity
+
+    def sha1_id(self,entity):
+        entityID = entity.get('entityID')
+        m = hashlib.sha1()
+        m.update(entityID)
+        return "{sha1}%s" % m.hexdigest()
 
     def stats(self):
         return {
@@ -146,10 +181,22 @@ is stored in the MDRepository instance.
         if url is not None:
             self[url] = t
         # we always clean incoming ID
-        for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
+        # compute sha1 index
+        idx = self.index.get('sha1',None)
+        if idx is None:
+            idx = {}
+            self.index['sha1'] = idx
+        for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
             if e.attrib.has_key('ID'):
                 del e.attrib['ID']
-        return t.xpath("//md:EntityDescriptor",namespaces=NS)
+            idx[self.sha1_id(e)] = e
+
+        #for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
+        #    if e.attrib.has_key('ID'):
+        #        del e.attrib['ID']
+        return t.findall(".//{%s}EntityDescriptor" % NS['md'])
+
+        #return t.xpath("//md:EntityDescriptor",namespaces=NS)
         #for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
         #    eid = e.get('entityID')
         #    if eid is None or len(eid) == 0:

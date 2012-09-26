@@ -1,0 +1,17 @@
+<%include file="header.html"/>
+        <h1>All Entities</h1>
+        <ul class="unstyled">
+    % for entity in entities:
+            <li><a href="/html/${entities.sha1_id(entity)}">
+                % if entities.is_idp(entity):
+                <i class="icon-user"></i>
+                % elif entities.is_sp(entity):
+                <i class="icon-globe"></i>
+                % else:
+                <i class="icon-question-sign"></i>
+                % endif
+                &nbsp;${entities.display(entity)}
+            </a></li>
+    % endfor
+        </ul>
+<%include file="footer.html"/>

@@ -230,3 +230,12 @@ def duration2timedelta(period):
         delta *= -1
 
     return delta
+
+def filter_lang(elts,langs=["en"]):
+    def _l(elt):
+        return elt.get("{http://www.w3.org/XML/1998/namespace}lang",None) in langs
+
+    if elts is None or len(elts) == 0:
+        return []
+
+    return filter(_l,elts)

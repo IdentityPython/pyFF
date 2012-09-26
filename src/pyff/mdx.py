@@ -105,6 +105,10 @@ Disallow: /
         )
 
     @cherrypy.expose
+    def metadata(self):
+        return template("metadata.html").render(entities=self.server.md,http=cherrypy.request)
+
+    @cherrypy.expose
     def index(self):
         return self.server.request("")
 
