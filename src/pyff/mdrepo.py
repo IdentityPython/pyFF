@@ -87,12 +87,15 @@ class MDRepository(DictMixin):
     def search(self,query):
         def _strings(e):
             lst = [e.get('entityID')]
-            for attr in ['{%s}OrganizationName' % NS['md'],'{%s}OrganizationName' % NS['md'],'{%s}DisplayName' % NS['mdui'],'{%s}ServiceName' % NS['md']]:
+            for attr in ['{%s}OrganizationName' % NS['md'],
+                         '{%s}OrganizationDisplayName' % NS['md'],
+                         '{%s}DisplayName' % NS['mdui'],
+                         '{%s}ServiceName' % NS['md']]:
                 lst.extend(e.findall(attr))
             return lst
 
         def _match(e):
-            return query in " ".join(filter(lambda s: s is not None,_strings(e)))
+            return len([query in str for str in filter(lambda s: s is not None,_strings(e))]) > 0
 
         return [{'label': self.display(e),
                  'value': e.get('entityID'),
