@@ -5,45 +5,51 @@
                 xmlns:atom="http://www.w3.org/2005/Atom"
                 xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui"
                 xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute"
-                xmlns:shibmd="urn:mace:shibboleth:metadata:1.0" xmlns:html="http://www.w3.org/1999/xhtml">
+                xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+                xmlns:shibmd="urn:mace:shibboleth:metadata:1.0"
+                xmlns:html="http://www.w3.org/1999/xhtml">
 
     <xsl:output method="html" omit-xml-declaration="yes" encoding="UTF-8"/>
     <xsl:template match="md:EntityDescriptor">
       <div>
         <div class="page-header">
             <h1>
-                <xsl:choose>
-                    <xsl:when test="//mdui:DisplayName">
-                        <xsl:call-template name="getString">
-                            <xsl:with-param name="path" select="//mdui:DisplayName"/>
-                        </xsl:call-template>
-                    </xsl:when>
-                    <xsl:when test="//md:OrganizationDisplayName">
-                        <xsl:call-template name="getString">
-                            <xsl:with-param name="path" select="//md:OrganizationDisplayName"/>
-                        </xsl:call-template>
-                    </xsl:when>
-                    <xsl:when test="//md:ServiceName">
-                        <xsl:call-template name="getString">
-                            <xsl:with-param name="path" select="//md:ServiceName"/>
-                        </xsl:call-template>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:value-of select="@entityID"/>
-                    </xsl:otherwise>
-                </xsl:choose>
-
-                <xsl:if test="//mdui:Logo">
-                    <html:div class="pull-right"><html:img>
-                        <xsl:attribute name="style">vertical-align: bottom; margin-right: 5px;</xsl:attribute>
-                        <xsl:attribute name="class">img-polaroid</xsl:attribute>
-                        <xsl:attribute name="src">
+                <xsl:call-template name="truncate">
+                    <xsl:with-param name="maxlen">40</xsl:with-param>
+                    <xsl:with-param name="str">
+                    <xsl:choose>
+                        <xsl:when test="//mdui:DisplayName">
                             <xsl:call-template name="getString">
-                                <xsl:with-param name="path" select="//mdui:Logo"/>
+                                <xsl:with-param name="path" select="//mdui:DisplayName"/>
                             </xsl:call-template>
-                        </xsl:attribute>
-                    </html:img></html:div>
-                </xsl:if>
+                        </xsl:when>
+                        <xsl:when test="//md:OrganizationDisplayName">
+                            <xsl:call-template name="getString">
+                                <xsl:with-param name="path" select="//md:OrganizationDisplayName"/>
+                            </xsl:call-template>
+                        </xsl:when>
+                        <xsl:when test="//md:ServiceName">
+                            <xsl:call-template name="getString">
+                                <xsl:with-param name="path" select="//md:ServiceName"/>
+                            </xsl:call-template>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="@entityID"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+
+                    <xsl:if test="//mdui:Logo">
+                        <html:div class="pull-right"><html:img>
+                            <xsl:attribute name="style">vertical-align: bottom; margin-right: 5px;</xsl:attribute>
+                            <xsl:attribute name="class">img-polaroid</xsl:attribute>
+                            <xsl:attribute name="src">
+                                <xsl:call-template name="getString">
+                                    <xsl:with-param name="path" select="//mdui:Logo"/>
+                                </xsl:call-template>
+                            </xsl:attribute>
+                        </html:img></html:div>
+                    </xsl:if></xsl:with-param>
+                </xsl:call-template>
             </h1>
         </div>
         <div>
@@ -167,6 +173,7 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
     <xsl:template match="md:SPSSODescriptor">
         <div class="tab-pane" id="sp">
             <div class="well">
+                <h2>Properties</h2>
                 <dl>
                     <dt>EntityID</dt>
                     <dd><xsl:value-of select="../@entityID"/></dd>
@@ -180,9 +187,26 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
                     </dd>
                     <xsl:apply-templates select="md:AttributeConsumingService"/>
                 </dl>
+                <xsl:if test="mdattr:EntityAttributes">
+                    <h2>Entity Attributes</h2>
+                    <xsl:apply-templates select="..//mdattr:EntityAttributes"/>
+                </xsl:if>
                 <xsl:apply-templates select=".//md:Extensions"/>
             </div>
         </div>
+    </xsl:template>
+
+    <xsl:template match="mdattr:EntityAttributes">
+        <html:dl>
+            <xsl:apply-templates select="saml:Attribute"/>
+        </html:dl>
+    </xsl:template>
+
+    <xsl:template match="saml:Attribute">
+        <xsl:call-template name="dtlist">
+            <xsl:with-param name="path" select=".//saml:AttributeValue"/>
+            <xsl:with-param name="term"><xsl:value-of select="@Name"/></xsl:with-param>
+        </xsl:call-template>
     </xsl:template>
 
     <xsl:template match="md:AttributeConsumingService">
@@ -272,11 +296,18 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
                 </xsl:choose>
             </xsl:attribute>
             <xsl:value-of select="@Name"/>
-        </html:div><xsl:text> </xsl:text>
+            <xsl:call-template name="attribute-links"/>
+        </html:div>
+
+    </xsl:template>
+
+    <!-- utilities -->
+
+    <xsl:template name="attribute-links">
         <xsl:if test="@NameFormat='urn:oasis:names:tc:SAML:2.0:attrname-format:uri' and substring(@Name,0,8)='urn:oid'">
             <a>
                 <xsl:attribute name="class">
-                    <xsl:text>label label-info pull-right</xsl:text>
+                    <xsl:text>label label-info</xsl:text>
                 </xsl:attribute>
                 <xsl:attribute name="style">
                     <xsl:text>margin-left: 2px;</xsl:text>
@@ -288,7 +319,10 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
             </a>
             <a>
                 <xsl:attribute name="class">
-                    <xsl:text>label label-info pull-right</xsl:text>
+                    <xsl:text>label label-info</xsl:text>
+                </xsl:attribute>
+                <xsl:attribute name="style">
+                    <xsl:text>margin-left: 2px;</xsl:text>
                 </xsl:attribute>
                 <xsl:attribute name="href">
                     <xsl:text>http://oid-info.com/get/</xsl:text><xsl:value-of select="substring(@Name,9)"/>
@@ -297,8 +331,6 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
             </a><xsl:text> </xsl:text>
         </xsl:if>
     </xsl:template>
-
-    <!-- utilities -->
 
     <xsl:template name="output-tokens">
         <xsl:param name="list" />
@@ -347,6 +379,17 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
         <xsl:param name="path"/>
         <xsl:variable name="geo" select="$path"/>
         <xsl:value-of select="substring($geo/text(),5)"/>
+    </xsl:template>
+
+    <xsl:template name="truncate">
+        <xsl:param name="str"/>
+        <xsl:param name="maxlen"/>
+        <xsl:if test="string-length($str) > $maxlen">
+            <xsl:value-of select="substring($str,0,$maxlen)"/><xsl:text>...</xsl:text>
+        </xsl:if>
+        <xsl:if test="not(string-length($str) > $maxlen)">
+            <xsl:value-of select="$str"/>
+        </xsl:if>
     </xsl:template>
 
 </xsl:stylesheet>
