@@ -15,12 +15,15 @@ from cherrypy._cperror import NotFound
 from cherrypy.lib import cptools,static
 from cherrypy.process.plugins import Monitor
 from cherrypy.lib import caching
+import re
+from pyff.constants import NS
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
-from pyff.utils import resource_string, resource_filename, template
+from pyff.utils import resource_string, resource_filename, template, xslt_transform, dumptree
 from pyff.logs import log
 import logging
+import lxml.html as html
 
 __author__ = 'leifj'
 
@@ -103,6 +106,37 @@ Disallow: /
             stats=self.server.stats(),
             plumbings=["%s" % p for p in self.server.plumbings],
         )
+
+    @cherrypy.expose
+    def html(self,id):
+
+        def escape(m):
+            str = m.group(0)
+            if str == '<':
+                return '&lt;'
+            if str == '>':
+                return '&gt;'
+            return str
+
+        m = re.match("^\{sha1\}(.+)$",id)
+        if not m:
+            raise ValueError("Bad entity ID - must be {sha1}...")
+        log.debug("Looking for %s in sha1 index" % m.group(1))
+        entity = self.server.md.index_lookup(m.group(1))
+        if entity is None:
+            raise NotFound()
+        t = html.fragment_fromstring(unicode(xslt_transform(entity,"entity2html.xsl")))
+        for c_elt in t.findall(".//code[@role='entity']"):
+            log.debug("----------- found %s" % c_elt)
+            c_txt = dumptree(entity,pretty_print=True,xml_declaration=False).decode("utf-8")
+            p = c_elt.getparent()
+            p.remove(c_elt)
+            if p.text is not None:
+                p.text += c_txt #re.sub(".",escape,c_txt)
+            else:
+                p.text = c_txt # re.sub(".",escape,c_txt)
+        xml = dumptree(t,xml_declaration=False).decode('utf-8')
+        return template("entity.html").render(http=cherrypy.request,entity=xml)
 
     @cherrypy.expose
     def metadata(self):
