@@ -53,17 +53,14 @@ class MDRepository(DictMixin):
 
     def display(self,entity):
 
-        for mdui in entity.findall(".//{%s}UIInfo" % NS['mdui']):
-            for displayName in filter_lang(mdui.findall(".//{%s}DisplayName" % NS['mdui'])):
-                return displayName.text
+        for displayName in filter_lang(entity.findall(".//{%s}DisplayName" % NS['mdui'])):
+            return displayName.text
 
-        for acs in entity.findall(".//{%s}AttributeConsumingService" % NS['md']):
-            for serviceName in filter_lang(acs.findall(".//{%s}ServiceName" % NS['md'])):
-                return serviceName.text
+        for serviceName in filter_lang(entity.findall(".//{%s}ServiceName" % NS['md'])):
+            return serviceName.text
 
-        for o in entity.findall(".//{%s}Organization" % NS['md']):
-            for organizationDisplayName in filter_lang(o.findall(".//{%s}OrganizationDisplayName" % NS['md'])):
-                return organizationDisplayName.text
+        for organizationDisplayName in filter_lang(entity.findall(".//{%s}OrganizationDisplayName" % NS['md'])):
+            return organizationDisplayName.text
 
         return entity.get('entityID')
 
@@ -72,11 +69,14 @@ class MDRepository(DictMixin):
             for entity in t.findall(".//{%s}EntityDescriptor" % NS['md']):
                 yield entity
 
-    def sha1_id(self,entity):
+    def sha1_id(self,entity,prefix=True):
         entityID = entity.get('entityID')
         m = hashlib.sha1()
         m.update(entityID)
-        return "{sha1}%s" % m.hexdigest()
+        if prefix:
+            return "{sha1}%s" % m.hexdigest()
+        else:
+            return m.hexdigest()
 
     def stats(self):
         return {
@@ -86,6 +86,12 @@ class MDRepository(DictMixin):
 
     def sane(self):
         return len(self.md) > 0
+
+    def index_lookup(self,id,hash="sha1"):
+        idx = self.index.get(hash,None)
+        if idx is None:
+            return None
+        return idx.get(id,None)
 
     def extensions(self,e):
         ext = e.find("{%s}Extensions" % NS['md'])
@@ -189,7 +195,9 @@ is stored in the MDRepository instance.
         for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
             if e.attrib.has_key('ID'):
                 del e.attrib['ID']
-            idx[self.sha1_id(e)] = e
+            id = self.sha1_id(e,prefix=False)
+            idx[id] = e
+            log.debug("indexed %s as %s" % (e.get('entityID'),id))
 
         #for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
         #    if e.attrib.has_key('ID'):
