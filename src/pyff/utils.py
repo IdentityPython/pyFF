@@ -108,13 +108,13 @@ Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours
         kwargs[k] = int(v)
     return timedelta(**kwargs)
 
-def dumptree(t,pretty_print=False):
+def dumptree(t,pretty_print=False,xml_declaration=True):
     """
 Return a string representation of the tree, optionally pretty_print(ed) (default False)
 
 :param t: An ElemenTree to serialize
     """
-    return etree.tostring(t,encoding='UTF-8',xml_declaration=True,pretty_print=pretty_print)
+    return etree.tostring(t,encoding='UTF-8',xml_declaration=xml_declaration,pretty_print=pretty_print)
 
 def iso_now():
     """
@@ -238,4 +238,14 @@ def filter_lang(elts,langs=["en"]):
     if elts is None or len(elts) == 0:
         return []
 
-    return filter(_l,elts)
+    lst = filter(_l,elts)
+    if lst:
+        return lst
+    else:
+        return elts
+
+
+def xslt_transform(t,stylesheet,params={}):
+    xsl = etree.fromstring(resource_string(stylesheet,"xslt"))
+    transform = etree.XSLT(xsl)
+    return transform(t,**params)

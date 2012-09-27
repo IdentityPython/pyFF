@@ -4,7 +4,7 @@ Package that contains the basic set of pipes - functions that can be used to put
 import cherrypy
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-from pyff.utils import dumptree, schema, resource_string, safe_write, template, root, duration2timedelta
+from pyff.utils import dumptree, schema, resource_string, safe_write, template, root, duration2timedelta, xslt_transform
 from pyff.mdrepo import NS
 from pyff.pipes import Plumbing, PipeException
 from copy import deepcopy
@@ -617,15 +617,12 @@ user-supplied file. The rest of the keyword arguments are made available as stri
 
     if req.t is None:
         raise ValueError("Your plumbing is missing a select statement.")
-    xslt = etree.fromstring(resource_string(stylesheet,"xslt"))
-    transform = etree.XSLT(xslt)
-    # this is to make sure the parameters are passed as xslt strings
-    d = dict((k,"\'%s\'" % v) for (k,v) in req.args.items())
-    del d['stylesheet']
-    ot = transform(req.t,**d)
-    t = ot #.getroot()
 
-    return t
+    params = dict((k,"\'%s\'" % v) for (k,v) in req.args.items())
+    del params['stylesheet']
+    ot = xslt_transform(req.t,stylesheet,params)
+
+    return ot
 
 def validate(req,*opts):
     """
