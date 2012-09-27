@@ -84,6 +84,20 @@ class MDRepository(DictMixin):
             'create_time': self.create_time
         }
 
+    def search(self,query):
+        def _strings(e):
+            lst = [e.get('entityID')]
+            for attr in ['{%s}OrganizationName' % NS['md'],'{%s}OrganizationName' % NS['md'],'{%s}DisplayName' % NS['mdui'],'{%s}ServiceName' % NS['md']]:
+                lst.extend(e.findall(attr))
+            return lst
+
+        def _match(e):
+            return query in " ".join(filter(lambda s: s is not None,_strings(e)))
+
+        return [{'label': self.display(e),
+                 'value': e.get('entityID'),
+                 'id': self.sha1_id(e)} for e in filter(_match,self.__iter__())]
+
     def sane(self):
         return len(self.md) > 0
 

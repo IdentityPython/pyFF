@@ -17,7 +17,31 @@
     <![endif]-->
     <script type="text/javascript">
         $(function() {
+            var labels,mapped,ids
+            function search(query,process) {
+                $.getJSON("/search/"+query,function(data) {
+                    labels = []
+                    mapped = {}
+                    ids = {}
+
+                    $.each(data,function(i,item){
+                        mapped[item.label] = item.value
+                        ids[item.label] = item.id
+                        labels.push(item.label)
+                    })
+                    process(labels)
+                })
+            }
             prettyPrint();
+            $('.typeahead').typeahead({'source': search,'updater': function(item) {
+                return mapped[item]
+            }});
+            $('.typeahead').on('change',function(event) {
+                var value = $('ul.typeahead li.active').data('value')
+                if (value) {
+                    document.location.href = "/html/"+ids[value]
+                }
+            })
         });
     </script>
 </head>
@@ -29,6 +53,9 @@
             <li><a href="/">Home</a></li>
             <li><a href="/metadata">All Entities</a></li>
         </ul>
+        <form class="navbar-search pull-left">
+            <input type="text" class="typeahead search-query" placeholder="Search">
+        </form>
         <ul class="nav pull-right">
             <li><a href="/about">About</a></li>
             <li><a href="http://packages.python.org/pyFF">Documentation</a></li>

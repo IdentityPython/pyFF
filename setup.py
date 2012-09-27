@@ -15,7 +15,8 @@ install_requires = [
     'eventlet',
     'pyXMLSecurity',
     'cherrypy',
-    'iso8601'
+    'iso8601',
+    'simplejson'
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies

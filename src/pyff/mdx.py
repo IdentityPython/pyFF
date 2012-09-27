@@ -16,6 +16,7 @@ from cherrypy.lib import cptools,static
 from cherrypy.process.plugins import Monitor
 from cherrypy.lib import caching
 import re
+from simplejson import dumps
 from pyff.constants import NS
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
@@ -137,6 +138,11 @@ Disallow: /
                 p.text = c_txt # re.sub(".",escape,c_txt)
         xml = dumptree(t,xml_declaration=False).decode('utf-8')
         return template("entity.html").render(http=cherrypy.request,entity=xml)
+
+    @cherrypy.expose
+    def search(self,query):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return dumps(self.server.md.search(query))
 
     @cherrypy.expose
     def metadata(self):
