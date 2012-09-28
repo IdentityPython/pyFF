@@ -52,7 +52,6 @@ class MDRepository(DictMixin):
         return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']))
 
     def display(self,entity):
-
         for displayName in filter_lang(entity.findall(".//{%s}DisplayName" % NS['mdui'])):
             return displayName.text
 
@@ -260,6 +259,18 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
 
 :param member: Either an entity, URL or a filter expression.
         """
+
+        def _hash(hn,str):
+            if hn == 'null':
+                return str
+            if not hasattr(hashlib,hn):
+                raise ValueError("Unknown digest mechanism: '%s'" % hn)
+            hash_m = getattr(hashlib,hn)
+            h = hash_m()
+            h.update(str)
+            return h.hexdigest()
+
+
         if xp is None:
             xp = "//md:EntityDescriptor"
         if member is None:
@@ -272,7 +283,15 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             log.debug("xpath filter %s <- %s" % (xp,member))
             return member.xpath(xp,namespaces=NS)
         elif type(member) is str or type(member) is unicode:
-            if "!" in member:
+            log.debug("string lookup %s" % member)
+            m = re.match("^\{(.+)\}(.+)$",member)
+            if m:
+                hn = m.group(1)
+                idx = self.index.get(hn,None)
+                if idx is None:
+                    raise ValueError("Unsupported digest '%s'" % hn)
+                return [idx.get(m.group(2).rstrip("/"),None)]
+            elif "!" in member:
                 (src,xp) = member.split("!")
                 if len(src) == 0:
                     src = None
@@ -282,6 +301,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                 return self._lookup(src,xp)
             else:
                 log.debug("basic lookup %s (%s)" % (member,{True:'exists',False:'does not exist'}[self.has_key(member)]))
+
                 return self._lookup(self.get(member,None),xp)
         elif hasattr(member,'__iter__') and type(member) is not dict:
             if not len(member):
