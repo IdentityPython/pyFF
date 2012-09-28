@@ -41,6 +41,10 @@
         - when accept application/xml:
              - xslt:
                  stylesheet: tidy.xsl
+             - first
+             - finalize:
+                cacheDuration: PT5H
+                validUntil: P10D
              - sign:
                  key: sign.key
                  cert: sign.crt
