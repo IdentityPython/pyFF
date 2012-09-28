@@ -480,6 +480,22 @@ Select a set of EntityDescriptor elements as a working document but don't valida
         raise PipeException("empty select '%s' - stop" % ",".join(args))
     return ot
 
+def first(req,*opts):
+    """
+    :param req: The request
+    :param opts: Options (unused)
+    :return: returns the first entity descriptor if the working document only contains one
+
+    Sometimes (eg when running an MDX pipeline) it is usually expected that if a single EntityDescriptor
+    is being returned then the outer EntitiesDescriptor is stripped. This method does exactly that:
+    """
+    nent = len(req.t.findall("//{%s}EntityDescriptor" % NS['md']))
+    if nent == 1:
+        return req.t.find("//{%s}EntityDescriptor" % NS['md'])
+    else:
+        return req.t
+
+
 def sign(req,*opts):
     """
     :param req: The request
@@ -801,6 +817,8 @@ string or (more comonly) a relative time on the form
 
 For instance +45d 2m results in a time delta of 45 days and 2 minutes. The '+' sign is optional.
 
+If operating on a single EntityDescriptor then @Name is ignored (cf first).
+
 **Examples**
 
 .. code-block:: yaml
@@ -813,15 +831,16 @@ For instance +45d 2m results in a time delta of 45 days and 2 minutes. The '+' s
         raise ValueError("Your plumbing is missing a select statement.")
 
     e = root(req.t)
-    name = req.args.get('name',None)
-    if name is None or not len(name):
-        name = req.args.get('Name',None)
-    if name is None or not len(name):
-        name = req.state.get('url',None)
-    if name is None or not len(name):
-        name = e.get('Name',None)
-    if name is not None and len(name):
-        e.set('Name',name)
+    if e.tag == "{%s}EntitiesDescriptor" % NS['md']:
+        name = req.args.get('name',None)
+        if name is None or not len(name):
+            name = req.args.get('Name',None)
+        if name is None or not len(name):
+            name = req.state.get('url',None)
+        if name is None or not len(name):
+            name = e.get('Name',None)
+        if name is not None and len(name):
+            e.set('Name',name)
 
     validUntil = req.args.get('validUntil',e.get('validUntil',None))
     if validUntil is not None and len(validUntil) > 0:
