@@ -5,26 +5,27 @@ Usage: pyffd [-C|--no-cache] [-P|--port] [-H|--host] {pipeline-files}+
 
 """
 import getopt
-from mako.lookup import TemplateLookup
 import os
 import sys
 from threading import RLock
 import cherrypy
 from cherrypy._cpdispatch import Dispatcher
 from cherrypy._cperror import NotFound
-from cherrypy.lib import cptools,static
+from cherrypy.lib import cptools,static, cpstats
 from cherrypy.process.plugins import Monitor
 from cherrypy.lib import caching
 import re
 from simplejson import dumps
-from pyff.constants import NS
+import time
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
-from pyff.utils import resource_string, resource_filename, template, xslt_transform, dumptree
+from pyff.utils import resource_string, template, xslt_transform, dumptree
 from pyff.logs import log
 import logging
+from pyff.stats import stats
 import lxml.html as html
+from datetime import datetime
 
 __author__ = 'leifj'
 
@@ -46,8 +47,11 @@ class MDUpdate(Monitor):
                 if not md.sane():
                     log.error("update produced insane active repository - will retry...")
                 with server.lock.writelock:
-                    log.debug("found %d things" % len(md))
+                    log.debug("updating metadata repository with %d entities" % len(md.index['sha1'].keys()))
                     server.md = md
+                    stats['Repository Update Time'] = datetime.now()
+                    stats['Repository Size'] = len(md.index['sha1'].keys())
+
         except Exception,ex:
             #log.error(ex)
             raise ex
@@ -68,7 +72,7 @@ class EncodingDispatcher(object):
         npath =  "%s/%s" % (self.prefix,self.enc(vpath))
         log.debug("EncodingDispatcher %s" % npath)
         handler =  self.next_dispatcher(npath)
-        cherrypy.request.is_index = True
+        cherrypy.request.is_index = False
         print handler
         return handler
 
@@ -93,6 +97,7 @@ Disallow: /
         return resource_string('favicon.ico',"site/static/icons")
 
     @cherrypy.expose
+    @cherrypy.tools.expires(secs=600,debug=True)
     def entities(self,path=None):
         return self.server.mdx(path)
 
@@ -101,10 +106,11 @@ Disallow: /
         import pkg_resources  # part of setuptools
         version = pkg_resources.require("pyFF")[0].version
         return template("about.html").render(version=version,
+            cversion=cherrypy.__version__,
             sysinfo=" ".join(os.uname()),
             http=cherrypy.request,
             cmdline=" ".join(sys.argv),
-            stats=self.server.stats(),
+            stats=stats,
             plumbings=["%s" % p for p in self.server.plumbings],
         )
 
@@ -122,13 +128,12 @@ Disallow: /
         m = re.match("^\{sha1\}(.+)$",id)
         if not m:
             raise ValueError("Bad entity ID - must be {sha1}...")
-        log.debug("Looking for %s in sha1 index" % m.group(1))
+        #log.debug("Looking for %s in sha1 index" % m.group(1))
         entity = self.server.md.index_lookup(m.group(1))
         if entity is None:
             raise NotFound()
         t = html.fragment_fromstring(unicode(xslt_transform(entity,"entity2html.xsl")))
         for c_elt in t.findall(".//code[@role='entity']"):
-            log.debug("----------- found %s" % c_elt)
             c_txt = dumptree(entity,pretty_print=True,xml_declaration=False).decode("utf-8")
             p = c_elt.getparent()
             p.remove(c_elt)
@@ -159,7 +164,6 @@ Disallow: /
     @cherrypy.expose
     def default(self,*args):
         path = "/".join(args)
-        log.debug("default %s" % path)
         return self.server.request(path)
 
 class MDServer():
@@ -170,11 +174,6 @@ class MDServer():
         self.plumbings = [plumbing(v) for v in pipes]
         self.refresh = MDUpdate(cherrypy.engine,server=self)
         self.refresh.subscribe()
-
-    def stats(self):
-        return {
-            'md': self.md.stats(),
-        }
 
     def start(self):
         self.refresh.run(self)
@@ -187,7 +186,7 @@ class MDServer():
             return cptools.accept(item,debug=True)
 
     def request(self,path,select=None):
-
+        stats['MD Requests'] += 1
         with self.lock.readlock:
             for p in self.plumbings:
                 state = {'request':{ "/%s" % path: True},
@@ -222,11 +221,14 @@ gets (as a string) the part of the path-info after the dispatcher "mount point" 
             else:
                 return x
 
+
         filter = _d(path)
         #accepts = cherrypy.request.headers.elements('Accept')
         select = None
         if filter is not None:
-            if '=' in path:
+            if filter.startswith("{sha1}"):
+                select = filter
+            elif '=' in path:
                 (k,eq,v) = filter.partition('=')
                 select = "!//md:EntityDescriptor[//md:Attribute[@type='%s' && md:AttributeValue[text()='%s']]" % (k,v)
             elif '@idp' in path:
@@ -316,11 +318,13 @@ def main():
             'tools.caching.maxobj_size': 1000000000000, # effectively infinite
             'tools.caching.maxsize': 1000000000000,
             'tools.caching.antistampede_timeout': None,
-            'tools.caching.delay': 3600 # this is how long we keep static stuff
+            'tools.caching.delay': 3600, # this is how long we keep static stuff
+            'tools.cpstats.on': True
         },
         '/': {
             'tools.caching.delay': delay,
-            'tools.staticdir.root': site_dir
+            'tools.staticdir.root': site_dir,
+            'tools.cpstats.on': True
         },
         '/static': {
             'tools.staticdir.on': True,
@@ -329,10 +333,13 @@ def main():
         '/entities': {
             'tools.caching.delay': delay,
             'request.dispatch': EncodingDispatcher("/entities",_b64),
+            'tools.cpstats.on': True
         }
     }
     cherrypy.config.update(cfg)
-    app = cherrypy.tree.mount(MDRoot(server),config=cfg)
+    root = MDRoot(server)
+    root.cpstats = cpstats.StatsPage()
+    app = cherrypy.tree.mount(root,config=cfg)
     app.log.error_log.setLevel(loglevel)
     #Always start the engine; this will start all other services
     try:
