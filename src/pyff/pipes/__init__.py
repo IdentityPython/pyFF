@@ -45,7 +45,6 @@ for d are allowed:
  - d is a dict of the form {name: args} (i.e one key) in which case the pipe named *name* is called with args
  - d is an iterable (eg tuple or list) in which case d[0] is treated as the pipe name and d[1:] becomes the args
         """
-        log.debug("load_pipe %s" % d)
         name = None
         args = None
         opts = []
@@ -162,7 +161,7 @@ The inner request pipeline processor.
         for p in self.pipeline:
             try:
                 pipe,opts,name,args = loader.load_pipe(p)
-                log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
+                #log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
                 if type(args) is str or type(args) is unicode:
                     args = [args]
                 if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
@@ -172,7 +171,7 @@ The inner request pipeline processor.
                 ot = pipe(req,*opts)
                 if ot is not None:
                     req.t = ot
-                log.debug("new state after %s: %s (done=%s)" % (pipe,req.state,req.done))
+                #log.debug("new state after %s: %s (done=%s)" % (pipe,req.state,req.done))
                 if req.done:
                     break
             except PipeException,ex:
