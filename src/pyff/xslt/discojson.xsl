@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
@@ -9,7 +9,7 @@
                 xmlns:shibmd="urn:mace:shibboleth:metadata:1.0"
                 xmlns:html="http://www.w3.org/1999/xhtml">
 
-    <xsl:output method="text"/>
+    <xsl:output method="text" encoding="UTF-8"/>
     <xsl:template match="md:EntitiesDescriptor">
         <xsl:text>[</xsl:text>
         <xsl:apply-templates/>
@@ -24,32 +24,32 @@
         <xsl:text>"</xsl:text>
 
         <xsl:text>,"type": "</xsl:text>
-        <xsl:apply-templates select="//md:IDPSSODescriptor[1]"/>
-        <xsl:apply-templates select="//md:SPSSODescriptor[1]"/>
+        <xsl:apply-templates select=".//md:IDPSSODescriptor[1]"/>
+        <xsl:apply-templates select=".//md:SPSSODescriptor[1]"/>
         <xsl:text>"</xsl:text>
 
         <xsl:text>,"title": "</xsl:text>
         <xsl:choose>
-            <xsl:when test="//mdui:DisplayName">
+            <xsl:when test=".//mdui:DisplayName">
                 <xsl:call-template name="getString">
                     <xsl:with-param name="preflang">en</xsl:with-param>
-                    <xsl:with-param name="path" select="//mdui:DisplayName"/>
+                    <xsl:with-param name="path" select=".//mdui:DisplayName"/>
                 </xsl:call-template>
             </xsl:when>
-            <xsl:when test="//md:OrganizationDisplayName">
+            <xsl:when test=".//md:OrganizationDisplayName">
                 <xsl:call-template name="getString">
                     <xsl:with-param name="preflang">en</xsl:with-param>
-                    <xsl:with-param name="path" select="//md:OrganizationDisplayName"/>
+                    <xsl:with-param name="path" select=".//md:OrganizationDisplayName"/>
                 </xsl:call-template>
             </xsl:when>
-            <xsl:when test="//md:ServiceName">
+            <xsl:when test=".//md:ServiceName">
                 <xsl:call-template name="getString">
                     <xsl:with-param name="preflang">en</xsl:with-param>
-                    <xsl:with-param name="path" select="//md:ServiceName"/>
+                    <xsl:with-param name="path" select=".//md:ServiceName"/>
                 </xsl:call-template>
             </xsl:when>
-            <xsl:when test="//mdui:DomainHint">
-                <xsl:value-of select="//mdui:DomainHint[1]/text()"/>
+            <xsl:when test=".//mdui:DomainHint">
+                <xsl:value-of select=".//mdui:DomainHint[1]/text()"/>
             </xsl:when>
             <xsl:otherwise>
                 <xsl:value-of select="@entityID"/>
@@ -57,21 +57,24 @@
         </xsl:choose>
         <xsl:text>"</xsl:text>
         <xsl:choose>
-            <xsl:when test="//mdui:Description">
+            <xsl:when test=".//mdui:Description">
                 <xsl:text>,"descr": "</xsl:text>
                 <xsl:call-template name="getString">
                     <xsl:with-param name="preflang">en</xsl:with-param>
-                    <xsl:with-param name="path" select="//mdui:Description"/>
+                    <xsl:with-param name="path" select=".//mdui:Description"/>
                 </xsl:call-template>
                 <xsl:text>"</xsl:text>
             </xsl:when>
         </xsl:choose>
-        <xsl:if test="//mdui:GeolocationHint">
+        <xsl:if test=".//mdui:GeolocationHint">
             <xsl:text>,"geo":</xsl:text>
-            <xsl:apply-templates select="//mdui:GeolocationHint[1]"></xsl:apply-templates>
+            <xsl:apply-templates select=".//mdui:GeolocationHint[1]"></xsl:apply-templates>
         </xsl:if>
         <xsl:text>,"auth": "saml"</xsl:text>
         <xsl:text>}</xsl:text>
+        <xsl:if test="./following-sibling::*">
+            <xsl:text>,</xsl:text>
+        </xsl:if>
     </xsl:template>
 
     <xsl:template match="md:SPSSODescriptor">
@@ -92,6 +95,8 @@
     </xsl:template>
 
     <xsl:template match="*"/>
+
+    <!-- utilities -->
 
     <xsl:template name="getString">
         <xsl:param name="path"/>
