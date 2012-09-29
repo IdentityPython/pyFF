@@ -637,7 +637,7 @@ user-supplied file. The rest of the keyword arguments are made available as stri
     params = dict((k,"\'%s\'" % v) for (k,v) in req.args.items())
     del params['stylesheet']
     ot = xslt_transform(req.t,stylesheet,params)
-
+    log.debug(ot)
     return ot
 
 def validate(req,*opts):
@@ -777,6 +777,14 @@ Renders the working tree as XML and sets the digest of the tree as the ETag.
     m.update(xml)
     req.state['headers']['ETag'] = m.hexdigest()
     return xml
+
+def emit(req,ctype,*opts):
+    m = hashlib.sha1()
+    m.update(req.t)
+    req.state['headers']['ETag'] = m.hexdigest()
+    req.state['headers']['Content-Type'] = ctype
+    return unicode(req.t)
+
 
 def signcerts(req,*opts):
     """
