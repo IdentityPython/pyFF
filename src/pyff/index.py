@@ -31,6 +31,12 @@ def entity_attribute_dict(entity):
                 d[an] = values
     return d
 
+def is_idp(entity):
+    return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']))
+
+def is_sp(entity):
+    return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']))
+
 class MDIndex(object):
     """
     Interface for metadata index providers
@@ -95,6 +101,16 @@ class MemoryIndex(MDIndex):
                 vidx = attr_idx.setdefault(attr,{})
                 vidx.setdefault(v,[])
                 vidx[v].append(entity)
+
+        vidx = attr_idx.setdefault('role',{})
+        if is_idp(entity):
+            vidx.setdefault('idp',[])
+            vidx['idp'].append(entity)
+
+        if is_idp(entity):
+            vidx.setdefault('sp',[])
+            vidx['sp'].append(entity)
+
 
         log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'),na,nd))
 
