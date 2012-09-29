@@ -52,7 +52,7 @@
              - break
         - when accept application/json:
              - xslt:
-                 stylesheet: json.xsl
-             - render
+                 stylesheet: discojson.xsl
+             - emit application/json:
              - break
 
