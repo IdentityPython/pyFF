@@ -783,7 +783,7 @@ def emit(req,ctype,*opts):
     m.update(req.t)
     req.state['headers']['ETag'] = m.hexdigest()
     req.state['headers']['Content-Type'] = ctype
-    return unicode(req.t)
+    return unicode(req.t).encode("utf-8")
 
 
 def signcerts(req,*opts):
