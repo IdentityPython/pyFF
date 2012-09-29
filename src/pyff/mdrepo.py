@@ -68,6 +68,9 @@ class MDRepository(DictMixin):
             for entity in t.findall(".//{%s}EntityDescriptor" % NS['md']):
                 yield entity
 
+    def sha1_id(self,e):
+        return pyff.index.hash_id(e,'sha1')
+
     def search(self,query):
         def _strings(e):
             lst = [e.get('entityID')]
@@ -264,17 +267,22 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                     if hits is None:
                         hits = set(self._lookup(f,xp))
                     else:
-                        hists = hits.intersection(f)
-                if hits is not None:
+                        other = self._lookup(f,xp)
+                        hits.intersection_update(other)
+
+                    if not hits:
+                        return []
+
+                if hits is not None and hits:
                     return list(hits)
                 else:
-                    return hits
+                    return []
 
             m = re.match("^\{(.+)\}(.+)$",member)
             if m:
                 return self.index.get(m.group(1),m.group(2).rstrip("/"))
 
-            m = re.match("^(.+)=(.+)$")
+            m = re.match("^(.+)=(.+)$",member)
             if m:
                 return self.index.get(m.group(1),m.group(2).rstrip("/"))
 
