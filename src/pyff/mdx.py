@@ -17,6 +17,7 @@ from cherrypy.lib import caching
 import re
 from simplejson import dumps
 import time
+from pyff.index import hash_id
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
@@ -129,26 +130,24 @@ Disallow: /
                 return '&gt;'
             return str
 
-        m = re.match("^\{(.+)\}(.+)$",id)
-        if not m:
-            raise ValueError("Bad entity ID...")
-
-        #log.debug("Looking for %s in sha1 index" % m.group(2))
-        entities = self.server.md.index.get(m.group(1),m.group(2))
+        entities = self.server.md.lookup(id)
         if not entities:
             raise NotFound()
-        entity = entities[0]
-        t = html.fragment_fromstring(unicode(xslt_transform(entity,"entity2html.xsl")))
-        for c_elt in t.findall(".//code[@role='entity']"):
-            c_txt = dumptree(entity,pretty_print=True,xml_declaration=False).decode("utf-8")
-            p = c_elt.getparent()
-            p.remove(c_elt)
-            if p.text is not None:
-                p.text += c_txt #re.sub(".",escape,c_txt)
-            else:
-                p.text = c_txt # re.sub(".",escape,c_txt)
-        xml = dumptree(t,xml_declaration=False).decode('utf-8')
-        return template("entity.html").render(http=cherrypy.request,entity=xml)
+        if len(entities) > 1:
+            return template("metadata.html").render(http=cherrypy.request,md=self.server.md,entities=entities)
+        else:
+            entity = entities[0]
+            t = html.fragment_fromstring(unicode(xslt_transform(entity,"entity2html.xsl")))
+            for c_elt in t.findall(".//code[@role='entity']"):
+                c_txt = dumptree(entity,pretty_print=True,xml_declaration=False).decode("utf-8")
+                p = c_elt.getparent()
+                p.remove(c_elt)
+                if p.text is not None:
+                    p.text += c_txt #re.sub(".",escape,c_txt)
+                else:
+                    p.text = c_txt # re.sub(".",escape,c_txt)
+            xml = dumptree(t,xml_declaration=False).decode('utf-8')
+            return template("basic.html").render(http=cherrypy.request,content=xml)
 
     @cherrypy.expose
     def search(self,query):
@@ -157,7 +156,7 @@ Disallow: /
 
     @cherrypy.expose
     def metadata(self):
-        return template("metadata.html").render(entities=self.server.md,http=cherrypy.request)
+        return template("metadata.html").render(entities=self.server.md,md=self.server.md,http=cherrypy.request)
 
     @cherrypy.expose
     def index(self):
@@ -196,7 +195,7 @@ class MDServer():
 
     def request(self,path,select=None,content_type=None):
         stats['MD Requests'] += 1
-
+        log.debug(cherrypy.request.headers)
         accept = {}
         if content_type is None:
             accept = MDServer.MediaAccept()
@@ -237,23 +236,7 @@ gets (as a string) the part of the path-info after the dispatcher "mount point" 
             else:
                 return x
 
-
-        filter = _d(path)
-        select = None
-        if filter is not None:
-            if filter.startswith("{sha1}"):
-                select = filter
-            elif '=' in path:
-                (k,eq,v) = filter.partition('=')
-                select = "!//md:EntityDescriptor[md:Attribute[@type='%s' && ./md:AttributeValue[text()='%s']]" % (k,v)
-            elif '@idp' in filter:
-                select = "!//md:EntityDescriptor[md:IDPSSODescriptor]"
-            elif '@sp' in filter:
-                select = "!//md:EntityDescriptor[md:SPSSODescriptor]"
-            else:
-                select = "!//md:EntityDescriptor[@entityID='%s']" % filter
-
-        return self.request("entities",select,content_type=content_type)
+        return self.request("entities",_d(path),content_type=content_type)
 
 def main():
     """
@@ -334,12 +317,16 @@ def main():
             'tools.caching.maxsize': 1000000000000,
             'tools.caching.antistampede_timeout': None,
             'tools.caching.delay': 3600, # this is how long we keep static stuff
-            'tools.cpstats.on': True
+            'tools.cpstats.on': True,
+            'tools.encode.on': True,
+            'tools.encode.encoding': "utf8",
         },
         '/': {
             'tools.caching.delay': delay,
             'tools.staticdir.root': site_dir,
-            'tools.cpstats.on': True
+            'tools.cpstats.on': True,
+            'tools.encode.on': True,
+            'tools.encode.encoding': "utf8",
         },
         '/static': {
             'tools.staticdir.on': True,
@@ -348,7 +335,16 @@ def main():
         '/entities': {
             'tools.caching.delay': delay,
             'request.dispatch': EncodingDispatcher("/entities",_b64),
-            'tools.cpstats.on': True
+            'tools.cpstats.on': True,
+            'tools.encode.on': True,
+            'tools.encode.encoding': "utf8",
+        },
+        '/json': {
+            'tools.caching.delay': delay,
+            'request.dispatch': EncodingDispatcher("/json",_b64),
+            'tools.cpstats.on': True,
+            'tools.encode.on': True,
+            'tools.encode.encoding': "utf8",
         }
     }
     cherrypy.config.update(cfg)
