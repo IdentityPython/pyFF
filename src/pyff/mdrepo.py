@@ -14,6 +14,7 @@ from lxml.etree import DocumentInvalid
 import os
 import re
 from copy import deepcopy
+import pyff.index
 from pyff.logs import log
 from pyff.utils import schema, URLFetch, filter_lang
 import xmlsec
@@ -37,13 +38,12 @@ def _e(error_log):
     return "\n".join(filter(lambda x: ":WARNING:" not in x,["%s" % e for e in error_log]))
 
 class MDRepository(DictMixin):
-    def __init__(self):
+    def __init__(self,index=pyff.index.MemoryIndex()):
         """
         A class representing a set of sets of SAML metadata.
         """
         self.md = {}
-        self.index = {}
-        self.create_time = datetime.now()
+        self.index = index
 
     def is_idp(self,entity):
         return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']))
@@ -68,21 +68,6 @@ class MDRepository(DictMixin):
             for entity in t.findall(".//{%s}EntityDescriptor" % NS['md']):
                 yield entity
 
-    def sha1_id(self,entity,prefix=True):
-        entityID = entity.get('entityID')
-        m = hashlib.sha1()
-        m.update(entityID)
-        if prefix:
-            return "{sha1}%s" % m.hexdigest()
-        else:
-            return m.hexdigest()
-
-    def stats(self):
-        return {
-            'number_of_pieces': len(self),
-            'create_time': self.create_time
-        }
-
     def search(self,query):
         def _strings(e):
             lst = [e.get('entityID')]
@@ -98,16 +83,10 @@ class MDRepository(DictMixin):
 
         return [{'label': self.display(e),
                  'value': e.get('entityID'),
-                 'id': self.sha1_id(e)} for e in filter(_match,self.__iter__())]
+                 'id': pyff.index.hash_id(e,'sha1')} for e in filter(_match,self.__iter__())]
 
     def sane(self):
         return len(self.md) > 0
-
-    def index_lookup(self,id,hash="sha1"):
-        idx = self.index.get(hash,None)
-        if idx is None:
-            return None
-        return idx.get(id,None)
 
     def extensions(self,e):
         ext = e.find("{%s}Extensions" % NS['md'])
@@ -148,7 +127,7 @@ class MDRepository(DictMixin):
                     if thread.ex is None:
                         self.parse_metadata(StringIO(thread.result),key=thread.verify,url=thread.id)
                     else:
-                        log.error("Error fetching %s: %s" (thread.url,thread.ex))
+                        log.error("Error fetching %s: %s" % (thread.url,thread.ex))
                 except Exception,ex:
                     traceback.print_exc()
                     log.error("Unexpected error in fetch_metadata: %s. Continuing anyway..." % ex)
@@ -203,17 +182,11 @@ is stored in the MDRepository instance.
         if url is not None:
             self[url] = t
         # we always clean incoming ID
-        # compute sha1 index
-        idx = self.index.get('sha1',None)
-        if idx is None:
-            idx = {}
-            self.index['sha1'] = idx
+        # add to the index
         for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
             if e.attrib.has_key('ID'):
                 del e.attrib['ID']
-            id = self.sha1_id(e,prefix=False)
-            idx[id] = e
-            log.debug("indexed %s as %s" % (e.get('entityID'),id))
+            self.index.add(e)
 
         #for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
         #    if e.attrib.has_key('ID'):
@@ -240,7 +213,7 @@ Files ending in the specified extension are included. Directories starting with 
         """
         if url is None:
             url = dir
-        if not self.md.has_key(dir): #TODO: check cache-time and reload
+        if not self.md.has_key(dir):
             entities = []
             for top, dirs, files in os.walk(dir):
                 for dn in dirs:
@@ -270,7 +243,6 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             h.update(str)
             return h.hexdigest()
 
-
         if xp is None:
             xp = "//md:EntityDescriptor"
         if member is None:
@@ -284,14 +256,29 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             return member.xpath(xp,namespaces=NS)
         elif type(member) is str or type(member) is unicode:
             log.debug("string lookup %s" % member)
+
+            if '+' in member:
+                hits = None
+                for f in member.split("+"):
+                    f = f.strip()
+                    if hits is None:
+                        hits = set(self._lookup(f,xp))
+                    else:
+                        hists = hits.intersection(f)
+                if hits is not None:
+                    return list(hits)
+                else:
+                    return hits
+
             m = re.match("^\{(.+)\}(.+)$",member)
             if m:
-                hn = m.group(1)
-                idx = self.index.get(hn,None)
-                if idx is None:
-                    raise ValueError("Unsupported digest '%s'" % hn)
-                return [idx.get(m.group(2).rstrip("/"),None)]
-            elif "!" in member:
+                return self.index.get(m.group(1),m.group(2).rstrip("/"))
+
+            m = re.match("^(.+)=(.+)$")
+            if m:
+                return self.index.get(m.group(1),m.group(2).rstrip("/"))
+
+            if "!" in member:
                 (src,xp) = member.split("!")
                 if len(src) == 0:
                     src = None
@@ -301,8 +288,11 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                 return self._lookup(src,xp)
             else:
                 log.debug("basic lookup %s (%s)" % (member,{True:'exists',False:'does not exist'}[self.has_key(member)]))
-
-                return self._lookup(self.get(member,None),xp)
+                e = self.index.get("null",member)
+                if e:
+                    return e
+                else:
+                    return self._lookup(self.get(member,None),xp)
         elif hasattr(member,'__iter__') and type(member) is not dict:
             if not len(member):
                 member = self.keys()

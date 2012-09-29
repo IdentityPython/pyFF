@@ -10,7 +10,7 @@ import sys
 from threading import RLock
 import cherrypy
 from cherrypy._cpdispatch import Dispatcher
-from cherrypy._cperror import NotFound
+from cherrypy._cperror import NotFound, HTTPError
 from cherrypy.lib import cptools,static, cpstats
 from cherrypy.process.plugins import Monitor
 from cherrypy.lib import caching
@@ -47,10 +47,10 @@ class MDUpdate(Monitor):
                 if not md.sane():
                     log.error("update produced insane active repository - will retry...")
                 with server.lock.writelock:
-                    log.debug("updating metadata repository with %d entities" % len(md.index['sha1'].keys()))
+                    log.debug("updating metadata repository with %d entities" % md.index.size())
                     server.md = md
                     stats['Repository Update Time'] = datetime.now()
-                    stats['Repository Size'] = len(md.index['sha1'].keys())
+                    stats['Repository Size'] = md.index.size()
 
         except Exception,ex:
             #log.error(ex)
@@ -73,7 +73,6 @@ class EncodingDispatcher(object):
         log.debug("EncodingDispatcher %s" % npath)
         handler =  self.next_dispatcher(npath)
         cherrypy.request.is_index = False
-        print handler
         return handler
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"site")
@@ -102,6 +101,11 @@ Disallow: /
         return self.server.mdx(path)
 
     @cherrypy.expose
+    @cherrypy.tools.expires(secs=600,debug=True)
+    def json(self,path=None):
+        return self.server.mdx(path,content_type="application/json")
+
+    @cherrypy.expose
     def about(self):
         import pkg_resources  # part of setuptools
         version = pkg_resources.require("pyFF")[0].version
@@ -125,13 +129,15 @@ Disallow: /
                 return '&gt;'
             return str
 
-        m = re.match("^\{sha1\}(.+)$",id)
+        m = re.match("^\{(.+)\}(.+)$",id)
         if not m:
-            raise ValueError("Bad entity ID - must be {sha1}...")
-        #log.debug("Looking for %s in sha1 index" % m.group(1))
-        entity = self.server.md.index_lookup(m.group(1))
-        if entity is None:
+            raise ValueError("Bad entity ID...")
+
+        #log.debug("Looking for %s in sha1 index" % m.group(2))
+        entities = self.server.md.index.get(m.group(1),m.group(2))
+        if not entities:
             raise NotFound()
+        entity = entities[0]
         t = html.fragment_fromstring(unicode(xslt_transform(entity,"entity2html.xsl")))
         for c_elt in t.findall(".//code[@role='entity']"):
             c_txt = dumptree(entity,pretty_print=True,xml_declaration=False).decode("utf-8")
@@ -183,15 +189,25 @@ class MDServer():
             return True
 
         def __getitem__(self, item):
-            return cptools.accept(item,debug=True)
+            try:
+                return cptools.accept(item,debug=True)
+            except HTTPError:
+                return False
 
-    def request(self,path,select=None):
+    def request(self,path,select=None,content_type=None):
         stats['MD Requests'] += 1
+
+        accept = {}
+        if content_type is None:
+            accept = MDServer.MediaAccept()
+        else:
+            accept = {content_type:True}
+
         with self.lock.readlock:
             for p in self.plumbings:
                 state = {'request':{ "/%s" % path: True},
                          'headers':{'Content-Type': 'text/xml'},
-                         'accept': MDServer.MediaAccept(),
+                         'accept': accept,
                          'url': cherrypy.url(relative=False),
                          'select': select}
                 r = p.process(self.md,state=state)
@@ -204,7 +220,7 @@ class MDServer():
                     return r
         raise NotFound()
 
-    def mdx(self,path):
+    def mdx(self,path,content_type=None):
         """
 The entities method is special - it gets called by the EncodingDispatcher which by-passes most
 of the RESTful path decoding/parsing mechanisms in cherrypy. Instead the entities method
@@ -223,22 +239,21 @@ gets (as a string) the part of the path-info after the dispatcher "mount point" 
 
 
         filter = _d(path)
-        #accepts = cherrypy.request.headers.elements('Accept')
         select = None
         if filter is not None:
             if filter.startswith("{sha1}"):
                 select = filter
             elif '=' in path:
                 (k,eq,v) = filter.partition('=')
-                select = "!//md:EntityDescriptor[//md:Attribute[@type='%s' && md:AttributeValue[text()='%s']]" % (k,v)
-            elif '@idp' in path:
+                select = "!//md:EntityDescriptor[md:Attribute[@type='%s' && ./md:AttributeValue[text()='%s']]" % (k,v)
+            elif '@idp' in filter:
                 select = "!//md:EntityDescriptor[md:IDPSSODescriptor]"
-            elif '@sp' in path:
+            elif '@sp' in filter:
                 select = "!//md:EntityDescriptor[md:SPSSODescriptor]"
             else:
                 select = "!//md:EntityDescriptor[@entityID='%s']" % filter
 
-        return self.request("entities",select)
+        return self.request("entities",select,content_type=content_type)
 
 def main():
     """
