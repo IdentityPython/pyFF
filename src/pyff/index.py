@@ -107,7 +107,7 @@ class MemoryIndex(MDIndex):
             vidx.setdefault('idp',[])
             vidx['idp'].append(entity)
 
-        if is_idp(entity):
+        if is_sp(entity):
             vidx.setdefault('sp',[])
             vidx['sp'].append(entity)
 
