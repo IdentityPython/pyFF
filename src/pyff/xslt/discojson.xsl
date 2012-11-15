@@ -78,7 +78,9 @@
     </xsl:template>
 
     <xsl:template match="md:SPSSODescriptor">
-        <xsl:text>sp</xsl:text>
+        <xsl:if test="not(md:IDPSSODescriptor)">
+            <xsl:text>sp</xsl:text>
+        </xsl:if>
     </xsl:template>
 
     <xsl:template match="md:IDPSSODescriptor">
