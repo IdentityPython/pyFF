@@ -1,4 +1,4 @@
-- remote:
+- load:
      - https://federation.belnet.be/edugain-metadata.xml
      - https://ds.cafe.rnp.br/metadata/edugain-metadata.signed.xml
      - https://login.aaiedu.hr/sso/module.php/aggregator/?id=aaieduhr_edugain&mimetype=application/xml

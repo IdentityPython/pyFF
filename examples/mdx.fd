@@ -5,12 +5,12 @@
     - fork and merge:
        - select
        - setattr:
-            http://www.swamid.se/collection: swamid-2.0
-#    - fork and merge:
-#        - select:
-#            - "http://www.swamid.se/collection=swamid-2.0+http://macedir.org/role=idp"
-#        - setattr:
-#            tag: swamid-idp-transitive
+            http://pyff-project.org/collection: swamid-2.0
+    - fork and merge:
+        - select:
+            - "http://www.swamid.se/collection=swamid-2.0+http://macedir.org/role=idp"
+        - setattr:
+            http://pyff-project.org/collection: swamid-idp-transitive
     - publish: "/tmp/tagged.xml"
     - break
 - when request:

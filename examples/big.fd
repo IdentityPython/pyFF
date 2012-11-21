@@ -1,4 +1,4 @@
-- remote:
+- load:
   - https://wayf.aco.net/aconet-metadata.xml
   - http://manager.aaf.edu.au/metadata/metadata.aaf.signed.xml
   - http://metadata.aai.switch.ch/metadata.switchaai.xml

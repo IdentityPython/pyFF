@@ -1,4 +1,4 @@
-- remote:
+- load:
   - https://idp.kirei.se/saml2/idp/metadata.php
 - select
 - store:

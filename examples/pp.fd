@@ -1,4 +1,4 @@
-- remote: https://aprikoslogin.pingpong.net/simplesaml/saml2/idp/metadata.php 6d:91:46:7e:20:b3:1e:4e:04:ba:93:c8:05:a8:9b:52:c2:37:a9:18
+- load: https://aprikoslogin.pingpong.net/simplesaml/saml2/idp/metadata.php 6d:91:46:7e:20:b3:1e:4e:04:ba:93:c8:05:a8:9b:52:c2:37:a9:18
 - stats
 - select
 - xslt:
