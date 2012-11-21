@@ -3,14 +3,14 @@
        - http://md.swamid.se/md/swamid-2.0.xml
     - select
     - fork and merge:
-       - select
+       - select: "!md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
        - setattr:
             http://pyff-project.org/collection: swamid-2.0
     - fork and merge:
         - select:
-            - "http://www.swamid.se/collection=swamid-2.0+http://macedir.org/role=idp"
+            - "http://pyff-project.org/collection=swamid-2.0+http://pyff-project.org/role=idp"
         - setattr:
-            http://pyff-project.org/collection: swamid-idp-transitive
+            http://pyff-project.org/collection: swamid-idp
     - publish: "/tmp/tagged.xml"
     - break
 - when request:
