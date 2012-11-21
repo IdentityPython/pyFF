@@ -18,7 +18,7 @@ from copy import deepcopy
 from pyff import merge_strategies
 import pyff.index
 from pyff.logs import log
-from pyff.utils import schema, URLFetch, filter_lang
+from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta
 import xmlsec
 from pyff.constants import NS, NF_URI
 import traceback
@@ -40,12 +40,17 @@ def _e(error_log):
     return "\n".join(filter(lambda x: ":WARNING:" not in x,["%s" % e for e in error_log]))
 
 class MDRepository(DictMixin):
-    def __init__(self,index=pyff.index.MemoryIndex()):
+    def __init__(self,index=pyff.index.MemoryIndex(),metadata_cache_enabled=False,min_cache_ttl="PT5M"):
         """
         A class representing a set of sets of SAML metadata.
         """
         self.md = {}
         self.index = index
+        self.metadata_cache_enabled = metadata_cache_enabled
+        self.min_cache_ttl = min_cache_ttl
+        self.respect_cache_duration = True
+        self.default_cache_duration = "PT10M"
+        self.retry_limit = 5
 
     def is_idp(self,entity):
         return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']) is not None)
@@ -152,17 +157,29 @@ class MDRepository(DictMixin):
             a.append(velt)
             #log.debug(etree.tostring(a))
 
-
     def fetch_metadata(self,resources,qsize=5,timeout=60):
         def producer(q, resources):
             for url,verify,id in resources:
                 log.debug("Starting fetcher for %s" % url)
-                thread = URLFetch(url,verify,id)
+                thread = URLFetch(url,verify,id,enable_cache=self.metadata_cache_enabled)
                 thread.start()
                 q.put(thread, True)
 
         def consumer(q, njobs):
             nfinished = 0
+
+            def _retry(thread):
+                if thread.tries < self.retry_limit:
+                    log.info("Retry (%d/%d) fetch %s" % (thread.tries+1,self.retry_limit,thread.url))
+                    # retry w/o cache enabled
+                    new_thread = URLFetch(thread.url,thread.verify,thread.id,enable_cache=False)
+                    new_thread.start()
+                    q.put(new_thread,True)
+                    return 1
+                else:
+                    log.error("Retry limitd (%d) reached for %s - giving up" % (self.retry_limit,thread.url))
+                    return 0
+
             while nfinished < njobs:
                 try:
                     log.debug("waiting for next thread to finish...")
@@ -170,12 +187,27 @@ class MDRepository(DictMixin):
                     thread.join(timeout)
                     if thread.ex is None and thread.result is not None:
                         xml = thread.result.strip()
-                        self.parse_metadata(StringIO(xml),key=thread.verify,url=thread.id)
+                        t = self.parse_metadata(StringIO(xml),key=thread.verify,url=thread.id)
+                        if thread.cached:
+                            cacheDuration = self.default_cache_duration
+                            if self.respect_cache_duration:
+                                cacheDuration = root(t).get('cacheDuration',self.default_cache_duration)
+                            offset = duration2timedelta(cacheDuration)
+                            if thread.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
+                                nfinished -= _retry(thread)
+                            else:
+                                log.debug("got cached metadata (last-modified: %s)" % thread.last_modified)
+                                self.import_metadata(t,url=thread.id)
+                        else:
+                            log.debug("got fresh metadata (date: %s)" % thread.date)
+                            self.import_metadata(t,url=thread.id)
                     else:
-                        log.error("Error fetching %s: %s" % (thread.url,thread.ex))
+                        log.warn("Error fetching %s: %s" % (thread.url,thread.ex))
+                        nfinished -= _retry(thread)
                 except Exception,ex:
                     traceback.print_exc()
-                    log.error("Unexpected error in fetch_metadata: %s. Continuing anyway..." % ex)
+                    log.error("Error fetching %s." % ex)
+                    nfinished -= _retry(thread)
                 finally:
                     nfinished += 1
 
@@ -210,7 +242,7 @@ is stored in the MDRepository instance.
             log.error(ex)
             if fail_on_error:
                 raise ex
-            return []
+            return None
         if key is not None:
             try:
                 log.debug("verifying signature using %s" % key)
@@ -219,33 +251,29 @@ is stored in the MDRepository instance.
                 tb = traceback.format_exc()
                 print tb
                 log.error(ex)
-                return []
+                return None
+
+        return t
+
+    def import_metadata(self,t,url=None):
         if url is None:
             top = t.xpath("//md:EntitiesDescriptor",namespaces=NS)
             if top is not None and len(top) == 1:
                 url = top[0].get("Name",None)
         if url is not None:
             self[url] = t
-        # we always clean incoming ID
+            # we always clean incoming ID
         # add to the index
         for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
             if e.attrib.has_key('ID'):
                 del e.attrib['ID']
             self.index.add(e)
 
-        #for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
-        #    if e.attrib.has_key('ID'):
-        #        del e.attrib['ID']
-        return t.findall(".//{%s}EntityDescriptor" % NS['md'])
-
-        #return t.xpath("//md:EntityDescriptor",namespaces=NS)
-        #for e in t.xpath("//md:EntityDescriptor",namespaces=NS):
-        #    eid = e.get('entityID')
-        #    if eid is None or len(eid) == 0:
-        #        raise Exception,"Missing entityID in %s" % fn
-        #    #self.md[eid] = deepcopy(e)
-        #    out.append(eid)
-        #return out
+    def entities(self,t=None):
+        if t is None:
+            return []
+        else:
+            return t.findall(".//{%s}EntityDescriptor" % NS['md'])
 
     def load_dir(self,dir,ext=".xml",url=None):
         """
@@ -267,8 +295,9 @@ Files ending in the specified extension are included. Directories starting with 
                 for nm in files:
                     if nm.endswith(ext):
                         fn = os.path.join(top, nm)
-                        entities.extend(self.parse_metadata(fn,fail_on_error=True)) #local metadata is assumed to be ok
-            self.md[url] = self.entity_set(entities,url)
+                        t = self.parse_metadata(fn,fail_on_error=True)
+                        entities.extend(self.entities(t)) #local metadata is assumed to be ok
+            self.import_metadata(self.entity_set(entities,url))
         return self.md[url]
 
     def _lookup(self,member,xp=None):
@@ -351,7 +380,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
 
             e = self.get(member,None)
             if e:
-                return self._lookup(self.get(member,None),xp)
+                return self._lookup(e,xp)
 
             if "://" in member: # looks like a URL and wasn't an entity or collection - recurse away!
                 log.debug("recursively fetching members from '%s'" % member)
@@ -449,12 +478,12 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             entityID = e.get("entityID")
             # we assume ddup:ed tree
             old_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'],entityID))
-            log.debug("merging %s into %s" % (e,old_e))
+            #log.debug("merging %s into %s" % (e,old_e))
             # update index!
 
             try:
                 self.index.remove(old_e)
-                log.debug("removed old entity from index")
+                #log.debug("removed old entity from index")
                 strategy(old_e,e)
                 new_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'],entityID))
                 self.index.add(new_e) # we don't know which strategy was employed

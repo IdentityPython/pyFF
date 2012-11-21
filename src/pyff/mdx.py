@@ -71,7 +71,7 @@ class MDUpdate(Monitor):
         try:
             if self.lock.acquire(blocking=0):
                 locked = True
-                md = MDRepository()
+                md = self.server.new_repository()
                 for p in server.plumbings:
                     p.process(md,state={'update':True})
                 if not md.sane():
@@ -238,9 +238,10 @@ Disallow: /
         return self.server.request(pfx,path)
 
 class MDServer():
-    def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS):
+    def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS,cache_enabled=True):
         if not pipes: pipes = []
-        self.md = MDRepository()
+        self.cache_enabled = cache_enabled
+        self.md = self.new_repository()
         self.lock = ReadWriteLock()
         self.plumbings = [plumbing(v) for v in pipes]
         self.refresh = MDUpdate(cherrypy.engine,server=self,frequency=frequency)
@@ -250,6 +251,9 @@ class MDServer():
         if autoreload:
             for f in pipes:
                 cherrypy.engine.autoreload.files.add(f)
+
+    def new_repository(self):
+        return MDRepository(metadata_cache_enabled=self.cache_enabled)
 
     def start(self):
         self.refresh.run(self)
@@ -449,7 +453,7 @@ def main():
         else:
             return ""
 
-    server = MDServer(pipes=args,autoreload=autoreload,frequency=frequency,aliases=aliases)
+    server = MDServer(pipes=args,autoreload=autoreload,frequency=frequency,aliases=aliases,cache_enabled=caching)
     pfx = ["/entities","/metadata"]+server.aliases.keys()
 
     cfg = {

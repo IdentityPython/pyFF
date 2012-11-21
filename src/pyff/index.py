@@ -140,7 +140,7 @@ class MemoryIndex(MDIndex):
             na += 1
             vidx['sp'].add(entity)
 
-        log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'),na,nd))
+        #log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'),na,nd))
 
     def remove(self,entity):
         attr_idx = self.index.setdefault('attr',{})
@@ -172,7 +172,7 @@ class MemoryIndex(MDIndex):
             na += 1
             vidx['sp'].discard(entity)
 
-        log.debug("(un)indexed %s (%d attributes, %d digests)" % (entity.get('entityID'),na,nd))
+        #log.debug("(un)indexed %s (%d attributes, %d digests)" % (entity.get('entityID'),na,nd))
 
     def get(self,a,v):
         if a in DIGESTS:

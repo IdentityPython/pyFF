@@ -242,53 +242,6 @@ Dumps the working document on stdout. Useful for testing.
         print e.get('entityID')
     return req.t
 
-def local(req,*opts):
-    """
-    :param req: The request
-    :param opts: Options (unused)
-    :return: None
-
-Load all entities found in a directory and optionally assign it to a name. When using 'remote' the validated
-stream is stored locally in the repository as the URI from which the stream was fetched. When using 'local' the
-name is the filename unless specified in the argument.
-
-**Examples**
-
-.. code-block:: yaml
-
-    - local: /var/local-metadata
-
-or with a custom URI
-
-.. code-block:: yaml
-
-    - local: /var/local-metadata as http://example.com/metadata.xml
-
-The name (URI) is used in select statements so that in the second example a select to find all SPs in /var/local-metadata
-would look like this:
-
-.. code-block:: yaml
-
-    - local:
-        - /var/local-metadata as http://example.com/metadata.xml
-    - select:
-        - http://example.com/metadata.xml!//md:EntityDescriptor[md:IDPSSODescriptor]
-    """
-    for d in req.args:
-        d = d.strip()
-        m = re.match("(\S+)+\s+as\s+(\S+)",d)
-        if m:
-            if os.path.isdir(m.group(1)):
-                req.md.load_dir(m.group(1),url=m.group(2))
-            else:
-                raise ValueError("%s is not a directory" % m.group(1))
-        else:
-            if os.path.isdir(d):
-                req.md.load_dir(d)
-            else:
-                raise ValueError("%s is not a directory" % d)
-    return req.t
-
 def publish(req,*opts):
     """
     :param req: The request
@@ -343,6 +296,11 @@ def _fetch(md,url,verify):
     except Exception,ex:
         return url,None,None,ex,datetime.now()
 
+def remote(req,*opts):
+    return load(req,opts)
+
+def load(req,*opts):
+    return load(req,opts)
 
 def load(req,*opts):
     """
@@ -355,7 +313,6 @@ is done using threads.
     """
     remote = []
     for x in req.args:
-        log.debug("x: %s" % x)
         x = x.strip()
         log.debug("load %s" % x)
         m = re.match("(\S+)\s+as\s+(\S+)",x)
@@ -379,7 +336,10 @@ is done using threads.
         else:
             raise ValueError("Don't know how to load '%s' as %s verified using %s" % (url,id,verify))
 
-    req.md.fetch_metadata(remote)
+    opts = dict(opts)
+    opts.setdefault('timeout',30)
+    opts.setdefault('qsize',5)
+    req.md.fetch_metadata(remote,**opts)
 
 def _pileon(md,pile,args):
     """
@@ -411,40 +371,6 @@ Recursively spawn _fetch for all URLs. A line on the form file:fn is treated as 
         if url is not None:
             log.debug("spawning %s" % url)
             pile.spawn(_fetch,md,url,verify)
-
-def remote(req,*opts):
-    """
-    :param req: The request
-    :param opts: Options (unused)
-    :return: None
-
-Load a (set of) remote URLs, validate (XSD) and optionally verify signature. Remote takes a list of pairs
-of a URI and an optional certificate or fingerprint for validation and loads those resources (validated)
-into the active repository.
-
-**Examples**
-
-.. code-block:: yaml
-
-    - remote:
-        - http://md.swamid.se/md/swamid-2.0.xml 12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB
-
-Will download http://md.swamid.se/md/swamid-2.0.xml and validate the signature using a certificate (if found
-in the Signature-element that has sha1 fingerprint 12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB.
-    """
-    pool = eventlet.GreenPool()
-    pile = eventlet.GreenPile(pool)
-
-    _pileon(req.md,pile,req.args)
-
-    for url,r,verify,ex,ts_start in pile:
-        ts_end = datetime.now()
-        if r is not None:
-            log.debug("url=%s: read %s bytes" % (url,len(r)))
-            eids = req.md.parse_metadata(StringIO(r),key=verify,url=url)
-            log.info("url=%s: got %d entities" % (url,len(eids)))
-        else:
-            log.error("url=%s: FAILED to load: %s" % (url,ex))
 
 def select(req,*opts):
     """
@@ -961,5 +887,5 @@ Normally this would be combined with the 'merge' feature of fork to add attribut
 document for later processing.
     """
     for e in req.t.findall(".//{%s}EntityDescriptor" % NS['md']):
-        log.debug("setting %s on %s" % (req.args,e.get('entityID')))
+        #log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         req.md.set_entity_attributes(e,req.args)

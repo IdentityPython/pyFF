@@ -15,7 +15,10 @@ import re
 from lxml import etree
 from time import gmtime, strftime
 from pyff.logs import log
-import urllib, threading
+import threading
+import httplib2
+from email.utils import parsedate
+from datetime import datetime
 
 __author__ = 'leifj'
 
@@ -178,34 +181,51 @@ def template(name):
     return templates.get_template(name)
 
 class URLFetch(threading.Thread):
-    def __init__(self, url, verify, id=None):
+    def __init__(self, url, verify, id=None, enable_cache=False):
         self.url = url
         self.verify = verify
         self.id = id
         self.result = None
         self.ex = None
+        self.cached = False
+        self.enable_cache = enable_cache
+        self.cache_ttl = 0
+        self.last_modified = None
+        self.date = None
+        self.tries = 0
 
         if self.id is None:
             self.id = self.url
 
         threading.Thread.__init__(self)
 
-    def get_result(self):
-        return self.result,self.url,self.verify,self.id,self.ex
-
     def run(self):
-        f = None
+
+        def _parse_date(str):
+            return datetime(*parsedate(str)[:6])
+
         try:
-            log.debug("url(%s)" % self.url)
-            f = urllib.urlopen(self.url)
-            self.result = f.read()
+            cache = None
+            if self.enable_cache:
+                log.debug("fetching %s using cache" % self.url)
+                cache = ".cache"
+            else:
+                log.debug("fetching %s without using cache" % self.url)
+
+            h = httplib2.Http(cache=cache)
+            resp,content = h.request(self.url)
+            log.debug(resp)
+            self.last_modified = _parse_date(resp['last-modified'])
+            self.date = _parse_date(resp['date'])
+            if resp.status != 200:
+                log.error("got %d: %s from %s" % (resp.status,resp.reason,self.url))
+                raise ValueError(resp.reason)
+            self.result = content
+            self.cached = resp.fromcache
             log.debug("got %d bytes from %s" % (len(self.result),self.url))
         except Exception,ex:
             self.ex = ex
             self.result = None
-        finally:
-            if f is not None:
-                f.close()
 
 def root(t):
     if hasattr(t,'getroot') and hasattr(t.getroot,'__call__'):
