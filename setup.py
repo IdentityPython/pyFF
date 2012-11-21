@@ -16,7 +16,8 @@ install_requires = [
     'pyXMLSecurity',
     'cherrypy',
     'iso8601',
-    'simplejson'
+    'simplejson',
+    'mako'
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
