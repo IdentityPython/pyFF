@@ -7,6 +7,7 @@ from StringIO import StringIO
 
 from datetime import datetime
 import hashlib
+import urllib
 from UserDict import DictMixin
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -14,11 +15,12 @@ from lxml.etree import DocumentInvalid
 import os
 import re
 from copy import deepcopy
+from pyff import merge_strategies
 import pyff.index
 from pyff.logs import log
 from pyff.utils import schema, URLFetch, filter_lang
 import xmlsec
-from pyff.constants import NS
+from pyff.constants import NS, NF_URI
 import traceback
 import threading
 from Queue import Queue
@@ -46,10 +48,10 @@ class MDRepository(DictMixin):
         self.index = index
 
     def is_idp(self,entity):
-        return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']))
+        return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']) is not None)
 
     def is_sp(self,entity):
-        return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']))
+        return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
 
     def display(self,entity):
         for displayName in filter_lang(entity.findall(".//{%s}DisplayName" % NS['mdui'])):
@@ -92,10 +94,10 @@ class MDRepository(DictMixin):
         return len(self.md) > 0
 
     def extensions(self,e):
-        ext = e.find("{%s}Extensions" % NS['md'])
+        ext = e.find(".//{%s}Extensions" % NS['md'])
         if ext is None:
-            e.insert(0,etree.Element("{%s}Extensions" % NS['md']))
-            ext = e.find("{%s}Extensions" % NS['md'])
+            ext = etree.Element("{%s}Extensions" % NS['md'])
+            e.insert(0,ext)
         return ext
 
     def annotate(self,e,category,title,message,source=None):
@@ -111,9 +113,47 @@ class MDRepository(DictMixin):
         args.extend([atom.title(title),
                      atom.category(term=category),
                      atom.content(message,type="text/plain")])
-        self.extensions(e).insert(0,atom.entry(*args))
+        self.extensions(e).append(atom.entry(*args))
 
-    def fetch_metadata(self,resources,qsize=5,timeout=30):
+    def entity_attributes(self,e):
+        ext = self.extensions(e)
+        #log.debug(ext)
+        ea = ext.find(".//{%s}EntityAttributes" % NS['mdattr'])
+        if ea is None:
+            ea = etree.Element("{%s}EntityAttributes" % NS['mdattr'])
+            ext.append(ea)
+        return ea
+
+    def eattribute(self,e,attr,nf):
+        ea = self.entity_attributes(e)
+        #log.debug(ea)
+        a = ea.xpath(".//saml:Attribute[@NameFormat='%s' and @Name='%s']" % (nf,attr),namespaces=NS)
+        if a is None or len(a) == 0:
+            a = etree.Element("{%s}Attribute" % NS['saml'])
+            a.set('NameFormat',nf)
+            a.set('Name',attr)
+            ea.append(a)
+        else:
+            a = a[0]
+        #log.debug(etree.tostring(self.extensions(e)))
+        return a
+
+    def set_entity_attributes(self,e,d,nf=NF_URI):
+        if e.tag != "{%s}EntityDescriptor" % NS['md']:
+            raise ValueError("I can only add EntityAttribute(s) to EntityDescriptor elements")
+
+        #log.debug("set %s" % d)
+        for attr,value in d.iteritems():
+            #log.debug("set %s to %s" % (attr,value))
+            a = self.eattribute(e,attr,nf)
+            #log.debug(etree.tostring(a))
+            velt = etree.Element("{%s}AttributeValue" % NS['saml'])
+            velt.text = value
+            a.append(velt)
+            #log.debug(etree.tostring(a))
+
+
+    def fetch_metadata(self,resources,qsize=5,timeout=60):
         def producer(q, resources):
             for url,verify,id in resources:
                 log.debug("Starting fetcher for %s" % url)
@@ -125,10 +165,12 @@ class MDRepository(DictMixin):
             nfinished = 0
             while nfinished < njobs:
                 try:
+                    log.debug("waiting for next thread to finish...")
                     thread = q.get(True)
                     thread.join(timeout)
-                    if thread.ex is None:
-                        self.parse_metadata(StringIO(thread.result),key=thread.verify,url=thread.id)
+                    if thread.ex is None and thread.result is not None:
+                        xml = thread.result.strip()
+                        self.parse_metadata(StringIO(xml),key=thread.verify,url=thread.id)
                     else:
                         log.error("Error fetching %s: %s" % (thread.url,thread.ex))
                 except Exception,ex:
@@ -261,6 +303,8 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             log.debug("string lookup %s" % member)
 
             if '+' in member:
+                member = member.strip('+')
+                log.debug("lookup intersection of '%s'" % ' and '.join(member.split('+')))
                 hits = None
                 for f in member.split("+"):
                     f = f.strip()
@@ -271,6 +315,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                         hits.intersection_update(other)
 
                     if not hits:
+                        log.debug("empty intersection")
                         return []
 
                 if hits is not None and hits:
@@ -280,10 +325,12 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
 
             m = re.match("^\{(.+)\}(.+)$",member)
             if m:
+                log.debug("attribute-value match: %s='%s'" % (m.group(1),m.group(2)))
                 return self.index.get(m.group(1),m.group(2).rstrip("/"))
 
             m = re.match("^(.+)=(.+)$",member)
             if m:
+                log.debug("attribute-value match: %s='%s'" % (m.group(1),m.group(2)))
                 return self.index.get(m.group(1),m.group(2).rstrip("/"))
 
             if "!" in member:
@@ -294,13 +341,24 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                 else:
                     log.debug("selecting %s filtered by %s" % (src,xp))
                 return self._lookup(src,xp)
-            else:
-                log.debug("basic lookup %s (%s)" % (member,{True:'exists',False:'does not exist'}[self.has_key(member)]))
-                e = self.index.get("null",member)
+
+            log.debug("basic lookup %s" % member)
+            for idx in ("null"):
+                e = self.index.get(idx,member)
                 if e:
+                    log.debug("found %s in %s index" % (e,idx))
                     return e
-                else:
-                    return self._lookup(self.get(member,None),xp)
+
+            e = self.get(member,None)
+            if e:
+                return self._lookup(self.get(member,None),xp)
+
+            if "://" in member: # looks like a URL and wasn't an entity or collection - recurse away!
+                log.debug("recursively fetching members from '%s'" % member)
+                # note that this supports remote lists which may be more rope than is healthy
+                return [self._lookup(line,xp) for line in urllib.urlopen(member).iterlines()]
+
+            return []
         elif hasattr(member,'__iter__') and type(member) is not dict:
             if not len(member):
                 member = self.keys()
@@ -369,3 +427,38 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
     def __delitem__(self, key):
         del self.md[key]
+
+    def merge(self,t,nt,strategy=pyff.merge_strategies.replace_existing,strategy_name=None):
+        if strategy_name is not None:
+            if not '.' in strategy_name:
+                strategy_name = "pyff.merge_strategies.%s" % strategy_name
+            (mn,sep,fn) = strategy_name.rpartition('.')
+            #log.debug("import %s from %s" % (fn,mn))
+            module = None
+            if '.' in mn:
+                (pn,sep,modn) = mn.rpartition('.')
+                module = getattr(__import__(pn,globals(),locals(),[modn],-1),modn)
+            else:
+                module = __import__(mn,globals(),locals(),[],-1)
+            strategy = getattr(module,fn) # we might aswell let this fail early if the strategy is wrongly named
+
+        if strategy is None:
+            raise ValueError("No merge strategy - refusing to merge")
+
+        for e in nt.findall(".//{%s}EntityDescriptor" % NS['md']):
+            entityID = e.get("entityID")
+            # we assume ddup:ed tree
+            old_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'],entityID))
+            log.debug("merging %s into %s" % (e,old_e))
+            # update index!
+
+            try:
+                self.index.remove(old_e)
+                log.debug("removed old entity from index")
+                strategy(old_e,e)
+                new_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'],entityID))
+                self.index.add(new_e) # we don't know which strategy was employed
+            except Exception,ex:
+                traceback.print_exc()
+                self.index.add(old_e)
+                raise ex

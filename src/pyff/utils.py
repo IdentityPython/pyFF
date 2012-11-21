@@ -194,15 +194,18 @@ class URLFetch(threading.Thread):
         return self.result,self.url,self.verify,self.id,self.ex
 
     def run(self):
+        f = None
         try:
             log.debug("url(%s)" % self.url)
             f = urllib.urlopen(self.url)
             self.result = f.read()
             log.debug("got %d bytes from %s" % (len(self.result),self.url))
-            f.close()
         except Exception,ex:
             self.ex = ex
             self.result = None
+        finally:
+            if f is not None:
+                f.close()
 
 def root(t):
     if hasattr(t,'getroot') and hasattr(t.getroot,'__call__'):

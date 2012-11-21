@@ -1,9 +1,23 @@
 <%include file="header.html"/>
-        <h1>Metadata</h1>
-        <dl class="dl-horizontal">
-    % for a in pyff.args:
-            <dt><a href="${a}">${a}</a></dt>
-            <dd>${pyff.args[a]}</dd>
-    % endfor
+<h1>${title}</h1>
+    % if alias:
+        <ul>
+            % for v in md.index.attribute(aliases[alias]):
+            <li><a href="/${alias}/${v|u}.html">${v}</a>
+                <a href="/${alias}/${v|u}.xml" title="XML Metadata"><i class="icon-cog"></i></a></li>
+            % endfor
+        </ul>
+    % else:
+        <dl>
+        % for a in aliases:
+            <dt>${a}</dt>
+
+            % for v in md.index.attribute(aliases[a]):
+            <dd><a href="/${a}/${v|u}.html">${v}</a>
+                <a href="/${a}/${v|u}.xml" title="XML Metadata"><i class="icon-cog"></i></a></dd>
+            % endfor
+        % endfor
         </dl>
+    % endif
+
 <%include file="footer.html"/>

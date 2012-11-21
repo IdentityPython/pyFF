@@ -4,7 +4,7 @@ Package that contains the basic set of pipes - functions that can be used to put
 import cherrypy
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-from pyff.utils import dumptree, schema, resource_string, safe_write, template, root, duration2timedelta, xslt_transform
+from pyff.utils import dumptree, schema,safe_write, template, root, duration2timedelta, xslt_transform
 from pyff.mdrepo import NS
 from pyff.pipes import Plumbing, PipeException
 from copy import deepcopy
@@ -16,10 +16,9 @@ import eventlet
 import hashlib
 from eventlet.green import urllib2
 from StringIO import StringIO
-from lxml import etree
 import xmlsec
 import base64
-from datetime import datetime,timedelta
+from datetime import datetime
 
 __author__ = 'leifj'
 
@@ -78,12 +77,53 @@ tree and allows a new plumbing to run. Useful for producing multiple outputs fro
 
 The second fork in this example is strictly speaking not necessary since the main plumbing is still active
 but it may help to structure your plumbings this way.
+
+Normally the result of the "inner" plumbing is disgarded - unless published or emit:ed to a calling client
+in the case of the MDX server - but by adding 'merge' to the options with an optional 'merge strategy' the
+behaviour can be changed to merge the result of the inner pipeline back to the parent working document.
+
+The default merge strategy is 'replace_existing' which replaces each EntityDescriptor found in the resulting
+document in the parent document (using the entityID as a pointer). Any python module path ('a.mod.u.le.callable')
+ending in a callable is accepted. If the path doesn't contain a '.' then it is assumed to reference one of the
+standard merge strategies in pyff.merge_strategies.
+
+For instance the following block can be used to set an attribute on a single entity:
+
+.. code-block: yaml
+
+    - fork merge:
+        - select: http://sp.example.com/shibboleth-sp
+        - setattr:
+            attribute: value
+
+
+Note that unless you have a select statement before your fork merge you'll be merging into an empty
+active document which with the default merge strategy of replace_existing will result in an empty
+active document. To avoid this do a select before your fork, thus:
+
+.. code-block: yaml
+
+    - select
+    - fork merge:
+        - select: http://sp.example.com/shibboleth-sp
+        - setattr:
+            attribute: value
+
+
     """
     nt = None
     if req.t is not None:
         nt = deepcopy(req.t)
 
-    Plumbing(pipeline=req.args,id="%s.fork" % req.plumbing.id)._process(req)
+    ip = Plumbing(pipeline=req.args,id="%s.fork" % req.plumbing.id)
+    ireq = Plumbing.Request(ip,req.md,nt)
+    ip._process(ireq)
+
+    if 'merge' in opts and ireq.t is not None and len(ireq.t) > 0:
+        sn="pyff.merge_strategies.replace_existing"
+        if opts[-1] != 'merge':
+            sn = opts[-1]
+        req.md.merge(req.t,ireq.t,strategy_name=sn)
 
 def _any(lst,d):
     for x in lst:
@@ -238,10 +278,10 @@ would look like this:
         d = d.strip()
         m = re.match("(\S+)+\s+as\s+(\S+)",d)
         if m:
-            if os.path.isdir(m.group(0)):
-                req.md.load_dir(m.group(0),url=m.group(1))
+            if os.path.isdir(m.group(1)):
+                req.md.load_dir(m.group(1),url=m.group(2))
             else:
-                raise ValueError("%s is not a directory" % m.group(0))
+                raise ValueError("%s is not a directory" % m.group(1))
         else:
             if os.path.isdir(d):
                 req.md.load_dir(d)
@@ -263,6 +303,10 @@ Publish the working document. Publish takes one argument: a file where the docum
 
     - publish: /tmp/idp.xml
     """
+
+    if req.t is None or not len(req.t):
+        raise ValueError("Empty document submitted for publication")
+
     try:
         schema().assertValid(req.t)
     except DocumentInvalid,ex:
@@ -278,6 +322,7 @@ Publish the working document. Publish takes one argument: a file where the docum
         output_file = req.args[0]
     if output_file is not None:
         output_file = output_file.strip()
+        log.debug("publish %s" % output_file)
         resource_name = output_file
         m = re.match("(\S+)+\s+as\s+(\S+)",output_file)
         if m:
@@ -310,6 +355,7 @@ is done using threads.
     """
     remote = []
     for x in req.args:
+        log.debug("x: %s" % x)
         x = x.strip()
         log.debug("load %s" % x)
         m = re.match("(\S+)\s+as\s+(\S+)",x)
@@ -637,16 +683,22 @@ user-supplied file. The rest of the keyword arguments are made available as stri
     params = dict((k,"\'%s\'" % v) for (k,v) in req.args.items())
     del params['stylesheet']
     ot = xslt_transform(req.t,stylesheet,params)
-    log.debug(ot)
+    #log.debug(ot)
     return ot
 
 def validate(req,*opts):
     """
+    :param req: The request
+    :param opts: Options - the template name
+    :return: The unmodified tree
+
 Generate an exception unless the working tree validates. Validation is done automatically
 during publication and loading of metadata so this call is seldom needed.
     """
     if req.t is not None:
         schema().assertValid(req.t)
+
+    return req.t
 
 def page(req,*opts):
     """
@@ -758,33 +810,46 @@ Remember that you need a 'publish' call after certreport in your plumbing to get
             except Exception,ex:
                 log.error(ex)
 
-def render(req,*opts):
+def emit(req,ctype="application/xml",*opts):
     """
     :param req: The request
     :param opts: Options (not used)
-    :return: XML
+    :return: unicode
 
-Renders the working tree as XML and sets the digest of the tree as the ETag.
+Renders the working tree as text and sets the digest of the tree as the ETag.
+If the tree has already been rendered as text by an earlier step the text is
+returned as utf-8 encoded unicode.
 
 **Examples**
 
 .. code-block:: yaml
 
-    - render
+    - emit application/xml
     """
-    xml =  dumptree(req.t)
-    m = hashlib.sha1()
-    m.update(xml)
-    req.state['headers']['ETag'] = m.hexdigest()
-    return xml
 
-def emit(req,ctype,*opts):
-    m = hashlib.sha1()
-    m.update(req.t)
-    req.state['headers']['ETag'] = m.hexdigest()
+    d = req.t
+    log.debug("before getroot (%s) %s" % (type(d),repr(d)))
+    if hasattr(d,'getroot') and hasattr(d.getroot,'__call__'):
+        nd = d.getroot()
+        if nd is None:
+            d = str(d)
+        else:
+            d = nd
+    log.debug("after getroot (%s) %s" % (type(d),repr(d)))
+    if hasattr(d,'tag'):
+        log.debug("has tag")
+        d = dumptree(d)
+    log.debug("after dumptree (%s) %s" % (type(d),repr(d)))
+
+    if d is not None:
+        m = hashlib.sha1()
+        m.update(d)
+        req.state['headers']['ETag'] = m.hexdigest()
+    else:
+        raise ValueError("Empty")
+
     req.state['headers']['Content-Type'] = ctype
-    return unicode(req.t).encode("utf-8")
-
+    return unicode(d.decode('utf-8')).encode("utf-8")
 
 def signcerts(req,*opts):
     """
@@ -873,3 +938,28 @@ If operating on a single EntityDescriptor then @Name is ignored (cf first).
         req.state['cache'] = int(offset.total_seconds())
 
     return req.t
+
+def setattr(req,*opts):
+    """
+    :param req: The request
+    :param opts: Options (not used)
+    :return: A modified working document
+
+Transforms the working document by setting the specified attribute on all of the EntityDescriptor
+elements of the active document.
+
+    **Examples**
+
+.. code-block:: yaml
+
+    - setattr:
+        attr1: value1
+        attr2: value2
+        ...
+
+Normally this would be combined with the 'merge' feature of fork to add attributes to the working
+document for later processing.
+    """
+    for e in req.t.findall(".//{%s}EntityDescriptor" % NS['md']):
+        log.debug("setting %s on %s" % (req.args,e.get('entityID')))
+        req.md.set_entity_attributes(e,req.args)

@@ -177,6 +177,7 @@ The inner request pipeline processor.
             except PipeException,ex:
                 log.error(ex)
                 break
+        return req.t
 
 def plumbing(fn):
     """

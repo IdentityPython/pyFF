@@ -1,10 +1,37 @@
 """
 An implementation of draft-lajoie-md-query
 
-Usage: pyffd [-C|--no-cache] [-P|--port] [-H|--host] {pipeline-files}+
+Usage: pyffd [-C|--no-cache] [-p <pidfile>] [-f] [-a] [--loglevel=<level>]
+             [-P<port>|--port=<port>] [-H<host>|--host=<host>] {pipeline-files}+
+
+    -C|--no-cache
+            Turn off caching
+    -p <pidfile>
+            Write a pidfile at the specified location
+    -f
+            Run in foreground
+    -a
+            Restart pyffd if any of the pipeline files change
+    --loglevel=<level>
+            Set logging level
+    -P<port>|--port=<port>
+            Listen on the specified port
+    -H<host>|--host=<host>
+            Listen on the specified interface
+    --frequency=<seconds>
+            Wake up every <seconds> and run the update pipeline. By
+            default the frequency is set to 600.
+    -A<name:uri>|--alias=<name:uri>
+            Add the mapping 'name: uri' to the toplevel URL alias
+            table. This causes URLs on the form http://server/<name>/x
+            to be processed as http://server/metadata/{uri}x. The
+            default alias table is presented at http://server
+    {pipeline-files}+
+            One or more pipeline files
 
 """
 import getopt
+import traceback
 import os
 import sys
 from threading import RLock
@@ -17,6 +44,8 @@ from cherrypy.lib import caching
 import re
 from simplejson import dumps
 import time
+from pyff.constants import ATTRS
+from pyff.dj import DiscoJuice
 from pyff.index import hash_id
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
@@ -52,28 +81,46 @@ class MDUpdate(Monitor):
                     server.md = md
                     stats['Repository Update Time'] = datetime.now()
                     stats['Repository Size'] = md.index.size()
-
         except Exception,ex:
-            #log.error(ex)
-            raise ex
+            traceback.print_exc()
         finally:
             if locked:
                 self.lock.release()
 
 class EncodingDispatcher(object):
+    def __init__(self,prefixes,enc,next_dispatcher=Dispatcher()):
+        self.prefixes = prefixes
+        self.enc = enc
+        self.next_dispatcher = next_dispatcher
+
+    def dispatch(self,path_info):
+        log.debug("EncodingDispatcher called with %s" % path_info)
+        vpath = path_info.replace("%2F", "/")
+        for prefix in self.prefixes:
+            if vpath.startswith(prefix):
+                plen = len(prefix)
+                vpath = vpath[plen+1:]
+                npath =  "%s/%s" % (prefix,self.enc(vpath))
+                log.debug("EncodingDispatcher %s" % npath)
+                return self.next_dispatcher(npath)
+        return self.next_dispatcher(vpath)
+
+
+class EncodingDispatcher_old(object):
     def __init__(self,prefix,enc,next_dispatcher=Dispatcher()):
         self.prefix = prefix
         self.plen = len(prefix)
         self.enc = enc
         self.next_dispatcher = next_dispatcher
 
-    def __call__(self,path_info):
+    def dispatch(self,path_info):
+        log.debug("EncodingDispatcher called with %s" % path_info)
         vpath = path_info.replace("%2F", "/")
         vpath = vpath[self.plen+1:]
         npath =  "%s/%s" % (self.prefix,self.enc(vpath))
         log.debug("EncodingDispatcher %s" % npath)
         handler =  self.next_dispatcher(npath)
-        cherrypy.request.is_index = False
+        #cherrypy.request.is_index = False
         return handler
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"site")
@@ -81,6 +128,8 @@ site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"site")
 class MDRoot():
     def __init__(self,server):
         self.server = server
+
+    cppstats = cpstats.StatsPage()
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600,debug=True)
@@ -99,12 +148,17 @@ Disallow: /
     @cherrypy.expose
     @cherrypy.tools.expires(secs=600,debug=True)
     def entities(self,path=None):
-        return self.server.mdx(path)
+        return self.server.request(path=path,content_type="application/xml")
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=600,debug=True)
+    def metadata(self,path=None):
+        return self.server.request(path=path)
+
+    #@cherrypy.expose
+    #@cherrypy.tools.expires(secs=600,debug=True)
     def json(self,path=None):
-        return self.server.mdx(path,content_type="application/json")
+        return self.server.request(path=path,content_type="application/json")
 
     @cherrypy.expose
     def about(self):
@@ -119,8 +173,25 @@ Disallow: /
             plumbings=["%s" % p for p in self.server.plumbings],
         )
 
-    @cherrypy.expose
-    def html(self,id):
+    #@cherrypy.expose
+    def md(self,path=None):
+        return self.server.request(path=path)
+
+    #@cherrypy.expose
+    def html(self,path=None):
+        return self.server.request(path=path,content_type="text/html")
+
+    #@cherrypy.expose
+    def md_old(self,id=None):
+
+        def _d(x):
+            if x is None:
+                return None
+
+            if x.startswith("{base64}"):
+                return x[8:].decode('base64')
+            else:
+                return x
 
         def escape(m):
             str = m.group(0)
@@ -130,7 +201,7 @@ Disallow: /
                 return '&gt;'
             return str
 
-        entities = self.server.md.lookup(id)
+        entities = self.server.md.lookup(_d(id))
         if not entities:
             raise NotFound()
         if len(entities) > 1:
@@ -155,30 +226,30 @@ Disallow: /
         return dumps(self.server.md.search(query))
 
     @cherrypy.expose
-    def metadata(self):
-        return template("metadata.html").render(entities=self.server.md,md=self.server.md,http=cherrypy.request)
-
-    @cherrypy.expose
     def index(self):
-        return self.server.request("")
+        return self.server.request()
 
     @cherrypy.expose
     def static(self):
         return static.staticdir("/static",site_dir,debug=True)
 
     @cherrypy.expose
-    def default(self,*args):
-        path = "/".join(args)
-        return self.server.request(path)
+    def default(self,pfx,path=None):
+        return self.server.request(pfx,path)
 
 class MDServer():
-    def __init__(self, pipes=None):
+    def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS):
         if not pipes: pipes = []
         self.md = MDRepository()
         self.lock = ReadWriteLock()
         self.plumbings = [plumbing(v) for v in pipes]
-        self.refresh = MDUpdate(cherrypy.engine,server=self)
+        self.refresh = MDUpdate(cherrypy.engine,server=self,frequency=frequency)
         self.refresh.subscribe()
+        self.aliases = aliases
+
+        if autoreload:
+            for f in pipes:
+                cherrypy.engine.autoreload.files.add(f)
 
     def start(self):
         self.refresh.run(self)
@@ -187,63 +258,124 @@ class MDServer():
         def has_key(self,key):
             return True
 
+        def get(self,item):
+            return self.__getitem__(item)
+
         def __getitem__(self, item):
             try:
                 return cptools.accept(item,debug=True)
             except HTTPError:
                 return False
 
-    def request(self,path,select=None,content_type=None):
+    def request(self,pfx=None,path=None,content_type=None):
         stats['MD Requests'] += 1
+
+        def escape(m):
+            str = m.group(0)
+            if str == '<':
+                return '&lt;'
+            if str == '>':
+                return '&gt;'
+            return str
+
+        def _d(x):
+            if x is None or len(x) == 0:
+                return None,None
+
+            if x.startswith("{base64}"):
+                x = x[8:].decode('base64')
+
+            if '.' in x:
+                (p,sep,ext) = x.rpartition('.')
+                return p,ext
+            else:
+                return x,None
+
+        _ctypes = {'xml': 'application/xml',
+                   'json': 'application/json',
+                    'htm': 'text/html',
+                    'html': 'text/html'}
+
+        alias=None
+        if pfx:
+            alias = pfx
+            pfx = self.aliases.get(alias,None)
+            if pfx is None:
+                raise NotFound()
+
+        path,ext = _d(path)
+        if pfx and path:
+            path = "{%s}%s" % (pfx,path)
+
+        logging.debug("request %s %s" % (path,ext))
         log.debug(cherrypy.request.headers)
         accept = {}
         if content_type is None:
-            accept = MDServer.MediaAccept()
+            if ext is not None and ext in _ctypes:
+                accept = {_ctypes[ext]:True}
+            else:
+                accept = MDServer.MediaAccept()
+                if ext is not None:
+                    path = "%s.%s" % (path,ext)
         else:
             accept = {content_type:True}
-
         with self.lock.readlock:
-            for p in self.plumbings:
-                state = {'request':{ "/%s" % path: True},
-                         'headers':{'Content-Type': 'text/xml'},
-                         'accept': accept,
-                         'url': cherrypy.url(relative=False),
-                         'select': select}
-                r = p.process(self.md,state=state)
-                if r is not None:
-                    cache_ttl = state.get('cache',0)
-                    log.debug("caching for %d seconds" % cache_ttl)
-                    caching.expires(secs=cache_ttl)
-                    for k,v in state.get('headers',{}).iteritems():
-                        cherrypy.response.headers[k] = v
-                    return r
+            if accept.get('text/html'):
+                if not path:
+                    if pfx:
+                        title=pfx
+                    else:
+                        title="Metadata By Attributes"
+                    return template("index.html").render(http=cherrypy.request,
+                        md=self.md,
+                        alias=alias,
+                        aliases=self.aliases,
+                        title=title)
+                else:
+                    entities = self.md.lookup(path)
+                    if not entities:
+                        raise NotFound()
+                    if len(entities) > 1:
+                        return template("metadata.html").render(http=cherrypy.request,md=self.md,entities=entities)
+                    else:
+                        entity = entities[0]
+                        t = html.fragment_fromstring(unicode(xslt_transform(entity,"entity2html.xsl")))
+                        for c_elt in t.findall(".//code[@role='entity']"):
+                            c_txt = dumptree(entity,pretty_print=True,xml_declaration=False).decode("utf-8")
+                            p = c_elt.getparent()
+                            p.remove(c_elt)
+                            if p.text is not None:
+                                p.text += c_txt #re.sub(".",escape,c_txt)
+                            else:
+                                p.text = c_txt # re.sub(".",escape,c_txt)
+                        xml = dumptree(t,xml_declaration=False).decode('utf-8')
+                        return template("basic.html").render(http=cherrypy.request,content=xml)
+            else:
+                for p in self.plumbings:
+                    state = {'request': True,
+                             'headers':{'Content-Type': 'text/xml'},
+                             'accept': accept,
+                             'url': cherrypy.url(relative=False),
+                             'select': path}
+                    r = p.process(self.md,state=state)
+                    if r is not None:
+                        cache_ttl = state.get('cache',0)
+                        log.debug("caching for %d seconds" % cache_ttl)
+                        caching.expires(secs=cache_ttl)
+                        for k,v in state.get('headers',{}).iteritems():
+                            cherrypy.response.headers[k] = v
+                        return r
         raise NotFound()
 
-    def mdx(self,path,content_type=None):
-        """
-The entities method is special - it gets called by the EncodingDispatcher which by-passes most
-of the RESTful path decoding/parsing mechanisms in cherrypy. Instead the entities method
-gets (as a string) the part of the path-info after the dispatcher "mount point" - typically
-/entities/ after url-dequoting.
-        """
-
-        def _d(x):
-            if x is None:
-                return None
-
-            if x.startswith("{base64}"):
-                return x[8:].decode('base64')
-            else:
-                return x
-
-        return self.request("entities",_d(path),content_type=content_type)
 
 def main():
     """
     The main entrypoint for the pyFF mdx server.
     """
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hP:p:H:Cf', ['help', 'loglevel=','port=','host=','no-caching'])
+        opts, args = getopt.getopt(sys.argv[1:],
+            'hP:p:H:CfaA:',
+            ['help', 'loglevel=','port=','host=','no-caching','autoreload','frequency=','alias='])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -257,6 +389,9 @@ def main():
     caching = True
     delay = 300
     daemonize = True
+    autoreload = False
+    frequency = 600
+    aliases = ATTRS
 
     try:
         for o, a in opts:
@@ -281,6 +416,14 @@ def main():
                 delay = int(caching)
             elif o in ('--foreground','-f'):
                 daemonize = False
+            elif o in ('--autoreload','-a'):
+                autoreload = True
+            elif o in ('--frequency'):
+                frequency = int(a)
+            elif o in ('-A','--alias'):
+                (a,sep,uri) = a.lpartition(':')
+                if a and uri:
+                    aliases[a] = uri
             else:
                 raise ValueError("Unknown option %s" % o)
 
@@ -305,7 +448,10 @@ def main():
             return "{base64}%s" % p.encode('base64')
         else:
             return ""
-    server = MDServer(pipes=args)
+
+    server = MDServer(pipes=args,autoreload=autoreload,frequency=frequency,aliases=aliases)
+    pfx = ["/entities","/metadata"]+server.aliases.keys()
+
     cfg = {
         'global': {
             'server.socket_port': port,
@@ -318,39 +464,26 @@ def main():
             'tools.caching.antistampede_timeout': None,
             'tools.caching.delay': 3600, # this is how long we keep static stuff
             'tools.cpstats.on': True,
-            'tools.encode.on': True,
-            'tools.encode.encoding': "utf8",
         },
         '/': {
             'tools.caching.delay': delay,
             'tools.staticdir.root': site_dir,
             'tools.cpstats.on': True,
-            'tools.encode.on': True,
-            'tools.encode.encoding': "utf8",
+            'request.dispatch': EncodingDispatcher(pfx,_b64).dispatch,
+            'request.dispatpch.debug': True,
         },
         '/static': {
             'tools.staticdir.on': True,
-            'tools.staticdir.dir': 'static'
-        },
-        '/entities': {
-            'tools.caching.delay': delay,
-            'request.dispatch': EncodingDispatcher("/entities",_b64),
-            'tools.cpstats.on': True,
-            'tools.encode.on': True,
-            'tools.encode.encoding': "utf8",
-        },
-        '/json': {
-            'tools.caching.delay': delay,
-            'request.dispatch': EncodingDispatcher("/json",_b64),
-            'tools.cpstats.on': True,
-            'tools.encode.on': True,
-            'tools.encode.encoding': "utf8",
+            'tools.staticdir.root': site_dir,
+            'tools.staticdir.dir': "static",
         }
     }
     cherrypy.config.update(cfg)
+
     root = MDRoot(server)
-    root.cpstats = cpstats.StatsPage()
+    root.dj = DiscoJuice()
     app = cherrypy.tree.mount(root,config=cfg)
+    app.log.error_log.setLevel(loglevel)
     app.log.error_log.setLevel(loglevel)
     #Always start the engine; this will start all other services
     try:
