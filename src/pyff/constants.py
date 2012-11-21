@@ -10,3 +10,9 @@ NS={"md": "urn:oasis:names:tc:SAML:2.0:metadata",
     'mdui': "urn:oasis:names:tc:SAML:metadata:ui",
     'mdattr': "urn:oasis:names:tc:SAML:metadata:attribute",
     'saml': "urn:oasis:names:tc:SAML:2.0:assertion"}
+
+ATTRS = {'collection': 'http://pyff-project.org/collection',
+         'entity-category': 'http://macedir.org/entity-category',
+         'role': 'http://pyff-project.org/role'}
+
+DIGESTS = ['sha1','md5','null']
