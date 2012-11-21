@@ -352,6 +352,15 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                 else:
                     return []
 
+            if "!" in member:
+                (src,xp) = member.split("!")
+                if len(src) == 0:
+                    src = None
+                    log.debug("filtering using %s" % xp)
+                else:
+                    log.debug("selecting %s filtered by %s" % (src,xp))
+                return self._lookup(src,xp)
+
             m = re.match("^\{(.+)\}(.+)$",member)
             if m:
                 log.debug("attribute-value match: %s='%s'" % (m.group(1),m.group(2)))
@@ -361,15 +370,6 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             if m:
                 log.debug("attribute-value match: %s='%s'" % (m.group(1),m.group(2)))
                 return self.index.get(m.group(1),m.group(2).rstrip("/"))
-
-            if "!" in member:
-                (src,xp) = member.split("!")
-                if len(src) == 0:
-                    src = None
-                    log.debug("filtering using %s" % xp)
-                else:
-                    log.debug("selecting %s filtered by %s" % (src,xp))
-                return self._lookup(src,xp)
 
             log.debug("basic lookup %s" % member)
             for idx in ("null"):
