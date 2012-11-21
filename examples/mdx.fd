@@ -1,40 +1,19 @@
 - when update:
     - load:
        - http://md.swamid.se/md/swamid-2.0.xml
+    - select
+    - fork and merge:
+       - select
+       - setattr:
+            http://www.swamid.se/collection: swamid-2.0
+#    - fork and merge:
+#        - select:
+#            - "http://www.swamid.se/collection=swamid-2.0+http://macedir.org/role=idp"
+#        - setattr:
+#            tag: swamid-idp-transitive
+    - publish: "/tmp/tagged.xml"
     - break
-- when request /:
-    - redirect: /md/
-    - break
-- when request /md:
-    - page:
-        swamid-idp.xml: "SWAMID Identity Providers"
-        swamid-sp.xml: "SWAMID Relying Parties"
-    - break
-- when request /md/swamid-idp.xml:
-    - select:
-        - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
-    - finalize:
-        cacheDuration: PT5H
-        validUntil: P10D
-    - sign:
-        key: sign.key
-        cert: sign.crt
-    - render
-    - break
-- when request /md/swamid-sp.xml:
-    - select:
-        - "!//md:EntityDescriptor[md:SPSSODescriptor]"
-    - xslt:
-        stylesheet: tidy.xsl
-    - finalize:
-        cacheDuration: PT5H
-        validUntil: P10D
-    - sign:
-        key: sign.key
-        cert: sign.crt
-    - render
-    - break
-- when request /entities:
+- when request:
     - select
     - stats
     - pipe:
@@ -48,11 +27,10 @@
              - sign:
                  key: sign.key
                  cert: sign.crt
-             - render
+             - emit application/xml
              - break
         - when accept application/json:
              - xslt:
                  stylesheet: discojson.xsl
              - emit application/json:
              - break
-
