@@ -39,9 +39,11 @@
             $('.typeahead').on('change',function(event) {
                 var value = $('ul.typeahead li.active').data('value')
                 if (value) {
-                    document.location.href = "/html/"+ids[value]
+                    document.location.href = "/metadata/"+ids[value]+".html"
                 }
             })
+            $('table').addClass("table table-striped table-bordered")
+            $('input:submit').addClass("btn btn-mini")
         });
     </script>
 </head>
@@ -64,4 +66,4 @@
 </div>
 <div class="container">
     <div class="row">
-        <div class="span10">
+        <div class="span12">
