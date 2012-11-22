@@ -73,11 +73,13 @@ class MDUpdate(Monitor):
                 locked = True
                 md = self.server.new_repository()
                 for p in server.plumbings:
-                    p.process(md,state={'update':True})
+                    state={'update':True,'stats':{}}
+                    p.process(md,state)
+                    stats.update(state.get('stats',{}))
                 if not md.sane():
-                    log.error("update produced insane active repository - will retry...")
+                    log.error("update produced insane active repository - will retry later...")
                 with server.lock.writelock:
-                    log.debug("updating metadata repository with %d entities" % md.index.size())
+                    log.debug("update produced new repository with %d entities" % md.index.size())
                     server.md = md
                     stats['Repository Update Time'] = datetime.now()
                     stats['Repository Size'] = md.index.size()
@@ -129,7 +131,7 @@ class MDRoot():
     def __init__(self,server):
         self.server = server
 
-    cppstats = cpstats.StatsPage()
+    stats = cpstats.StatsPage()
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600,debug=True)
@@ -360,7 +362,8 @@ class MDServer():
                              'headers':{'Content-Type': 'text/xml'},
                              'accept': accept,
                              'url': cherrypy.url(relative=False),
-                             'select': path}
+                             'select': path,
+                             'stats':{}}
                     r = p.process(self.md,state=state)
                     if r is not None:
                         cache_ttl = state.get('cache',0)

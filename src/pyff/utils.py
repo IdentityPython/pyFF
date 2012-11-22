@@ -13,7 +13,7 @@ import os
 import pkg_resources
 import re
 from lxml import etree
-from time import gmtime, strftime
+from time import gmtime, strftime, clock
 from pyff.logs import log
 import threading
 import httplib2
@@ -193,17 +193,26 @@ class URLFetch(threading.Thread):
         self.last_modified = None
         self.date = None
         self.tries = 0
+        self.resp = None
+        self.start_time = 0
+        self.end_time = 0
 
         if self.id is None:
             self.id = self.url
 
         threading.Thread.__init__(self)
 
+    def time(self):
+        if self.isAlive():
+            raise ValueError("I'm not done yet")
+        return self.end_time - self.start_time
+
     def run(self):
 
         def _parse_date(str):
             return datetime(*parsedate(str)[:6])
 
+        self.start_time = clock()
         try:
             cache = None
             if self.enable_cache:
@@ -214,6 +223,7 @@ class URLFetch(threading.Thread):
 
             h = httplib2.Http(cache=cache)
             resp,content = h.request(self.url)
+            self.resp = resp
             log.debug(resp)
             self.last_modified = _parse_date(resp['last-modified'])
             self.date = _parse_date(resp['date'])
@@ -226,6 +236,8 @@ class URLFetch(threading.Thread):
         except Exception,ex:
             self.ex = ex
             self.result = None
+        finally:
+            self.end_time = clock()
 
 def root(t):
     if hasattr(t,'getroot') and hasattr(t.getroot,'__call__'):

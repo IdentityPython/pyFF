@@ -157,15 +157,15 @@ class MDRepository(DictMixin):
             a.append(velt)
             #log.debug(etree.tostring(a))
 
-    def fetch_metadata(self,resources,qsize=5,timeout=60):
-        def producer(q, resources):
+    def fetch_metadata(self,resources,qsize=5,timeout=60,stats={}):
+        def producer(q,resources):
             for url,verify,id in resources:
                 log.debug("Starting fetcher for %s" % url)
                 thread = URLFetch(url,verify,id,enable_cache=self.metadata_cache_enabled)
                 thread.start()
                 q.put(thread, True)
 
-        def consumer(q, njobs):
+        def consumer(q,njobs,stats):
             nfinished = 0
 
             def _retry(thread):
@@ -181,26 +181,46 @@ class MDRepository(DictMixin):
                     return 0
 
             while nfinished < njobs:
+                info = None
                 try:
                     log.debug("waiting for next thread to finish...")
                     thread = q.get(True)
                     thread.join(timeout)
+
+                    info = {
+                        'Time Spent': thread.time(),
+                        'Status': thread.resp.status,
+                    }
+
+                    if thread.ex:
+                        info['URL Exception'] = ex
+                    else:
+                        if thread.result is not None:
+                            info['Bytes'] = len(thread.result)
+                        info['Cached'] = thread.cached
+                        info['Date'] = str(thread.date)
+                        info['Last-Modified'] = str(thread.last_modified)
+
                     if thread.ex is None and thread.result is not None:
                         xml = thread.result.strip()
                         t = self.parse_metadata(StringIO(xml),key=thread.verify,url=thread.id)
+                        cacheDuration = self.default_cache_duration
+                        if self.respect_cache_duration:
+                            cacheDuration = root(t).get('cacheDuration',self.default_cache_duration)
+                        offset = duration2timedelta(cacheDuration)
+
                         if thread.cached:
-                            cacheDuration = self.default_cache_duration
-                            if self.respect_cache_duration:
-                                cacheDuration = root(t).get('cacheDuration',self.default_cache_duration)
-                            offset = duration2timedelta(cacheDuration)
                             if thread.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
                                 nfinished -= _retry(thread)
                             else:
                                 log.debug("got cached metadata (last-modified: %s)" % thread.last_modified)
-                                self.import_metadata(t,url=thread.id)
+                                ne = self.import_metadata(t,url=thread.id)
+                                info['Number of Entities'] = ne
                         else:
                             log.debug("got fresh metadata (date: %s)" % thread.date)
-                            self.import_metadata(t,url=thread.id)
+                            ne = self.import_metadata(t,url=thread.id)
+                            info['Number of Entities'] = ne
+                        info['Cache Expiration Time'] = str(thread.last_modified + offset)
                     else:
                         log.warn("Error fetching %s: %s" % (thread.url,thread.ex))
                         nfinished -= _retry(thread)
@@ -208,12 +228,15 @@ class MDRepository(DictMixin):
                     traceback.print_exc()
                     log.error("Error fetching %s." % ex)
                     nfinished -= _retry(thread)
+                    info['Exception'] = ex
                 finally:
                     nfinished += 1
+                    if info is not None:
+                        stats[thread.url] = info
 
         q = Queue(qsize)
         prod_thread = threading.Thread(target=producer, args=(q, resources))
-        cons_thread = threading.Thread(target=consumer, args=(q, len(resources)))
+        cons_thread = threading.Thread(target=consumer, args=(q, len(resources), stats))
         prod_thread.start()
         cons_thread.start()
         prod_thread.join()
@@ -264,10 +287,13 @@ is stored in the MDRepository instance.
             self[url] = t
             # we always clean incoming ID
         # add to the index
+        ne = 0
         for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
             if e.attrib.has_key('ID'):
                 del e.attrib['ID']
             self.index.add(e)
+            ne += 1
+        return ne
 
     def entities(self,t=None):
         if t is None:
@@ -425,7 +451,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                     seen[entityID] = True
                     nent += 1
 
-        log.debug("selecting %d from %d entities before validation" % (nent,len(entities)))
+        log.debug("selecting %d entities from %d entity set(s) before validation" % (nent,len(entities)))
 
         if not nent:
             return None

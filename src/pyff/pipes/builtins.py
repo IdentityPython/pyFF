@@ -299,7 +299,7 @@ def _fetch(md,url,verify):
 def remote(req,*opts):
     return load(req,opts)
 
-def load(req,*opts):
+def local(req,*opts):
     return load(req,opts)
 
 def load(req,*opts):
@@ -334,43 +334,15 @@ is done using threads.
             log.debug("load %s %s %s" % (url,verify,id))
             req.md.load_dir(url,url=id)
         else:
-            raise ValueError("Don't know how to load '%s' as %s verified using %s" % (url,id,verify))
+            raise ValueError("Don't know how to load '%s' as %s verified by %s" % (url,id,verify))
 
     opts = dict(opts)
     opts.setdefault('timeout',30)
     opts.setdefault('qsize',5)
+    stats = dict()
+    opts.setdefault('stats',stats)
     req.md.fetch_metadata(remote,**opts)
-
-def _pileon(md,pile,args):
-    """
-    :param md: the MDRepository instance
-    :param pile: the greenlet pile
-    :param args: list of URLs
-    :return: None
-
-Recursively spawn _fetch for all URLs. A line on the form file:fn is treated as a file of URLs - one per line.
-    """
-    for d in args:
-        url = None
-        verify = None
-        if type(d) is str or type(d) is unicode:
-            lst = d.split()
-            d = None
-            if len(lst) == 1:
-                url = lst[0]
-                if url.startswith("file:"):
-                    with open(url.partition(":")[2]) as fd:
-                        _pileon(md,pile,[line.strip() for line in fd.readlines()])
-            elif len(lst) > 1:
-                url = lst[0]
-                verify = lst[1]
-        elif type(d) is dict and d.has_key('url'):
-            url = d['url']
-            verify = d.get('verify',None)
-
-        if url is not None:
-            log.debug("spawning %s" % url)
-            pile.spawn(_fetch,md,url,verify)
+    req.state['stats']['Metadata URLs'] = stats
 
 def select(req,*opts):
     """
