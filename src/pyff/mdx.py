@@ -40,15 +40,12 @@ from threading import RLock
 import cherrypy
 from cherrypy._cpdispatch import Dispatcher
 from cherrypy._cperror import NotFound, HTTPError
-from cherrypy.lib import cptools,static, cpstats
+from cherrypy.lib import cptools,static
 from cherrypy.process.plugins import Monitor
 from cherrypy.lib import caching
-import re
 from simplejson import dumps
-import time
 from pyff.constants import ATTRS
 from pyff.dj import DiscoJuice
-from pyff.index import hash_id
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
