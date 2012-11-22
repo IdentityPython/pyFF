@@ -93,7 +93,8 @@ class MDRepository(DictMixin):
 
         return [{'label': self.display(e),
                  'value': e.get('entityID'),
-                 'id': pyff.index.hash_id(e,'sha1')} for e in filter(_match,self.__iter__())]
+                 'id': pyff.index.hash_id(e,'sha1')}
+                    for e in pyff.index.EntitySet(filter(_match,self.__iter__()))]
 
     def sane(self):
         return len(self.md) > 0
