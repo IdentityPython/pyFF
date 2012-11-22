@@ -72,8 +72,11 @@ class MDIndex(object):
 
 class EntitySet(MutableSet):
 
-    def __init__(self):
+    def __init__(self,initial=None):
         self._e = dict()
+        if initial is not None:
+            for e in initial:
+                self.add(e)
 
     def add(self,value):
         self._e[value.get('entityID')] = value
