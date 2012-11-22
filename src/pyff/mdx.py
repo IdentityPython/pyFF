@@ -30,8 +30,10 @@ Usage: pyffd [-C|--no-cache] [-p <pidfile>] [-f] [-a] [--loglevel=<level>]
             One or more pipeline files
 
 """
+from StringIO import StringIO
 import getopt
 import traceback
+from cherrypy.lib.cpstats import StatsPage
 import os
 import sys
 from threading import RLock
@@ -127,11 +129,25 @@ class EncodingDispatcher_old(object):
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"site")
 
+from lxml import etree
+
+class MDStats(StatsPage):
+
+    @cherrypy.expose
+    def index(self):
+        h = "".join(super(MDStats,self).index())
+        parser = etree.HTMLParser()
+        tree = etree.parse(StringIO(h), parser)
+        body = tree.getroot().find("body")
+        body.tag = 'div'
+        str = etree.tostring(body,pretty_print=True,method="html")
+        return template("basic.html").render(content=str,http=cherrypy.request)
+
 class MDRoot():
     def __init__(self,server):
         self.server = server
 
-    stats = cpstats.StatsPage()
+    stats = MDStats()
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600,debug=True)
@@ -157,11 +173,6 @@ Disallow: /
     def metadata(self,path=None):
         return self.server.request(path=path)
 
-    #@cherrypy.expose
-    #@cherrypy.tools.expires(secs=600,debug=True)
-    def json(self,path=None):
-        return self.server.request(path=path,content_type="application/json")
-
     @cherrypy.expose
     def about(self):
         import pkg_resources  # part of setuptools
@@ -174,53 +185,6 @@ Disallow: /
             stats=stats,
             plumbings=["%s" % p for p in self.server.plumbings],
         )
-
-    #@cherrypy.expose
-    def md(self,path=None):
-        return self.server.request(path=path)
-
-    #@cherrypy.expose
-    def html(self,path=None):
-        return self.server.request(path=path,content_type="text/html")
-
-    #@cherrypy.expose
-    def md_old(self,id=None):
-
-        def _d(x):
-            if x is None:
-                return None
-
-            if x.startswith("{base64}"):
-                return x[8:].decode('base64')
-            else:
-                return x
-
-        def escape(m):
-            str = m.group(0)
-            if str == '<':
-                return '&lt;'
-            if str == '>':
-                return '&gt;'
-            return str
-
-        entities = self.server.md.lookup(_d(id))
-        if not entities:
-            raise NotFound()
-        if len(entities) > 1:
-            return template("metadata.html").render(http=cherrypy.request,md=self.server.md,entities=entities)
-        else:
-            entity = entities[0]
-            t = html.fragment_fromstring(unicode(xslt_transform(entity,"entity2html.xsl")))
-            for c_elt in t.findall(".//code[@role='entity']"):
-                c_txt = dumptree(entity,pretty_print=True,xml_declaration=False).decode("utf-8")
-                p = c_elt.getparent()
-                p.remove(c_elt)
-                if p.text is not None:
-                    p.text += c_txt #re.sub(".",escape,c_txt)
-                else:
-                    p.text = c_txt # re.sub(".",escape,c_txt)
-            xml = dumptree(t,xml_declaration=False).decode('utf-8')
-            return template("basic.html").render(http=cherrypy.request,content=xml)
 
     @cherrypy.expose
     def search(self,query):
