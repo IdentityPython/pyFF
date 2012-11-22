@@ -98,7 +98,7 @@ class EncodingDispatcher(object):
         self.next_dispatcher = next_dispatcher
 
     def dispatch(self,path_info):
-        log.debug("EncodingDispatcher called with %s" % path_info)
+        log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes),path_info))
         vpath = path_info.replace("%2F", "/")
         for prefix in self.prefixes:
             if vpath.startswith(prefix):
@@ -421,7 +421,7 @@ def main():
             return ""
 
     server = MDServer(pipes=args,autoreload=autoreload,frequency=frequency,aliases=aliases,cache_enabled=caching)
-    pfx = ["/entities","/metadata"]+server.aliases.keys()
+    pfx = ["/entities","/metadata"]+["/"+x for x in server.aliases.keys()]
 
     cfg = {
         'global': {
