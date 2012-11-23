@@ -330,9 +330,15 @@ is done using threads.
         if "://" in url:
             log.debug("remote %s %s %s" % (url,verify,id))
             remote.append((url,verify,id))
-        elif os.path.exists(r[0]):
-            log.debug("load %s %s %s" % (url,verify,id))
-            req.md.load_dir(url,url=id)
+        elif os.path.exists(url):
+            if os.path.isdir(url):
+                log.debug("local directory %s %s %s" % (url,verify,id))
+                req.md.load_dir(url,url=id)
+            elif os.path.isfile(url):
+                log.debug("local file %s %s %s" % (url,verify,id))
+                remote.append(("file://%s" % url,verify,id))
+            else:
+                raise ValueError("Unknown file type for load: %s" % r[0])
         else:
             raise ValueError("Don't know how to load '%s' as %s verified by %s" % (url,id,verify))
 
