@@ -68,6 +68,9 @@ class MDRepository(DictMixin):
         for organizationDisplayName in filter_lang(entity.findall(".//{%s}OrganizationDisplayName" % NS['md'])):
             return organizationDisplayName.text
 
+        for organizationName in filter_lang(entity.findall(".//{%s}OrganizationName" % NS['md'])):
+            return organizationName.text
+
         return entity.get('entityID')
 
     def __iter__(self):
@@ -81,10 +84,10 @@ class MDRepository(DictMixin):
     def search(self,query):
         def _strings(e):
             lst = [e.get('entityID')]
-            for attr in ['{%s}OrganizationName' % NS['md'],
+            for attr in ['{%s}DisplayName' % NS['mdui'],
+                         '{%s}ServiceName' % NS['md'],
                          '{%s}OrganizationDisplayName' % NS['md'],
-                         '{%s}DisplayName' % NS['mdui'],
-                         '{%s}ServiceName' % NS['md']]:
+                         '{%s}OrganizationName' % NS['md']]:
                 lst.extend(e.findall(attr))
             return lst
 

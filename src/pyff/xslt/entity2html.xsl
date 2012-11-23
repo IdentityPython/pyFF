@@ -22,14 +22,14 @@
                                 <xsl:with-param name="path" select="//mdui:DisplayName"/>
                             </xsl:call-template>
                         </xsl:when>
-                        <xsl:when test="//md:OrganizationDisplayName">
-                            <xsl:call-template name="getString">
-                                <xsl:with-param name="path" select="//md:OrganizationDisplayName"/>
-                            </xsl:call-template>
-                        </xsl:when>
                         <xsl:when test="//md:ServiceName">
                             <xsl:call-template name="getString">
                                 <xsl:with-param name="path" select="//md:ServiceName"/>
+                            </xsl:call-template>
+                        </xsl:when>
+                        <xsl:when test="//md:OrganizationDisplayName">
+                            <xsl:call-template name="getString">
+                                <xsl:with-param name="path" select="//md:OrganizationDisplayName"/>
                             </xsl:call-template>
                         </xsl:when>
                         <xsl:otherwise>
