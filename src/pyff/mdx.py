@@ -180,6 +180,7 @@ Disallow: /
             http=cherrypy.request,
             cmdline=" ".join(sys.argv),
             stats=stats,
+            repo=self.server.md,
             plumbings=["%s" % p for p in self.server.plumbings],
         )
 

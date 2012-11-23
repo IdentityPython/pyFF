@@ -4,6 +4,7 @@
         <ul class="nav nav-tabs">
             <li class="active"><a href="#info" data-toggle="tab">Server Info</a>
             <li><a href="#pipeline" data-toggle="tab">Pipeline</a></li>
+            <li><a href="#repo" data-toggle="tab">Repository</a></li>
         </ul>
         <div class="tab-content">
             <div class="tab-pane" id="pipeline">
@@ -26,6 +27,27 @@
                     <dt>Last update</dt>
                     <dd>${stats['Repository Update Time']}</dd>
                 </dl>
+            </div>
+            <div class="tab-pane" id="repo">
+                % for uri in repo.keys():
+                <h2>${uri}</h2>
+                <dl>
+                    % for k,v in repo.summary(uri).iteritems():
+                    % if v:
+                    <dt>${k}</dt>
+                    % if type(v) is list:
+                        <dd><ul>
+                        % for vv in v:
+                            <li><a href="/metadata/${repo.sha1_id(vv)}.html">${vv}</a></li>
+                        % endfor
+                        </ul></dd>
+                    % else:
+                    <dd>${v}</dd>
+                    % endif
+                    % endif
+                    % endfor
+                </dl>
+                % endfor
             </div>
         </div>
     </div>

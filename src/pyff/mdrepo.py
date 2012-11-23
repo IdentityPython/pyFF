@@ -176,7 +176,7 @@ class MDRepository(DictMixin):
                 if thread.tries < self.retry_limit:
                     log.info("Retry (%d/%d) fetch %s" % (thread.tries+1,self.retry_limit,thread.url))
                     # retry w/o cache enabled
-                    new_thread = URLFetch(thread.url,thread.verify,thread.id,enable_cache=False)
+                    new_thread = URLFetch(thread.url,thread.verify,thread.id,enable_cache=False,tries=thread.tries+1)
                     new_thread.start()
                     q.put(new_thread,True)
                     return 1
@@ -204,6 +204,7 @@ class MDRepository(DictMixin):
                         info['Cached'] = thread.cached
                         info['Date'] = str(thread.date)
                         info['Last-Modified'] = str(thread.last_modified)
+                        info['Tries'] = thread.tries
 
                     if thread.ex is None and thread.result is not None:
                         xml = thread.result.strip()
@@ -260,6 +261,7 @@ is stored in the MDRepository instance.
         log.debug("parsing %s" % src_desc)
         try:
             t = etree.parse(fn,parser=etree.XMLParser(resolve_entities=False))
+            t.xinclude()
             schema().assertValid(t)
         except DocumentInvalid,ex:
             log.debug(_e(ex.error_log))
@@ -486,6 +488,25 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
     def __delitem__(self, key):
         del self.md[key]
+
+    def summary(self,uri):
+        seen = dict()
+        info = dict()
+        t = root(self[uri])
+        info['Name'] = t.get('Name',uri)
+        info['cacheDuration'] = t.get('cacheDuration',None)
+        info['validUntil'] = t.get('validUntil',None)
+        info['Duplicates'] = []
+        info['Size'] = 0
+        for e in self.entities(self[uri]):
+            entityID = e.get('entityID')
+            if seen.get(entityID,False):
+                info['Duplicates'].append(entityID)
+            else:
+                seen[entityID] = True
+            info['Size'] += 1
+
+        return info
 
     def merge(self,t,nt,strategy=pyff.merge_strategies.replace_existing,strategy_name=None):
         if strategy_name is not None:
