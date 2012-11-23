@@ -12,7 +12,6 @@
     <xsl:output method="html" omit-xml-declaration="yes" encoding="UTF-8"/>
     <xsl:template match="md:EntityDescriptor">
       <div>
-        <div class="page-header">
             <h1>
                 <xsl:call-template name="truncate">
                     <xsl:with-param name="maxlen">40</xsl:with-param>
@@ -51,7 +50,6 @@
                     </xsl:if></xsl:with-param>
                 </xsl:call-template>
             </h1>
-        </div>
         <div>
             <ul id="menu" class="nav nav-tabs">
                 <li class="active"><a href="#summary" >Summary</a></li>

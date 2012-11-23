@@ -42,8 +42,9 @@
                     document.location.href = "/metadata/"+ids[value]+".html"
                 }
             })
-            $('table').addClass("table table-striped table-bordered")
+            $('table').addClass("table table-striped table-bordered table-condensed")
             $('input:submit').addClass("btn btn-mini")
+            $('h1').wrap("<div class='page-header'/>")
         });
     </script>
 </head>
@@ -60,6 +61,7 @@
         </form>
         <ul class="nav pull-right">
             <li><a href="/about">About</a></li>
+            <li><a href="/stats">Statistics</a></li>
             <li><a href="http://packages.python.org/pyFF">Documentation</a></li>
         </ul>
     </div>
