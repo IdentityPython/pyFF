@@ -7,7 +7,9 @@ from pyff.logs import log
 __author__ = 'leifj'
 
 def hash_id(entity,hn='sha1',prefix=True):
-    entityID = entity.get('entityID')
+    entityID = entity
+    if hasattr(entity,'get'):
+        entityID = entity.get('entityID')
 
     if hn == 'null':
         return entityID
