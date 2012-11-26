@@ -4,11 +4,9 @@ This module contains various utilities.
 
 """
 from datetime import timedelta, datetime
-import hashlib
 import tempfile
-import cherrypy
+import traceback
 from mako.lookup import TemplateLookup
-from mako.template import Template
 import os
 import pkg_resources
 import re
@@ -18,7 +16,6 @@ from pyff.logs import log
 import threading
 import httplib2
 from email.utils import parsedate
-from datetime import datetime
 
 __author__ = 'leifj'
 
@@ -182,7 +179,7 @@ def template(name):
 
 class URLFetch(threading.Thread):
     def __init__(self, url, verify, id=None, enable_cache=False,tries=0):
-        self.url = url
+        self.url = url.strip()
         self.verify = verify
         self.id = id
         self.result = None
@@ -222,19 +219,28 @@ class URLFetch(threading.Thread):
             else:
                 log.debug("fetching %s without using cache" % self.url)
 
-            h = httplib2.Http(cache=cache)
-            resp,content = h.request(self.url)
-            self.resp = resp
-            log.debug(resp)
-            self.last_modified = _parse_date(resp['last-modified'])
-            self.date = _parse_date(resp['date'])
-            if resp.status != 200:
-                log.error("got %d: %s from %s" % (resp.status,resp.reason,self.url))
-                raise ValueError(resp.reason)
-            self.result = content
-            self.cached = resp.fromcache
+            if self.url.startswith('file://'):
+                path = self.url[7:]
+                with open(path) as fd:
+                    self.result = fd.read()
+                    self.cached = False
+                    self.date = datetime.now()
+                    self.last_modified = datetime.fromtimestamp(os.stat(path).st_mtime)
+            else:
+                h = httplib2.Http(cache=cache,disable_ssl_certificate_validation=True) # yes this is correct!
+                resp,content = h.request(self.url)
+                self.resp = resp
+                self.last_modified = _parse_date(resp['last-modified'])
+                self.date = _parse_date(resp['date'])
+                if resp.status != 200:
+                    log.error("got %d: %s from %s" % (resp.status,resp.reason,self.url))
+                    raise ValueError(resp.reason)
+                self.result = content
+                self.cached = resp.fromcache
+
             log.debug("got %d bytes from %s" % (len(self.result),self.url))
         except Exception,ex:
+            traceback.print_exc()
             self.ex = ex
             self.result = None
         finally:

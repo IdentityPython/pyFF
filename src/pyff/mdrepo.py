@@ -11,7 +11,7 @@ import urllib
 from UserDict import DictMixin
 from lxml import etree
 from lxml.builder import ElementMaker
-from lxml.etree import DocumentInvalid
+from lxml.etree import DocumentInvalid, dump
 import os
 import re
 from copy import deepcopy
@@ -40,10 +40,13 @@ def _e(error_log):
     return "\n".join(filter(lambda x: ":WARNING:" not in x,["%s" % e for e in error_log]))
 
 class MDRepository(DictMixin):
+    """
+A class representing a set of SAML Metadata. Instances present as dict-like objects where
+the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
+    """
+
+
     def __init__(self,index=pyff.index.MemoryIndex(),metadata_cache_enabled=False,min_cache_ttl="PT5M"):
-        """
-        A class representing a set of sets of SAML metadata.
-        """
         self.md = {}
         self.index = index
         self.metadata_cache_enabled = metadata_cache_enabled
@@ -53,12 +56,27 @@ class MDRepository(DictMixin):
         self.retry_limit = 5
 
     def is_idp(self,entity):
+        """
+:param entity: An EntityDescriptor element
+
+Returns True if the supplied EntityDescriptor has an IDPSSODescriptor Role
+        """
         return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']) is not None)
 
     def is_sp(self,entity):
+        """
+:param entity: An EntityDescriptor element
+
+Returns True if the supplied EntityDescriptor has an SPSSODescriptor Role
+        """
         return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
 
     def display(self,entity):
+        """
+:param entity: An EntityDescriptor element
+
+Utility-method for computing a displayable string for a given entity.
+        """
         for displayName in filter_lang(entity.findall(".//{%s}DisplayName" % NS['mdui'])):
             return displayName.text
 
@@ -82,6 +100,19 @@ class MDRepository(DictMixin):
         return pyff.index.hash_id(e,'sha1')
 
     def search(self,query):
+        """
+:param query: A string to search for.
+
+Returns a list of dict's for each EntityDescriptor present in the metadata store such
+that any of the DisplayName, ServiceName, OrganizationName or OrganizationDisplayName
+elements match the query (as in contains the query as a substring).
+
+The dict in the list contains three items:
+
+:param label: A displayable string, useful as a UI label
+:param value: The entityID of the EntityDescriptor
+:param id: A sha1-ID of the entityID - on the form {sha1}<sha1-hash-of-entityID>
+        """
         def _strings(e):
             lst = [e.get('entityID')]
             for attr in ['{%s}DisplayName' % NS['mdui'],
@@ -110,6 +141,15 @@ class MDRepository(DictMixin):
         return ext
 
     def annotate(self,e,category,title,message,source=None):
+        """
+Add an ATOM annotation to an EntityDescriptor or an EntitiesDescriptor.
+
+:param e: An EntityDescriptor or an EntitiesDescriptor element
+:param category: The ATOM category
+:param title: The ATOM title
+:param message: The ATOM content
+:param source: An optional source URL. It is added as a <link> element with @rel='saml-metadata-source'
+        """
         if e.tag != "{%s}EntityDescriptor" % NS['md'] and \
            e.tag != "{%s}EntitiesDescriptor" % NS['md']:
             raise ValueError("I can only annotate EntityDescriptor or EntitiesDescriptor elements")
@@ -124,7 +164,7 @@ class MDRepository(DictMixin):
                      atom.content(message,type="text/plain")])
         self.extensions(e).append(atom.entry(*args))
 
-    def entity_attributes(self,e):
+    def _entity_attributes(self,e):
         ext = self.extensions(e)
         #log.debug(ext)
         ea = ext.find(".//{%s}EntityAttributes" % NS['mdattr'])
@@ -133,8 +173,8 @@ class MDRepository(DictMixin):
             ext.append(ea)
         return ea
 
-    def eattribute(self,e,attr,nf):
-        ea = self.entity_attributes(e)
+    def _eattribute(self,e,attr,nf):
+        ea = self._entity_attributes(e)
         #log.debug(ea)
         a = ea.xpath(".//saml:Attribute[@NameFormat='%s' and @Name='%s']" % (nf,attr),namespaces=NS)
         if a is None or len(a) == 0:
@@ -154,7 +194,7 @@ class MDRepository(DictMixin):
         #log.debug("set %s" % d)
         for attr,value in d.iteritems():
             #log.debug("set %s to %s" % (attr,value))
-            a = self.eattribute(e,attr,nf)
+            a = self._eattribute(e,attr,nf)
             #log.debug(etree.tostring(a))
             velt = etree.Element("{%s}AttributeValue" % NS['saml'])
             velt.text = value
@@ -162,6 +202,26 @@ class MDRepository(DictMixin):
             #log.debug(etree.tostring(a))
 
     def fetch_metadata(self,resources,qsize=5,timeout=60,stats={}):
+        """
+Fetch a series of metadata URLs and optionally verifies signatures.
+
+:param resources: A list of triples (url,cert-or-fingerprint,id)
+:param qsize: The number of parallell downloads to run
+:param timeout: The number of seconds to wait (60 by default) for each download
+:param stats: A dictionary used for storing statistics. Useful for cherrypy cpstats
+
+The list of triples is processed by first downloading the URL. If a cert-or-fingerprint
+is supplied it is used to validate the signature on the received XML. Two forms of XML
+is supported: SAML Metadata and XRD.
+
+SAML metadata is (if valid and contains a valid signature) stored under the 'id'
+identifier (which defaults to the URL unless provided in the triple.
+
+XRD elements are processed thus: for all <Link> elements that contain a ds;KeyInfo
+elements with a X509Certificate and where the <Rel> element contains the string
+'urn:oasis:names:tc:SAML:2.0:metadata', the corresponding <URL> element is download
+and verified.
+        """
         def producer(q,resources):
             for url,verify,id in resources:
                 log.debug("Starting fetcher for %s" % url)
@@ -171,6 +231,11 @@ class MDRepository(DictMixin):
 
         def consumer(q,njobs,stats):
             nfinished = 0
+
+            def _xp1(e,p):
+                for s in e.xpath(p):
+                    return s
+                return None
 
             def _retry(thread):
                 if thread.tries < self.retry_limit:
@@ -191,13 +256,15 @@ class MDRepository(DictMixin):
                     thread = q.get(True)
                     thread.join(timeout)
 
+                    if thread.isAlive():
+                        raise ValueError("thread timeout")
+
                     info = {
-                        'Time Spent': thread.time(),
-                        'Status': thread.resp.status,
+                        'Time Spent': thread.time()
                     }
 
                     if thread.ex:
-                        info['URL Exception'] = ex
+                        info['URL Exception'] = thread.ex
                     else:
                         if thread.result is not None:
                             info['Bytes'] = len(thread.result)
@@ -208,24 +275,54 @@ class MDRepository(DictMixin):
 
                     if thread.ex is None and thread.result is not None:
                         xml = thread.result.strip()
-                        t = self.parse_metadata(StringIO(xml),key=thread.verify,url=thread.id)
-                        cacheDuration = self.default_cache_duration
-                        if self.respect_cache_duration:
-                            cacheDuration = root(t).get('cacheDuration',self.default_cache_duration)
-                        offset = duration2timedelta(cacheDuration)
 
-                        if thread.cached:
-                            if thread.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
-                                nfinished -= _retry(thread)
+                        if thread.resp is not None:
+                            info['Status'] = thread.resp.status
+
+                        t = self.parse_metadata(StringIO(xml),key=thread.verify,base_url=thread.url)
+                        if t is None:
+                            raise ValueError("No valid metadata found at %s" % thread.url)
+
+                        relt = root(t)
+                        print relt.tag
+                        if relt.tag in ('{%s}XRD' % NS['xrd'],'{%s}XRDS' % NS['xrd']):
+                            log.debug("%s looks like an xrd document" % thread.url)
+                            log.debug(dump(root(t)))
+                            for xrd in t.xpath("//xrd:XRD",namespaces=NS):
+                                log.debug("xrd: %s" % xrd)
+                                for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'],NS['md'])):
+                                    url = link.get("href")
+                                    certs = xmlsec.CertDict(link)
+                                    fingerprints = certs.keys()
+                                    fp = None
+                                    if len(fingerprints) > 0:
+                                        fp = fingerprints[0]
+                                    log.debug("fingerprint: %s" % fp)
+                                    subt = URLFetch(url,fp,url,enable_cache=True)
+                                    subt.start()
+                                    q.put(subt,True)
+                                    nfinished -= 1
+
+                        elif relt.tag in ('{%s}EntityDescriptor' % NS['md'],'{%s}EntitiesDescriptor' % NS['md']):
+                            cacheDuration = self.default_cache_duration
+                            if self.respect_cache_duration:
+                                cacheDuration = root(t).get('cacheDuration',self.default_cache_duration)
+                            offset = duration2timedelta(cacheDuration)
+
+                            if thread.cached:
+                                if thread.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
+                                    nfinished -= _retry(thread)
+                                else:
+                                    log.debug("got cached metadata (last-modified: %s)" % thread.last_modified)
+                                    ne = self.import_metadata(t,url=thread.id)
+                                    info['Number of Entities'] = ne
                             else:
-                                log.debug("got cached metadata (last-modified: %s)" % thread.last_modified)
+                                log.debug("got fresh metadata (date: %s)" % thread.date)
                                 ne = self.import_metadata(t,url=thread.id)
                                 info['Number of Entities'] = ne
+                            info['Cache Expiration Time'] = str(thread.last_modified + offset)
                         else:
-                            log.debug("got fresh metadata (date: %s)" % thread.date)
-                            ne = self.import_metadata(t,url=thread.id)
-                            info['Number of Entities'] = ne
-                        info['Cache Expiration Time'] = str(thread.last_modified + offset)
+                            raise ValueError("Unknown metadata type (%s)" % relt.tag)
                     else:
                         log.warn("Error fetching %s: %s" % (thread.url,thread.ex))
                         nfinished -= _retry(thread)
@@ -233,7 +330,8 @@ class MDRepository(DictMixin):
                     traceback.print_exc()
                     log.error("Error fetching %s." % ex)
                     nfinished -= _retry(thread)
-                    info['Exception'] = ex
+                    if info is not None:
+                        info['Exception'] = ex
                 finally:
                     nfinished += 1
                     if info is not None:
@@ -247,20 +345,17 @@ class MDRepository(DictMixin):
         prod_thread.join()
         cons_thread.join()
 
-    def parse_metadata(self,fn,key=None,url=None,fail_on_error=False):
+    def parse_metadata(self,fn,key=None,base_url=None,fail_on_error=False):
         """
 Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
 is stored in the MDRepository instance.
 
 :param fn: a file-like object containing SAML metadata
 :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
+:param base_url: use this base url to resolve relative URLs for XInclude processing
         """
-        src_desc = "%s" % fn
-        if url is not None:
-            src_desc = url
-        log.debug("parsing %s" % src_desc)
         try:
-            t = etree.parse(fn,parser=etree.XMLParser(resolve_entities=False))
+            t = etree.parse(fn,base_url=base_url,parser=etree.XMLParser(resolve_entities=False))
             t.xinclude()
             schema().assertValid(t)
         except DocumentInvalid,ex:
@@ -285,13 +380,22 @@ is stored in the MDRepository instance.
         return t
 
     def import_metadata(self,t,url=None):
+        """
+:param t: An EntitiesDescriptor element
+:param url: An optional URL to used to identify the EntitiesDescriptor in the MDRepository
+
+Import an EntitiesDescriptor element using the @Name attribute (or the supplied url parameter). All
+EntityDescriptor elements are stripped of any @ID attribute and are then indexed before the collection
+is stored in the MDRepository object.
+        """
         if url is None:
             top = t.xpath("//md:EntitiesDescriptor",namespaces=NS)
             if top is not None and len(top) == 1:
                 url = top[0].get("Name",None)
-        if url is not None:
-            self[url] = t
-            # we always clean incoming ID
+        if url is None:
+            raise ValueError("No collection name found")
+        self[url] = t
+        # we always clean incoming ID
         # add to the index
         ne = 0
         for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
@@ -302,6 +406,11 @@ is stored in the MDRepository instance.
         return ne
 
     def entities(self,t=None):
+        """
+:param t: An EntitiesDescriptor element
+
+Returns the list of contained EntityDescriptor elements
+        """
         if t is None:
             return []
         else:
@@ -309,12 +418,11 @@ is stored in the MDRepository instance.
 
     def load_dir(self,dir,ext=".xml",url=None):
         """
-Traverse a directory tree looking for metadata.
-
 :param dir: A directory to walk.
 :param ext: Include files with this extension (default .xml)
 
-Files ending in the specified extension are included. Directories starting with '.' are excluded.
+Traverse a directory tree looking for metadata. Files ending in the specified extension are included. Directories
+starting with '.' are excluded.
         """
         if url is None:
             url = dir
@@ -334,11 +442,10 @@ Files ending in the specified extension are included. Directories starting with 
 
     def _lookup(self,member,xp=None):
         """
-Find a (set of) EntityDescriptor element(s) based on the specified 'member' expression.
-
 :param member: Either an entity, URL or a filter expression.
-        """
 
+Find a (set of) EntityDescriptor element(s) based on the specified 'member' expression.
+        """
         def _hash(hn,str):
             if hn == 'null':
                 return str
@@ -434,12 +541,12 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
 
     def entity_set(self,entities,name,cacheDuration=None,validUntil=None,validate=True):
         """
-Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
-
 :param entities: a set of entities specifiers (lookup is used to find entities from this set)
 :param name: the @Name attribute
 :param cacheDuration: an XML timedelta expression, eg PT1H for 1hr
 :param validUntil: a relative time eg 2w 4d 1h for 2 weeks, 4 days and 1hour from now.
+
+Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
         """
         attrs = dict(Name=name,nsmap=NS)
         if cacheDuration is not None:
@@ -472,7 +579,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
     def error_set(self,url,title,ex):
         """
-        Creates an "error" EntitiesDescriptor - empty but for an annotation about the error that occured
+Creates an "error" EntitiesDescriptor - empty but for an annotation about the error that occured
         """
         t = etree.Element("{%s}EntitiesDescriptor" % NS['md'],Name=url,nsmap=NS)
         self.annotate(t,"error",title,ex,source=url)
@@ -490,6 +597,12 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         del self.md[key]
 
     def summary(self,uri):
+        """
+:param uri: An EntitiesDescriptor URI present in the MDRepository
+:return: an information dict
+
+Returns a dict object with basic information about the EntitiesDescriptor
+        """
         seen = dict()
         info = dict()
         t = root(self[uri])
@@ -509,6 +622,26 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         return info
 
     def merge(self,t,nt,strategy=pyff.merge_strategies.replace_existing,strategy_name=None):
+        """
+:param t: The EntitiesDescriptor element to merge *into*
+:param nt:  The EntitiesDescriptor element to merge *from*
+:param strategy: A callable implementing the merge strategy pattern
+:param strategy_name: The name of a strategy to import. Overrides the callable if present.
+:return:
+
+Two EntitiesDescriptor elements are merged - the second into the first. For each element
+in the second collection that is present (using the @entityID attribute as key) in the
+first the strategy callable is called with the old and new EntityDescriptor elements
+as parameters. The strategy callable thus must implement the following pattern:
+
+:param old_e: The EntityDescriptor from t
+:param e: The EntityDescriptor from nt
+:return: A merged EntityDescriptor element
+
+Before each call to strategy old_e is removed from the MDRepository index and after
+merge the resultant EntityDescriptor is added to the index before it is used to
+replace old_e in t.
+        """
         if strategy_name is not None:
             if not '.' in strategy_name:
                 strategy_name = "pyff.merge_strategies.%s" % strategy_name

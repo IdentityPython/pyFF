@@ -76,12 +76,14 @@ class MDUpdate(Monitor):
                     p.process(md,state)
                     stats.update(state.get('stats',{}))
                 if not md.sane():
-                    log.error("update produced insane active repository - will retry later...")
+                    log.error("update produced insane active repository - will try again later...")
                 with server.lock.writelock:
                     log.debug("update produced new repository with %d entities" % md.index.size())
                     server.md = md
                     stats['Repository Update Time'] = datetime.now()
                     stats['Repository Size'] = md.index.size()
+            else:
+                log.error("another instance is running - will try again later...")
         except Exception,ex:
             traceback.print_exc()
         finally:
@@ -105,24 +107,6 @@ class EncodingDispatcher(object):
                 log.debug("EncodingDispatcher %s" % npath)
                 return self.next_dispatcher(npath)
         return self.next_dispatcher(vpath)
-
-
-class EncodingDispatcher_old(object):
-    def __init__(self,prefix,enc,next_dispatcher=Dispatcher()):
-        self.prefix = prefix
-        self.plen = len(prefix)
-        self.enc = enc
-        self.next_dispatcher = next_dispatcher
-
-    def dispatch(self,path_info):
-        log.debug("EncodingDispatcher called with %s" % path_info)
-        vpath = path_info.replace("%2F", "/")
-        vpath = vpath[self.plen+1:]
-        npath =  "%s/%s" % (self.prefix,self.enc(vpath))
-        log.debug("EncodingDispatcher %s" % npath)
-        handler =  self.next_dispatcher(npath)
-        #cherrypy.request.is_index = False
-        return handler
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"site")
 
@@ -205,7 +189,7 @@ class MDServer():
     def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS,cache_enabled=True):
         if not pipes: pipes = []
         self.cache_enabled = cache_enabled
-        self.md = self.new_repository()
+        self._md = None
         self.lock = ReadWriteLock()
         self.plumbings = [plumbing(v) for v in pipes]
         self.refresh = MDUpdate(cherrypy.engine,server=self,frequency=frequency)
@@ -215,6 +199,16 @@ class MDServer():
         if autoreload:
             for f in pipes:
                 cherrypy.engine.autoreload.files.add(f)
+
+    def _set_md(self,md):
+        self._md = md
+
+    def _get_md(self):
+        if self._md is None:
+            raise cherrypy.HTTPError(503,message="Repository loading...")
+        return self._md
+
+    md = property(_get_md,_set_md)
 
     def new_repository(self):
         return MDRepository(metadata_cache_enabled=self.cache_enabled)
@@ -418,6 +412,10 @@ def main():
         else:
             return ""
 
+    def error_page(code,**kwargs):
+        kwargs['http'] = cherrypy.request
+        return template("%d.html" % code).render(**kwargs)
+
     server = MDServer(pipes=args,autoreload=autoreload,frequency=frequency,aliases=aliases,cache_enabled=caching)
     pfx = ["/entities","/metadata"]+["/"+x for x in server.aliases.keys()]
 
@@ -433,6 +431,9 @@ def main():
             'tools.caching.antistampede_timeout': None,
             'tools.caching.delay': 3600, # this is how long we keep static stuff
             'tools.cpstats.on': True,
+            'error_page.404': lambda **kwargs: error_page(404,**kwargs),
+            'error_page.503': lambda **kwargs: error_page(503,**kwargs),
+            'error_page.500': lambda **kwargs: error_page(500,**kwargs)
         },
         '/': {
             'tools.caching.delay': delay,
