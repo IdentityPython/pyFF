@@ -208,6 +208,8 @@ class URLFetch(threading.Thread):
     def run(self):
 
         def _parse_date(str):
+            if str is None:
+                return datetime.new()
             return datetime(*parsedate(str)[:6])
 
         self.start_time = clock()
@@ -227,10 +229,10 @@ class URLFetch(threading.Thread):
                     self.date = datetime.now()
                     self.last_modified = datetime.fromtimestamp(os.stat(path).st_mtime)
             else:
-                h = httplib2.Http(cache=cache,disable_ssl_certificate_validation=True) # yes this is correct!
+                h = httplib2.Http(cache=cache,timeout=20,disable_ssl_certificate_validation=True) # yes this is correct!
                 resp,content = h.request(self.url)
                 self.resp = resp
-                self.last_modified = _parse_date(resp['last-modified'])
+                self.last_modified = _parse_date(resp.get('last-modified',resp.get('date',None)))
                 self.date = _parse_date(resp['date'])
                 if resp.status != 200:
                     log.error("got %d: %s from %s" % (resp.status,resp.reason,self.url))

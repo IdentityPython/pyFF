@@ -223,127 +223,114 @@ elements with a X509Certificate and where the <Rel> element contains the string
 and verified.
         """
         def producer(q,resources):
-            for url,verify,id in resources:
+            print resources
+            for url,verify,id,tries in resources:
                 log.debug("Starting fetcher for %s" % url)
-                thread = URLFetch(url,verify,id,enable_cache=self.metadata_cache_enabled)
+                thread = URLFetch(url,verify,id,enable_cache=self.metadata_cache_enabled,tries=tries)
                 thread.start()
                 q.put(thread, True)
 
-        def consumer(q,njobs,stats):
+        def consumer(q,njobs,stats,next_jobs=[]):
             nfinished = 0
-
-            def _xp1(e,p):
-                for s in e.xpath(p):
-                    return s
-                return None
-
-            def _retry(thread):
-                if thread.tries < self.retry_limit:
-                    log.info("Retry (%d/%d) fetch %s" % (thread.tries+1,self.retry_limit,thread.url))
-                    # retry w/o cache enabled
-                    new_thread = URLFetch(thread.url,thread.verify,thread.id,enable_cache=False,tries=thread.tries+1)
-                    new_thread.start()
-                    q.put(new_thread,True)
-                    return 1
-                else:
-                    log.error("Retry limitd (%d) reached for %s - giving up" % (self.retry_limit,thread.url))
-                    return 0
 
             while nfinished < njobs:
                 info = None
                 try:
-                    log.debug("waiting for next thread to finish...")
+                    log.debug("Waiting for next thread to finish...")
                     thread = q.get(True)
                     thread.join(timeout)
 
                     if thread.isAlive():
-                        raise ValueError("thread timeout")
+                        raise ValueError("Thread timeout occured")
 
                     info = {
                         'Time Spent': thread.time()
                     }
 
-                    if thread.ex:
-                        info['URL Exception'] = thread.ex
+                    if thread.ex is not None:
+                        raise thread.ex
                     else:
                         if thread.result is not None:
                             info['Bytes'] = len(thread.result)
+                        else:
+                            raise ValueError("Empty response")
                         info['Cached'] = thread.cached
                         info['Date'] = str(thread.date)
                         info['Last-Modified'] = str(thread.last_modified)
                         info['Tries'] = thread.tries
 
-                    if thread.ex is None and thread.result is not None:
-                        xml = thread.result.strip()
+                    xml = thread.result.strip()
 
-                        if thread.resp is not None:
-                            info['Status'] = thread.resp.status
+                    if thread.resp is not None:
+                        info['Status'] = thread.resp.status
 
-                        t = self.parse_metadata(StringIO(xml),key=thread.verify,base_url=thread.url)
-                        if t is None:
-                            raise ValueError("No valid metadata found at %s" % thread.url)
+                    t = self.parse_metadata(StringIO(xml),key=thread.verify,base_url=thread.url)
+                    if t is None:
+                        raise ValueError("No valid metadata found at %s" % thread.url)
 
-                        relt = root(t)
-                        print relt.tag
-                        if relt.tag in ('{%s}XRD' % NS['xrd'],'{%s}XRDS' % NS['xrd']):
-                            log.debug("%s looks like an xrd document" % thread.url)
-                            log.debug(dump(root(t)))
-                            for xrd in t.xpath("//xrd:XRD",namespaces=NS):
-                                log.debug("xrd: %s" % xrd)
-                                for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'],NS['md'])):
-                                    url = link.get("href")
-                                    certs = xmlsec.CertDict(link)
-                                    fingerprints = certs.keys()
-                                    fp = None
-                                    if len(fingerprints) > 0:
-                                        fp = fingerprints[0]
-                                    log.debug("fingerprint: %s" % fp)
-                                    subt = URLFetch(url,fp,url,enable_cache=True)
-                                    subt.start()
-                                    q.put(subt,True)
-                                    nfinished -= 1
+                    relt = root(t)
+                    if relt.tag in ('{%s}XRD' % NS['xrd'],'{%s}XRDS' % NS['xrd']):
+                        log.debug("%s looks like an xrd document" % thread.url)
+                        for xrd in t.xpath("//xrd:XRD",namespaces=NS):
+                            log.debug("xrd: %s" % xrd)
+                            for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'],NS['md'])):
+                                url = link.get("href")
+                                certs = xmlsec.CertDict(link)
+                                fingerprints = certs.keys()
+                                fp = None
+                                if len(fingerprints) > 0:
+                                    fp = fingerprints[0]
+                                log.debug("fingerprint: %s" % fp)
+                                next_jobs.append((url,fp,url,0))
 
-                        elif relt.tag in ('{%s}EntityDescriptor' % NS['md'],'{%s}EntitiesDescriptor' % NS['md']):
-                            cacheDuration = self.default_cache_duration
-                            if self.respect_cache_duration:
-                                cacheDuration = root(t).get('cacheDuration',self.default_cache_duration)
-                            offset = duration2timedelta(cacheDuration)
+                    elif relt.tag in ('{%s}EntityDescriptor' % NS['md'],'{%s}EntitiesDescriptor' % NS['md']):
+                        cacheDuration = self.default_cache_duration
+                        if self.respect_cache_duration:
+                            cacheDuration = root(t).get('cacheDuration',self.default_cache_duration)
+                        offset = duration2timedelta(cacheDuration)
 
-                            if thread.cached:
-                                if thread.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
-                                    nfinished -= _retry(thread)
-                                else:
-                                    log.debug("got cached metadata (last-modified: %s)" % thread.last_modified)
-                                    ne = self.import_metadata(t,url=thread.id)
-                                    info['Number of Entities'] = ne
+                        if thread.cached:
+                            if thread.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
+                                raise ValueError("Cached metadata expired")
                             else:
-                                log.debug("got fresh metadata (date: %s)" % thread.date)
+                                log.debug("Found cached metadata (last-modified: %s)" % thread.last_modified)
                                 ne = self.import_metadata(t,url=thread.id)
                                 info['Number of Entities'] = ne
-                            info['Cache Expiration Time'] = str(thread.last_modified + offset)
                         else:
-                            raise ValueError("Unknown metadata type (%s)" % relt.tag)
+                            log.debug("got fresh metadata (date: %s)" % thread.date)
+                            ne = self.import_metadata(t,url=thread.id)
+                            info['Number of Entities'] = ne
+                        info['Cache Expiration Time'] = str(thread.last_modified + offset)
                     else:
-                        log.warn("Error fetching %s: %s" % (thread.url,thread.ex))
-                        nfinished -= _retry(thread)
+                        raise ValueError("Unknown metadata type (%s)" % relt.tag)
                 except Exception,ex:
                     traceback.print_exc()
                     log.error("Error fetching %s." % ex)
-                    nfinished -= _retry(thread)
                     if info is not None:
                         info['Exception'] = ex
+                    if thread.tries < self.retry_limit:
+                        next_jobs.append((thread.url,thread.verify,thread.id,thread.tries+1))
+                    else:
+                        log.error("Retry limit exceeded for %s" % thread.url)
                 finally:
                     nfinished += 1
                     if info is not None:
                         stats[thread.url] = info
 
-        q = Queue(qsize)
-        prod_thread = threading.Thread(target=producer, args=(q, resources))
-        cons_thread = threading.Thread(target=consumer, args=(q, len(resources), stats))
-        prod_thread.start()
-        cons_thread.start()
-        prod_thread.join()
-        cons_thread.join()
+        resources = [(url,verify,id,0) for url,verify,id in resources]
+        while len(resources):
+            next_jobs = []
+            q = Queue(qsize)
+            prod_thread = threading.Thread(target=producer, args=(q, resources))
+            cons_thread = threading.Thread(target=consumer, args=(q, len(resources), stats, next_jobs))
+            prod_thread.start()
+            cons_thread.start()
+            prod_thread.join()
+            cons_thread.join()
+            if len(next_jobs) > 0:
+                resources = next_jobs
+            else:
+                resources = []
 
     def parse_metadata(self,fn,key=None,base_url=None,fail_on_error=False):
         """
