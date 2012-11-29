@@ -1,0 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <title>{{ page.title }}</title>
+  <meta name="author" content="{{ site.author }}" />
+  <link rel="stylesheet" href="/css/bootstrap/css/bootstrap.css" type="text/css"/>
+  <link rel="stylesheet" href="/css/ribbon.css" type="tex/css"/>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script type="text/javascript" src="/js/bootstrap-dropdown.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      {{ page.script }}
+      $('.dropdown-toggle').dropdown()
+    });
+  </script>
+  <style>
+        .container[role="main"] {
+            padding-bottom: 80px;
+            //min-height: 600px;
+        }
+        .footer {
+            //position: fixed;
+            padding-bottom: 80px;
+            left: 0;
+            right: 0;
+        }
+  </style>
+</head>
+<body>
+
+<div class="row"><div class="span12">&nbsp;</div></div>
+
+<div class="container" role="main">
+
+<div class="row">
+   <div class="span12">
+      <div class="navbar">
+         <div class="navbar-inner">
+            <div class="container">
+               <a class="brand" href="/">pyff.mnt.se</a>
+               <ul class="nav">
+               </ul>
+               <ul class="nav pull-right">
+                  <li><a href="/news.html">News</a></li>
+                  <li><a href="/about.html">About</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
+
+<div class="row">
+<div class="span1">&nbsp;</div>
+<div class="span10">{{content}}</div>
+<div class="span1">&nbsp;</div>
+
+</div> <!-- container -->
+
+<div class="footer">
+   <div class="footer-inner">
+      <div class="container"> 
+         <hr/>
+         <div class="row">
+            <div class="span4 pull-left">
+               <a href="mailto:webmaster@levelofassurance.org">Contact the webmaster</a>.
+            </div>
+            <div class="span4"></div>
+            <div class="span4 pull-right">
+               Site contents licensed under <a href="http://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
+
+</body>
+</html>

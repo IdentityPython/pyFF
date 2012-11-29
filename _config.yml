@@ -1,0 +1,11 @@
+markdown: rdiscount
+pygments: true
+permalink: /posts/:title
+auto: true
+rdiscount:
+  extensions: [smart]
+gravatar: 123
+url: http://localhost:4000
+title: pyFF
+subtitle: SAML Federation Feeder
+author: Leif Johansson
