@@ -1,4 +1,4 @@
-- load:
+- load xrd /tmp/big-loaded.xrd:
   - examples/big.xrd
 - select
 - store: 
