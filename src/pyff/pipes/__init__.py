@@ -21,7 +21,7 @@ Each part (aka pipe) is a callable with the following signature:
 
     :param req: request.
     :type req: Plumbing.Request
-    :param opts: optional arguments
+    :param opts: options
     :type opts: iterable
 
 The pipe may return a transformed copy of or replacement for t. The return value must be an
@@ -89,35 +89,31 @@ class PipeException(Exception):
 
 class Plumbing(object):
     """
-A plumbing instance represents a basic processing chaing for SAML metadata. A basic example:
+A plumbing instance represents a basic processing chain  for SAML metadata. A simple, yet reasonably complete example:
 
 .. code-block:: yaml
 
-    - local:
-       - /var/metadata/registry
-
+    - load:
+        - /var/metadata/registry
+        - http://md.example.com
     - select:
        - #md:EntityDescriptor[md:IDPSSODescriptor]
-
     - xslt:
         stylesheet: tidy.xsl
-
-    - xslt:
-        stylesheet: pp.xsl
-
     - fork:
+        - finalize:
+            Name: http://example.com/metadata.xml
+            cacheDuration: PT1H
+            validUntil: PT1D
         - sign:
            key: signer.key
            cert: signer.crt
+       - publish: /var/metadata/public/metadata.xml
 
-       - publish:
-           output: /var/metadata/public/metadata.xml
-
-Running this plumbing would bake all metadata found in /var/metadata/registry
-into an EntitiesDescriptor element with @Name http://example.com/metadata.xml,
-cacheDuration 1hr, validUntil 1 day from now. The tree woud be transformed
-using the "tidy" and "pp" (for pretty-print) stylesheets and would then be
-signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
+Running this plumbing would bake all metadata found in /var/metadata/registry and at http://md.example.com into an
+EntitiesDescriptor element with @Name http://example.com/metadata.xml, @cacheDuration set to 1hr and @validUntil
+1 day from the time the 'finalize' command was run. The tree woud be transformed using the "tidy" stylesheets and
+would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
     """
     def __init__(self,pipeline,id):
         self.id = id
@@ -133,8 +129,8 @@ signed (using signer.key) and finally published in /var/metadata/public/metadata
 
     class Request(object):
         """
-Represents a single request. When processing a set of pipelines a single request is
-used. Any part of the pipeline may modify any of the fields.
+Represents a single request. When processing a set of pipelines a single request is used. Any part of the pipeline
+may modify any of the fields.
         """
         def __init__(self,plumbing,md,t,name=None,args=[],state={}):
             self.plumbing = plumbing
@@ -148,6 +144,11 @@ used. Any part of the pipeline may modify any of the fields.
     def process(self,md,state={},t=None):
         """
 The main entrypoint for processing a request pipeline. Calls the inner processor.
+
+:param md: The current metadata repository
+:param state: The active request state
+:param t: The active working document
+:return: The result of applying the processing pipeline to t.
         """
         req = Plumbing.Request(self,md,t,state=state)
         self._process(req)
@@ -181,8 +182,12 @@ The inner request pipeline processor.
 
 def plumbing(fn):
     """
-Create a new plumbing instance by parsing yaml from the filename. This uses the resource framework to locate
-the yaml file which means that pipelines can be shipped as plugins.
+Create a new plumbing instance by parsing yaml from the filename.
+
+:param fn: A filename containing the pipeline.
+:return: A plumbing object
+
+This uses the resource framework to locate the yaml file which means that pipelines can be shipped as plugins.
     """
     id = os.path.splitext(fn)[0]
     ystr = resource_string(fn)

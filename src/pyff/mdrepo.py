@@ -4,7 +4,6 @@ This is the implementation of the active repository of SAML metadata. The 'local
 
 """
 from StringIO import StringIO
-
 from datetime import datetime
 import hashlib
 import urllib
@@ -18,7 +17,7 @@ from copy import deepcopy
 from pyff import merge_strategies
 import pyff.index
 from pyff.logs import log
-from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta
+from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template
 import xmlsec
 from pyff.constants import NS, NF_URI
 import traceback
@@ -201,7 +200,7 @@ Add an ATOM annotation to an EntityDescriptor or an EntitiesDescriptor.
             a.append(velt)
             #log.debug(etree.tostring(a))
 
-    def fetch_metadata(self,resources,qsize=5,timeout=60,stats={}):
+    def fetch_metadata(self,resources,qsize=5,timeout=60,stats={},xrd=None):
         """
 Fetch a series of metadata URLs and optionally verifies signatures.
 
@@ -230,7 +229,7 @@ and verified.
                 thread.start()
                 q.put(thread, True)
 
-        def consumer(q,njobs,stats,next_jobs=[]):
+        def consumer(q,njobs,stats,next_jobs=[],resolved=set()):
             nfinished = 0
 
             while nfinished < njobs:
@@ -301,6 +300,11 @@ and verified.
                             ne = self.import_metadata(t,url=thread.id)
                             info['Number of Entities'] = ne
                         info['Cache Expiration Time'] = str(thread.last_modified + offset)
+                        certs = xmlsec.CertDict(relt)
+                        cert = None
+                        if certs.values():
+                            cert = certs.values()[0].strip()
+                        resolved.add((thread.url,cert))
                     else:
                         raise ValueError("Unknown metadata type (%s)" % relt.tag)
                 except Exception,ex:
@@ -318,11 +322,12 @@ and verified.
                         stats[thread.url] = info
 
         resources = [(url,verify,id,0) for url,verify,id in resources]
+        resolved = set()
         while len(resources):
             next_jobs = []
             q = Queue(qsize)
             prod_thread = threading.Thread(target=producer, args=(q, resources))
-            cons_thread = threading.Thread(target=consumer, args=(q, len(resources), stats, next_jobs))
+            cons_thread = threading.Thread(target=consumer, args=(q, len(resources), stats, next_jobs, resolved))
             prod_thread.start()
             cons_thread.start()
             prod_thread.join()
@@ -331,6 +336,10 @@ and verified.
                 resources = next_jobs
             else:
                 resources = []
+
+        if xrd is not None:
+            with open(xrd,"w") as fd:
+                fd.write(template("trust.xrd").render(links=resolved))
 
     def parse_metadata(self,fn,key=None,base_url=None,fail_on_error=False):
         """
@@ -522,7 +531,34 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             raise Exception,"What about %s ??" % member
 
     def lookup(self,member,xp=None):
-        log.debug("lookup %s" % member)
+        """
+Lookup elements in the working metadata repository
+
+:param member: A selector (cf below)
+:type member: basestring
+:param xp: An optional xpath filter
+:type xp: basestring
+:return: An interable of EntityDescriptor elements
+:rtype: etree.Element
+
+**Selector Syntax**
+
+    - selector "+" selector
+    - [sourceID] "!" xpath
+    - attribute=value or {attribute}value
+    - entityID
+    - sourceID (@Name)
+    - <URL containing one selector per line>
+
+The first form results in the intersection of the results of doing a lookup on the selectors. The second form
+results in the EntityDescriptor elements from the source (defaults to all EntityDescriptors) that match the
+xpath expression. The attribute-value forms resuls in the EntityDescriptors that contain the specified entity
+attribute pair. If non of these forms apply, the lookup is done using either source ID (normally @Name from
+the EntitiesDescriptor) or the entityID of single EntityDescriptors. If member is a URI but isn't part of
+the metadata repository then it is fetched an treated as a list of (one per line) of selectors. If all else
+fails an empty list is returned.
+
+        """
         l = self._lookup(member,xp)
         return list(set(filter(lambda x: x is not None,l)))
 
