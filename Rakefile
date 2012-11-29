@@ -37,11 +37,6 @@ task :start do
   sh "jekyll --server"
 end
 
-desc "Publish"
-task :publish do
-  sh "jekyll --no-auto && rsync -avz --delete _site/ root@etc.mnt.se:/var/www/levelofassurance.org/"
-end
-
 desc 'Make a new post'
 task :post, [:name] do |t, args|
   if args.name then
