@@ -1,16 +1,20 @@
 Using pyFF
 =============
 
-pyFF has a single command-line tool: pyff.
+pyFF has two command-line tools: pyff and pyffd.
 
 .. code-block:: bash
 
   # pyff --loglevel=INFO pipeline.fd [pipeline2.fd]
-
+  # pyffd --loglevel=INFO pipeline.fd [pipeline2.fd]
 
 pyff operates by setting up and running "pipelines". Each pipeline starts with an empty "active repository" - an
 in-memory representation of a set of SAML metadata documents - and an empty "working document" - a subset of the
 EntityDescriptor elements in the active repository.
+
+The pyffd tool starts a metadata server with an HTTP-based interface for viewing and downloading metadata. The
+HTTP interface can produce *XML*, *HTML* and *JSON* output (aswell as other formats with a bit of configuration) and
+implements the MDX specification for online SAML metadata query.
 
 Pipeline files are *yaml* document representing a list of processing steps:
 
@@ -24,7 +28,21 @@ Each step represents a processing instruction. pyFF has a library of built-in in
 include fetching local and remote metadata, xslt transforms, signing, validation and various forms of output and
 statistics.
 
-Processing steps are called pipes. Many pipes take arguments. For instance the sign pipe takes the key and certificate
-as arguments.
+Processing steps are called pipes. A pipe can have arguments and options:
 
-Documentation for each pipe is in the :doc:`api/pyff.pipes`. Also take a look at the :doc:`examples`.
+.. code-block:: yaml
+
+    - step [option]*:
+        - argument1
+        - argument2
+        ...
+
+    - step [option]*:
+        key1: value1
+        key2: value2
+        ...
+
+Typically options are used to modify the behaviour of the pipe itself (think macros), while arguments provide
+runtime data to operate on.
+
+Documentation for each pipe is in the :py:mod:`pyff.pipes.builtins` Module. Also take a look at the :doc:`examples`.
