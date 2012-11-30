@@ -1,1 +1,7 @@
 _site
+src/pyFF.egg-info
+.idea/
+build/
+dist/
+docs/
+src/
