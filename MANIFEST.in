@@ -1,4 +1,4 @@
 include README.rst
 include NEWS.txt
-recursive-include examples *.xsd *.js *.css *.html *.fd *.xrd *.png *.gif
-recursive-include src/pyff *.xsd *.js *.css *.html *.fd *.xrd *.png *.gif
+recursive-include examples *.fd *.xrd
+recursive-include src/pyff *.xsd *.js *.css *.html *.xrd *.png *.gif
