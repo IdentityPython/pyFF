@@ -61,3 +61,8 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * several bugfixes
 * indexing in MDRepository
 * completely rewritten URL fetcher with monitoring
+
+0.9
+---
+
+*Release date: UNRELEASED*

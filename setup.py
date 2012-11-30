@@ -7,7 +7,7 @@ README = open(os.path.join(here, 'README.rst')).read()
 NEWS = open(os.path.join(here, 'NEWS.txt')).read()
 
 
-version = '0.8'
+version = '0.9dev'
 
 install_requires = [
     'lxml',
@@ -41,7 +41,7 @@ setup(name='pyFF',
     package_dir = {'': 'src'},
     include_package_data=True,
     package_data = {
-        'pyff': ['xslt/*','site/*','schema/*']
+        'pyff': ['xslt/**/*','site/**/*','schema/**/*']
     },
     zip_safe=False,
     install_requires=install_requires,
