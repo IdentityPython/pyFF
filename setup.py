@@ -41,7 +41,15 @@ setup(name='pyFF',
     package_dir = {'': 'src'},
     include_package_data=True,
     package_data = {
-        'pyff': ['xslt/**/*','site/**/*','schema/**/*']
+        'pyff': ['xslt/*.xsl',
+		'site/static/js/*',
+		'site/static/css/*',
+		'site/templates/*',
+		'site/icons/*',
+		'site/static/bootstrap/js/*',
+		'site/static/bootstrap/css/*',
+		'site/static/bootstrap/img/*',
+		'schema/*.xsd']
     },
     zip_safe=False,
     install_requires=install_requires,
