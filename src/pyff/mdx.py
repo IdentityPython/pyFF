@@ -45,7 +45,7 @@ from cherrypy.process.plugins import Monitor
 from cherrypy.lib import caching
 from simplejson import dumps
 from pyff.constants import ATTRS
-from pyff.dj import DiscoJuice
+#from pyff.dj import DiscoJuice
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
@@ -451,7 +451,7 @@ def main():
     cherrypy.config.update(cfg)
 
     root = MDRoot(server)
-    root.dj = DiscoJuice()
+    #root.dj = DiscoJuice()
     app = cherrypy.tree.mount(root,config=cfg)
     app.log.error_log.setLevel(loglevel)
     app.log.error_log.setLevel(loglevel)
