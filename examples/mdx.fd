@@ -2,7 +2,6 @@
     - load:
        - examples/links.xrd
        - http://mds.edugain.org
-       - /home/leifj/work/swamid.se/swamid-metadata/swamid-1.0.mxml
     - select
     - fork and merge:
        - select: "!md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
