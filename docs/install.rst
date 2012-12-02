@@ -14,7 +14,7 @@ Fedora or other rpm-based systems:
 
 .. code-block:: bash
 
-  # apt-get install build-essential libxml2-dev libxslt1-dev libyaml-dev
+  # apt-get install build-essential python-dev libxml2-dev libxslt1-dev libyaml-dev
 
 If you want to use OS packages instead of python packages from pypi then
 consider also installing the following packages before you begin:
