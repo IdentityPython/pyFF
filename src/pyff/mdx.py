@@ -454,7 +454,10 @@ def main():
     #root.dj = DiscoJuice()
     app = cherrypy.tree.mount(root,config=cfg)
     app.log.error_log.setLevel(loglevel)
-    app.log.error_log.setLevel(loglevel)
+    if logfile is not None:
+        cherrypy.config.update({'log.error_file': logfile})
+        cherrypy.config.update({'log.access_file': logfile})
+
     #Always start the engine; this will start all other services
     try:
         engine.start()
