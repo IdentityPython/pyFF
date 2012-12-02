@@ -338,7 +338,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
             'hP:p:H:CfaA:',
-            ['help', 'loglevel=','port=','host=','no-caching','autoreload','frequency=','alias='])
+            ['help', 'loglevel=','logfile=','port=','host=','no-caching','autoreload','frequency=','alias='])
     except getopt.error, msg:
         print msg
         print __doc__
