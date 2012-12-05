@@ -223,7 +223,10 @@ class URLFetch(threading.Thread):
 
             if self.url.startswith('file://'):
                 path = self.url[7:]
-                with open(path) as fd:
+                if not os.path.exists(path):
+                    raise IOError("File not found: %s" % path)
+
+                with open(path,'r') as fd:
                     self.result = fd.read()
                     self.cached = False
                     self.date = datetime.now()
@@ -236,7 +239,7 @@ class URLFetch(threading.Thread):
                 self.date = _parse_date(resp['date'])
                 if resp.status != 200:
                     log.error("got %d: %s from %s" % (resp.status,resp.reason,self.url))
-                    raise ValueError(resp.reason)
+                    raise IOError(resp.reason)
                 self.result = content
                 self.cached = resp.fromcache
 

@@ -362,9 +362,9 @@ Supports both remote and local resources. Fetching remote resources is done in p
                 log.debug("local file %s %s %s" % (url,verify,id))
                 remote.append(("file://%s" % url,verify,id))
             else:
-                raise ValueError("Unknown file type for load: %s" % r[0])
+                log.error("Unknown file type for load: %s" % r[0])
         else:
-            raise ValueError("Don't know how to load '%s' as %s verified by %s" % (url,id,verify))
+            log.error("Don't know how to load '%s' as %s verified by %s" % (url,id,verify))
 
     opts = dict(zip(opts[::2],opts[1::2]))
     opts.setdefault('timeout',30)

@@ -1,8 +1,7 @@
 """
 An implementation of draft-lajoie-md-query
 
-Usage: pyffd [-C|--no-cache] [-p <pidfile>] [-f] [-a] [--loglevel=<level>]
-             [-P<port>|--port=<port>] [-H<host>|--host=<host>] {pipeline-files}+
+Usage: pyffd <options> {pipeline-files}+
 
     -C|--no-cache
             Turn off caching
@@ -12,6 +11,10 @@ Usage: pyffd [-C|--no-cache] [-p <pidfile>] [-f] [-a] [--loglevel=<level>]
             Run in foreground
     -a
             Restart pyffd if any of the pipeline files change
+    --log=<log> | -l<log>
+            Set to either a file or syslog:<facility> (eg syslog:auth)
+    --error-log=<log> | --access-log=<log>
+            As --log but only affects the error or access log streams.
     --loglevel=<level>
             Set logging level
     -P<port>|--port=<port>
@@ -50,7 +53,7 @@ from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
 from pyff.utils import resource_string, template, xslt_transform, dumptree
-from pyff.logs import log
+from pyff.logs import log, PyFFLogger, SysLogLibHandler
 import logging
 from pyff.stats import stats
 import lxml.html as html
@@ -94,6 +97,11 @@ class MDUpdate(Monitor):
     def start(self):
         self.run(self.server)
         super(MDUpdate,self).start()
+
+    def stop(self):
+        super(MDUpdate,self).stop()
+
+    start.priority = 80
 
 class EncodingDispatcher(object):
     def __init__(self,prefixes,enc,next_dispatcher=Dispatcher()):
@@ -339,15 +347,16 @@ def main():
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-            'hP:p:H:CfaA:',
-            ['help', 'loglevel=','logfile=','port=','host=','no-caching','autoreload','frequency=','alias='])
+            'hP:p:H:CfaA:l:',
+            ['help', 'loglevel=','log=','access-log=','error-log=','port=','host=','no-caching','autoreload','frequency=','alias='])
     except getopt.error, msg:
         print msg
         print __doc__
         sys.exit(2)
 
     loglevel = logging.INFO
-    logfile = None #TODO configure logging file(s)
+    error_log = None
+    access_log = None
     port = 8080
     host = "127.0.0.1"
     pidfile = "/var/run/pyffd.pid"
@@ -363,12 +372,17 @@ def main():
             if o in ('-h', '--help'):
                 print __doc__
                 sys.exit(0)
-            elif o in ('--loglevel'):
+            elif o  == '--loglevel':
                 loglevel = getattr(logging, a.upper(), None)
                 if not isinstance(loglevel, int):
                     raise ValueError('Invalid log level: %s' % loglevel)
-            elif o in ('--logfile'):
-                logfile = a
+            elif o in ('--log','-l'):
+                error_log = a
+                access_log = a
+            elif o in ('--error-log'):
+                error_log = a
+            elif o in ('--access-log'):
+                access_log = a
             elif o in ('--host','-H'):
                 host = a
             elif o in ('--port','-P'):
@@ -403,6 +417,10 @@ def main():
     if daemonize:
         cherrypy.config.update({'environment': 'production'})
         cherrypy.config.update({'log.screen': False})
+        if error_log is None:
+            error_log = 'syslog:daemon'
+        if access_log is None:
+            access_log = 'syslog:daemon'
         plugins.Daemonizer(engine).subscribe()
 
     if pidfile:
@@ -452,15 +470,31 @@ def main():
     }
     cherrypy.config.update(cfg)
 
-    root = MDRoot(server)
-    #root.dj = DiscoJuice()
-    app = cherrypy.tree.mount(root,config=cfg)
-    app.log.error_log.setLevel(loglevel)
-    if logfile is not None:
-        cherrypy.config.update({'log.error_file': logfile})
-        cherrypy.config.update({'log.access_file': logfile})
+    if error_log is not None:
+        cherrypy.config.update({'log.screen': False})
 
-    #Always start the engine; this will start all other services
+    root = MDRoot(server)
+    app = cherrypy.tree.mount(root,config=cfg)
+    if error_log is not None:
+        if error_log.startswith('syslog:'):
+            facility = error_log[7:]
+            h = SysLogLibHandler(facility=facility)
+            app.log.error_log.addHandler(h)
+            cherrypy.config.update({'log.error_file': ''})
+        else:
+            cherrypy.config.update({'log.error_file': error_log})
+
+    if access_log is not None:
+        if access_log.startswith('syslog:'):
+            facility = error_log[7:]
+            h = SysLogLibHandler(facility=facility)
+            app.log.access_log.addHandler(h)
+            cherrypy.config.update({'log.access_file': ''})
+        else:
+            cherrypy.config.update({'log.access_file': access_log})
+
+    app.log.error_log.setLevel(loglevel)
+
     try:
         engine.start()
     except:
