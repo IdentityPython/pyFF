@@ -64,6 +64,7 @@ class MDUpdate(Monitor):
         self.server = server
         self.bus = bus
         Monitor.__init__(self,bus,lambda:self.run(server),frequency=frequency)
+        self.subscribe()
 
     def run(self,server):
         locked = False
@@ -89,6 +90,10 @@ class MDUpdate(Monitor):
         finally:
             if locked:
                 self.lock.release()
+
+    def start(self):
+        self.run(self.server)
+        super(MDUpdate,self).start()
 
 class EncodingDispatcher(object):
     def __init__(self,prefixes,enc,next_dispatcher=Dispatcher()):
@@ -212,9 +217,6 @@ class MDServer():
 
     def new_repository(self):
         return MDRepository(metadata_cache_enabled=self.cache_enabled)
-
-    def start(self):
-        self.refresh.run(self)
 
     class MediaAccept():
         def has_key(self,key):
@@ -461,7 +463,6 @@ def main():
     #Always start the engine; this will start all other services
     try:
         engine.start()
-        server.start() # we start the update here to give time for logging to initialize
     except:
         # Assume the error has been logged already via bus.log.
         sys.exit(1)
