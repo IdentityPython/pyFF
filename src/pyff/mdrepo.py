@@ -409,6 +409,8 @@ Returns the list of contained EntityDescriptor elements
         """
         if t is None:
             return []
+        elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
+            return [root(t)]
         else:
             return t.findall(".//{%s}EntityDescriptor" % NS['md'])
 
@@ -422,6 +424,7 @@ starting with '.' are excluded.
         """
         if url is None:
             url = dir
+        log.debug("walking %s" % dir)
         if not self.md.has_key(dir):
             entities = []
             for top, dirs, files in os.walk(dir):
@@ -429,6 +432,7 @@ starting with '.' are excluded.
                     if dn.startswith("."):
                         dirs.remove(dn)
                 for nm in files:
+                    log.debug("found file %s" % nm)
                     if nm.endswith(ext):
                         fn = os.path.join(top, nm)
                         t = self.parse_metadata(fn,fail_on_error=True)
