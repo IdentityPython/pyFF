@@ -394,11 +394,20 @@ is stored in the MDRepository object.
         # we always clean incoming ID
         # add to the index
         ne = 0
-        for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
-            if e.attrib.has_key('ID'):
-                del e.attrib['ID']
-            self.index.add(e)
-            ne += 1
+
+        if t is not None:
+            if root(t).tag == "{%s}EntityDescriptor" % NS['md']:
+                if root(t).attrib.has_key('ID'):
+                    del root(t).attrib['ID']
+                self.index.add(root(t))
+                ne += 1
+            else:
+                for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
+                    if e.attrib.has_key('ID'):
+                        del e.attrib['ID']
+                    self.index.add(e)
+                    ne += 1
+
         return ne
 
     def entities(self,t=None):
