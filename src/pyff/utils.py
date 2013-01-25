@@ -155,7 +155,8 @@ def schema():
 def safe_write(fn,data):
     tmpn = None
     try:
-        with tempfile.NamedTemporaryFile('w',delete=False) as tmp:
+        dirname,basename = os.path.split(fn)
+        with tempfile.NamedTemporaryFile('w',delete=False,prefix=".%s" % basename,dir=dirname) as tmp:
             tmp.write(data)
             tmpn = tmp.name
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
