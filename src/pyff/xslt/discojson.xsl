@@ -28,6 +28,10 @@
         <xsl:apply-templates select=".//md:SPSSODescriptor[1]"/>
         <xsl:text>"</xsl:text>
 
+        <xsl:text>,"icon": "</xsl:text>
+        <xsl:apply-templates select=".//mdui:Logo[1]/text()"/>
+        <xsl:text>"</xsl:text>
+
         <xsl:text>,"title": "</xsl:text>
         <xsl:choose>
             <xsl:when test=".//mdui:DisplayName">

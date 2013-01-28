@@ -12,6 +12,10 @@
             - "http://pyff-project.org/collection=swamid-2.0+http://pyff-project.org/role=idp"
         - setattr:
             http://pyff-project.org/collection: swamid-idp
+    - fork:
+        - select as /md/foo-2.0:
+            - http://pyff-project.org/collection=swamid-2.0
+        - break
     - break
 - when request:
     - select

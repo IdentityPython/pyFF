@@ -380,7 +380,7 @@ def select(req,*opts):
 Select a set of EntityDescriptor elements as the working document.
 
 :param req: The request
-:param opts: Options (unused)
+:param opts: Options - used for select alias
 :return: returns the result of the operation as a working document
 
 Select picks and expands elements (with optional filtering) from the active repository you setup using calls
@@ -422,19 +422,45 @@ stop the plumbing if the current working document is empty. For instance, runnin
 
 .. code-block:: yaml
 
-    - select "!//md:EntityDescriptor[md:SPSSODescriptor]"
+    - select: "!//md:EntityDescriptor[md:SPSSODescriptor]"
 
-This would terminate the plumbing at select if there are no SPs in the local repository. This is useful in
+would terminate the plumbing at select if there are no SPs in the local repository. This is useful in
 combination with fork for handling multiple cases in your plumbings.
+
+The 'as' keyword allows a select to be stored as an alias in the local repository. For instance
+
+.. code-block:: yaml
+
+    - select as foo-2.0: "!//md:EntityDescriptor[md:IDPSSODescriptor]""
+
+would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in the current repository.
+Note that you should not include an extension in your "as foo-bla-something" since that would make your
+alias invisible for anything except the corresponding mime type.
     """
     args = req.args
     if args is None:
         args = [req.state.get('select',None)]
     if args is None:
         args = req.md.keys()
-    ot = req.md.entity_set(args,req.plumbing.id)
+    if args is None:
+        args = []
+    name = req.plumbing.id
+    alias = False
+    if len(opts) > 0:
+        if opts[0] != 'as' and len(opts) == 1:
+            name = opts[0]
+            alias = True
+        if opts[0] == 'as' and len(opts) == 2:
+            name = opts[1]
+            alias = True
+
+    ot = req.md.entity_set(args,name)
     if ot is None:
-        raise PipeException("empty select '%s' - stop" % ",".join(args))
+        raise PipeException("empty select - stop")
+
+    if alias:
+        req.md.import_metadata(ot,name)
+
     return ot
 
 def pick(req,*opts):

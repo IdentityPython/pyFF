@@ -52,7 +52,7 @@ from pyff.constants import ATTRS
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
-from pyff.utils import resource_string, template, xslt_transform, dumptree
+from pyff.utils import resource_string, template, xslt_transform, dumptree, duration2timedelta
 from pyff.logs import log, PyFFLogger, SysLogLibHandler
 import logging
 from pyff.stats import stats
@@ -110,14 +110,14 @@ class EncodingDispatcher(object):
         self.next_dispatcher = next_dispatcher
 
     def dispatch(self,path_info):
-        log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes),path_info))
+        #log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes),path_info))
         vpath = path_info.replace("%2F", "/")
         for prefix in self.prefixes:
             if vpath.startswith(prefix):
                 plen = len(prefix)
                 vpath = vpath[plen+1:]
                 npath =  "%s/%s" % (prefix,self.enc(vpath))
-                log.debug("EncodingDispatcher %s" % npath)
+                #log.debug("EncodingDispatcher %s" % npath)
                 return self.next_dispatcher(npath)
         return self.next_dispatcher(vpath)
 
@@ -137,11 +137,37 @@ class MDStats(StatsPage):
         str = etree.tostring(body,pretty_print=True,method="html")
         return template("basic.html").render(content=str,http=cherrypy.request)
 
-class MDRoot():
-    def __init__(self,server):
+class WellKnown():
+
+    def __init__(self,server=None):
         self.server = server
 
+    @cherrypy.expose
+    def webfinger(self,resource=None,rel=None):
+        if resource is None:
+            raise cherrypy.HTTPError(400,"Bad Request - missing resource parameter")
+
+        jrd = dict()
+        dt = datetime.now()+duration2timedelta("PT1H")
+        jrd['expires'] = dt.isoformat()
+        jrd['subject'] = cherrypy.request.base
+        links = list()
+        jrd['links'] = links
+        for a in self.server.aliases.keys():
+            links.append(dict(rel='urn:oasis:names:tc:SAML:2.0:metadata',href='%s/%s.xml' % (cherrypy.request.base,a)))
+            links.append(dict(rel='disco-json',href='%s/%s.json' % (cherrypy.request.base,a)))
+
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return dumps(jrd)
+
+class MDRoot():
+
+    def __init__(self,server):
+        self.server = server
+        self._well_known.server = server
+
     stats = MDStats()
+    _well_known = WellKnown()
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600,debug=True)
@@ -182,9 +208,13 @@ Disallow: /
         )
 
     @cherrypy.expose
-    def search(self,query):
+    def search(self,paged=False,query=None,page=0,page_limit=10,entity_filter=None):
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return dumps(self.server.md.search(query))
+        if paged:
+            res,more,total = self.server.md.search(query,page=int(page),page_limit=int(page_limit),entity_filter=entity_filter)
+            return dumps({'entities': res,'more':more,'total':total})
+        else:
+            return dumps(self.server.md.search(query))
 
     @cherrypy.expose
     def index(self):
@@ -195,11 +225,26 @@ Disallow: /
         return static.staticdir("/static",site_dir,debug=True)
 
     @cherrypy.expose
-    def default(self,pfx,path=None):
-        return self.server.request(pfx,path)
+    def default(self,*args,**kwargs):
+        log.debug("request default: %s" % ",".join(args))
+        if len(args) > 0 and args[0] in self.server.aliases:
+            kwargs['pfx'] = args[0]
+            if len(args) > 1:
+                kwargs['path'] = args[1]
+            return self.server.request(**kwargs)
+        else:
+            log.debug("not an alias: %s" % "/".join(args))
+            kwargs['pfx'] = None
+            kwargs['path'] = "/"+"/".join(args)
+            return self.server.request(**kwargs)
+
+    #@cherrypy.expose
+    #def default(self,pfx,path=None):
+    #    log.debug("pfx=%s,path=%s" % (pfx,path))
+    #    return self.server.request(pfx,path)
 
 class MDServer():
-    def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS,cache_enabled=True):
+    def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS, cache_enabled=True):
         if not pipes: pipes = []
         self.cache_enabled = cache_enabled
         self._md = None
@@ -239,8 +284,14 @@ class MDServer():
             except HTTPError:
                 return False
 
-    def request(self,pfx=None,path=None,content_type=None):
+    def request(self,**kwargs):
         stats['MD Requests'] += 1
+
+        pfx = kwargs.get('pfx',None)
+        path = kwargs.get('path',None)
+        content_type = kwargs.get('content_type',None)
+
+        log.debug("request pfx=%s, path=%s, content_type=%s" % (pfx,path,content_type))
 
         def escape(m):
             str = m.group(0)
@@ -266,7 +317,9 @@ class MDServer():
         _ctypes = {'xml': 'application/xml',
                    'json': 'application/json',
                     'htm': 'text/html',
-                    'html': 'text/html'}
+                    'html': 'text/html',
+                    'ds': 'text/html',
+                    's': 'application/json'}
 
         alias=None
         if pfx:
@@ -292,7 +345,39 @@ class MDServer():
         else:
             accept = {content_type:True}
         with self.lock.readlock:
-            if accept.get('text/html'):
+            if ext == 'ds':
+                pdict = dict()
+                pdict['http'] = cherrypy.request,
+                pdict['sp'] = {'title': 'Test SP'}
+                pdict['ret'] = kwargs.get('return',None)
+                if not path:
+                    pdict['search'] = "/search/"
+                else:
+                    pdict['search'] = "%s.s" % path
+                if pdict['ret'] is None:
+                    raise HTTPError(400,"400 Bad Request - Missing 'return' parameter")
+                pdict['returnIDParam'] = kwargs.get('returnIDParam','entityID')
+                cherrypy.response.headers['Content-Type'] = 'text/html'
+                return template("ds.html").render(**pdict)
+            elif ext == 's':
+                paged = bool(kwargs.get('paged',False))
+                query = kwargs.get('query',None)
+                page = kwargs.get('page',0)
+                page_limit = kwargs.get('page_limit',10)
+                entity_filter = kwargs.get('entity_filter',None)
+
+                cherrypy.response.headers['Content-Type'] = 'application/json'
+                if paged:
+                    res,more,total = self.md.search(query,
+                                                    path=path,
+                                                    page=int(page),
+                                                    page_limit=int(page_limit),
+                                                    entity_filter=entity_filter)
+                    log.debug(dumps({'entities': res,'more':more,'total':total}))
+                    return dumps({'entities': res,'more':more,'total':total})
+                else:
+                    return dumps(self.md.search(query,path=path,entity_filter=entity_filter))
+            elif accept.get('text/html'):
                 if not path:
                     if pfx:
                         title=pfx

@@ -10,7 +10,7 @@ import urllib
 from UserDict import DictMixin
 from lxml import etree
 from lxml.builder import ElementMaker
-from lxml.etree import DocumentInvalid, dump
+from lxml.etree import DocumentInvalid
 import os
 import re
 from copy import deepcopy
@@ -98,9 +98,13 @@ Utility-method for computing a displayable string for a given entity.
     def sha1_id(self,e):
         return pyff.index.hash_id(e,'sha1')
 
-    def search(self,query):
+    def search(self,query,path=None,page=None,page_limit=10,entity_filter=None):
         """
 :param query: A string to search for.
+:param path: The repository collection (@Name) to search in - None for search in all collections
+:param page:  When using paged search, the page index
+:param page_limit: When using paged search, the maximum entry per page
+:param entity_filter: A lookup expression used to filter the entries before search is done.
 
 Returns a list of dict's for each EntityDescriptor present in the metadata store such
 that any of the DisplayName, ServiceName, OrganizationName or OrganizationDisplayName
@@ -114,20 +118,46 @@ The dict in the list contains three items:
         """
         def _strings(e):
             lst = [e.get('entityID')]
-            for attr in ['{%s}DisplayName' % NS['mdui'],
-                         '{%s}ServiceName' % NS['md'],
-                         '{%s}OrganizationDisplayName' % NS['md'],
-                         '{%s}OrganizationName' % NS['md']]:
-                lst.extend(e.findall(attr))
-            return lst
+            for attr in ['.//{%s}DisplayName' % NS['mdui'],
+                         './/{%s}ServiceName' % NS['md'],
+                         './/{%s}OrganizationDisplayName' % NS['md'],
+                         './/{%s}OrganizationName' % NS['md']]:
+                lst.extend([x.text.lower() for x in e.findall(attr)])
+            return filter(lambda s: s is not None,lst)
 
-        def _match(e):
-            return len([query in str for str in filter(lambda s: s is not None,_strings(e))]) > 0
+        def _match(query,e):
+            #log.debug("looking for %s in %s" % (query,",".join(_strings(e))))
+            for str in _strings(e):
+                if query in str:
+                    return True
+            return False
 
-        return [{'label': self.display(e),
-                 'value': e.get('entityID'),
-                 'id': pyff.index.hash_id(e,'sha1')}
-                    for e in pyff.index.EntitySet(filter(_match,self.__iter__()))]
+        f = []
+        if path is not None:
+            f.append(path)
+        if entity_filter is not None:
+            f.append(entity_filter)
+        mexpr = "+".join(f)
+
+        log.debug("mexpr: %s" % mexpr)
+
+        res = [{'label': self.display(e),
+                'value': e.get('entityID'),
+                'id': pyff.index.hash_id(e,'sha1')}
+                    for e in pyff.index.EntitySet(filter(lambda ent: _match(query,ent),self.lookup(mexpr)))]
+
+        res.sort(key=lambda i: i['label'])
+
+        log.debug(res)
+
+        if page is not None:
+            total = len(res)
+            begin = (page-1)*page_limit
+            end = begin+page_limit
+            more = (end < total)
+            return res[begin:end],more,total
+        else:
+            return res
 
     def sane(self):
         return len(self.md) > 0
@@ -510,12 +540,12 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                 return self._lookup(src,xp)
 
             m = re.match("^\{(.+)\}(.+)$",member)
-            if m:
+            if m is not None:
                 log.debug("attribute-value match: %s='%s'" % (m.group(1),m.group(2)))
                 return self.index.get(m.group(1),m.group(2).rstrip("/"))
 
             m = re.match("^(.+)=(.+)$",member)
-            if m:
+            if m is not None:
                 log.debug("attribute-value match: %s='%s'" % (m.group(1),m.group(2)))
                 return self.index.get(m.group(1),m.group(2).rstrip("/"))
 
@@ -527,7 +557,13 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                     return e
 
             e = self.get(member,None)
-            if e:
+            if e is not None:
+                return self._lookup(e,xp)
+
+            e = self.get("%s.xml" % member,None) #hackish but helps save people from their misstakes
+            if e is not None:
+                if not "://" in member: # not an absolute URL
+                    log.warn("Found %s.xml as an alias - AVOID extensions in 'select as' statements" % member)
                 return self._lookup(e,xp)
 
             if "://" in member: # looks like a URL and wasn't an entity or collection - recurse away!

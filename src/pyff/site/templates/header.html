@@ -19,7 +19,7 @@
         $(function() {
             var labels,mapped,ids
             function search(query,process) {
-                $.getJSON("/search/"+query,function(data) {
+                $.getJSON("/search/?query="+query,function(data) {
                     labels = []
                     mapped = {}
                     ids = {}

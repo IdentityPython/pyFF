@@ -1,0 +1,212 @@
+<!DOCTYPE HTML>
+## -*- coding: utf-8 -*-
+<html>
+<head>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="/static/js/select2/select2.css" rel="stylesheet"/>
+    <link href="/static/css/flags.css" rel="stylesheet"/>
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="/static/js/json2.js"></script>
+    <script type="text/javascript" src="/static/js/jstorage.js"></script>
+    <script type="text/javascript" src="/static/js/select2/select2.min.js"></script>
+    <title>Please login...</title>
+    <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <style type="text/css">
+        img.idp-icon {
+            max-height: 50px;
+            max-width: 80px;
+            margin-left: 40px;
+        }
+        li.idp {
+            margin-top: 5px;
+        }
+        div.idp-btn {
+            width: 70%;
+        }
+        .inline li {
+            display: inline;
+        }
+    </style>
+
+    <script type="text/javascript">
+        (function( $ ) {
+
+            function idpFormatResult(idp) {
+                console.log(idp);
+                return idp['label']; //['label'];
+            }
+
+            function idpFormatSelection(idp) {
+                console.log(idp);
+                return idp['value']; //['value'];
+            }
+
+            $.fn.dsQuickLinks = function() {
+                this.each(function() {
+                    var $this = $(this);
+                    $this.html($('<ul>').addClass("unstyled").append(function() {
+                        var item;
+                        var lst = $.jStorage.get('pyff.discovery.idps',[]);
+                        console.log(lst);
+                        for (var i = 0; i < lst.length; i++) {
+                            var item = lst[i];
+
+                            var btn = $('<a>').addClass("btn btn-large btn-block select").attr('href',item['entityID']).append(item['title']);
+                            if (item['icon']) {
+                                btn.append($('<img>').addClass('img-polaroid').attr('src',item['icon']).addClass("fallback-icon idp-icon"));
+                            }
+                            $(this).append($('<li>').addClass('idp').append(btn));
+                        }
+                    }));
+                });
+            };
+            $.fn.dsSelect = function() {
+                this.each(function() {
+                    var $this = $(this);
+                    $this.select2({
+                       placeholder: "Search for a login provider...",
+                       ajax: {
+                           url: '${search}',
+                           data: function(term,page) {
+                                return {
+                                    query: term,
+                                    page_limit: 10,
+                                    page: page,
+                                    paged: true,
+                                    entity_filter: '{http://pyff-project.org/role}idp'
+                                };
+                           },
+                           results: function(data,page) {
+                               var more = (page*10) < data['total'];
+                               console.log(data['entities']);
+                               console.log(data);
+                               return {results: data['entities'], more: more}
+                           }
+                       },
+                       formatResult: idpFormatResult,
+                       formatSelection: idpFormatSelection,
+                       dropdownCssClass: 'bigdrop',
+                       width: 'resolve'
+                    });
+                    $this.select2('focus');
+                });
+            };
+        })( jQuery );
+        $(function() {
+            function ds_select(entityID) {
+                window.location = '${ret}?${returnIDParam}='+entityID;
+            }
+
+            function contains_idp(idp,lst) {
+                for (var i = 0; i < lst.length; i++) {
+                    var item = lst[i];
+                    if (item['entityID'] == idp['entityID']) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            function addIdP(item) {
+                var idps = $.jStorage.get('pyff.discovery.idps',[]);
+                console.log(item);
+                if (!contains_idp(item,idps)) {
+                    idps.push(item);
+                }
+                $.jStorage.set('pyff.discovery.idps',idps);
+                ds_select(item['entityID']);
+            }
+
+            $('#quickLinks').dsQuickLinks();
+            $('.show-if-empty').each(function() {
+                var idps = $.jStorage.get('pyff.discovery.idps',[]);
+                if (idps.length > 0) {
+                    $(this).hide();
+                }
+            });
+            $('.hide-if-empty').each(function() {
+                var idps = $.jStorage.get('pyff.discovery.idps',[]);
+                if (idps.length == 0) {
+                    $(this).hide();
+                }
+            });
+            $('.clearLinks').click(function(ev) {
+                $.jStorage.set('pyff.discovery.idps',[]);
+                $('#quickLinks').dsQuickLinks();
+                $(this).hide();
+                return false;
+            });
+            $(".select").click(function(e) {
+                ds_select($(this).attr('href'));
+                return false;
+            });
+            $(".remove").click(function(e) {
+                return false;
+            });
+            $("img.fallback-icon").error(function(e) {
+                $(this).error(function(e) {});
+                $(this).addClass("icon-user").removeClass("img-polaroid");
+            });
+            $('#select').dsSelect();
+            $('#select').change(function(ev) {
+                $.ajax({
+                    datatype: 'json',
+                    url: '/metadata/'+ev['val']+".json",
+                    success: function (data) {
+                        for (var i = 0; i < data.length; i++) {
+                            console.log("fetched: "+data[i]);
+                            addIdP(data[i]);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+<body>
+
+    <div class="container-fluid">
+        <div class="navbar navbar-fixed-top">
+            <div class="navbar-inner" style>
+                <div style="margin-left: 40px;">
+                    <a class="brand" href="#">Choose Login to ${sp['title']}</a>
+                </div>
+                <ul class="nav pull-right">
+                    <li class="divider-vertical"></li>
+                    <li><a class="clearLinks hide-if-empty" href="#">Clear Provider List</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="span8" style="padding-top: 50px;">
+
+
+            <div class="alert alert-info show-if-empty">
+                <h4>Choosing a login provider</h4>
+                If you are coming to this page for the first time, or if you are using a new computer or a new
+                browser you will have to select a login provider. The next time we will try our best to remember
+                your choice and will display it in a list below.
+            </div>
+
+            <h2 class="hide-if-empty">Please choose a login provider</h2>
+
+            <span>
+                <div id="quickLinks"></div>
+                <div><hr/></div>
+                <p>If you can't find your login provider, use the searchable menu below to find it...</p>
+                <div style="width: 100%;" id="select"></div>
+                <form class="form-inline">
+                    <label class="checkbox"><input id="remember" type="checkbox"> Remember my choice and never show me this page again!</label>
+                </form>
+            </span>
+        </div>
+        <div class="span4" style="padding-top: 50px;">
+
+        </div>
+    </div>
+
+
+</body>
+</html>
