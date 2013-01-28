@@ -15,6 +15,7 @@
     <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
 
+
     <style type="text/css">
         img.idp-icon {
             max-height: 50px;
@@ -98,7 +99,14 @@
         })( jQuery );
         $(function() {
             function ds_select(entityID) {
-                window.location = '${ret}?${returnIDParam}='+entityID;
+                var ret = '${ret}'
+                var qs
+                if (ret.indexOf('?') === -1) {
+                    qs = '?'
+                } else {
+                    qs = '&'
+                }
+                window.location = '${ret}'+qs+'${returnIDParam}='+entityID;
             }
 
             function contains_idp(idp,lst) {
@@ -115,7 +123,10 @@
                 var idps = $.jStorage.get('pyff.discovery.idps',[]);
                 console.log(item);
                 if (!contains_idp(item,idps)) {
-                    idps.push(item);
+                    idps.unshift(item);
+                }
+                while (idps.length > 3) {
+                    idps.pop()
                 }
                 $.jStorage.set('pyff.discovery.idps',idps);
                 ds_select(item['entityID']);
