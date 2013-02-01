@@ -1,8 +1,10 @@
 <!DOCTYPE HTML>
 ## -*- coding: utf-8 -*-
-<html>
+<html xmlns="http://www.w3.org/1999/html">
 <head>
     <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="/static/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="/static/js/select2/select2.css" rel="stylesheet"/>
     <link href="/static/css/flags.css" rel="stylesheet"/>
     <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
@@ -18,18 +20,46 @@
 
     <style type="text/css">
         img.idp-icon {
-            max-height: 50px;
-            max-width: 80px;
-            margin-left: 40px;
+            max-height: 20px;
+            max-width: 200px;
+            margin-left: 40px;va
+        }
+        .idp-label {
+            margin-left: 20px;
+            line-height: 20px;
         }
         li.idp {
             margin-top: 5px;
         }
-        div.idp-btn {
-            width: 70%;
-        }
         .inline li {
             display: inline;
+        }
+        .tab-pane {
+            //height: 200px;
+        }
+        html { height: 100%; }
+        body {
+            height: 100%;
+        }
+
+        #wrap {
+            min-height: 99%;
+            height: auto !important;
+            height: 100%;
+            margin: 0 auto -180px;
+        }
+        #push {
+            height: 180px;
+        }
+        #footer {
+            height: 180px;
+            background-color: rgb(242, 242, 242);
+        }
+        #remember-message {
+            margin-top: 20px;
+        }
+        #remember-message form {
+            margin-bottom: 2px;
         }
     </style>
 
@@ -49,18 +79,22 @@
             $.fn.dsQuickLinks = function() {
                 this.each(function() {
                     var $this = $(this);
-                    $this.html($('<ul>').addClass("unstyled").append(function() {
+                    $this.html($('<ul>').addClass("nav nav-tabs nav-stacked").append(function() {
                         var item;
                         var lst = $.jStorage.get('pyff.discovery.idps',[]);
-                        console.log(lst);
                         for (var i = 0; i < lst.length; i++) {
                             var item = lst[i];
-
-                            var btn = $('<a>').addClass("btn btn-large btn-block select").attr('href',item['entityID']).append(item['title']);
+                            var outer = $('<li>');
+                            var idp = $('<a>').addClass("select").attr('href',item['entityID']);
+                            idp.append($('<span>').addClass("idp-label").append(item['title']));
                             if (item['icon']) {
-                                btn.append($('<img>').addClass('img-polaroid').attr('src',item['icon']).addClass("fallback-icon idp-icon"));
+                                idp.append($('<img>').attr('src',item['icon']).addClass("fallback-icon idp-icon"));
                             }
-                            $(this).append($('<li>').addClass('idp').append(btn));
+
+                            var dismiss = $('<button>').attr('type',"button").addClass('close unselect').attr('rel',item['entityID']).append("&times;");
+                            idp.append(dismiss);
+                            outer.append(idp);
+                            $(this).append(outer);
                         }
                     }));
                 });
@@ -83,8 +117,6 @@
                            },
                            results: function(data,page) {
                                var more = (page*10) < data['total'];
-                               console.log(data['entities']);
-                               console.log(data);
                                return {results: data['entities'], more: more}
                            }
                        },
@@ -96,8 +128,44 @@
                     $this.select2('focus');
                 });
             };
+            $.fn.dsRelyingParty = function() {
+                var o = $(this);
+                $.ajax({
+                    url: '/metadata/${sp}.json',
+                    type: 'json',
+                    success: function(data) {
+                        for (var i = 0; i < data.length; i++) {
+                            var entity = data[i];
+                            $(o).filter(".sp-icon").each(function() {
+                                if (entity.icon) {
+                                    $(this).append($('img').attr('src',entity.icon))
+                                }
+                            });
+                            $(o).filter(".sp-name").each(function() {
+                                if (entity.title) {
+                                    $(this).append(entity.title)
+                                }
+                            });
+                            $(o).filter(".sp-description").each(function() {
+                                if (!entity.descr) {
+                                    entity.descr = "<em>No description available...</em>"
+                                }
+                                if (entity.descr) {
+                                    $(this).append(entity.descr).addClass("alert alert-info");
+                                }
+                            });
+                        }
+                    }
+                });
+            };
         })( jQuery );
         $(function() {
+            function ds_default_select() {
+                var idp = $.jStorage.get('pyff.discovery.idp');
+                if (idp) {
+                    ds_select(idp);
+                }
+            }
             function ds_select(entityID) {
                 var ret = '${ret}'
                 var qs
@@ -105,6 +173,9 @@
                     qs = '?'
                 } else {
                     qs = '&'
+                }
+                if ($('#remember').is(':checked')) {
+                    $.jStorage.set('pyff.discovery.idp',entityID);
                 }
                 window.location = '${ret}'+qs+'${returnIDParam}='+entityID;
             }
@@ -133,35 +204,32 @@
             }
 
             $('#quickLinks').dsQuickLinks();
-            $('.show-if-empty').each(function() {
-                var idps = $.jStorage.get('pyff.discovery.idps',[]);
-                if (idps.length > 0) {
-                    $(this).hide();
-                }
-            });
-            $('.hide-if-empty').each(function() {
-                var idps = $.jStorage.get('pyff.discovery.idps',[]);
-                if (idps.length == 0) {
-                    $(this).hide();
-                }
-            });
-            $('.clearLinks').click(function(ev) {
-                $.jStorage.set('pyff.discovery.idps',[]);
-                $('#quickLinks').dsQuickLinks();
-                $(this).hide();
-                return false;
-            });
             $(".select").click(function(e) {
                 ds_select($(this).attr('href'));
                 return false;
             });
-            $(".remove").click(function(e) {
-                return false;
+            function find_idp(id,lst) {
+                for (var i = 0; i < lst.length; i++) {
+                    if (id == lst[i].entityID) {
+                        return i
+                    }
+                }
+                return -1
+            }
+            $(".unselect").click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var id = $(this).attr('rel');
+                var idps = $.jStorage.get('pyff.discovery.idps',[]);
+                var idx = find_idp(id,idps);
+                if (idx != -1) {
+                    idps.splice(idx,1);
+                    $.jStorage.set('pyff.discovery.idps',idps);
+                    $(this).parent().parent().remove();
+                }
             });
-            $("img.fallback-icon").error(function(e) {
-                $(this).error(function(e) {});
-                $(this).addClass("icon-user").removeClass("img-polaroid");
-            });
+
+            $('.sp').dsRelyingParty();
             $('#select').dsSelect();
             $('#select').change(function(ev) {
                 $.ajax({
@@ -175,49 +243,128 @@
                     }
                 });
             });
+            $("img.fallback-icon").error(function(e) {
+                $(this).error(function(e) {});
+                $(this).addClass("icon-user").removeClass("img-polaroid");
+            });
+            $('#switch-to-search').click(function (ev) {
+                ev.preventDefault();
+                $('#search').tab('show');
+                $('#select').focus();
+            });
+            $('a[href="#search"]').click(function (e) {
+                e.preventDefault();
+                $(this).tab('show');
+                $('#select').select2("focus");
+            });
+            $('a[data-toggle="tab"]').click(function (e) {
+                e.preventDefault();
+                $(this).tab('show');
+            });
+            $('.message > button.close').click(function(e) {
+                console.log(e);
+                console.log($(this));
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                var id = $(this).parentsUntil('.message').attr('id');
+                $(this).parent().each(function() {
+                    console.log($(this).attr('id'));
+                    closed[$(this).attr('id')] = true;
+                });
+                $.jStorage.set('pyff.discovery.messages',closed);
+            });
+            $('.message').each(function () {
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                if (closed[$(this).attr('id')]) {
+                    $(this).hide();
+                }
+            });
+
+            function switch_to_search() {
+                $('#search-tab').addClass('active');
+                $('#search-tab a').click();
+            }
+
+            function switch_to_suggested() {
+                $('#suggested-tab').click();
+            }
+
+            function tab_focus() {
+                var idps = $.jStorage.get('pyff.discovery.idps',[]);
+                if (idps.length === 0) {
+                    $('#idptab a[href="#search"]').tab('show');
+                    $('#idptab a[href="#suggested"]').parent().addClass('hide');
+                } else {
+                    $('#idptab a[href="#suggested"]').parent().removeClass('hide');
+                    $('#idptab a[href="#suggested"]').tab('show');
+                }
+            }
+            //ds_default_select();
+            tab_focus();
         });
     </script>
 <body>
 
+<div id="wrap">
     <div class="container-fluid">
-        <div class="navbar navbar-fixed-top">
+        <!-- div class="navbar navbar-fixed-top">
             <div class="navbar-inner" style>
                 <div style="margin-left: 40px;">
-                    <a class="brand" href="#">Choose Login to ${sp['title']}</a>
+                    <a class="brand" href="#">Select a Login Provider</a>
                 </div>
-                <ul class="nav pull-right">
-                    <li class="divider-vertical"></li>
-                    <li><a class="clearLinks hide-if-empty" href="#">Clear Provider List</a></li>
+            </div>
+        </div -->
+        <div class="span8">
+            <h2>Please Login</h2>
+            <div class="tabbable tabs-below">
+                <ul id="idptab" class="nav nav-tabs">
+                    <li><a href="#suggested" data-toggle="tab">Suggested</a></li>
+                    <li><a href="#search" data-toggle="tab">All Login Providers</a></li>
                 </ul>
+                <div class="tab-content">
+                    <div class="tab-pane" id="suggested">
+                        <div id="quickLinks"></div>
+                        <div class="clearfix"></div>
+                        <!-- a id="switch-to-search" href="#">Help me find my Identity Provider!</a -->
+                    </div>
+                    <div class="tab-pane" id="search" style="min-height: 100px;">
+                        <div style="width: 99%;" id="select"></div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="span8" style="padding-top: 50px;">
-
-
-            <div class="alert alert-info show-if-empty">
-                <h4>Choosing a login provider</h4>
-                If you are coming to this page for the first time, or if you are using a new computer or a new
-                browser you will have to select a login provider. The next time we will try our best to remember
-                your choice and will display it in a list below.
-            </div>
-
-            <h2 class="hide-if-empty">Please choose a login provider</h2>
-
-            <span>
-                <div id="quickLinks"></div>
-                <div><hr/></div>
-                <p>If you can't find your login provider, use the searchable menu below to find it...</p>
-                <div style="width: 100%;" id="select"></div>
+            <div class="alert alert-info message" id="remember-message">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                <h4>Remember choice</h4>
                 <form class="form-inline">
                     <label class="checkbox"><input id="remember" type="checkbox"> Remember my choice and never show me this page again!</label>
                 </form>
-            </span>
+            </div>
         </div>
-        <div class="span4" style="padding-top: 50px;">
+        <div class="span4 hidden-phone">
+            <h4 class="sp sp-name"></h4>
+            <div class="sp sp-icon"></div>
+            <div class="sp sp-description"></div>
 
+            <div class="alert alert-success message" id="first-time-user">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                <h4>First time users</h4>
+                <p>If you are coming to this page for the first time, if you are using a new computer or a new
+                browser you will have to select a login provider.</p>
+                <p>The next time we will try our best to remember your choice and will display it in a list below.</p>
+            </div>
         </div>
     </div>
+    <div id="push"></div>
+</div>
+<div id="footer">
+    <div class="container" style="padding-top: 50px">
+        <div class="row-fluid">
+            <div class="span12">
+                <div class="fluid-row">
 
-
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
