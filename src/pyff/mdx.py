@@ -347,8 +347,11 @@ class MDServer():
         with self.lock.readlock:
             if ext == 'ds':
                 pdict = dict()
-                pdict['http'] = cherrypy.request,
-                pdict['sp'] = {'title': 'Test SP'}
+                pdict['http'] = cherrypy.request
+                entityID = kwargs.get('entityID',None)
+                if entityID is None:
+                    raise HTTPError(400,"400 Bad Request - missing entityID")
+                pdict['sp'] = self.md.sha1_id(entityID)
                 pdict['ret'] = kwargs.get('return',None)
                 if not path:
                     pdict['search'] = "/search/"
@@ -538,7 +541,8 @@ def main():
             'tools.cpstats.on': True,
             'error_page.404': lambda **kwargs: error_page(404,**kwargs),
             'error_page.503': lambda **kwargs: error_page(503,**kwargs),
-            'error_page.500': lambda **kwargs: error_page(500,**kwargs)
+            'error_page.500': lambda **kwargs: error_page(500,**kwargs),
+            'error_page.400': lambda **kwargs: error_page(400,**kwargs)
         },
         '/': {
             'tools.caching.delay': delay,
