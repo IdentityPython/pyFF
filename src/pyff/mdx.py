@@ -48,7 +48,6 @@ from cherrypy.process.plugins import Monitor
 from cherrypy.lib import caching
 from simplejson import dumps
 from pyff.constants import ATTRS
-#from pyff.dj import DiscoJuice
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
