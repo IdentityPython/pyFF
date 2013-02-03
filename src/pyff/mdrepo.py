@@ -251,11 +251,11 @@ elements with a X509Certificate and where the <Rel> element contains the string
 'urn:oasis:names:tc:SAML:2.0:metadata', the corresponding <URL> element is download
 and verified.
         """
-        def producer(q,resources):
+        def producer(q,resources,cache=self.metadata_cache_enabled):
             print resources
             for url,verify,id,tries in resources:
                 log.debug("Starting fetcher for %s" % url)
-                thread = URLFetch(url,verify,id,enable_cache=self.metadata_cache_enabled,tries=tries)
+                thread = URLFetch(url,verify,id,enable_cache=cache,tries=tries)
                 thread.start()
                 q.put(thread, True)
 
@@ -337,7 +337,7 @@ and verified.
                         resolved.add((thread.url,cert))
                     else:
                         raise ValueError("Unknown metadata type (%s)" % relt.tag)
-                except Exception,ex:
+                except Exception,ex: ## TODO need to handle cache expired exception differently!
                     traceback.print_exc()
                     log.error("Error fetching %s." % ex)
                     if info is not None:
@@ -353,10 +353,11 @@ and verified.
 
         resources = [(url,verify,id,0) for url,verify,id in resources]
         resolved = set()
-        while len(resources):
+        cache = True
+        while len(resources) > 0:
             next_jobs = []
             q = Queue(qsize)
-            prod_thread = threading.Thread(target=producer, args=(q, resources))
+            prod_thread = threading.Thread(target=producer, args=(q, resources, cache))
             cons_thread = threading.Thread(target=consumer, args=(q, len(resources), stats, next_jobs, resolved))
             prod_thread.start()
             cons_thread.start()
@@ -364,6 +365,7 @@ and verified.
             cons_thread.join()
             if len(next_jobs) > 0:
                 resources = next_jobs
+                cache = False
             else:
                 resources = []
 
