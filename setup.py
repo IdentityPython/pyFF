@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from setuptools import setup, find_packages
+from distutils.core import setup
+from setuptools import find_packages
 import sys, os
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -10,18 +11,15 @@ NEWS = open(os.path.join(here, 'NEWS.txt')).read()
 version = '0.9dev'
 
 install_requires = [
-    'lxml>=3.0',
-    'pyyaml',
-    'eventlet',
-    'pyXMLSecurity==0.7',
-    'cherrypy',
-    'iso8601',
-    'simplejson',
-    'mako',
-    'httplib2'
-    # List your project dependencies here.
-    # For more details, see:
-    # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
+    'lxml >=3.0',
+    'pyyaml >=3.10',
+    'eventlet >=0.9.16',
+    'pyXMLSecurity >=0.7',
+    'cherrypy >=3.2.0',
+    'iso8601 >=0.1.4',
+    'simplejson >=2.6.2',
+    'mako >=0.7.2',
+    'httplib2 >=0.7.7'
 ]
 
 
@@ -57,5 +55,4 @@ setup(name='pyFF',
         'console_scripts':
             ['pyff=pyff:main','pyffd=pyff.mdx:main']
     },
-    requires=install_requires
 )
