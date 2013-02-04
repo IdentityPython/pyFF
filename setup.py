@@ -10,10 +10,10 @@ NEWS = open(os.path.join(here, 'NEWS.txt')).read()
 version = '0.9dev'
 
 install_requires = [
-    'lxml',
+    'lxml>=3.0',
     'pyyaml',
     'eventlet',
-    'pyXMLSecurity',
+    'pyXMLSecurity==0.7',
     'cherrypy',
     'iso8601',
     'simplejson',

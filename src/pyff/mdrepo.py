@@ -337,7 +337,7 @@ and verified.
                         resolved.add((thread.url,cert))
                     else:
                         raise ValueError("Unknown metadata type (%s)" % relt.tag)
-                except Exception,ex: ## TODO need to handle cache expired exception differently!
+                except Exception,ex:
                     traceback.print_exc()
                     log.error("Error fetching %s." % ex)
                     if info is not None:
