@@ -164,9 +164,19 @@ class WellKnown():
         jrd['subject'] = cherrypy.request.base
         links = list()
         jrd['links'] = links
-        for a in self.server.aliases.keys():
+
+        def _links(a):
             links.append(dict(rel='urn:oasis:names:tc:SAML:2.0:metadata',href='%s/%s.xml' % (cherrypy.request.base,a)))
             links.append(dict(rel='disco-json',href='%s/%s.json' % (cherrypy.request.base,a)))
+
+        for a in self.server.md.keys():
+            if not '://' in a:
+                a = a.lstrip('/')
+                _links(a)
+
+        for a in self.server.aliases.keys():
+            for v in self.server.md.index.attribute(self.server.aliases[a]):
+                _links('%s/%s' % (a,v))
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return dumps(jrd)
