@@ -22,7 +22,7 @@
         img.idp-icon {
             max-height: 20px;
             max-width: 200px;
-            margin-left: 40px;va
+            margin-left: 40px;
         }
         .idp-label {
             margin-left: 20px;
@@ -250,7 +250,7 @@
             $('#switch-to-search').click(function (ev) {
                 ev.preventDefault();
                 $('#search').tab('show');
-                $('#select').focus();
+                $('#select').select2("focus");
             });
             $('a[href="#search"]').click(function (e) {
                 e.preventDefault();
