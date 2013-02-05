@@ -44,7 +44,7 @@ import cherrypy
 from cherrypy._cpdispatch import Dispatcher
 from cherrypy._cperror import NotFound, HTTPError
 from cherrypy.lib import cptools,static
-from cherrypy.process.plugins import Monitor
+from cherrypy.process.plugins import Monitor, SimplePlugin
 from cherrypy.lib import caching
 from simplejson import dumps
 from pyff.constants import ATTRS
@@ -101,6 +101,18 @@ class MDUpdate(Monitor):
         super(MDUpdate,self).stop()
 
     start.priority = 80
+
+class DirPlugin(SimplePlugin):
+
+    def __init__(self,bus,dir=None):
+        SimplePlugin.__init__(self, bus)
+        self.dir = dir
+
+    def start(self):
+        os.chdir(self.dir)
+
+    start.priority = 79
+
 
 class EncodingDispatcher(object):
     def __init__(self,prefixes,enc,next_dispatcher=Dispatcher()):
@@ -514,7 +526,7 @@ def main():
         plugins.Daemonizer(engine).subscribe()
 
     if dir is not None:
-        os.chdir(dir)
+        DirPlugin(engine,dir).subscribe()
 
     if pidfile:
         plugins.PIDFile(engine, pidfile).subscribe()
