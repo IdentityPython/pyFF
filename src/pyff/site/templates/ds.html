@@ -125,7 +125,6 @@
                        dropdownCssClass: 'bigdrop',
                        width: 'resolve'
                     });
-                    $this.select2('focus');
                 });
             };
             $.fn.dsRelyingParty = function() {
@@ -293,6 +292,7 @@
                 if (idps.length === 0) {
                     $('#idptab a[href="#search"]').tab('show');
                     $('#idptab a[href="#suggested"]').parent().addClass('hide');
+                    $('#select').select2("focus");
                 } else {
                     $('#idptab a[href="#suggested"]').parent().removeClass('hide');
                     $('#idptab a[href="#suggested"]').tab('show');
