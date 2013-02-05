@@ -435,7 +435,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
             'hP:p:H:CfaA:l:',
-            ['help', 'loglevel=','log=','access-log=','error-log=','port=','host=','no-caching','autoreload','frequency=','alias='])
+            ['help', 'loglevel=','log=','access-log=','error-log=','port=','host=','no-caching','autoreload','frequency=','alias=','dir='])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -453,6 +453,7 @@ def main():
     autoreload = False
     frequency = 600
     aliases = ATTRS
+    dir = None
 
     try:
         for o, a in opts:
@@ -490,6 +491,8 @@ def main():
                 (a,sep,uri) = a.lpartition(':')
                 if a and uri:
                     aliases[a] = uri
+            elif o in ('--dir'):
+                dir = a
             else:
                 raise ValueError("Unknown option %s" % o)
 
@@ -509,6 +512,9 @@ def main():
         if access_log is None:
             access_log = 'syslog:daemon'
         plugins.Daemonizer(engine).subscribe()
+
+    if dir is not None:
+        os.chdir(dir)
 
     if pidfile:
         plugins.PIDFile(engine, pidfile).subscribe()
