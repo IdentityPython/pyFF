@@ -582,6 +582,9 @@ Display statistics about the current working document.
     """
     print "---"
     print "total size:     %d" % len(req.md.keys())
+    if not hasattr(req.t,'xpath'):
+        raise ValueError("Unable to call stats on non-XML")
+
     if req.t is not None:
         print "selected:       %d" % len(req.t.xpath("//md:EntityDescriptor",namespaces=NS))
         print "          idps: %d" % len(req.t.xpath("//md:EntityDescriptor[md:IDPSSODescriptor]",namespaces=NS))
