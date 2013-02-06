@@ -201,7 +201,7 @@
 
             function addIdP(item) {
                 var idps = $.jStorage.get('pyff.discovery.idps',[]);
-                console.log(item);
+                //console.log(item);
                 if (!contains_idp(item,idps)) {
                     idps.unshift(item);
                 }
@@ -246,7 +246,7 @@
                     url: '/metadata/'+ev['val']+".json",
                     success: function (data) {
                         for (var i = 0; i < data.length; i++) {
-                            console.log("fetched: "+data[i]);
+                            //console.log("fetched: "+data[i]);
                             return addIdP(data[i]);
                         }
                     }
@@ -271,12 +271,12 @@
                 $(this).tab('show');
             });
             $('.message > button.close').click(function(e) {
-                console.log(e);
-                console.log($(this));
+                //console.log(e);
+                //console.log($(this));
                 var closed = $.jStorage.get('pyff.discovery.messages',{});
                 var id = $(this).parentsUntil('.message').attr('id');
                 $(this).parent().each(function() {
-                    console.log($(this).attr('id'));
+                    //console.log($(this).attr('id'));
                     closed[$(this).attr('id')] = true;
                 });
                 $.jStorage.set('pyff.discovery.messages',closed);
