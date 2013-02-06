@@ -3,3 +3,46 @@
     overflow-y: auto;
     font-size: small;
 }
+
+img.idp-icon {
+    max-height: 20px;
+    max-width: 200px;
+    margin-left: 40px;
+}
+.idp-label {
+    margin-left: 20px;
+    line-height: 20px;
+}
+li.idp {
+    margin-top: 5px;
+}
+.inline li {
+    display: inline;
+}
+.tab-pane {
+//height: 200px;
+}
+html { height: 100%; }
+body {
+    height: 100%;
+}
+
+#wrap {
+    min-height: 99%;
+    height: auto !important;
+    height: 100%;
+    margin: 0 auto -180px;
+}
+#push {
+    height: 180px;
+}
+#footer {
+    height: 180px;
+    background-color: rgb(242, 242, 242);
+}
+#remember-message {
+    margin-top: 20px;
+}
+#remember-message form {
+    margin-bottom: 2px;
+}
