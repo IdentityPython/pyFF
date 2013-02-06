@@ -65,10 +65,7 @@
 
     <script type="text/javascript">
         (function( $ ) {
-
-            //http://stackoverflow.com/questions/7424968/console-log-ie9-issue
-            if (!console) {var console = {};}
-            if (!console.log) {console.log = function() {};}
+            if (!(window.console && console.log)) { (function() { var noop = function() {}; var methods = ['assert', 'clear', 'count', 'debug', 'dir', 'dirxml', 'error', 'exception', 'group', 'groupCollapsed', 'groupEnd', 'info', 'log', 'markTimeline', 'profile', 'profileEnd', 'markTimeline', 'table', 'time', 'timeEnd', 'timeStamp', 'trace', 'warn']; var length = methods.length; var console = window.console = {}; while (length--) { console[methods[length]] = noop; } }()); }
 
             function idpFormatResult(idp) {
                 //console.log(idp);
@@ -163,9 +160,6 @@
             };
         })( jQuery );
         $(function() {
-            if (!console) {var console = {};}
-            if (!console.log) {console.log = function() {};}
-
             function ds_default_select() {
                 var idp = $.jStorage.get('pyff.discovery.idp');
                 if (idp) {
