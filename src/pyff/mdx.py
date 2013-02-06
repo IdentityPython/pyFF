@@ -349,9 +349,12 @@ class MDServer():
             if pfx is None:
                 raise NotFound()
 
+
         path,ext = _d(path)
         if pfx and path:
-            path = "{%s}%s" % (pfx,path)
+            q = "{%s}%s" % (pfx,path)
+        else:
+            q = path
 
         logging.debug("request %s %s" % (path,ext))
         log.debug(cherrypy.request.headers)
@@ -393,16 +396,16 @@ class MDServer():
                 cherrypy.response.headers['Content-Type'] = 'application/json'
                 if paged:
                     res,more,total = self.md.search(query,
-                                                    path=path,
+                                                    path=q,
                                                     page=int(page),
                                                     page_limit=int(page_limit),
                                                     entity_filter=entity_filter)
                     log.debug(dumps({'entities': res,'more':more,'total':total}))
                     return dumps({'entities': res,'more':more,'total':total})
                 else:
-                    return dumps(self.md.search(query,path=path,entity_filter=entity_filter))
+                    return dumps(self.md.search(query,path=q,entity_filter=entity_filter))
             elif accept.get('text/html'):
-                if not path:
+                if not q:
                     if pfx:
                         title=pfx
                     else:
@@ -413,7 +416,7 @@ class MDServer():
                         aliases=self.aliases,
                         title=title)
                 else:
-                    entities = self.md.lookup(path)
+                    entities = self.md.lookup(q)
                     if not entities:
                         raise NotFound()
                     if len(entities) > 1:
@@ -437,7 +440,7 @@ class MDServer():
                              'headers':{'Content-Type': 'text/xml'},
                              'accept': accept,
                              'url': cherrypy.url(relative=False),
-                             'select': path,
+                             'select': q,
                              'stats':{}}
                     r = p.process(self.md,state=state)
                     if r is not None:

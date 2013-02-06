@@ -44,11 +44,11 @@
     };
     $.fn.dsSelect = function() {
         this.each(function() {
-            var $this = $(this);
-            $this.select2({
+            var seldiv = $(this);
+            seldiv.select2({
                 placeholder: "Search for a login provider...",
                 ajax: {
-                    url: '${search}',
+                    url: seldiv.attr('data-target'),
                     data: function(term,page) {
                         return {
                             query: term,
@@ -70,10 +70,11 @@
             });
         });
     };
-    $.fn.dsRelyingParty = function() {
+    $.fn.dsRelyingParty = function(id) {
         var o = $(this);
+
         $.ajax({
-            url: '/metadata/${sp}.json',
+            url: '/metadata/'+ id +'.json',
             type: 'json',
             success: function(data) {
                 for (var i = 0; i < data.length; i++) {

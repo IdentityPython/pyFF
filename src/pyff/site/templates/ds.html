@@ -91,10 +91,13 @@
                     idps.splice(idx,1);
                     $.jStorage.set('pyff.discovery.idps',idps);
                     $(this).parent().parent().remove();
+                    if (idps.length == 0) {
+                        ;
+                    }
                 }
             });
 
-            $('.sp').dsRelyingParty();
+            $('.sp').dsRelyingParty('${sp}');
             $('#select').dsSelect();
             $('#select').change(function(ev) {
                 $.ajax({
@@ -193,7 +196,7 @@
                         <!-- a id="switch-to-search" href="#">Help me find my Identity Provider!</a -->
                     </div>
                     <div class="tab-pane" id="search" style="min-height: 100px;">
-                        <div style="width: 99%;" id="select"></div>
+                        <div style="width: 99%;" id="select" data-target="${search}"></div>
                     </div>
                 </div>
             </div>
