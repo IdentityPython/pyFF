@@ -71,12 +71,12 @@
             if (!console.log) {console.log = function() {};}
 
             function idpFormatResult(idp) {
-                console.log(idp);
+                //console.log(idp);
                 return idp['label']; //['label'];
             }
 
             function idpFormatSelection(idp) {
-                console.log(idp);
+                //console.log(idp);
                 return idp['value']; //['value'];
             }
 
@@ -169,7 +169,9 @@
             function ds_default_select() {
                 var idp = $.jStorage.get('pyff.discovery.idp');
                 if (idp) {
-                    ds_select(idp);
+                    return ds_select(idp);
+                } else {
+                    return false;
                 }
             }
             function ds_select(entityID) {
@@ -207,7 +209,7 @@
                     idps.pop()
                 }
                 $.jStorage.set('pyff.discovery.idps',idps);
-                ds_select(item['entityID']);
+                return ds_select(item['entityID']);
             }
 
             $('#quickLinks').dsQuickLinks();
@@ -245,7 +247,7 @@
                     success: function (data) {
                         for (var i = 0; i < data.length; i++) {
                             console.log("fetched: "+data[i]);
-                            addIdP(data[i]);
+                            return addIdP(data[i]);
                         }
                     }
                 });
