@@ -163,6 +163,9 @@
             };
         })( jQuery );
         $(function() {
+            if (!console) {var console = {};}
+            if (!console.log) {console.log = function() {};}
+
             function ds_default_select() {
                 var idp = $.jStorage.get('pyff.discovery.idp');
                 if (idp) {
@@ -181,6 +184,7 @@
                     $.jStorage.set('pyff.discovery.idp',entityID);
                 }
                 window.location = '${ret}'+qs+'${returnIDParam}='+entityID;
+                return false;
             }
 
             function contains_idp(idp,lst) {
@@ -208,8 +212,8 @@
 
             $('#quickLinks').dsQuickLinks();
             $(".select").click(function(e) {
-                ds_select($(this).attr('href'));
-                return false;
+                e.preventDefault();
+                return ds_select($(this).attr('href'));
             });
             function find_idp(id,lst) {
                 for (var i = 0; i < lst.length; i++) {
