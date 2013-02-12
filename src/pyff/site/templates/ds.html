@@ -92,7 +92,10 @@
                     $.jStorage.set('pyff.discovery.idps',idps);
                     $(this).parent().parent().remove();
                     if (idps.length == 0) {
-                        ;
+                        $('a[href="#suggested"]').hide()
+                        $('a[href="#search"]').tab('show');
+                        $('#select').select2("focus");
+
                     }
                 }
             });
