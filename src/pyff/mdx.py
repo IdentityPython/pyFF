@@ -400,7 +400,7 @@ class MDServer():
                     raise HTTPError(400, "400 Bad Request - Missing 'return' parameter")
                 pdict['returnIDParam'] = kwargs.get('returnIDParam', 'entityID')
                 cherrypy.response.headers['Content-Type'] = 'text/html'
-                pdict['style'] = '/static/css/style.css'
+                pdict['style'] = '/static/css/style.css'  # TODO figure out how to sensibly set this per request
 
                 return template("ds.html").render(**pdict)
             elif ext == 's':
