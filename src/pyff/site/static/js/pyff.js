@@ -29,13 +29,15 @@
                     var item = lst[i];
                     var outer = $('<li>');
                     var idp = $('<a>').addClass("select").attr('href',item['entityID']);
-                    idp.append($('<span>').addClass("idp-label").append(item['title']));
-                    if (item['icon']) {
-                        idp.append($('<img>').attr('src',item['icon']).addClass("fallback-icon idp-icon"));
-                    }
-
                     var dismiss = $('<button>').attr('type',"button").addClass('close unselect').attr('rel',item['entityID']).append("&times;");
                     idp.append(dismiss);
+
+                    idp.append($('<h4>').addClass("idp-label").append(item['title']));
+                    if (item['icon']) {
+                        idp.append($('<img>').attr('src',item['icon']).addClass("fallback-icon img-polaroid idp-icon"));
+                    }
+
+
                     outer.append(idp);
                     $(this).append(outer);
                 }
@@ -46,7 +48,7 @@
         this.each(function() {
             var seldiv = $(this);
             seldiv.select2({
-                placeholder: "Search for a login provider...",
+                placeholder: "Start typing to search ...",
                 ajax: {
                     url: seldiv.attr('data-target'),
                     data: function(term,page) {

@@ -5,13 +5,12 @@
 }
 
 img.idp-icon {
-    max-height: 20px;
-    max-width: 200px;
-    margin-left: 40px;
-}
-.idp-label {
     margin-left: 20px;
-    line-height: 20px;
+    max-height: 30px;
+}
+
+.idp-label {
+    display: inline-block;
 }
 li.idp {
     margin-top: 5px;
@@ -20,8 +19,9 @@ li.idp {
     display: inline;
 }
 .tab-pane {
-//height: 200px;
+
 }
+
 html { height: 100%; }
 body {
     height: 100%;
@@ -45,4 +45,8 @@ body {
 }
 #remember-message form {
     margin-bottom: 2px;
+}
+
+.brand {
+
 }

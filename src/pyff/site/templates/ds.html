@@ -1,6 +1,6 @@
 <!DOCTYPE HTML>
 ## -*- coding: utf-8 -*-
-<html xmlns="http://www.w3.org/1999/html">
+<html>
 <head>
     <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
     <link href="/static/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
@@ -8,11 +8,13 @@
     <link href="/static/js/select2/select2.css" rel="stylesheet"/>
     <link href="/static/css/flags.css" rel="stylesheet"/>
     <link href="/static/css/pyff.css" rel="stylesheet"/>
-    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <link href="${style}" rel="stylesheet"/>
+    <script type="text/javascript" src="/static/js/jquery.min.js"></script>
     <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="/static/js/json2.js"></script>
     <script type="text/javascript" src="/static/js/jstorage.js"></script>
     <script type="text/javascript" src="/static/js/select2.min.js"></script>
+
     <title>Please login...</title>
     <!--[if lt IE 9]>
     <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
@@ -95,7 +97,6 @@
                         $('a[href="#suggested"]').hide();
                         $('a[href="#search"]').tab('show');
                         $('#select').select2("focus");
-
                     }
                 }
             });
@@ -116,7 +117,7 @@
             });
             $("img.fallback-icon").error(function(e) {
                 $(this).error(function(e) {});
-                $(this).addClass("icon-user").removeClass("img-polaroid");
+                $(this).attr('src','/static/icons/1x1t.png').removeClass("img-polaroid").hide();
             });
             $('#switch-to-search').click(function (ev) {
                 ev.preventDefault();
@@ -178,15 +179,13 @@
 
 <div id="wrap">
     <div class="container-fluid">
-        <!-- div class="navbar navbar-fixed-top">
-            <div class="navbar-inner" style>
-                <div style="margin-left: 40px;">
-                    <a class="brand" href="#">Select a Login Provider</a>
-                </div>
+        <div class="navbar hidden-phone">
+            <div class="navbar-inner">
+                <a class="brand" href="#"></a>
             </div>
-        </div -->
+        </div>
         <div class="span8">
-            <h2>Please Login</h2>
+            <h2>How do you want to sign in?</h2>
             <div class="tabbable tabs-below">
                 <ul id="idptab" class="nav nav-tabs">
                     <li><a href="#suggested" data-toggle="tab">Suggested</a></li>
