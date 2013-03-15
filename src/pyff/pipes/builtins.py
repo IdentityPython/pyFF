@@ -853,7 +853,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
             e.set('Name',name)
 
     if not e.get('ID'):
-        e.set('ID',datetime.now().strftime("%Y%m%dT%H%M%S%Z"))
+        e.set('ID',datetime.now().strftime("pyff%Y%m%dT%H%M%S%Z"))
 
     validUntil = req.args.get('validUntil',e.get('validUntil',None))
     if validUntil is not None and len(validUntil) > 0:
