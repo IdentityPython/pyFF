@@ -20,6 +20,8 @@ from datetime import datetime
 
 __author__ = 'leifj'
 
+FILESPEC_REGEX = "([^ \t\n\r\f\v.]+)\s+as\s+([^ \t\n\r\f\v.]+)"
+
 def dump(req,*opts):
     """
 Print a representation of the entities set on stdout. Useful for testing.
@@ -294,7 +296,7 @@ Publish the working document in XML form.
         output_file = output_file.strip()
         log.debug("publish %s" % output_file)
         resource_name = output_file
-        m = re.match("(\S+)+\s+as\s+(\S+)",output_file)
+        m = re.match(FILESPEC_REGEX,output_file)
         if m:
             output_file = m.group(1)
             resource_name = m.group(2)
@@ -339,7 +341,7 @@ Supports both remote and local resources. Fetching remote resources is done in p
     for x in req.args:
         x = x.strip()
         log.debug("load %s" % x)
-        m = re.match("(\S+)\s+as\s+(\S+)",x)
+        m = re.match(FILESPEC_REGEX,x)
         id = None
         if m:
             x = m.group(1)
