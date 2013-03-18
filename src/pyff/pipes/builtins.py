@@ -20,7 +20,7 @@ from datetime import datetime
 
 __author__ = 'leifj'
 
-FILESPEC_REGEX = "([^ \t\n\r\f\v.]+)\s+as\s+([^ \t\n\r\f\v.]+)"
+FILESPEC_REGEX = "([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)"
 
 def dump(req,*opts):
     """
