@@ -316,3 +316,9 @@ def xslt_transform(t, stylesheet, params={}):
     xsl = etree.fromstring(resource_string(stylesheet, "xslt"))
     transform = etree.XSLT(xsl)
     return transform(t, **params)
+
+def total_seconds(dt):
+    if hasattr(dt, "total_seconds"):
+        return deltatime.total_seconds()
+    else: 
+        return (deltatime.microseconds + (deltatime.seconds +  deltatime.days * 24 * 3600) * 10**6) / 10**6

@@ -4,7 +4,7 @@ Package that contains the basic set of pipes - functions that can be used to put
 import cherrypy
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-from pyff.utils import dumptree, schema, safe_write, template, root, duration2timedelta, xslt_transform
+from pyff.utils import total_seconds, dumptree, schema, safe_write, template, root, duration2timedelta, xslt_transform
 from pyff.mdrepo import NS
 from pyff.pipes import Plumbing, PipeException
 from copy import deepcopy
@@ -105,7 +105,7 @@ standard merge strategies in pyff.merge_strategies.
 
 For instance the following block can be used to set an attribute on a single entity:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     - fork merge:
         - select: http://sp.example.com/shibboleth-sp
@@ -117,7 +117,7 @@ Note that unless you have a select statement before your fork merge you'll be me
 active document which with the default merge strategy of replace_existing will result in an empty
 active document. To avoid this do a select before your fork, thus:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     - select
     - fork merge:
@@ -232,7 +232,7 @@ the request state.
 
 **Examples**
 
-.. code-block: yaml
+.. code-block:: yaml
 
     - when foo
         - something
@@ -751,12 +751,12 @@ HTML.
                     et = datetime.strptime("%s" % cert.getNotAfter(), "%Y%m%d%H%M%SZ")
                     now = datetime.now()
                     dt = et - now
-                    if dt.total_seconds() < error_seconds:
+                    if total_seconds(dt) < error_seconds:
                         e = cd.getparent().getparent().getparent().getparent().getparent()
                         req.md.annotate(e, "certificate-error", "certificate has expired",
                                         "%s expired %s ago" % (cert.getSubject(), -dt))
                         log.error("%s expired %s ago" % (eid, -dt))
-                    elif dt.total_seconds() < warning_seconds:
+                    elif total_seconds(dt) < warning_seconds:
                         e = cd.getparent().getparent().getparent().getparent().getparent()
                         req.md.annotate(e, "certificate-warning", "certificate about to expire",
                                         "%s expires in %s" % (cert.getSubject(), dt))
@@ -893,7 +893,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
             offset = dt - datetime.now()
             # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set
-        req.state['cache'] = int(offset.total_seconds() / 50)
+        req.state['cache'] = int(total_seconds(offset) / 50)
 
     cacheDuration = req.args.get('cacheDuration', e.get('cacheDuration', None))
     if cacheDuration is not None and len(cacheDuration) > 0:
@@ -902,7 +902,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
             raise ValueError("Unable to parse %s as xs:duration" % cacheDuration)
 
         e.set('cacheDuration', cacheDuration)
-        req.state['cache'] = int(offset.total_seconds())
+        req.state['cache'] = int(total_seconds(offset))
 
     return req.t
 
