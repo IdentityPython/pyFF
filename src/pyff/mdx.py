@@ -47,7 +47,6 @@ from cherrypy.lib import cptools, static
 from cherrypy.process.plugins import Monitor, SimplePlugin
 from cherrypy.lib import caching
 from simplejson import dumps
-import yaml
 from pyff.constants import ATTRS
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
@@ -177,6 +176,10 @@ class WellKnown():
             if not '://' in a:
                 a = a.lstrip('/')
                 _links(a)
+            elif 'http://' in a or 'https://' in a:
+                links.append(dict(rel='urn:oasis:names:tc:SAML:2.0:metadata',
+                                  href=a,
+                                  properties=dict()))
 
         for a in self.server.aliases.keys():
             for v in self.server.md.index.attribute(self.server.aliases[a]):
@@ -217,6 +220,10 @@ Disallow: /
     @cherrypy.tools.expires(secs=600, debug=True)
     def metadata(self, path=None):
         return self.server.request(path=path)
+
+    @cherrypy.expose
+    def finger(self, domain="localhost"):
+        return template("finger.html").render(http=cherrypy.request, domain=domain)
 
     @cherrypy.expose
     def about(self):

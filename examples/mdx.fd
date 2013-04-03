@@ -2,6 +2,7 @@
     - load:
        - examples/links.xrd
        - http://mds.edugain.org
+       - http://wayf.aco.net/aconet-metadata.xml EE:37:0A:C2:77:56:F8:8B:45:3A:9B:7D:F2:F0:CA:24:C2:14:33:72
     - select
     - fork and merge:
        - select: "!md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
