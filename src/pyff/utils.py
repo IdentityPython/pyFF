@@ -319,6 +319,6 @@ def xslt_transform(t, stylesheet, params={}):
 
 def total_seconds(dt):
     if hasattr(dt, "total_seconds"):
-        return deltatime.total_seconds()
+        return dt.total_seconds()
     else: 
-        return (deltatime.microseconds + (deltatime.seconds +  deltatime.days * 24 * 3600) * 10**6) / 10**6
+        return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10**6) / 10**6
