@@ -1,6 +1,6 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:output method="xml" encoding="UTF8"/>
-  <xsl:param name="indent-increment" select="'   '"/>
+  <xsl:param name="indent-increment" select="'  '"/>
   
   <xsl:template name="newline">
     <xsl:text disable-output-escaping="yes">
