@@ -11,11 +11,11 @@ for metadata exchange by Ian Young: http://iay.org.uk/blog/2008/10/metadata_inte
 Features 
 ========
 
-* Pluggable "piplines" for processing SAML metadata
+* Pluggable "pipelines" for processing SAML metadata
 * Signature validation and creation
 * Support for using PKCS#11 tokens for signing
 * Certificate expiration checking and reporting
-* Fast parallell fetch of multiple streams
+* Fast parallel fetching of multiple streams
 
 Dependencies
 ============
