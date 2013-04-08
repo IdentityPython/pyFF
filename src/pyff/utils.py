@@ -317,6 +317,7 @@ def xslt_transform(t, stylesheet, params={}):
     transform = etree.XSLT(xsl)
     return transform(t, **params)
 
+
 def total_seconds(dt):
     if hasattr(dt, "total_seconds"):
         return dt.total_seconds()
