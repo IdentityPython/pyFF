@@ -285,7 +285,7 @@ Publish the working document in XML form.
     - publish: /tmp/idp.xml
     """
 
-    if req.t is None or not len(req.t):
+    if req.t is None:
         raise ValueError("Empty document submitted for publication")
 
     try:
