@@ -20,6 +20,10 @@ from email.utils import parsedate
 __author__ = 'leifj'
 
 
+class PyffException(Exception):
+    pass
+
+
 def _e(error_log):
     return "\n".join(filter(lambda x: ":WARNING:" not in x, ["%s" % e for e in error_log]))
 

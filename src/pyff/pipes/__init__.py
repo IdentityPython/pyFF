@@ -5,11 +5,16 @@ transform, sign or output SAML metadata.
 
 import os
 import yaml
-from pyff.utils import resource_string
+from pyff.utils import resource_string, PyffException
 from pyff.logs import log
 from StringIO import StringIO
 
 __author__ = 'leifj'
+
+
+class PipeException(PyffException):
+    pass
+
 
 class PipeLoader(object):
     """
@@ -30,13 +35,13 @@ of the pipeline to get cancelled. The pipe may also replace req.t instead of ret
 transformed copy in which case it should return None
     """
 
-    def _n(self,d):
+    def _n(self, d):
         lst = d.split()
         name = lst[0]
         opts = lst[1:]
-        return name,opts
+        return name, opts
 
-    def load_pipe(self,d):
+    def load_pipe(self, d):
         """
 Return a triple callable,name,args of the pipe specified by the object d. The following alternatives
 for d are allowed:
@@ -49,43 +54,41 @@ for d are allowed:
         args = None
         opts = []
         if type(d) is str or type(d) is unicode:
-            name,opts = self._n(d)
-        elif hasattr(d,'__iter__') and not type(d) is dict:
+            name, opts = self._n(d)
+        elif hasattr(d, '__iter__') and not type(d) is dict:
             if not len(d):
-                raise Exception,"This does not look like a length of pipe... \n%s" % repr(d)
-            name,opts = self._n(d[0])
+                raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
+            name, opts = self._n(d[0])
         elif type(d) is dict:
             k = d.keys()[0]
-            name,opts = self._n(k)
+            name, opts = self._n(k)
             args = d[k]
         else:
-            raise Exception,"This does not look like a length of pipe... \n%s" % repr(d)
+            raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
 
         if name is None:
-            raise Exception,"Anonymous length of pipe... \n%s" % repr(d)
+            raise PipeException("Anonymous length of pipe... \n%s" % repr(d))
 
         mname = "pyff.pipes.builtins"
         fn = name
         if ':' in name:
-            (mname,sep,fn) = name.rpartition(":")
+            (mname, sep, fn) = name.rpartition(":")
         pm = mname
         if '.' in mname:
-            (pm,sep,mn) = mname.rpartition('.')
-            log.debug("importing %s from %s to find %s" % (mn,pm,fn))
+            (pm, sep, mn) = mname.rpartition('.')
+            log.debug("importing %s from %s to find %s" % (mn, pm, fn))
         else:
-            log.debug("importing %s from %s to find %s" % (mname,pm,fn))
-        module = __import__(mname,fromlist=[pm])
-        if hasattr(module,fn) and hasattr(getattr(module,fn),'__call__'):
-            return getattr(module,fn),opts,fn,args
-        elif hasattr(module,"_%s" % fn) and hasattr(getattr(module,"_%s" % fn),'__call__'):
-            return getattr(module,"_%s" % fn),opts,fn,args
+            log.debug("importing %s from %s to find %s" % (mname, pm, fn))
+        module = __import__(mname, fromlist=[pm])
+        if hasattr(module, fn) and hasattr(getattr(module, fn), '__call__'):
+            return getattr(module, fn), opts, fn, args
+        elif hasattr(module, "_%s" % fn) and hasattr(getattr(module, "_%s" % fn), '__call__'):
+            return getattr(module, "_%s" % fn), opts, fn, args
         else:
-            raise ValueError("No such method %s in %s" % (fn,mname))
+            raise PipeException("No such method %s in %s" % (fn, mname))
 
-        #return __import__("pyff.pipes.%s" % name, fromlist=["pyff.pipes"]),name,args
+            #return __import__("pyff.pipes.%s" % name, fromlist=["pyff.pipes"]),name,args
 
-class PipeException(Exception):
-    pass
 
 class Plumbing(object):
     """
@@ -115,7 +118,8 @@ EntitiesDescriptor element with @Name http://example.com/metadata.xml, @cacheDur
 1 day from the time the 'finalize' command was run. The tree woud be transformed using the "tidy" stylesheets and
 would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
     """
-    def __init__(self,pipeline,id):
+
+    def __init__(self, pipeline, id):
         self.id = id
         self.pipeline = pipeline
 
@@ -124,7 +128,7 @@ would then be signed (using signer.key) and finally published in /var/metadata/p
 
     def __str__(self):
         out = StringIO()
-        yaml.dump(self.pipeline,stream=out)
+        yaml.dump(self.pipeline, stream=out)
         return out.getvalue()
 
     class Request(object):
@@ -132,7 +136,8 @@ would then be signed (using signer.key) and finally published in /var/metadata/p
 Represents a single request. When processing a set of pipelines a single request is used. Any part of the pipeline
 may modify any of the fields.
         """
-        def __init__(self,plumbing,md,t,name=None,args=[],state={}):
+
+        def __init__(self, plumbing, md, t, name=None, args=[], state={}):
             self.plumbing = plumbing
             self.md = md
             self.t = t
@@ -141,7 +146,7 @@ may modify any of the fields.
             self.state = state
             self.done = False
 
-    def process(self,md,state={},t=None):
+    def process(self, md, state=dict(), t=None):
         """
 The main entrypoint for processing a request pipeline. Calls the inner processor.
 
@@ -150,35 +155,36 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
 :param t: The active working document
 :return: The result of applying the processing pipeline to t.
         """
-        req = Plumbing.Request(self,md,t,state=state)
+        req = Plumbing.Request(self, md, t, state=state)
         self._process(req)
         return req.t
 
-    def _process(self,req):
+    def _process(self, req):
         """
 The inner request pipeline processor.
         """
         log.debug('Processing \n%s' % self)
         for p in self.pipeline:
             try:
-                pipe,opts,name,args = loader.load_pipe(p)
+                pipe, opts, name, args = loader.load_pipe(p)
                 #log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
                 if type(args) is str or type(args) is unicode:
                     args = [args]
                 if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
-                    raise ValueError("Unknown argument type %s" % repr(args))
+                    raise PipeException("Unknown argument type %s" % repr(args))
                 req.args = args
                 req.name = name
-                ot = pipe(req,*opts)
+                ot = pipe(req, *opts)
                 if ot is not None:
                     req.t = ot
-                #log.debug("new state after %s: %s (done=%s)" % (pipe,req.state,req.done))
+                    #log.debug("new state after %s: %s (done=%s)" % (pipe,req.state,req.done))
                 if req.done:
                     break
-            except PipeException,ex:
+            except PipeException, ex:
                 log.error(ex)
                 break
         return req.t
+
 
 def plumbing(fn):
     """
@@ -192,9 +198,10 @@ This uses the resource framework to locate the yaml file which means that pipeli
     id = os.path.splitext(fn)[0]
     ystr = resource_string(fn)
     if ystr is None:
-        raise ValueError("Plumbing not found: %s" % fn)
+        raise PipeException("Plumbing not found: %s" % fn)
     pipeline = yaml.safe_load(ystr)
 
-    return Plumbing(pipeline=pipeline,id=id)
+    return Plumbing(pipeline=pipeline, id=id)
+
 
 loader = PipeLoader()

@@ -1,10 +1,10 @@
 """
 Package that contains the basic set of pipes - functions that can be used to put together a processing pipeling for pyFF.
 """
-import cherrypy
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-from pyff.utils import total_seconds, dumptree, schema, safe_write, template, root, duration2timedelta, xslt_transform
+from pyff.decorators import deprecated
+from pyff.utils import total_seconds, dumptree, schema, safe_write, root, duration2timedelta, xslt_transform
 from pyff.mdrepo import NS
 from pyff.pipes import Plumbing, PipeException
 from copy import deepcopy
@@ -318,6 +318,7 @@ Publish the working document in XML form.
     return req.t
 
 
+@deprecated
 def _fetch(md, url, verify):
     log.debug("open %s" % url)
     try:
@@ -325,17 +326,15 @@ def _fetch(md, url, verify):
     except Exception, ex:
         return url, None, None, ex, datetime.now()
 
-
+@deprecated
 def remote(req, *opts):
-    """
-Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
+    """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
     return load(req, opts)
 
-
+@deprecated
 def local(req, *opts):
-    """
-Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
+    """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
     return load(req, opts)
 
