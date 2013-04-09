@@ -2,8 +2,7 @@
 Package that contains the basic set of pipes - functions that can be used to put together a processing pipeling for pyFF.
 """
 from iso8601 import iso8601
-from lxml import etree
-from lxml.etree import DocumentInvalid
+from lxml.etree import DocumentInvalid, Element
 from pyff.decorators import deprecated
 from pyff.utils import total_seconds, dumptree, schema, safe_write, root, duration2timedelta, xslt_transform
 from pyff.mdrepo import NS
@@ -883,9 +882,9 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
         if publisher is not None and len(publisher):
            ext = e.find("./{%s}Extensions" % NS['md'])
            if ext is None:
-               ext = etree.Element("{%s}Extensions" % NS['md'])
+               ext = Element("{%s}Extensions" % NS['md'])
                e.insert(0,ext)
-               pubinfo = etree.Element("{%s}PublicationInfo" % NS['mdrpi'])
+               pubinfo = Element("{%s}PublicationInfo" % NS['mdrpi'])
                pubinfo.attrib['publisher'] = publisher
                pubinfo.attrib['creationInstant'] = datetime.now().isoformat()
                ext.append(pubinfo)
