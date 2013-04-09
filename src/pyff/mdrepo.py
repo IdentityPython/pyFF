@@ -43,11 +43,9 @@ def _e(error_log):
 
 
 class MDRepository(DictMixin):
+    """A class representing a set of SAML Metadata. Instances present as dict-like objects where
+    the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
     """
-A class representing a set of SAML Metadata. Instances present as dict-like objects where
-the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
-    """
-
 
     def __init__(self, index=pyff.index.MemoryIndex(), metadata_cache_enabled=False, min_cache_ttl="PT5M"):
         self.md = {}
@@ -59,26 +57,23 @@ the keys are URIs and values are EntitiesDescriptor elements containing sets of 
         self.retry_limit = 5
 
     def is_idp(self, entity):
-        """
-:param entity: An EntityDescriptor element
+        """Returns True if the supplied EntityDescriptor has an IDPSSODescriptor Role
 
-Returns True if the supplied EntityDescriptor has an IDPSSODescriptor Role
+:param entity: An EntityDescriptor element
         """
         return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']) is not None)
 
     def is_sp(self, entity):
-        """
-:param entity: An EntityDescriptor element
+        """Returns True if the supplied EntityDescriptor has an SPSSODescriptor Role
 
-Returns True if the supplied EntityDescriptor has an SPSSODescriptor Role
+:param entity: An EntityDescriptor element
         """
         return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
 
     def display(self, entity):
-        """
-:param entity: An EntityDescriptor element
+        """Utility-method for computing a displayable string for a given entity.
 
-Utility-method for computing a displayable string for a given entity.
+:param entity: An EntityDescriptor element
         """
         for displayName in filter_lang(entity.findall(".//{%s}DisplayName" % NS['mdui'])):
             return displayName.text
@@ -132,8 +127,8 @@ The dict in the list contains three items:
 
         def _match(query, e):
             #log.debug("looking for %s in %s" % (query,",".join(_strings(e))))
-            for str in _strings(e):
-                if query in str:
+            for qstr in _strings(e):
+                if query in qstr:
                     return True
             return False
 
@@ -165,9 +160,18 @@ The dict in the list contains three items:
             return res
 
     def sane(self):
+        """A very basic test for sanity. An empty metadata set is probably not a sane output of any process.
+
+:return: True iff there is at least one EntityDescriptor in the active set.
+        """
         return len(self.md) > 0
 
     def extensions(self, e):
+        """Return a list of the Extensions elements in the EntityDescriptor
+
+:param e: an EntityDescriptor
+:return: a list
+        """
         ext = e.find(".//{%s}Extensions" % NS['md'])
         if ext is None:
             ext = etree.Element("{%s}Extensions" % NS['md'])
@@ -175,8 +179,8 @@ The dict in the list contains three items:
         return ext
 
     def annotate(self, e, category, title, message, source=None):
-        """
-Add an ATOM annotation to an EntityDescriptor or an EntitiesDescriptor.
+        """Add an ATOM annotation to an EntityDescriptor or an EntitiesDescriptor. This is a simple way to
+        add non-normative text annotations to metadata, eg for the purpuse of generating reports.
 
 :param e: An EntityDescriptor or an EntitiesDescriptor element
 :param category: The ATOM category
@@ -222,6 +226,14 @@ Add an ATOM annotation to an EntityDescriptor or an EntitiesDescriptor.
         return a
 
     def set_entity_attributes(self, e, d, nf=NF_URI):
+
+        """Set an entity attribute on an EntityDescriptor
+
+:param e: The EntityDescriptor element
+:param d: A dict of attribute-value pairs that should be added as entity attributes
+:param nf: The nameFormat (by default "urn:oasis:names:tc:SAML:2.0:attrname-format:uri") to use.
+:raise: ValueError unless e is an EntityDescriptor element
+        """
         if e.tag != "{%s}EntityDescriptor" % NS['md']:
             raise ValueError("I can only add EntityAttribute(s) to EntityDescriptor elements")
 
@@ -236,8 +248,7 @@ Add an ATOM annotation to an EntityDescriptor or an EntitiesDescriptor.
             #log.debug(etree.tostring(a))
 
     def fetch_metadata(self, resources, qsize=5, timeout=60, stats={}, xrd=None):
-        """
-Fetch a series of metadata URLs and optionally verifies signatures.
+        """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id)
 :param qsize: The number of parallell downloads to run
@@ -380,9 +391,8 @@ and verified.
                 fd.write(template("trust.xrd").render(links=resolved))
 
     def parse_metadata(self, fn, key=None, base_url=None, fail_on_error=False):
-        """
-Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
-is stored in the MDRepository instance.
+        """Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
+        is stored in the MDRepository instance.
 
 :param fn: a file-like object containing SAML metadata
 :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
