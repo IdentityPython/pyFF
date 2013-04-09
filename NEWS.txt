@@ -71,3 +71,9 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Lots of bugfixes
 * pep8 cleanup
 * stability & testcases
+
+1.0
+---
+
+* Release date: UNRELEASED*
+
