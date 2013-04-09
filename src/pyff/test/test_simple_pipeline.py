@@ -31,6 +31,7 @@ class SimplePipeLineTest(SignerTestCase):
         eIDs = [e.get('entityID') for e in self.md_signer]
         assert('https://idp.aco.net/idp/shibboleth' in eIDs)
         assert('https://skriptenforum.net/shibboleth' in eIDs)
+
         eIDs = [e.get('entityID') for e in self.md_validator]
         assert('https://idp.aco.net/idp/shibboleth' in eIDs)
         assert('https://skriptenforum.net/shibboleth' in eIDs)
