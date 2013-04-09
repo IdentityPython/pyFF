@@ -1,0 +1,3 @@
+- load:
+    ${ctx.output} ${ctx.public_keyspec}
+- select

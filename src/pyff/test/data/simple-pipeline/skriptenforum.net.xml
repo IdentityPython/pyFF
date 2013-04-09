@@ -1,0 +1,103 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<md:EntityDescriptor xmlns:idpdisc="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:xrd="http://docs.oasis-open.org/ns/xri/xrd-1.0" xmlns:mdrpi="urn:oasis:names:tc:SAML:metadata:rpi" xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" entityID="https://skriptenforum.net/shibboleth">
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol urn:oasis:names:tc:SAML:1.1:protocol urn:oasis:names:tc:SAML:1.0:protocol">
+    <md:Extensions>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://skriptenforum.net/Shibboleth.sso/DS" index="1"/>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="en">Skriptenforum.net</mdui:DisplayName>
+        <mdui:DisplayName xml:lang="de">Skriptenforum.net</mdui:DisplayName>
+        <mdui:Description xml:lang="en">The Skriptenforum is a nonprofit project to build a free collection of university learning materials and Learning aids following the wiki principle.</mdui:Description>
+        <mdui:Description xml:lang="de">Das Skriptenforum ist ein gemeinnütziges Projekt zum Aufbau einer freien Sammlung von Hochschul-Lernunterlagen und Lernhilfen auf Wiki-Prinzip.</mdui:Description>
+        <mdui:PrivacyStatementURL xml:lang="de">https://skriptenforum.net/wiki/Skriptenforum.net:Datenschutz</mdui:PrivacyStatementURL>
+        <mdui:Logo height="70" width="135">https://skriptenforum.net/images/skriptenforum-logo.png</mdui:Logo>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDCTCCAfGgAwIBAgIJAJCf923GESSXMA0GCSqGSIb3DQEBBQUAMCExHzAdBgNV
+BAMTFmVudGUuc2tyaXB0ZW5mb3J1bS5uZXQwHhcNMTAwOTMwMTIyMTI1WhcNMjAw
+OTI3MTIyMTI1WjAhMR8wHQYDVQQDExZlbnRlLnNrcmlwdGVuZm9ydW0ubmV0MIIB
+IjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5/Pu4zGBvW/sNOhkokEyRvQH
+btTxYfHk4CnYgIrQrdm9A6cSOEKP/4vAdE4ENSg0uDZOMrjTaDOKsug8FPeTTALC
+uQJk6HzcKoulKpdluOvXXF0QspUvDICYIoeLHH+RFCBAeL6sRjYs1xhRp69MQoJB
+e/dZQmKS2UaQSX95IzENHr4vxvCykeqVz1FfThl/QUaEXE0n2WHO+ljLLfik+EzZ
+4iVzGyMTLV9b2McvlU+uBQYNBSlv//sDe/NUQjfNijN+qZoHPHIS4EO2GGuoQpx5
+upKRw2wKK6LRT6OIOI+Mba81DwK5Edguv1W2LjKv12wZHDqg5tFU3V2nZlnSWwID
+AQABo0QwQjAhBgNVHREEGjAYghZlbnRlLnNrcmlwdGVuZm9ydW0ubmV0MB0GA1Ud
+DgQWBBTgTq3U3NBMLr1cKcLXqwn/865AkjANBgkqhkiG9w0BAQUFAAOCAQEA3tda
+HJ0iN7/zOBNQHeMbK6KYL0X32KG/C2b0BgJ2zWeVdMVxy7YoEYx6vDDXYG+RgXMe
+idRGTGxkIi9y4w0PuqoxsMvRomEv5akNZ5AgDZyfi5WU6ik5f2X9Lu9UGeoIJ2kg
+b5iT75YKdKMh7lGK04A51zKbNod9lP+Dhav/xd7kra6iT4WnwjBcTgBnbKS9ZpvS
+h1HO3N910+uqcyoU1Qa00pf6GAH3ioDLjPw87G4LgExEyEAgOFQDjObc441OvSgK
+rcPBK+E9Rghi1rIn60qdKkLxHBEqpKtZDEHEKlrTre1sNU9NZSExsf/42PuH4rj4
+ZPvJLZPsOAQ3NX5Jsw==
+</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="encryption">
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDCTCCAfGgAwIBAgIJAJCf923GESSXMA0GCSqGSIb3DQEBBQUAMCExHzAdBgNV
+BAMTFmVudGUuc2tyaXB0ZW5mb3J1bS5uZXQwHhcNMTAwOTMwMTIyMTI1WhcNMjAw
+OTI3MTIyMTI1WjAhMR8wHQYDVQQDExZlbnRlLnNrcmlwdGVuZm9ydW0ubmV0MIIB
+IjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5/Pu4zGBvW/sNOhkokEyRvQH
+btTxYfHk4CnYgIrQrdm9A6cSOEKP/4vAdE4ENSg0uDZOMrjTaDOKsug8FPeTTALC
+uQJk6HzcKoulKpdluOvXXF0QspUvDICYIoeLHH+RFCBAeL6sRjYs1xhRp69MQoJB
+e/dZQmKS2UaQSX95IzENHr4vxvCykeqVz1FfThl/QUaEXE0n2WHO+ljLLfik+EzZ
+4iVzGyMTLV9b2McvlU+uBQYNBSlv//sDe/NUQjfNijN+qZoHPHIS4EO2GGuoQpx5
+upKRw2wKK6LRT6OIOI+Mba81DwK5Edguv1W2LjKv12wZHDqg5tFU3V2nZlnSWwID
+AQABo0QwQjAhBgNVHREEGjAYghZlbnRlLnNrcmlwdGVuZm9ydW0ubmV0MB0GA1Ud
+DgQWBBTgTq3U3NBMLr1cKcLXqwn/865AkjANBgkqhkiG9w0BAQUFAAOCAQEA3tda
+HJ0iN7/zOBNQHeMbK6KYL0X32KG/C2b0BgJ2zWeVdMVxy7YoEYx6vDDXYG+RgXMe
+idRGTGxkIi9y4w0PuqoxsMvRomEv5akNZ5AgDZyfi5WU6ik5f2X9Lu9UGeoIJ2kg
+b5iT75YKdKMh7lGK04A51zKbNod9lP+Dhav/xd7kra6iT4WnwjBcTgBnbKS9ZpvS
+h1HO3N910+uqcyoU1Qa00pf6GAH3ioDLjPw87G4LgExEyEAgOFQDjObc441OvSgK
+rcPBK+E9Rghi1rIn60qdKkLxHBEqpKtZDEHEKlrTre1sNU9NZSExsf/42PuH4rj4
+ZPvJLZPsOAQ3NX5Jsw==
+</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://skriptenforum.net/Shibboleth.sso/Artifact/SOAP" index="1"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://skriptenforum.net/Shibboleth.sso/SLO/SOAP"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://skriptenforum.net/Shibboleth.sso/SLO/Redirect"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://skriptenforum.net/Shibboleth.sso/SLO/POST"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://skriptenforum.net/Shibboleth.sso/SLO/Artifact"/>
+    <md:ManageNameIDService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://skriptenforum.net/Shibboleth.sso/NIM/SOAP"/>
+    <md:ManageNameIDService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://skriptenforum.net/Shibboleth.sso/NIM/Redirect"/>
+    <md:ManageNameIDService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://skriptenforum.net/Shibboleth.sso/NIM/POST"/>
+    <md:ManageNameIDService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://skriptenforum.net/Shibboleth.sso/NIM/Artifact"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://skriptenforum.net/Shibboleth.sso/SAML2/POST" index="1"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://skriptenforum.net/Shibboleth.sso/SAML2/POST-SimpleSign" index="2"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://skriptenforum.net/Shibboleth.sso/SAML2/Artifact" index="3"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:PAOS" Location="https://skriptenforum.net/Shibboleth.sso/SAML2/ECP" index="4"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:1.0:profiles:browser-post" Location="https://skriptenforum.net/Shibboleth.sso/SAML/POST" index="5"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:1.0:profiles:artifact-01" Location="https://skriptenforum.net/Shibboleth.sso/SAML/Artifact" index="6"/>
+    <md:AttributeConsumingService index="0">
+      <md:ServiceName xml:lang="en">Skriptenforum.net</md:ServiceName>
+      <md:ServiceName xml:lang="de">Skriptenforum.net</md:ServiceName>
+      <md:ServiceDescription xml:lang="en">The Skriptenforum is a nonprofit project to build a free collection of university learning materials and Learning aids following the wiki principle.</md:ServiceDescription>
+      <md:ServiceDescription xml:lang="de">Das Skriptenforum ist ein gemeinnütziges Projekt zum Aufbau einer freien Sammlung von Hochschul-Lernunterlagen und Lernhilfen auf Wiki-Prinzip.</md:ServiceDescription>
+      <!-- Foo bar! -->
+      <md:RequestedAttribute FriendlyName="eduPersonTargetedID" Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.10" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="eduPersonPrincipalName" Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.6" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"/>
+      <md:RequestedAttribute FriendlyName="eduPersonScopedAffiliation" Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.9" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"/>
+      <md:RequestedAttribute FriendlyName="displayName" Name="urn:oid:2.16.840.1.113730.3.1.241" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"/>
+    </md:AttributeConsumingService>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="de">Verein Skriptenforum</md:OrganizationName>
+    <md:OrganizationName xml:lang="en">Association Skriptenforum</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="de">Skriptenforum.net</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="en">Skriptenforum.net</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="de">https://skriptenforum.net/</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="technical">
+    <md:SurName>Webmaster</md:SurName>
+    <md:EmailAddress>mailto:webmaster@skriptenforum.net</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor>
+
+

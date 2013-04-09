@@ -1,0 +1,12 @@
+- load:
+    ${ctx.datadir}
+- select
+- finalize:
+    Name: http://federation.aco.net/metadata/edugain-export.xml
+    cacheDuration: PT5H
+    validUntil: P10D
+- sign:
+    key:  ${ctx.private_keyspec}
+    cert: ${ctx.public_keyspec}
+- publish:
+    output: ${ctx.output}
