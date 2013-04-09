@@ -1,5 +1,5 @@
-"""
-Package that contains the basic set of pipes - functions that can be used to put together a processing pipeling for pyFF.
+"""Package that contains the basic set of pipes - functions that can be used to put together a processing pipeling
+for pyFF.
 """
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
@@ -143,7 +143,7 @@ active document. To avoid this do a select before your fork, thus:
 
 def _any(lst, d):
     for x in lst:
-        if d.has_key(x):
+        if x in d:
             return d[x]
     return False
 
@@ -261,7 +261,7 @@ Dumps the working document on stdout. Useful for testing.
 
     """
     if req.t is None:
-        raise Exception, "Your plumbing is missing a select statement."
+        raise PipeException("Your plumbing is missing a select statement.")
 
     for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS):
         print e.get('entityID')
@@ -286,15 +286,15 @@ Publish the working document in XML form.
     """
 
     if req.t is None:
-        raise ValueError("Empty document submitted for publication")
+        raise PipeException("Empty document submitted for publication")
 
     try:
         schema().assertValid(req.t)
     except DocumentInvalid, ex:
         log.error(ex.error_log)
-        raise ValueError("XML schema validation failed")
+        raise PipeException("XML schema validation failed")
     if req.args is None:
-        raise ValueError("publish must specify output")
+        raise PipeException("publish must specify output")
 
     output_file = None
     if type(req.args) is dict:
@@ -326,11 +326,13 @@ def _fetch(md, url, verify):
     except Exception, ex:
         return url, None, None, ex, datetime.now()
 
+
 @deprecated
 def remote(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
     return load(req, opts)
+
 
 @deprecated
 def local(req, *opts):
@@ -354,31 +356,31 @@ Supports both remote and local resources. Fetching remote resources is done in p
         x = x.strip()
         log.debug("load %s" % x)
         m = re.match(FILESPEC_REGEX, x)
-        id = None
+        rid = None
         if m:
             x = m.group(1)
-            id = m.group(2)
+            rid = m.group(2)
         r = x.split()
-        assert len(r) in [1, 2], ValueError("Usage: load: resource [as url] [verification]")
+        assert len(r) in [1, 2], PipeException("Usage: load: resource [as url] [verification]")
         verify = None
         url = r[0]
         if len(r) == 2:
             verify = r[1]
 
         if "://" in url:
-            log.debug("remote %s %s %s" % (url, verify, id))
-            remote.append((url, verify, id))
+            log.debug("remote %s %s %s" % (url, verify, rid))
+            remote.append((url, verify, rid))
         elif os.path.exists(url):
             if os.path.isdir(url):
-                log.debug("local directory %s %s %s" % (url, verify, id))
-                req.md.load_dir(url, url=id)
+                log.debug("local directory %s %s %s" % (url, verify, rid))
+                req.md.load_dir(url, url=rid)
             elif os.path.isfile(url):
-                log.debug("local file %s %s %s" % (url, verify, id))
-                remote.append(("file://%s" % url, verify, id))
+                log.debug("local file %s %s %s" % (url, verify, rid))
+                remote.append(("file://%s" % url, verify, rid))
             else:
                 log.error("Unknown file type for load: %s" % r[0])
         else:
-            log.error("Don't know how to load '%s' as %s verified by %s" % (url, id, verify))
+            log.error("Don't know how to load '%s' as %s verified by %s" % (url, rid, verify))
 
     opts = dict(zip(opts[::2], opts[1::2]))
     opts.setdefault('timeout', 30)
@@ -560,16 +562,16 @@ of your PKCS#11 module to find out about any other configuration you may need.
 This example signs the document using the plain key and cert found in the signer.key and signer.crt files.
     """
     if req.t is None:
-        raise Exception, "Your plumbing is missing a select statement."
+        raise PipeException("Your plumbing is missing a select statement.")
 
     if not type(req.args) is dict:
-        raise ValueError("Missing key and cert arguments to sign pipe")
+        raise PipeException("Missing key and cert arguments to sign pipe")
 
     key_file = req.args.get('key', None)
     cert_file = req.args.get('cert', None)
 
     if key_file is None:
-        raise ValueError("Missing key argument for sign pipe")
+        raise PipeException("Missing key argument for sign pipe")
 
     if cert_file is None:
         log.info("Attempting to extract certificate from token...")
@@ -601,7 +603,7 @@ Display statistics about the current working document.
     print "---"
     print "total size:     %d" % len(req.md.keys())
     if not hasattr(req.t, 'xpath'):
-        raise ValueError("Unable to call stats on non-XML")
+        raise PipeException("Unable to call stats on non-XML")
 
     if req.t is not None:
         print "selected:       %d" % len(req.t.xpath("//md:EntityDescriptor", namespaces=NS))
@@ -625,7 +627,7 @@ before you call store.
     """
 
     if not req.args:
-        raise ValueError("store requires an argument")
+        raise PipeException("store requires an argument")
 
     target_dir = None
     if type(req.args) is dict:
@@ -637,11 +639,11 @@ before you call store.
         if not os.path.isdir(target_dir):
             os.makedirs(target_dir)
         if req.t is None:
-            raise Exception, "Your plumbing is missing a select statement."
+            raise PipeException("Your plumbing is missing a select statement.")
         for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS):
             eid = e.get('entityID')
             if eid is None or len(eid) == 0:
-                raise Exception, "Missing entityID in %s" % e
+                raise PipeException("Missing entityID in %s" % e)
             m = hashlib.sha1()
             m.update(eid)
             d = m.hexdigest()
@@ -672,10 +674,10 @@ user-supplied file. The rest of the keyword arguments are made available as stri
     """
     stylesheet = req.args.get('stylesheet', None)
     if stylesheet is None:
-        raise ValueError("xslt requires stylesheet")
+        raise PipeException("xslt requires stylesheet")
 
     if req.t is None:
-        raise ValueError("Your plumbing is missing a select statement.")
+        raise PipeException("Your plumbing is missing a select statement.")
 
     params = dict((k, "\'%s\'" % v) for (k, v) in req.args.items())
     del params['stylesheet']
@@ -723,13 +725,13 @@ HTML.
     """
 
     if req.t is None:
-        raise ValueError("Your plumbing is missing a select statement.")
+        raise PipeException("Your plumbing is missing a select statement.")
 
     if not req.args:
         req.args = {}
 
     if type(req.args) is not dict:
-        raise ValueError("usage: certreport {warning: 864000, error: 0}")
+        raise PipeException("usage: certreport {warning: 864000, error: 0}")
 
     error_seconds = int(req.args.get('error', "0"))
     warning_seconds = int(req.args.get('warning', "864000"))
@@ -804,7 +806,7 @@ Content-Type HTTP response header.
         m.update(d)
         req.state['headers']['ETag'] = m.hexdigest()
     else:
-        raise ValueError("Empty")
+        raise PipeException("Empty")
 
     req.state['headers']['Content-Type'] = ctype
     return unicode(d.decode('utf-8')).encode("utf-8")
@@ -827,7 +829,7 @@ Useful for testing.
     - signcerts
     """
     if req.t is None:
-        raise ValueError("Your plumbing is missing a select statement.")
+        raise PipeException("Your plumbing is missing a select statement.")
     for fp, pem in xmlsec.CertDict(req.t).iteritems():
         log.info("found signing cert with fingerprint %s" % fp)
     return req.t
@@ -864,7 +866,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
         validUntil: +10d
     """
     if req.t is None:
-        raise ValueError("Your plumbing is missing a select statement.")
+        raise PipeException("Your plumbing is missing a select statement.")
 
     e = root(req.t)
     if e.tag == "{%s}EntitiesDescriptor" % NS['md']:
@@ -898,7 +900,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
     if cacheDuration is not None and len(cacheDuration) > 0:
         offset = duration2timedelta(cacheDuration)
         if offset is None:
-            raise ValueError("Unable to parse %s as xs:duration" % cacheDuration)
+            raise PipeException("Unable to parse %s as xs:duration" % cacheDuration)
 
         e.set('cacheDuration', cacheDuration)
         req.state['cache'] = int(total_seconds(offset))
