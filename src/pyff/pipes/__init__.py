@@ -42,9 +42,9 @@ transformed copy in which case it should return None
         return name, opts
 
     def load_pipe(self, d):
-        """
-Return a triple callable,name,args of the pipe specified by the object d. The following alternatives
-for d are allowed:
+        """Return a triple callable,name,args of the pipe specified by the object d.
+
+        :param d: The following alternatives for d are allowed:
 
  - d is a string (or unicode) in which case the pipe is named d called with None as args.
  - d is a dict of the form {name: args} (i.e one key) in which case the pipe named *name* is called with args
@@ -137,7 +137,11 @@ Represents a single request. When processing a set of pipelines a single request
 may modify any of the fields.
         """
 
-        def __init__(self, plumbing, md, t, name=None, args=[], state={}):
+        def __init__(self, plumbing, md, t, name=None, args=None, state=None):
+            if not state:
+                state = dict()
+            if not args:
+                args = []
             self.plumbing = plumbing
             self.md = md
             self.t = t
@@ -146,7 +150,7 @@ may modify any of the fields.
             self.state = state
             self.done = False
 
-    def process(self, md, state=dict(), t=None):
+    def process(self, md, state=None, t=None):
         """
 The main entrypoint for processing a request pipeline. Calls the inner processor.
 
@@ -155,13 +159,16 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
 :param t: The active working document
 :return: The result of applying the processing pipeline to t.
         """
+        if not state:
+            state = dict()
         req = Plumbing.Request(self, md, t, state=state)
         self._process(req)
         return req.t
 
     def _process(self, req):
-        """
-The inner request pipeline processor.
+        """The inner request pipeline processor.
+
+        :param req: The request to run through the pipeline
         """
         log.debug('Processing \n%s' % self)
         for p in self.pipeline:
