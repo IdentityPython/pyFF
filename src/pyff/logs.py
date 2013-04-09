@@ -4,8 +4,8 @@ import cherrypy
 import syslog
 import logging
 
-class PyFFLogger():
 
+class PyFFLogger():
     def __init__(self):
         self._loggers = {logging.WARN: logging.warn,
                          logging.WARNING: logging.warn,
@@ -14,26 +14,27 @@ class PyFFLogger():
                          logging.DEBUG: logging.debug,
                          logging.ERROR: logging.error}
 
-    def _l(self,severity,msg):
+    def _l(self, severity, msg):
         if cherrypy.tree.apps.has_key(''):
-            cherrypy.tree.apps[''].log("%s" % msg,severity=severity)
+            cherrypy.tree.apps[''].log("%s" % msg, severity=severity)
         else:
             self._loggers[severity]("%s" % msg)
 
-    def warn(self,msg):
-        return self._l(logging.WARN,msg)
+    def warn(self, msg):
+        return self._l(logging.WARN, msg)
 
-    def info(self,msg):
-        return self._l(logging.INFO,msg)
+    def info(self, msg):
+        return self._l(logging.INFO, msg)
 
-    def error(self,msg):
-        return self._l(logging.ERROR,msg)
+    def error(self, msg):
+        return self._l(logging.ERROR, msg)
 
-    def critical(self,msg):
-        return self._l(logging.CRITICAL,msg)
+    def critical(self, msg):
+        return self._l(logging.CRITICAL, msg)
 
-    def debug(self,msg):
-        return self._l(logging.DEBUG,msg)
+    def debug(self, msg):
+        return self._l(logging.DEBUG, msg)
+
 
 log = PyFFLogger()
 
@@ -49,7 +50,7 @@ class SysLogLibHandler(logging.Handler):
         40: syslog.LOG_ERR,
         50: syslog.LOG_CRIT,
         0: syslog.LOG_NOTICE,
-        }
+    }
 
     def __init__(self, facility):
 
@@ -63,4 +64,4 @@ class SysLogLibHandler(logging.Handler):
         logging.Handler.__init__(self)
 
     def emit(self, record):
-        syslog.syslog(self.facility | self.priority_map[record.levelno],self.format(record))
+        syslog.syslog(self.facility | self.priority_map[record.levelno], self.format(record))

@@ -13,7 +13,7 @@ __author__ = 'leifj'
 if not hasattr(logging, 'statistics'): logging.statistics = {}
 # Initialize my namespace
 stats = logging.statistics.setdefault('pyFF Statistics', {})
-# Initialize my namespace's scalars and collections
+# Initialize my namespaces scalars and collections
 stats.update({
     'Enabled': True,
     'Start Time': time.time(),

@@ -164,6 +164,11 @@ def schema():
 
 
 def safe_write(fn, data):
+    """Safely write data to a file with name fn
+    :param fn: a filename
+    :param data: some data to write
+    :return: True or False depending on the outcome of the write
+    """
     tmpn = None
     try:
         dirname, basename = os.path.split(fn)
@@ -179,7 +184,8 @@ def safe_write(fn, data):
         if tmpn is not None:
             try:
                 os.unlink(tmpn)
-            except Exception:
+            except Exception, ex:
+                log.warn(ex)
                 pass
     return False
 

@@ -237,8 +237,7 @@ Disallow: /
                                              cmdline=" ".join(sys.argv),
                                              stats=stats,
                                              repo=self.server.md,
-                                             plumbings=["%s" % p for p in self.server.plumbings],
-        )
+                                             plumbings=["%s" % p for p in self.server.plumbings])
 
     @cherrypy.expose
     def search(self, paged=False, query=None, page=0, page_limit=10, entity_filter=None):
@@ -453,9 +452,9 @@ class MDServer():
                             p = c_elt.getparent()
                             p.remove(c_elt)
                             if p.text is not None:
-                                p.text += c_txt #re.sub(".",escape,c_txt)
+                                p.text += c_txt  # re.sub(".",escape,c_txt)
                             else:
-                                p.text = c_txt # re.sub(".",escape,c_txt)
+                                p.text = c_txt  # re.sub(".",escape,c_txt)
                         xml = dumptree(t, xml_declaration=False).decode('utf-8')
                         return template("basic.html").render(http=cherrypy.request, content=xml)
             else:
@@ -517,9 +516,9 @@ def main():
             elif o in ('--log', '-l'):
                 error_log = a
                 access_log = a
-            elif o in ('--error-log'):
+            elif o in '--error-log':
                 error_log = a
-            elif o in ('--access-log'):
+            elif o in '--access-log':
                 access_log = a
             elif o in ('--host', '-H'):
                 host = a
@@ -535,13 +534,13 @@ def main():
                 daemonize = False
             elif o in ('--autoreload', '-a'):
                 autoreload = True
-            elif o in ('--frequency'):
+            elif o in '--frequency':
                 frequency = int(a)
             elif o in ('-A', '--alias'):
                 (a, sep, uri) = a.lpartition(':')
                 if a and uri:
                     aliases[a] = uri
-            elif o in ('--dir'):
+            elif o in '--dir':
                 base_dir = a
             else:
                 raise ValueError("Unknown option %s" % o)
@@ -592,7 +591,7 @@ def main():
             'tools.caching.maxobj_size': 1000000000000, # effectively infinite
             'tools.caching.maxsize': 1000000000000,
             'tools.caching.antistampede_timeout': None,
-            'tools.caching.delay': 3600, # this is how long we keep static stuff
+            'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
             'error_page.404': lambda **kwargs: error_page(404, **kwargs),
             'error_page.503': lambda **kwargs: error_page(503, **kwargs),
@@ -641,8 +640,8 @@ def main():
 
     try:
         engine.start()
-    except:
-        # Assume the error has been logged already via bus.log.
+    except Exception, ex:
+        logging.error(ex)
         sys.exit(1)
     else:
         engine.block()

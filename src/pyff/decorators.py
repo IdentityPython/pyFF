@@ -3,9 +3,9 @@ Various decorators used in pyFF.
 """
 __author__ = 'leifj'
 
-
 import time
 from pyff.logs import log
+
 
 def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=log):
     """Retry calling the decorated function using an exponential backoff.
@@ -26,6 +26,7 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=log):
     :param logger: logger to use. If None, print
     :type logger: logging.Logger instance
     """
+
     def deco_retry(f):
         def f_retry(*args, **kwargs):
             mtries, mdelay = tries, delay
@@ -47,5 +48,7 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=log):
             if try_one_last_time:
                 return f(*args, **kwargs)
             return
+
         return f_retry  # true decorator
+
     return deco_retry

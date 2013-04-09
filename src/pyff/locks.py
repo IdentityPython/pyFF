@@ -59,7 +59,7 @@ class ReadWriteLock(object):
         # Initialize with no readers.
         self.__readers = {}
 
-    def acquireRead(self,blocking=True, timeout=None):
+    def acquireRead(self, blocking=True, timeout=None):
         """Acquire a read lock for the current thread, waiting at most
         timeout seconds or doing a non-blocking check in case timeout is <= 0.
 
@@ -97,7 +97,7 @@ class ReadWriteLock(object):
                     else:
                         # Grant a new read lock, always, in case there are
                         # no pending writers (and no writer).
-                        self.__readers[me] = self.__readers.get(me,0) + 1
+                        self.__readers[me] = self.__readers.get(me, 0) + 1
                         return
                 if endtime is not None:
                     remaining = endtime - time()
@@ -111,6 +111,7 @@ class ReadWriteLock(object):
             self.__condition.release()
 
     from contextlib import contextmanager
+
     @property
     @contextmanager
     def readlock(self):
@@ -129,7 +130,7 @@ class ReadWriteLock(object):
         finally:
             self.release()
 
-    def acquireWrite(self,timeout=None):
+    def acquireWrite(self, timeout=None):
         """Acquire a write lock for the current thread, waiting at most
         timeout seconds or doing a non-blocking check in case timeout is <= 0.
 
@@ -246,4 +247,5 @@ class ReadWriteLock(object):
                 raise ValueError("Trying to release unheld lock")
         finally:
             self.__condition.release()
+
 ## end of http://code.activestate.com/recipes/502283/ }}}
