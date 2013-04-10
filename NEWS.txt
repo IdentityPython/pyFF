@@ -57,6 +57,7 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 ---
 
 *Release date: Fri Nov 30 09:37:59 CET 2012*
+
 * HTTP-based pyffd with MDX support
 * several bugfixes
 * indexing in MDRepository
@@ -65,4 +66,8 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 0.9
 ---
 
-*Release date: UNRELEASED*
+*Release date: Tue Apr  9 18:03:13 CEST 2013*
+
+* Lots of bugfixes
+* pep8 cleanup
+* stability & testcases

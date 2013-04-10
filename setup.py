@@ -8,7 +8,7 @@ README = open(os.path.join(here, 'README.rst')).read()
 NEWS = open(os.path.join(here, 'NEWS.txt')).read()
 
 
-version = '0.9dev'
+version = '0.9'
 
 install_requires = [
     'lxml >=3.0',

@@ -49,4 +49,3 @@ class SignerTestCase(TestCase):
             os.unlink(self.private_keyspec)
         if os.path.exists(self.public_keyspec):
             os.unlink(self.public_keyspec)
-
