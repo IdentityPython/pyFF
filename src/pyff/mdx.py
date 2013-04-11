@@ -46,6 +46,7 @@ from cherrypy._cperror import NotFound, HTTPError
 from cherrypy.lib import cptools, static
 from cherrypy.process.plugins import Monitor, SimplePlugin
 from cherrypy.lib import caching
+import pkg_resources
 from simplejson import dumps
 from pyff.constants import ATTRS
 from pyff.locks import ReadWriteLock
@@ -542,8 +543,13 @@ def main():
                     aliases[a] = uri
             elif o in '--dir':
                 base_dir = a
+            elif o in '--version':
+                pyff_version = pkg_resources.require("pyFF")[0].version
+                cherrypy_version = cherrypy.__version__
+                print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy_version)
+                sys.exit(0)
             else:
-                raise ValueError("Unknown option %s" % o)
+                raise ValueError("Unknown option '%s'" % o)
 
     except Exception, ex:
         print ex

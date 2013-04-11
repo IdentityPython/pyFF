@@ -4,6 +4,7 @@ pyFF is a SAML metadata aggregator.
 
 import sys
 import getopt
+import pkg_resources
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
 import traceback
@@ -34,6 +35,12 @@ def main():
                 raise ValueError('Invalid log level: %s' % loglevel)
         elif o in '--logfile':
             logfile = a
+        elif o in '--version':
+            pyff_version = pkg_resources.require("pyFF")[0].version
+            print "pyff version %s" % pyff_version
+            sys.exit(0)
+        else:
+            raise ValueError("Unknown option '%s'" % o)
 
     log_args = {'level': loglevel}
     if logfile is not None:
