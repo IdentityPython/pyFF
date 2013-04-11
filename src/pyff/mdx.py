@@ -46,20 +46,20 @@ from cherrypy._cperror import NotFound, HTTPError
 from cherrypy.lib import cptools, static
 from cherrypy.process.plugins import Monitor, SimplePlugin
 from cherrypy.lib import caching
-import pkg_resources
 from simplejson import dumps
 from pyff.constants import ATTRS
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
 from pyff.utils import resource_string, template, xslt_transform, dumptree, duration2timedelta
-from pyff.logs import log, PyFFLogger, SysLogLibHandler
+from pyff.logs import log, SysLogLibHandler
 import logging
 from pyff.stats import stats
 import lxml.html as html
 from datetime import datetime
 
 __author__ = 'leifj'
+from pyff import __version__ as pyff_version
 
 
 class MDUpdate(Monitor):
@@ -544,9 +544,7 @@ def main():
             elif o in '--dir':
                 base_dir = a
             elif o in '--version':
-                pyff_version = pkg_resources.require("pyFF")[0].version
-                cherrypy_version = cherrypy.__version__
-                print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy_version)
+                print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__)
                 sys.exit(0)
             else:
                 raise ValueError("Unknown option '%s'" % o)

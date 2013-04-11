@@ -10,6 +10,7 @@ from pyff.pipes import plumbing
 import traceback
 import logging
 
+__version__ = pkg_resources.require("pyFF")[0].version
 
 def main():
     """
@@ -36,8 +37,7 @@ def main():
         elif o in '--logfile':
             logfile = a
         elif o in '--version':
-            pyff_version = pkg_resources.require("pyFF")[0].version
-            print "pyff version %s" % pyff_version
+            print "pyff version %s" % __version__
             sys.exit(0)
         else:
             raise ValueError("Unknown option '%s'" % o)
