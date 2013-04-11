@@ -90,7 +90,7 @@ class MDUpdate(Monitor):
             else:
                 log.error("another instance is running - will try again later...")
         except Exception, ex:
-            traceback.print_exc()
+            traceback.print_exc(ex)
         finally:
             if locked:
                 self.lock.release()
@@ -148,8 +148,8 @@ class MDStats(StatsPage):
         tree = etree.parse(StringIO(h), parser)
         body = tree.getroot().find("body")
         body.tag = 'div'
-        str = etree.tostring(body, pretty_print=True, method="html")
-        return template("basic.html").render(content=str, http=cherrypy.request)
+        hstr = etree.tostring(body, pretty_print=True, method="html")
+        return template("basic.html").render(content=hstr, http=cherrypy.request)
 
 
 class WellKnown():
@@ -289,7 +289,8 @@ Search the active set for matching entities.
 
 class MDServer():
     def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS, cache_enabled=True):
-        if not pipes: pipes = []
+        if not pipes:
+            pipes = []
         self.cache_enabled = cache_enabled
         self._md = None
         self.lock = ReadWriteLock()
@@ -592,7 +593,7 @@ def main():
             'tools.caching.on': caching,
             'tools.caching.debug': True,
             'tools.trailing_slash.on': True,
-            'tools.caching.maxobj_size': 1000000000000, # effectively infinite
+            'tools.caching.maxobj_size': 1000000000000,  # effectively infinite
             'tools.caching.maxsize': 1000000000000,
             'tools.caching.antistampede_timeout': None,
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
