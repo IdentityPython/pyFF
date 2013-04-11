@@ -185,7 +185,7 @@ def safe_write(fn, data):
     except Exception, ex:
         log.error(ex)
     finally:
-        if tmpn is not None:
+        if tmpn is not None and os.path.exists(tmpn):
             try:
                 os.unlink(tmpn)
             except Exception, ex:
