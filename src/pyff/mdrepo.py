@@ -492,8 +492,11 @@ starting with '.' are excluded.
                     log.debug("found file %s" % nm)
                     if nm.endswith(ext):
                         fn = os.path.join(top, nm)
-                        t = self.parse_metadata(fn, fail_on_error=True)
-                        entities.extend(self.entities(t)) #local metadata is assumed to be ok
+                        try:
+                            t = self.parse_metadata(fn, fail_on_error=True)
+                            entities.extend(self.entities(t))  # local metadata is assumed to be ok
+                        except Exception, ex:
+                            log.error(ex)
             self.import_metadata(self.entity_set(entities, url))
         return self.md[url]
 
