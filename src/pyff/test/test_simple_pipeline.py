@@ -2,6 +2,7 @@ import os
 import tempfile
 from mako.lookup import TemplateLookup
 import pkg_resources
+from pyff.constants import NS
 from pyff import MDRepository, plumbing
 from pyff.test import SignerTestCase, _p
 
@@ -45,6 +46,9 @@ class SimplePipeLineTest(SignerTestCase):
 
     def testSelectSingle(self):
         assert(self.validator_result is not None)
+        entities = self.validator_result.findall('{%s}EntityDescriptor' % NS['md'])
+        assert(len(entities) == 1)
+        assert(entities[0].get('entityID') == 'https://idp.aco.net/idp/shibboleth')
 
     def tearDown(self):
         super(SimplePipeLineTest,self).tearDown()
