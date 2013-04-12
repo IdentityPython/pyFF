@@ -769,7 +769,8 @@ replace old_e in t.
                 #log.debug("removed old entity from index")
                 strategy(old_e, e)
                 new_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
-                self.index.add(new_e)  # we don't know which strategy was employed
+                if new_e:
+                    self.index.add(new_e) # we don't know which strategy was employed
             except Exception, ex:
                 traceback.print_exc()
                 self.index.add(old_e)
