@@ -19,7 +19,7 @@ import pyff.index
 from pyff.logs import log
 from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template
 import xmlsec
-from pyff.constants import NS, NF_URI
+from pyff.constants import NS, NF_URI, DIGESTS
 import traceback
 import threading
 from Queue import Queue
@@ -188,8 +188,7 @@ The dict in the list contains three items:
 :param message: The ATOM content
 :param source: An optional source URL. It is added as a <link> element with @rel='saml-metadata-source'
         """
-        if e.tag != "{%s}EntityDescriptor" % NS['md'] and \
-                        e.tag != "{%s}EntitiesDescriptor" % NS['md']:
+        if e.tag != "{%s}EntityDescriptor" % NS['md'] and e.tag != "{%s}EntitiesDescriptor" % NS['md']:
             raise ValueError("I can only annotate EntityDescriptor or EntitiesDescriptor elements")
         subject = e.get('Name', e.get('entityID', None))
         atom = ElementMaker(nsmap={'atom': 'http://www.w3.org/2005/Atom'}, namespace='http://www.w3.org/2005/Atom')
@@ -247,7 +246,7 @@ The dict in the list contains three items:
             a.append(velt)
             #log.debug(etree.tostring(a))
 
-    def fetch_metadata(self, resources, qsize=5, timeout=60, stats={}, xrd=None):
+    def fetch_metadata(self, resources, qsize=5, timeout=60, stats=None, xrd=None):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id)
@@ -267,6 +266,8 @@ elements with a X509Certificate and where the <Rel> element contains the string
 'urn:oasis:names:tc:SAML:2.0:metadata', the corresponding <URL> element is download
 and verified.
         """
+        if not stats:
+            stats = {}
 
         def producer(q, resources, cache=self.metadata_cache_enabled):
             print resources
@@ -276,7 +277,9 @@ and verified.
                 thread.start()
                 q.put(thread, True)
 
-        def consumer(q, njobs, stats, next_jobs=[], resolved=set()):
+        def consumer(q, njobs, stats, next_jobs=None, resolved=set()):
+            if not next_jobs:
+                next_jobs = []
             nfinished = 0
 
             while nfinished < njobs:
@@ -368,7 +371,7 @@ and verified.
                     if info is not None:
                         stats[thread.url] = info
 
-        resources = [(url, verify, id, 0) for url, verify, id in resources]
+        resources = [(url, verify, rid, 0) for url, verify, rid in resources]
         resolved = set()
         cache = True
         while len(resources) > 0:
@@ -423,6 +426,12 @@ and verified.
 
         return t
 
+    def _index_entity(self, e):
+        log.debug("adding %s to index" % e.get('entityID'))
+        if 'ID' in e.attrib:
+            del e.attrib['ID']
+        self.index.add(e)
+
     def import_metadata(self, t, url=None):
         """
 :param t: An EntitiesDescriptor element
@@ -445,15 +454,11 @@ is stored in the MDRepository object.
 
         if t is not None:
             if root(t).tag == "{%s}EntityDescriptor" % NS['md']:
-                if root(t).attrib.has_key('ID'):
-                    del root(t).attrib['ID']
-                self.index.add(root(t))
+                self._index_entity(root(t))
                 ne += 1
             else:
                 for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
-                    if e.attrib.has_key('ID'):
-                        del e.attrib['ID']
-                    self.index.add(e)
+                    self._index_entity(e)
                     ne += 1
 
         return ne
@@ -471,20 +476,20 @@ Returns the list of contained EntityDescriptor elements
         else:
             return t.findall(".//{%s}EntityDescriptor" % NS['md'])
 
-    def load_dir(self, dir, ext=".xml", url=None):
+    def load_dir(self, directory, ext=".xml", url=None):
         """
-:param dir: A directory to walk.
+:param directory: A directory to walk.
 :param ext: Include files with this extension (default .xml)
 
 Traverse a directory tree looking for metadata. Files ending in the specified extension are included. Directories
 starting with '.' are excluded.
         """
         if url is None:
-            url = dir
-        log.debug("walking %s" % dir)
-        if not self.md.has_key(dir):
+            url = directory
+        log.debug("walking %s" % directory)
+        if not directory in self.md:
             entities = []
-            for top, dirs, files in os.walk(dir):
+            for top, dirs, files in os.walk(directory):
                 for dn in dirs:
                     if dn.startswith("."):
                         dirs.remove(dn)
@@ -507,14 +512,14 @@ starting with '.' are excluded.
 Find a (set of) EntityDescriptor element(s) based on the specified 'member' expression.
         """
 
-        def _hash(hn, str):
+        def _hash(hn, strv):
             if hn == 'null':
-                return str
+                return strv
             if not hasattr(hashlib, hn):
                 raise ValueError("Unknown digest mechanism: '%s'" % hn)
             hash_m = getattr(hashlib, hn)
             h = hash_m()
-            h.update(str)
+            h.update(strv)
             return h.hexdigest()
 
         if xp is None:
@@ -572,7 +577,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                 return self.index.get(m.group(1), m.group(2).rstrip("/"))
 
             log.debug("basic lookup %s" % member)
-            for idx in ("null"):
+            for idx in DIGESTS:
                 e = self.index.get(idx, member)
                 if e:
                     log.debug("found %s in %s index" % (e, idx))
@@ -582,13 +587,13 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             if e is not None:
                 return self._lookup(e, xp)
 
-            e = self.get("%s.xml" % member, None) #hackish but helps save people from their misstakes
+            e = self.get("%s.xml" % member, None)  # hackish but helps save people from their misstakes
             if e is not None:
-                if not "://" in member: # not an absolute URL
+                if not "://" in member:  # not an absolute URL
                     log.warn("Found %s.xml as an alias - AVOID extensions in 'select as' statements" % member)
                 return self._lookup(e, xp)
 
-            if "://" in member: # looks like a URL and wasn't an entity or collection - recurse away!
+            if "://" in member:  # looks like a URL and wasn't an entity or collection - recurse away!
                 log.debug("recursively fetching members from '%s'" % member)
                 # note that this supports remote lists which may be more rope than is healthy
                 return [self._lookup(line, xp) for line in urllib.urlopen(member).iterlines()]
@@ -599,7 +604,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                 member = self.keys()
             return [self._lookup(m, xp) for m in member]
         else:
-            raise Exception, "What about %s ??" % member
+            raise ValueError("What about %s ??" % member)
 
     def lookup(self, member, xp=None):
         """
@@ -649,7 +654,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             attrs['validUntil'] = validUntil
         t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], **attrs)
         nent = 0
-        seen = {} # TODO make better de-duplication
+        seen = {}  # TODO make better de-duplication
         for member in entities:
             for ent in self.lookup(member):
                 entityID = ent.get('entityID', None)
@@ -747,7 +752,7 @@ replace old_e in t.
                 module = getattr(__import__(pn, globals(), locals(), [modn], -1), modn)
             else:
                 module = __import__(mn, globals(), locals(), [], -1)
-            strategy = getattr(module, fn) # we might aswell let this fail early if the strategy is wrongly named
+            strategy = getattr(module, fn)  # we might aswell let this fail early if the strategy is wrongly named
 
         if strategy is None:
             raise ValueError("No merge strategy - refusing to merge")
@@ -764,7 +769,7 @@ replace old_e in t.
                 #log.debug("removed old entity from index")
                 strategy(old_e, e)
                 new_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
-                self.index.add(new_e) # we don't know which strategy was employed
+                self.index.add(new_e)  # we don't know which strategy was employed
             except Exception, ex:
                 traceback.print_exc()
                 self.index.add(old_e)

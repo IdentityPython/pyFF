@@ -126,10 +126,10 @@ class MemoryIndex(MDIndex):
         attr_idx = self.index.setdefault('attr', {})
         nd = 0
         for hn in DIGESTS:
-            #log.debug("computing %s" % hn)
-            id = hash_id(entity, hn, False)
-            self.index[hn].setdefault(id, EntitySet())
-            self.index[hn][id].add(entity)
+            hid = hash_id(entity, hn, False)
+            #log.debug("computing index %s(%s) = %s" % (hn, entity.get('entityID'), hid))
+            self.index[hn].setdefault(hid, EntitySet())
+            self.index[hn][hid].add(entity)
             nd += 1
 
         na = 0
@@ -151,16 +151,17 @@ class MemoryIndex(MDIndex):
             na += 1
             vidx['sp'].add(entity)
 
-            #log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'),na,nd))
+            #log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'), na, nd))
+            #log.debug(self.index)
 
     def remove(self, entity):
         attr_idx = self.index.setdefault('attr', {})
         nd = 0
         for hn in DIGESTS:
             #log.debug("computing %s" % hn)
-            id = hash_id(entity, hn, False)
-            self.index[hn].setdefault(id, EntitySet())
-            self.index[hn][id].discard(entity)
+            hid = hash_id(entity, hn, False)
+            self.index[hn].setdefault(hid, EntitySet())
+            self.index[hn][hid].discard(entity)
             nd += 1
 
         na = 0
