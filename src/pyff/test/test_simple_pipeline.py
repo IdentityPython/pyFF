@@ -24,8 +24,8 @@ class SimplePipeLineTest(SignerTestCase):
             fd.write(self.signer_template.render(ctx=self))
         with open(self.validator, "w") as fd:
             fd.write(self.validator_template.render(ctx=self))
-        plumbing(self.signer).process(self.md_signer, state={'batch': True, 'stats': {}})
-        plumbing(self.validator).process(self.md_validator, state={'batch': True, 'stats': {}})
+        self.signer_result = plumbing(self.signer).process(self.md_signer, state={'batch': True, 'stats': {}})
+        self.validator_result = plumbing(self.validator).process(self.md_validator, state={'batch': True, 'stats': {}})
 
     def testEntityIDPresent(self):
         eIDs = [e.get('entityID') for e in self.md_signer]
@@ -43,9 +43,13 @@ class SimplePipeLineTest(SignerTestCase):
         assert(len(self.md_validator) == 1)
         assert(os.path.getsize(self.output) > 0)
 
+    def testSelectSingle(self):
+        assert(self.validator_result is not None)
+
     def tearDown(self):
         super(SimplePipeLineTest,self).tearDown()
         os.unlink(self.signer)
         os.unlink(self.validator)
         os.unlink(self.output)
+
 
