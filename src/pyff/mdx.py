@@ -203,7 +203,7 @@ listed using the 'role' attribute to the link elements.
 
         def _links(a):
             links.append(
-                dict(rel='urn:oasis:names:tc:SAML:2.0:metadata', href='%s/%s.xml' % (cherrypy.request.base, a)))
+                dict(rel='urn:oasis:names:tc:SAML:2.0:metadata', role="provider", href='%s/%s.xml' % (cherrypy.request.base, a)))
             links.append(dict(rel='disco-json', href='%s/%s.json' % (cherrypy.request.base, a)))
 
         for a in self.server.md.keys():
@@ -213,6 +213,7 @@ listed using the 'role' attribute to the link elements.
             elif 'http://' in a or 'https://' in a:
                 links.append(dict(rel='urn:oasis:names:tc:SAML:2.0:metadata',
                                   href=a,
+                                  role="consumer",
                                   properties=dict()))
 
         for a in self.server.aliases.keys():
@@ -438,7 +439,7 @@ class MDServer():
         else:
             q = path
 
-        logging.debug("request %s %s" % (path, ext))
+        log.debug("request %s %s" % (path, ext))
         log.debug(cherrypy.request.headers)
         accept = {}
         if content_type is None:
