@@ -27,6 +27,7 @@ PEER project (also on pypi).
    using
    examples
    coding
+   faq
    api/modules
 
 

@@ -11,10 +11,10 @@ from pyff.logs import log
 
 
 def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=log):
-    """Retry calling the decorated function using an exponential backoff.
+    """Retry calling the decorated function using exponential backoff based on
 
-    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
-    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
+    * http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
+    * http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
 
     :param ExceptionToCheck: the exception to check. may be a tuple of
         excpetions to check

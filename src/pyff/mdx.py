@@ -1,7 +1,9 @@
 """
 An implementation of draft-lajoie-md-query
 
-Usage: pyffd <options> {pipeline-files}+
+.. code-block:: bash
+
+    Usage: pyffd <options> {pipeline-files}+
 
     -C|--no-cache
             Turn off caching
@@ -170,11 +172,15 @@ class WellKnown():
         """An implementation the webfinger protocol (http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-12)
         in order to provide information about up and downstream metadata available at this pyFF instance.
 
-        Example:
+Example:
+
+.. code-block:: bash
 
         # curl http://localhost:8080/.well-known/webfinger?resource=http://localhost:8080
 
-        This should result in a JSON structure that looks something like this:
+This should result in a JSON structure that looks something like this:
+
+.. code-block:: json
 
         {"expires": "2013-04-13T17:40:42.188549",
          "links": [
@@ -182,8 +188,8 @@ class WellKnown():
             {"href": "http://reep.refeds.org:8080/role/sp.json", "rel": "disco-json"}],
          "subject": "http://reep.refeds.org:8080"}
 
-         Depending on which version of pyFF your're running and the configuration you may also see
-         downstream metadata listed using the 'role' attribute to the link elements.
+Depending on which version of pyFF your're running and the configuration you may also see downstream metadata
+listed using the 'role' attribute to the link elements.
         """
         if resource is None:
             raise cherrypy.HTTPError(400, "Bad Request - missing resource parameter")

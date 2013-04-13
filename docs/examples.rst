@@ -237,3 +237,22 @@ consistent with expected behaviour for the MDX protocol.
 The behaviour of the select command in the request pipeline is a bit different: the select operates on
 a query fed to the request pipeline from the HTTP server that runs the command. This is called implicit
 select.
+
+Now start pyffd:
+
+.. code-block:: bash
+
+  # pyffd -f --loglevel=DEBUG -p /var/run/pyffd.pid mdx.fd
+
+This should start pyffd in the foreground. If you remove the ``-f`` pyff should daemonize. For running
+pyff in production I suggest something like this:
+
+.. code-block:: bash
+
+  # pyffd --loglevel=INFO --log=syslog:auth --frequency=300 -p /var/run/pyffd.pid --dir=`pwd` -H<ip> -P80 mdx.fd
+
+This starts pyff on the interface <ip>:80 and uses the current directory as the working directory. If you leave
+out --dir then pyffd will change directory to $HOME of the current user which is probably not what you want. 
+In this case logging is done through syslog (the auth facility) and with log level INFO. The refres-rate is set
+to 300 seconds so at minimum your downstream feeds will be refreshed that often.
+
