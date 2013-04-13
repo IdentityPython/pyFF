@@ -788,18 +788,17 @@ Content-Type HTTP response header.
     """
 
     d = req.t
-    log.debug("before getroot (%s) %s" % (type(d), repr(d)))
+    #log.debug("before getroot (%s) %s" % (type(d), repr(d)))
     if hasattr(d, 'getroot') and hasattr(d.getroot, '__call__'):
         nd = d.getroot()
         if nd is None:
             d = str(d)
         else:
             d = nd
-    log.debug("after getroot (%s) %s" % (type(d), repr(d)))
+    #log.debug("after getroot (%s) %s" % (type(d), repr(d)))
     if hasattr(d, 'tag'):
-        log.debug("has tag")
         d = dumptree(d)
-    log.debug("after dumptree (%s) %s" % (type(d), repr(d)))
+    #log.debug("after dumptree (%s) %s" % (type(d), repr(d)))
 
     if d is not None:
         m = hashlib.sha1()

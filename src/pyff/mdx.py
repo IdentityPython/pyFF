@@ -245,7 +245,6 @@ Disallow: /
 """
 
     @cherrypy.expose
-    @cherrypy.tools.expires(secs=3600, debug=True)
     def favicon_ico(self):
         """Returns the pyff icon (the alchemic symbol for sublimation).
         """
@@ -253,7 +252,6 @@ Disallow: /
         return resource_string('favicon.ico', "site/static/icons")
 
     @cherrypy.expose
-    @cherrypy.tools.expires(secs=600, debug=True)
     def entities(self, path=None):
         """Process an MDX request with Content-Type hard-coded to application/xml. Regardless of the suffix
         you will get XML back from /entities/...
@@ -261,7 +259,6 @@ Disallow: /
         return self.server.request(path=path, content_type="application/xml")
 
     @cherrypy.expose
-    @cherrypy.tools.expires(secs=600, debug=True)
     def metadata(self, path=None):
         """The main request entry point. Any requests are subject to content negotiation based on Accept headers
         and based on file name extension. Requesting /metadata/foo.xml gets you (signed) XML (assuming your pipeline
@@ -533,9 +530,9 @@ class MDServer():
                     if r is not None:
                         cache_ttl = state.get('cache', 0)
                         log.debug("caching for %d seconds" % cache_ttl)
-                        caching.expires(secs=cache_ttl)
                         for k, v in state.get('headers', {}).iteritems():
                             cherrypy.response.headers[k] = v
+                        caching.expires(secs=cache_ttl)
                         return r
         raise NotFound()
 
@@ -593,7 +590,7 @@ def main():
             elif o in ('--no-caching', '-C'):
                 caching = False
             elif o in ('--caching-delay', 'D'):
-                delay = int(caching)
+                delay = int(o)
             elif o in ('--foreground', '-f'):
                 daemonize = False
             elif o in ('--autoreload', '-a'):
@@ -647,17 +644,16 @@ def main():
 
     server = MDServer(pipes=args, autoreload=autoreload, frequency=frequency, aliases=aliases, cache_enabled=caching)
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
-
     cfg = {
         'global': {
             'server.socket_port': port,
             'server.socket_host': host,
             'tools.caching.on': caching,
-            'tools.caching.debug': True,
+            'tools.caching.debug': caching,
             'tools.trailing_slash.on': True,
             'tools.caching.maxobj_size': 1000000000000,  # effectively infinite
             'tools.caching.maxsize': 1000000000000,
-            'tools.caching.antistampede_timeout': None,
+            'tools.caching.antistampede_timeout': 30,
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
             'error_page.404': lambda **kwargs: error_page(404, **kwargs),

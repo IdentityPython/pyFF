@@ -42,6 +42,10 @@ def _e(error_log):
     return "\n".join(filter(lambda x: ":WARNING:" not in x, ["%s" % e for e in error_log]))
 
 
+class MetadataException(Exception):
+    pass
+
+
 class MDRepository(DictMixin):
     """A class representing a set of SAML Metadata. Instances present as dict-like objects where
     the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
@@ -189,7 +193,7 @@ The dict in the list contains three items:
 :param source: An optional source URL. It is added as a <link> element with @rel='saml-metadata-source'
         """
         if e.tag != "{%s}EntityDescriptor" % NS['md'] and e.tag != "{%s}EntitiesDescriptor" % NS['md']:
-            raise ValueError("I can only annotate EntityDescriptor or EntitiesDescriptor elements")
+            raise MetadataException("I can only annotate EntityDescriptor or EntitiesDescriptor elements")
         subject = e.get('Name', e.get('entityID', None))
         atom = ElementMaker(nsmap={'atom': 'http://www.w3.org/2005/Atom'}, namespace='http://www.w3.org/2005/Atom')
         args = [atom.published("%s" % datetime.now().isoformat()),
@@ -231,10 +235,10 @@ The dict in the list contains three items:
 :param e: The EntityDescriptor element
 :param d: A dict of attribute-value pairs that should be added as entity attributes
 :param nf: The nameFormat (by default "urn:oasis:names:tc:SAML:2.0:attrname-format:uri") to use.
-:raise: ValueError unless e is an EntityDescriptor element
+:raise: MetadataException unless e is an EntityDescriptor element
         """
         if e.tag != "{%s}EntityDescriptor" % NS['md']:
-            raise ValueError("I can only add EntityAttribute(s) to EntityDescriptor elements")
+            raise MetadataException("I can only add EntityAttribute(s) to EntityDescriptor elements")
 
         #log.debug("set %s" % d)
         for attr, value in d.iteritems():
@@ -277,9 +281,11 @@ and verified.
                 thread.start()
                 q.put(thread, True)
 
-        def consumer(q, njobs, stats, next_jobs=None, resolved=set()):
-            if not next_jobs:
+        def consumer(q, njobs, stats, next_jobs=None, resolved=None):
+            if next_jobs is None:
                 next_jobs = []
+            if resolved is None:
+                resolved = set()
             nfinished = 0
 
             while nfinished < njobs:
@@ -290,7 +296,7 @@ and verified.
                     thread.join(timeout)
 
                     if thread.isAlive():
-                        raise ValueError("Thread timeout occured")
+                        raise MetadataException("Thread timeout occured")
 
                     info = {
                         'Time Spent': thread.time()
@@ -302,7 +308,7 @@ and verified.
                         if thread.result is not None:
                             info['Bytes'] = len(thread.result)
                         else:
-                            raise ValueError("Empty response")
+                            raise MetadataException("Empty response")
                         info['Cached'] = thread.cached
                         info['Date'] = str(thread.date)
                         info['Last-Modified'] = str(thread.last_modified)
@@ -315,7 +321,7 @@ and verified.
 
                     t = self.parse_metadata(StringIO(xml), key=thread.verify, base_url=thread.url)
                     if t is None:
-                        raise ValueError("No valid metadata found at %s" % thread.url)
+                        raise MetadataException("No valid metadata found at %s" % thread.url)
 
                     relt = root(t)
                     if relt.tag in ('{%s}XRD' % NS['xrd'], '{%s}XRDS' % NS['xrd']):
@@ -340,7 +346,7 @@ and verified.
 
                         if thread.cached:
                             if thread.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
-                                raise ValueError("Cached metadata expired")
+                                raise MetadataException("Cached metadata expired")
                             else:
                                 log.debug("Found cached metadata (last-modified: %s)" % thread.last_modified)
                                 ne = self.import_metadata(t, url=thread.id)
@@ -356,10 +362,10 @@ and verified.
                             cert = certs.values()[0].strip()
                         resolved.add((thread.url, cert))
                     else:
-                        raise ValueError("Unknown metadata type (%s)" % relt.tag)
+                        raise MetadataException("Unknown metadata type (%s)" % relt.tag)
                 except Exception, ex:
-                    traceback.print_exc()
-                    log.error("Error fetching %s." % ex)
+                    traceback.print_exc(ex)
+                    log.error("Error fetching metadata: %s" % ex)
                     if info is not None:
                         info['Exception'] = ex
                     if thread.tries < self.retry_limit:
@@ -375,6 +381,7 @@ and verified.
         resolved = set()
         cache = True
         while len(resources) > 0:
+            log.debug("fetching %d resources (%s)" % (len(resources), repr(resources)))
             next_jobs = []
             q = Queue(qsize)
             prod_thread = threading.Thread(target=producer, args=(q, resources, cache))
@@ -383,6 +390,7 @@ and verified.
             cons_thread.start()
             prod_thread.join()
             cons_thread.join()
+            log.debug("after fetch: %d jobs to retry" % len(next_jobs))
             if len(next_jobs) > 0:
                 resources = next_jobs
                 cache = False
@@ -407,7 +415,7 @@ and verified.
             schema().assertValid(t)
         except DocumentInvalid, ex:
             log.debug(_e(ex.error_log))
-            raise ValueError("XML schema validation failed")
+            raise MetadataException("XML schema validation failed")
         except Exception, ex:
             log.debug(_e(schema().error_log))
             log.error(ex)
@@ -427,7 +435,7 @@ and verified.
         return t
 
     def _index_entity(self, e):
-        log.debug("adding %s to index" % e.get('entityID'))
+        #log.debug("adding %s to index" % e.get('entityID'))
         if 'ID' in e.attrib:
             del e.attrib['ID']
         self.index.add(e)
@@ -446,7 +454,7 @@ is stored in the MDRepository object.
             if top is not None and len(top) == 1:
                 url = top[0].get("Name", None)
         if url is None:
-            raise ValueError("No collection name found")
+            raise MetadataException("No collection name found")
         self[url] = t
         # we always clean incoming ID
         # add to the index
@@ -516,7 +524,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
             if hn == 'null':
                 return strv
             if not hasattr(hashlib, hn):
-                raise ValueError("Unknown digest mechanism: '%s'" % hn)
+                raise MetadataException("Unknown digest mechanism: '%s'" % hn)
             hash_m = getattr(hashlib, hn)
             h = hash_m()
             h.update(strv)
@@ -604,7 +612,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                 member = self.keys()
             return [self._lookup(m, xp) for m in member]
         else:
-            raise ValueError("What about %s ??" % member)
+            raise MetadataException("What about %s ??" % member)
 
     def lookup(self, member, xp=None):
         """
@@ -673,7 +681,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                 schema().assertValid(t)
             except DocumentInvalid, ex:
                 log.debug(_e(ex.error_log))
-                raise ValueError("XML schema validation failed")
+                raise MetadataException("XML schema validation failed")
         return t
 
     def error_set(self, url, title, ex):
@@ -755,7 +763,7 @@ replace old_e in t.
             strategy = getattr(module, fn)  # we might aswell let this fail early if the strategy is wrongly named
 
         if strategy is None:
-            raise ValueError("No merge strategy - refusing to merge")
+            raise MetadataException("No merge strategy - refusing to merge")
 
         for e in nt.findall(".//{%s}EntityDescriptor" % NS['md']):
             entityID = e.get("entityID")
