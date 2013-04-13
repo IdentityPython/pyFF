@@ -10,7 +10,7 @@
     % else:
         <dl>
         % for a in aliases:
-            % if md.index.attributes(aliases[a])
+            % if md.index.attribute(aliases[a]):
             <dt>${a}</dt>
             % for v in md.index.attribute(aliases[a]):
             <dd><a href="/${a}/${v|u}.html">${v}</a>
