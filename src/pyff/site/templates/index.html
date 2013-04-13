@@ -10,12 +10,13 @@
     % else:
         <dl>
         % for a in aliases:
+            % if md.index.attributes(aliases[a])
             <dt>${a}</dt>
-
             % for v in md.index.attribute(aliases[a]):
             <dd><a href="/${a}/${v|u}.html">${v}</a>
                 <a href="/${a}/${v|u}.xml" title="XML Metadata"><i class="icon-cog"></i></a></dd>
             % endfor
+            % endif
         % endfor
         </dl>
     % endif

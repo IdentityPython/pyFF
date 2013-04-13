@@ -57,9 +57,12 @@ import logging
 from pyff.stats import stats
 import lxml.html as html
 from datetime import datetime
+from lxml import etree
+from pyff import __version__ as pyff_version
 
 __author__ = 'leifj'
-from pyff import __version__ as pyff_version
+
+site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
 
 class MDUpdate(Monitor):
@@ -117,6 +120,11 @@ class DirPlugin(SimplePlugin):
 
 
 class EncodingDispatcher(object):
+    """Cherrypy ass-u-me-s a lot about how requests are processed. In particular it is diffucult to send
+    something that contains '/' and ':' (like a URL) throught the standard dispatchers. This class provides
+    a workaround by base64-encoding the troubling stuff and sending the result through the normal displatch
+    pipeline. At the other end base64-encoded data is unpacked.
+    """
     def __init__(self, prefixes, enc, next_dispatcher=Dispatcher()):
         self.prefixes = prefixes
         self.enc = enc
@@ -135,12 +143,10 @@ class EncodingDispatcher(object):
         return self.next_dispatcher(vpath)
 
 
-site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
-
-from lxml import etree
-
-
 class MDStats(StatsPage):
+    """Renders the standard stats page with pyFF style decoration. We use the lxml html parser to locate the
+    body and replace it with a '<div>'. The result is passed as the content using the 'basic' template.
+    """
     @cherrypy.expose
     def index(self):
         h = "".join(super(MDStats, self).index())
@@ -153,11 +159,32 @@ class MDStats(StatsPage):
 
 
 class WellKnown():
+    """Implementation of the .well-known URL namespace for pyFF. In particular this contains the webfinger
+    implementation which returns information about up- and downstream metadata.
+    """
     def __init__(self, server=None):
         self.server = server
 
     @cherrypy.expose
     def webfinger(self, resource=None, rel=None):
+        """An implementation the webfinger protocol (http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-12)
+        in order to provide information about up and downstream metadata available at this pyFF instance.
+
+        Example:
+
+        # curl http://localhost:8080/.well-known/webfinger?resource=http://localhost:8080
+
+        This should result in a JSON structure that looks something like this:
+
+        {"expires": "2013-04-13T17:40:42.188549",
+         "links": [
+            {"href": "http://reep.refeds.org:8080/role/sp.xml", "rel": "urn:oasis:names:tc:SAML:2.0:metadata"},
+            {"href": "http://reep.refeds.org:8080/role/sp.json", "rel": "disco-json"}],
+         "subject": "http://reep.refeds.org:8080"}
+
+         Depending on which version of pyFF your're running and the configuration you may also see
+         downstream metadata listed using the 'role' attribute to the link elements.
+        """
         if resource is None:
             raise cherrypy.HTTPError(400, "Bad Request - missing resource parameter")
 
@@ -191,6 +218,9 @@ class WellKnown():
 
 
 class MDRoot():
+    """The root application of pyFF. The root application assembles the MDStats and WellKnown classes with an
+    MDServer instance.
+    """
     def __init__(self, server):
         self.server = server
         self._well_known.server = server
@@ -201,6 +231,8 @@ class MDRoot():
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600, debug=True)
     def robots_txt(self):
+        """Returns a robots.txt that disables all robots.
+        """
         return """
 User-agent: *
 Disallow: /
@@ -209,17 +241,27 @@ Disallow: /
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600, debug=True)
     def favicon_ico(self):
+        """Returns the pyff icon (the alchemic symbol for sublimation).
+        """
         cherrypy.response.headers['Content-Type'] = 'image/x-icon'
         return resource_string('favicon.ico', "site/static/icons")
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=600, debug=True)
     def entities(self, path=None):
+        """Process an MDX request with Content-Type hard-coded to application/xml. Regardless of the suffix
+        you will get XML back from /entities/...
+        """
         return self.server.request(path=path, content_type="application/xml")
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=600, debug=True)
     def metadata(self, path=None):
+        """The main request entry point. Any requests are subject to content negotiation based on Accept headers
+        and based on file name extension. Requesting /metadata/foo.xml gets you (signed) XML (assuming your pipeline
+        contains that mode), requesting /metadata/foo.json gets you json, and /metadata/foo.ds gets you a discovery
+        interface based on the IdPs found in 'foo'. Here 'foo' is any supported lookup expression.
+        """
         return self.server.request(path=path)
 
     @cherrypy.expose
@@ -228,6 +270,8 @@ Disallow: /
 
     @cherrypy.expose
     def about(self):
+        """The 'about' page. Contains links to statistics etc.
+        """
         import pkg_resources  # part of setuptools
 
         version = pkg_resources.require("pyFF")[0].version
@@ -261,14 +305,21 @@ Search the active set for matching entities.
 
     @cherrypy.expose
     def index(self):
+        """Alias for /metadata
+        """
         return self.server.request()
 
     @cherrypy.expose
     def static(self):
+        """Static resources in the main 'site' directory.
+        """
         return static.staticdir("/static", site_dir, debug=True)
 
     @cherrypy.expose
     def default(self, *args, **kwargs):
+        """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
+        handler.
+        """
         log.debug("request default: %s" % ",".join(args))
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
@@ -288,6 +339,9 @@ Search the active set for matching entities.
 
 
 class MDServer():
+    """The MDServer class is the business logic of pyFF. This class is isolated from the request-decoding logic
+    of MDRoot and from the ancilliary classes like MDStats and WellKnown.
+    """
     def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS, cache_enabled=True):
         if not pipes:
             pipes = []
@@ -330,6 +384,8 @@ class MDServer():
                 return False
 
     def request(self, **kwargs):
+        """The main request processor. This code implements all rendering of metadata.
+        """
         stats['MD Requests'] += 1
 
         pfx = kwargs.get('pfx', None)
@@ -480,7 +536,7 @@ class MDServer():
 
 def main():
     """
-    The main entrypoint for the pyFF mdx server.
+    The main entrypoint for the pyffd command.
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:],
