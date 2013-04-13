@@ -270,7 +270,7 @@ elements with a X509Certificate and where the <Rel> element contains the string
 'urn:oasis:names:tc:SAML:2.0:metadata', the corresponding <URL> element is download
 and verified.
         """
-        if not stats:
+        if stats is None:
             stats = {}
 
         def producer(q, resources, cache=self.metadata_cache_enabled):
