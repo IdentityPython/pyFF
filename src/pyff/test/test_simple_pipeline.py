@@ -51,9 +51,7 @@ class SimplePipeLineTest(SignerTestCase):
         assert(entities[0].get('entityID') == 'https://idp.aco.net/idp/shibboleth')
 
     def tearDown(self):
-        super(SimplePipeLineTest,self).tearDown()
+        super(SimplePipeLineTest, self).tearDown()
         os.unlink(self.signer)
         os.unlink(self.validator)
         os.unlink(self.output)
-
-
