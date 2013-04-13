@@ -347,7 +347,7 @@ class MDServer():
     of MDRoot and from the ancilliary classes like MDStats and WellKnown.
     """
     def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS, cache_enabled=True):
-        if not pipes:
+        if pipes is None:
             pipes = []
         self.cache_enabled = cache_enabled
         self._md = None
