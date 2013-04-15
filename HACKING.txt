@@ -19,8 +19,9 @@ To make a release,
   2b) update the version in docs/conf.py
   3) commit the changes to setup.py and NEWS.txt
   4) git tag <version>
-  5) git push
-  6) Upload to PyPI: 'python setup.py sdist register upload build_sphinx upload_sphinx'
+  5) git push && git push --tag
+  6) cd docs && make html
+  6) Upload to PyPI: 'python setup.py sdist register upload upload_sphinx'
   7) Increase version in setup.py (for next release) with dev suffix
   8) Create NEWS.txt entry for next release
 
