@@ -210,7 +210,9 @@ listed using the 'role' attribute to the link elements.
 
         def _links(a):
             links.append(
-                dict(rel='urn:oasis:names:tc:SAML:2.0:metadata', role="provider", href='%s/%s.xml' % (cherrypy.request.base, a)))
+                dict(rel='urn:oasis:names:tc:SAML:2.0:metadata',
+                     role="provider",
+                     href='%s/%s.xml' % (cherrypy.request.base, a)))
             links.append(dict(rel='disco-json', href='%s/%s.json' % (cherrypy.request.base, a)))
 
         for a in self.server.md.keys():
@@ -229,14 +231,6 @@ listed using the 'role' attribute to the link elements.
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return dumps(jrd)
-
-
-def _expandvhost(dir, request):
-    vhost = request.headers.get('X-Forwarded-Host', request.headers.get('Host', None))
-    if vhost is not None:
-        return dir.replace("%VHOST%", vhost)
-    else:
-        return dir
 
 
 class MDRoot():
@@ -478,8 +472,6 @@ class MDServer():
                     raise HTTPError(400, "400 Bad Request - Missing 'return' parameter")
                 pdict['returnIDParam'] = kwargs.get('returnIDParam', 'entityID')
                 cherrypy.response.headers['Content-Type'] = 'text/html'
-                pdict['style'] = '/static/css/style.css'  # TODO figure out how to sensibly set this per request
-
                 return template("ds.html").render(**pdict)
             elif ext == 's':
                 paged = bool(kwargs.get('paged', False))
