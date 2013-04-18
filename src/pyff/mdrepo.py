@@ -681,7 +681,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                 schema().assertValid(t)
             except DocumentInvalid, ex:
                 log.debug(_e(ex.error_log))
-                raise MetadataException("XML schema validation failed")
+                raise MetadataException("XML schema validation failed: %s" % name)
         return t
 
     def error_set(self, url, title, ex):
