@@ -654,7 +654,7 @@ def main():
         if os.path.exists(hosts_dir):
             if not os.path.isdir(hosts_dir):
                 raise ValueError("%s exists but is not a directory" % hosts_dir)
-            static_dirs.append(os.path.join(hosts_dir, "%VHOSTS%"))
+            static_dirs.append(os.path.join(hosts_dir, "%VHOST%"))
     static_dirs.append(site_dir)
 
     server = MDServer(pipes=args, autoreload=autoreload, frequency=frequency, aliases=aliases, cache_enabled=caching)

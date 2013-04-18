@@ -65,9 +65,9 @@ def _staticdirs(section, dir, roots=[], match="", content_types=None, index="", 
                 if debug:
                     cherrypy.log(msg, 'TOOLS.STATICDIRS')
                 raise ValueError(msg)
-            dir = os.path.join(root, dir)
+            rdir = os.path.join(root, dir)
             if debug:
-                cherrypy.log("dir now is %s" % dir)
+                cherrypy.log("rdir now is %s" % rdir)
 
         # Determine where we are in the object tree relative to 'section'
         # (where the static tool was defined).
@@ -78,7 +78,7 @@ def _staticdirs(section, dir, roots=[], match="", content_types=None, index="", 
         branch = unquote(branch.lstrip(r"\/"))
 
         # If branch is "", filename will end in a slash
-        filename = os.path.join(dir, branch)
+        filename = os.path.join(rdir, branch)
         if debug:
             cherrypy.log('Checking file %r to fulfill %r' %
                          (filename, request.path_info), 'TOOLS.STATICDIRS')
@@ -86,17 +86,20 @@ def _staticdirs(section, dir, roots=[], match="", content_types=None, index="", 
         # There's a chance that the branch pulled from the URL might
         # have ".." or similar uplevel attacks in it. Check that the final
         # filename is a child of dir.
-        if not os.path.normpath(filename).startswith(os.path.normpath(dir)):
+        if not os.path.normpath(filename).startswith(os.path.normpath(rdir)):
             raise cherrypy.HTTPError(403)  # Forbidden
 
         handled = _attempt(filename, content_types)
         if not handled:
+            if debug:
+                cherrypy.log("not handled using %s" % filename)
             # Check for an index file if a folder was requested.
-            if index:
-                handled = _attempt(os.path.join(filename, index), content_types)
-                if handled:
-                    request.is_index = filename[-1] in (r"\/")
-                    return True
+            #if index:
+            #    handled = _attempt(os.path.join(filename, index), content_types)
+            #    if handled:
+            #        request.is_index = filename[-1] in (r"\/")
+            #
+            #         return True
         else:
             return True
     return False
