@@ -31,6 +31,10 @@ An implementation of draft-lajoie-md-query
             table. This causes URLs on the form http://server/<name>/x
             to be processed as http://server/metadata/{uri}x. The
             default alias table is presented at http://server
+    --dir=<dir>
+            Chdir into <dir> after the server starts up
+    --proxy
+            The service is running behind a proxy - respect the X-Forwarded-Host header.
     {pipeline-files}+
             One or more pipeline files
 
@@ -38,6 +42,7 @@ An implementation of draft-lajoie-md-query
 from StringIO import StringIO
 import getopt
 import traceback
+from cherrypy._cptools import HandlerTool
 from cherrypy.lib.cpstats import StatsPage
 import os
 import sys
@@ -45,7 +50,7 @@ from threading import RLock
 import cherrypy
 from cherrypy._cpdispatch import Dispatcher
 from cherrypy._cperror import NotFound, HTTPError
-from cherrypy.lib import cptools, static
+from cherrypy.lib import cptools
 from cherrypy.process.plugins import Monitor, SimplePlugin
 from cherrypy.lib import caching
 from simplejson import dumps
@@ -53,6 +58,7 @@ from pyff.constants import ATTRS
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
+from pyff.tools import _staticdirs
 from pyff.utils import resource_string, template, xslt_transform, dumptree, duration2timedelta
 from pyff.logs import log, SysLogLibHandler
 import logging
@@ -65,6 +71,7 @@ from pyff import __version__ as pyff_version
 __author__ = 'leifj'
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
+cherrypy.tools.staticdirs = HandlerTool(_staticdirs)
 
 
 class MDUpdate(Monitor):
@@ -224,6 +231,14 @@ listed using the 'role' attribute to the link elements.
         return dumps(jrd)
 
 
+def _expandvhost(dir, request):
+    vhost = request.headers.get('X-Forwarded-Host', request.headers.get('Host', None))
+    if vhost is not None:
+        return dir.replace("%VHOST%", vhost)
+    else:
+        return dir
+
+
 class MDRoot():
     """The root application of pyFF. The root application assembles the MDStats and WellKnown classes with an
     MDServer instance.
@@ -234,6 +249,7 @@ class MDRoot():
 
     stats = MDStats()
     _well_known = WellKnown()
+    static = cherrypy.tools.staticdirs.handler("/static", dir="static")
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600, debug=True)
@@ -314,12 +330,6 @@ Search the active set for matching entities.
         return self.server.request()
 
     @cherrypy.expose
-    def static(self):
-        """Static resources in the main 'site' directory.
-        """
-        return static.staticdir("/static", site_dir, debug=True)
-
-    @cherrypy.expose
     def default(self, *args, **kwargs):
         """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
         handler.
@@ -346,7 +356,7 @@ class MDServer():
     """The MDServer class is the business logic of pyFF. This class is isolated from the request-decoding logic
     of MDRoot and from the ancilliary classes like MDStats and WellKnown.
     """
-    def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS, cache_enabled=True):
+    def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS, cache_enabled=True, hosts_dir=None):
         if pipes is None:
             pipes = []
         self.cache_enabled = cache_enabled
@@ -546,7 +556,7 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:],
                                    'hP:p:H:CfaA:l:',
                                    ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=', 'port=', 'host=',
-                                    'no-caching', 'autoreload', 'frequency=', 'alias=', 'dir=', 'version'])
+                                    'no-caching', 'autoreload', 'frequency=', 'alias=', 'dir=', 'version', 'proxy'])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -565,6 +575,7 @@ def main():
     frequency = 600
     aliases = ATTRS
     base_dir = None
+    proxy = False
 
     try:
         for o, a in opts:
@@ -604,6 +615,8 @@ def main():
                     aliases[a] = uri
             elif o in '--dir':
                 base_dir = a
+            elif o in '--proxy':
+                proxy = bool(a)
             elif o in '--version':
                 print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__)
                 sys.exit(0)
@@ -643,6 +656,15 @@ def main():
         kwargs['http'] = cherrypy.request
         return template("%d.html" % code).render(**kwargs)
 
+    static_dirs = []
+    if base_dir:
+        hosts_dir = os.path.join(base_dir, "hosts")
+        if os.path.exists(hosts_dir):
+            if not os.path.isdir(hosts_dir):
+                raise ValueError("%s exists but is not a directory" % hosts_dir)
+            static_dirs.append(os.path.join(hosts_dir, "%VHOSTS%"))
+    static_dirs.append(site_dir)
+
     server = MDServer(pipes=args, autoreload=autoreload, frequency=frequency, aliases=aliases, cache_enabled=caching)
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
     cfg = {
@@ -657,6 +679,7 @@ def main():
             'tools.caching.antistampede_timeout': 30,
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
+            'tools.proxy.on': proxy,
             'error_page.404': lambda **kwargs: error_page(404, **kwargs),
             'error_page.503': lambda **kwargs: error_page(503, **kwargs),
             'error_page.500': lambda **kwargs: error_page(500, **kwargs),
@@ -664,15 +687,17 @@ def main():
         },
         '/': {
             'tools.caching.delay': delay,
-            'tools.staticdir.root': site_dir,
             'tools.cpstats.on': True,
+            'tools.proxy.on': proxy,
             'request.dispatch': EncodingDispatcher(pfx, _b64).dispatch,
             'request.dispatpch.debug': True,
         },
         '/static': {
-            'tools.staticdir.on': True,
-            'tools.staticdir.root': site_dir,
-            'tools.staticdir.dir': "static",
+            'tools.cpstats.on': True,
+            'tools.caching.on': caching,
+            'tools.caching.delay': 3600,
+            'tools.proxy.on': proxy,
+            'tools.staticdirs.roots': static_dirs,
         }
     }
     cherrypy.config.update(cfg)

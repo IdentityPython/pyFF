@@ -77,11 +77,9 @@ This includes certain XSLT and XSD files.
 
     """
     if os.path.exists(name):
-        with open(name) as fd:
-            return fd.read()
+        return name
     elif pfx and os.path.exists(os.path.join(pfx, name)):
-        with open(os.path.join(pfx, name)) as fd:
-            return fd.read()
+        return os.path.join(pfx, name)
     elif pkg_resources.resource_exists(__name__, name):
         return pkg_resources.resource_filename(__name__, name)
     elif pfx and pkg_resources.resource_exists(__name__, "%s/%s" % (pfx, name)):
