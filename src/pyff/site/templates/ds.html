@@ -17,7 +17,7 @@
 
     <title>Please login...</title>
     <!--[if lt IE 9]>
-    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js" type="text/javascript"></script>
     <![endif]-->
     <script type="text/javascript" src="/static/js/pyff.js"></script>
 
@@ -33,13 +33,9 @@
                 }
             }
             function ds_select(entityID) {
-                var ret = '${ret}'
-                var qs
-                if (ret.indexOf('?') === -1) {
-                    qs = '?'
-                } else {
-                    qs = '&'
-                }
+                var ret = '${ret}';
+                var qs;
+                qs = ret.indexOf('?') === -1 ? '?' : '&';
                 if ($('#remember').is(':checked')) {
                     $.jStorage.set('pyff.discovery.idp',entityID);
                 }
@@ -102,8 +98,9 @@
             });
 
             $('.sp').dsRelyingParty('${sp}');
-            $('#select').dsSelect();
-            $('#select').change(function(ev) {
+            var select = $('#select');
+            select.dsSelect();
+            select.change(function(ev) {
                 $.ajax({
                     datatype: 'json',
                     url: '/metadata/'+ev['val']+".json",
@@ -152,8 +149,10 @@
             });
 
             function switch_to_search() {
-                $('#search-tab').addClass('active');
-                $('#search-tab a').click();
+                var search_tab;
+                search_tab = $('#search-tab');
+                search_tab.addClass('active');
+                search_tab.find('a').click();
             }
 
             function switch_to_suggested() {
@@ -162,13 +161,15 @@
 
             function tab_focus() {
                 var idps = $.jStorage.get('pyff.discovery.idps',[]);
+                var idptab;
+                idptab = $('#idptab');
                 if (idps.length === 0) {
-                    $('#idptab a[href="#search"]').tab('show');
-                    $('#idptab a[href="#suggested"]').parent().addClass('hide');
+                    idptab.find('a[href="#search"]').tab('show');
+                    idptab.find('a[href="#suggested"]').parent().addClass('hide');
                     $('#select').select2("focus");
                 } else {
-                    $('#idptab a[href="#suggested"]').parent().removeClass('hide');
-                    $('#idptab a[href="#suggested"]').tab('show');
+                    idptab.find('a[href="#suggested"]').parent().removeClass('hide');
+                    idptab.find('a[href="#suggested"]').tab('show');
                 }
             }
             //ds_default_select();
