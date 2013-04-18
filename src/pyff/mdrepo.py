@@ -141,7 +141,9 @@ The dict in the list contains three items:
             f.append(path)
         if entity_filter is not None:
             f.append(entity_filter)
-        mexpr = "+".join(f)
+        mexpr = None
+        if f:
+            mexpr = "+".join(f)
 
         log.debug("mexpr: %s" % mexpr)
 
