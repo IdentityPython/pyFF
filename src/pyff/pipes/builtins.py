@@ -749,7 +749,7 @@ HTML.
                     seen[fp] = True
                     cdict = xmlsec.b642cert(cert_pem)
                     cert = cdict['cert']
-                    et = datetime.strptime("%s" % cert.getNotAfter(), "%Y%m%d%H%M%SZ")
+                    et = datetime.strptime("%s" % cert.getNotAfter(), "%y%m%d%H%M%SZ")
                     now = datetime.now()
                     dt = et - now
                     if total_seconds(dt) < error_seconds:
