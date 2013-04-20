@@ -32,7 +32,9 @@ An implementation of draft-lajoie-md-query
             to be processed as http://server/metadata/{uri}x. The
             default alias table is presented at http://server
     --dir=<dir>
-            Chdir into <dir> after the server starts up
+            Chdir into <dir> after the server starts up. You can override
+            all static resources on a per-vhost basis by creating a
+            hosts/<vhost>/static directory-hierarchy in this directory.
     --proxy
             The service is running behind a proxy - respect the X-Forwarded-Host header.
     {pipeline-files}+
