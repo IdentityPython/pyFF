@@ -526,9 +526,10 @@ Sign the working document.
 :param opts: Options (unused)
 :return: returns the signed working document
 
-The 'key' argument references either a PKCS#11 uri or the filename containing a PEM-encoded non-password protected
-private RSA key. The 'cert' argument may be empty in which case the cert is looked up using the PKCS#11 token, or
-may point to a file containing a PEM-encoded X.509 certificate.
+Sign expects a single dict with at least a 'key' key and optionally a 'cert' key. The 'key' argument references
+either a PKCS#11 uri or the filename containing a PEM-encoded non-password protected private RSA key.
+The 'cert' argument may be empty in which case the cert is looked up using the PKCS#11 token, or may point
+to a file containing a PEM-encoded X.509 certificate.
 
 **PKCS11 URIs**
 
