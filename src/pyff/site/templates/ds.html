@@ -10,10 +10,13 @@
     <link href="/static/css/pyff.css" rel="stylesheet"/>
     <link href="/static/css/style.css" rel="stylesheet"/>
     <script type="text/javascript" src="/static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/js/jquery.browser.js"></script>
+    <script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script>
     <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="/static/js/json2.js"></script>
     <script type="text/javascript" src="/static/js/jstorage.js"></script>
     <script type="text/javascript" src="/static/js/select2.min.js"></script>
+    <script type="text/javascript" src="/static/js/mdetect.js"></script>
 
     <title>Please login...</title>
     <!--[if lt IE 9]>
@@ -24,94 +27,20 @@
     <script type="text/javascript">
 
         $(function() {
-            function ds_default_select() {
-                var idp = $.jStorage.get('pyff.discovery.idp');
-                if (idp) {
-                    return ds_select(idp);
-                } else {
-                    return false;
-                }
-            }
-            function ds_select(entityID) {
-                var ret = '${ret}';
-                var qs;
-                qs = ret.indexOf('?') === -1 ? '?' : '&';
-                if ($('#remember').is(':checked')) {
-                    $.jStorage.set('pyff.discovery.idp',entityID);
-                }
-                window.location = '${ret}'+qs+'${returnIDParam}='+entityID;
-                return false;
-            }
-
-            function contains_idp(idp,lst) {
-                for (var i = 0; i < lst.length; i++) {
-                    var item = lst[i];
-                    if (item['entityID'] == idp['entityID']) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            function addIdP(item) {
-                var idps = $.jStorage.get('pyff.discovery.idps',[]);
-                //console.log(item);
-                if (!contains_idp(item,idps)) {
-                    idps.unshift(item);
-                }
-                while (idps.length > 3) {
-                    idps.pop()
-                }
-                $.jStorage.set('pyff.discovery.idps',idps);
-                return ds_select(item['entityID']);
-            }
-
             $('#quickLinks').dsQuickLinks();
-            $(".select").click(function(e) {
-                e.preventDefault();
-                return ds_select($(this).attr('href'));
-            });
-            function find_idp(id,lst) {
-                for (var i = 0; i < lst.length; i++) {
-                    if (id == lst[i].entityID) {
-                        return i
-                    }
-                }
-                return -1
-            }
-            $(".unselect").click(function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                var id = $(this).attr('rel');
-                var idps = $.jStorage.get('pyff.discovery.idps',[]);
-                var idx = find_idp(id,idps);
-                if (idx != -1) {
-                    idps.splice(idx,1);
-                    $.jStorage.set('pyff.discovery.idps',idps);
-                    $(this).parent().parent().remove();
-                    if (idps.length == 0) {
-                        $('a[href="#suggested"]').hide();
-                        $('a[href="#search"]').tab('show');
-                        $('#select').select2("focus");
-                    }
+            $('.sp').dsRelyingParty('${sp}');
+            $('#select').dsSelect({
+                empty: function() {
+                    $('a[href="#suggested"]').parent().hide();
+                    $('a[href="#search"]').tab('show');
+                    $('#select').dsSelect('focus');
+                },
+                nonempty: function() {
+                    $('a[href="#suggested"]').parent().show();
+                    $('a[href="#suggested"]').tab('show');
                 }
             });
 
-            $('.sp').dsRelyingParty('${sp}');
-            var select = $('#select');
-            select.dsSelect();
-            select.change(function(ev) {
-                $.ajax({
-                    datatype: 'json',
-                    url: '/metadata/'+ev['val']+".json",
-                    success: function (data) {
-                        for (var i = 0; i < data.length; i++) {
-                            //console.log("fetched: "+data[i]);
-                            return addIdP(data[i]);
-                        }
-                    }
-                });
-            });
             $("img.fallback-icon").error(function(e) {
                 $(this).error(function(e) {});
                 $(this).attr('src','/static/icons/1x1t.png').removeClass("img-polaroid").hide();
@@ -119,12 +48,12 @@
             $('#switch-to-search').click(function (ev) {
                 ev.preventDefault();
                 $('#search').tab('show');
-                $('#select').select2("focus");
+                $('#select').dsSelect("focus");
             });
             $('a[href="#search"]').click(function (e) {
                 e.preventDefault();
                 $(this).tab('show');
-                $('#select').select2("focus");
+                $('#select').dsSelect("focus");
             });
             $('a[data-toggle="tab"]').click(function (e) {
                 e.preventDefault();
@@ -147,33 +76,6 @@
                     $(this).hide();
                 }
             });
-
-            function switch_to_search() {
-                var search_tab;
-                search_tab = $('#search-tab');
-                search_tab.addClass('active');
-                search_tab.find('a').click();
-            }
-
-            function switch_to_suggested() {
-                $('#suggested-tab').click();
-            }
-
-            function tab_focus() {
-                var idps = $.jStorage.get('pyff.discovery.idps',[]);
-                var idptab;
-                idptab = $('#idptab');
-                if (idps.length === 0) {
-                    idptab.find('a[href="#search"]').tab('show');
-                    idptab.find('a[href="#suggested"]').parent().addClass('hide');
-                    $('#select').select2("focus");
-                } else {
-                    idptab.find('a[href="#suggested"]').parent().removeClass('hide');
-                    idptab.find('a[href="#suggested"]').tab('show');
-                }
-            }
-            //ds_default_select();
-            tab_focus();
         });
     </script>
 <body>
@@ -200,7 +102,9 @@
                         <!-- a id="switch-to-search" href="#">Help me find my Identity Provider!</a -->
                     </div>
                     <div class="tab-pane" id="search" style="min-height: 100px;">
-                        <div style="width: 99%;" id="select" data-target="${search}"></div>
+                        <!-- div style="width: 99%;" class="visible-desktop" id="select" data-target="${search}"></div -->
+                        <input type="text" style="width: 95%;" id="select"
+                               data-target="${search}" data-provide="typeahead"/>
                     </div>
                 </div>
             </div>
