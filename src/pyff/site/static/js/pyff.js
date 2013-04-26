@@ -73,19 +73,18 @@
     var methods;
     var seldiv;
 
-    function sel2_focus(ev) {
-        $(this).dsSelect('focus');
+    function sel2_focus() {
+        seldiv.select2('focus');
     }
 
-    function ta_focus(ev) {
-        $(this).focus();
+    function ta_focus() {
+        seldiv.focus();
     }
 
     methods = {
         init: function (options) {
             this.each(function (opts) {
                 seldiv = $(this);
-
                 if (! DetectTierIphone()) {
                     seldiv.change(function (ev) {
                         select_idp(ev['val'])
@@ -120,7 +119,7 @@
                         width: 'resolve'
                     });
                     methods['focus'] = sel2_focus;
-                } else {
+                } else  {
                     seldiv.typeahead({
                         source: function(query,process) {
                             $.ajax(seldiv.attr('data-target'),
@@ -179,6 +178,7 @@
                     seldiv.dsSelect(key,val);
                 });
                 seldiv.dsSelect('resize');
+                seldiv.dsSelect('focus');
             });
             $("button.unselect").bind('click.ds', methods.unselect);
             $("a.select").bind('click.ds',methods.select);
@@ -187,7 +187,7 @@
             var idps;
             idps = $.jStorage.get('pyff.discovery.idps');
             //console.log($(this));
-            if (idps.length == 0) {
+            if (!idps || idps.length == 0) {
                 seldiv.trigger('empty');
             } else {
                 seldiv.trigger('nonempty');
