@@ -81,16 +81,21 @@
         seldiv.focus();
     }
 
+    function use_select2() {
+        return false;
+        // return ! DetectTierIphone() && ! DetectTierTablet();
+    }
+
     methods = {
         init: function (options) {
             this.each(function (opts) {
                 seldiv = $(this);
-                if (! DetectTierIphone()) {
+                if (use_select2()) {
                     seldiv.change(function (ev) {
                         select_idp(ev['val'])
                     });
                     seldiv.select2({
-                        placeholder: "Start typing to search ...",
+                        placeholder: seldiv.attr('rel'),
                         ajax: {
                             url: seldiv.attr('data-target'),
                             data: function (term, page) {
@@ -120,12 +125,13 @@
                     });
                     methods['focus'] = sel2_focus;
                 } else  {
+                    seldiv.parent().prepend($('<em>').append(seldiv.attr('rel')));
                     seldiv.typeahead({
                         source: function(query,process) {
                             $.ajax(seldiv.attr('data-target'),
                                 {
                                     data: {
-                                            query: query,
+                                            query: query.toLowerCase(),
                                             entity_filter: '{http://pyff-project.org/role}idp'
                                     }
                                 }
