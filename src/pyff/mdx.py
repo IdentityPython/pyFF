@@ -44,6 +44,7 @@ An implementation of draft-lajoie-md-query
 from StringIO import StringIO
 import getopt
 import traceback
+import urlparse
 from cherrypy._cptools import HandlerTool
 from cherrypy.lib.cpstats import StatsPage
 import os
@@ -301,6 +302,19 @@ Disallow: /
                                              plumbings=["%s" % p for p in self.server.plumbings])
 
     @cherrypy.expose
+    def reset(self):
+        """The /reset page clears all local browser settings for the device. After visiting
+        this page users of the discovery service will see a "new device" page.
+        """
+        return template("reset.html").render(http=cherrypy.request)
+
+    @cherrypy.expose
+    def settings(self):
+        """The /settings page documents the (non) use of cookies.
+        """
+        return template("settings.html").render(http=cherrypy.request)
+
+    @cherrypy.expose
     def search(self, paged=False, query=None, page=0, page_limit=10, entity_filter=None):
         """
 Search the active set for matching entities.
@@ -393,6 +407,14 @@ class MDServer():
             except HTTPError:
                 return False
 
+    def _guess_idp(self, url): # not yet implemented
+        u = urlparse.urlparse(url)
+        host = u.netloc
+        if ':' in host:
+            (host, port) = host.split(':')
+        #sp.swamid.se -> swamid.se
+        return
+
     def request(self, **kwargs):
         """The main request processor. This code implements all rendering of metadata.
         """
@@ -473,6 +495,7 @@ class MDServer():
                 if pdict['ret'] is None:
                     raise HTTPError(400, "400 Bad Request - Missing 'return' parameter")
                 pdict['returnIDParam'] = kwargs.get('returnIDParam', 'entityID')
+                pdict['suggest'] = self._guess_idp(entityID)
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return template("ds.html").render(**pdict)
             elif ext == 's':

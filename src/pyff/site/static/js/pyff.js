@@ -9,10 +9,21 @@
 (function( $ ) {
     if (!(window.console && console.log)) { (function() { var noop = function() {}; var methods = ['assert', 'clear', 'count', 'debug', 'dir', 'dirxml', 'error', 'exception', 'group', 'groupCollapsed', 'groupEnd', 'info', 'log', 'markTimeline', 'profile', 'profileEnd', 'markTimeline', 'table', 'time', 'timeEnd', 'timeStamp', 'trace', 'warn']; var length = methods.length; var console = window.console = {}; while (length--) { console[methods[length]] = noop; } }()); }
 
+    function _autoselect() {
+        var use_idp;
+        use_idp = $.jStorage.get('pyff.discovery.idp');
+        if (use_idp) {
+            ds_select(use_idp);
+        }
+    }
+
+    _autoselect();
+
     function ds_select(entityID) {
         var params;
         params = $.deparam.querystring();
         var qs;
+        console.log(entityID);
         qs = params['return'].indexOf('?') === -1 ? '?' : '&';
         if ($('#remember').is(':checked')) {
             $.jStorage.set('pyff.discovery.idp',entityID);
@@ -127,6 +138,7 @@
                 } else  {
                     seldiv.parent().prepend($('<em>').append(seldiv.attr('rel')));
                     seldiv.typeahead({
+                        minLength: 2,
                         source: function(query,process) {
                             $.ajax(seldiv.attr('data-target'),
                                 {
@@ -223,9 +235,14 @@
         },
         select: function(e) {
             e.preventDefault();
-            return ds_select(this);
+            return ds_select($(this).attr('href'));
         }
     };
+
+    $("img.fallback-icon").error(function(e) {
+        $(this).error(function(e) {});
+        $(this).attr('src','1x1t.png').removeClass("img-polaroid").hide();
+    });
 
     $.fn.dsQuickLinks = function() {
         this.each(function() {

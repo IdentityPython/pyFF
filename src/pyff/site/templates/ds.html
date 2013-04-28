@@ -40,11 +40,6 @@
                     $('a[href="#suggested"]').tab('show');
                 }
             });
-
-            $("img.fallback-icon").error(function(e) {
-                $(this).error(function(e) {});
-                $(this).attr('src','/static/icons/1x1t.png').removeClass("img-polaroid").hide();
-            });
             $('#switch-to-search').click(function (ev) {
                 ev.preventDefault();
                 $('#search').tab('show');
@@ -82,12 +77,11 @@
 
 <div id="wrap">
     <div style="width: 100%" class="navbar hidden-phone navbar-static-top">
-        <div class="navbar-inner" style="padding-left: 40px;">
-            <a class="brand" href="#">Identity Provider Selection</a>
+        <div class="navbar-inner" style="padding-left: 20px;">
+            <a class="brand" href="#"><span class="sp sp-name"></span></a>
         </div>
     </div>
-    <div class="container-fluid">
-        <div class="span1"></div>
+    <div class="container">
         <div class="span6">
             <h2>How do you want to sign in?</h2>
             <div class="tabbable tabs-below">
@@ -104,7 +98,8 @@
                     <div class="tab-pane" id="search" style="min-height: 100px;">
                         <!-- div style="width: 99%;" class="visible-desktop" id="select" data-target="${search}"></div -->
                         <input type="text" style="width: 95%;" id="select"
-                               data-target="${search}" data-provider="typeahead" rel="Start typing to search ..."/>
+                               data-target="${search}" data-provider="typeahead"
+                               rel="Start typing to search for your home institution or login provider..."/>
                     </div>
                 </div>
             </div>
@@ -120,11 +115,14 @@
             <h4 class="sp sp-name"></h4>
             <div class="sp sp-icon"></div>
             <div class="sp sp-description"></div>
-            <div class="alert alert-info message" id="about">
+            <div class="alert message" id="about">
                 <button type="button" class="close" data-dismiss="alert">&times;</button>
                 <h4>What is this?</h4>
-                <p>You are accessing a service which requires you to sign in. You
+                <p>You are accessing a service that requires you to sign in. You
                 need to choose an identity provider - typically your home organization.</p>
+                <p>
+                    We will do our best to remember your choice for the next time you visit this service!
+                </p>
             </div>
         </div>
     </div>
