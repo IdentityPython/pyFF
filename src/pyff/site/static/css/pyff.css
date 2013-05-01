@@ -12,12 +12,15 @@ img.idp-icon {
 .idp-label {
     display: inline-block;
 }
+
 li.idp {
     margin-top: 5px;
 }
+
 .inline li {
     display: inline;
 }
+
 .tab-pane {
 
 }
