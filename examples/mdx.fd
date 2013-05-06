@@ -17,9 +17,9 @@
             - http://pyff-project.org/collection=swamid-2.0
         - break
     - fork:
-	- select as /md/skolfederation-1.0:
-	    - http://md.skolfederation.se/md/skolfederation-1.0.xml
-	- break
+        - select as /md/skolfederation-1.0:
+            - http://md.skolfederation.se/md/skolfederation-1.0.xml
+        - break
     - break
 - when request:
     - select
