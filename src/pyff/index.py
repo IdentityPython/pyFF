@@ -33,7 +33,7 @@ def entity_attribute_dict(entity):
         if a is not None:
             an = a.get('Name', None)
             if a is not None:
-                values = [v.text for v in a.findall(".//{%s}AttributeValue" % NS['saml'])]
+                values = [v.text.strip() for v in a.findall(".//{%s}AttributeValue" % NS['saml'])]
                 d[an] = values
     return d
 
