@@ -1,2 +1,3 @@
 sphinx-pypi-upload
 sphinx
+nose
