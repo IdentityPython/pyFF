@@ -13,7 +13,6 @@ import os
 import re
 from pyff.logs import log
 import hashlib
-from eventlet.green import urllib2
 import xmlsec
 import base64
 from datetime import datetime
@@ -317,16 +316,6 @@ Publish the working document in XML form.
         req.md[resource_name] = req.t
     return req.t
 
-
-@deprecated
-def _fetch(md, url, verify):
-    log.debug("open %s" % url)
-    try:
-        return url, urllib2.urlopen(url).read(), verify, None, datetime.now()
-    except Exception, ex:
-        return url, None, None, ex, datetime.now()
-
-
 @deprecated
 def remote(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
@@ -339,6 +328,11 @@ def local(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
     return load(req, opts)
+
+
+@deprecated
+def _fetch(req, *opts):
+    return load(req,*opts)
 
 
 def load(req, *opts):

@@ -13,7 +13,6 @@ version = '0.9.4dev'
 install_requires = [
     'lxml >=3.0',
     'pyyaml >=3.10',
-    'eventlet >=0.9.16',
     'pyXMLSecurity >=0.8',
     'cherrypy >=3.2.0',
     'iso8601 >=0.1.4',
