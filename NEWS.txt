@@ -82,3 +82,9 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * 'remove' merge strategy from Peter S
 * cleanup & bugfixes
 
+0.9.3
+-----
+
+* Release date: Wed May 15 12:09:57 CEST 2013*
+
+* better discovery UI
