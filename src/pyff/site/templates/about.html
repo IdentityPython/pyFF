@@ -1,10 +1,10 @@
 <%include file="header.html"/>
-    <h1>About this server</h1>
+    <h1>${_('About this server')}</h1>
     <div class="tabbable">
         <ul class="nav nav-tabs">
-            <li class="active"><a href="#info" data-toggle="tab">Server Info</a>
-            <li><a href="#pipeline" data-toggle="tab">Pipeline</a></li>
-            <li><a href="#repo" data-toggle="tab">Repository</a></li>
+            <li class="active"><a href="#info" data-toggle="tab">${_('Server Info')}</a>
+            <li><a href="#pipeline" data-toggle="tab">${_('Pipeline')}</a></li>
+            <li><a href="#repo" data-toggle="tab">${_('Repository')}</a></li>
         </ul>
         <div class="tab-content">
             <div class="tab-pane" id="pipeline">
@@ -14,17 +14,17 @@
             </div>
             <div class="tab-pane active" id="info">
                 <dl class="dl-horizontal">
-                    <dt>pyFF version</dt>
+                    <dt>pyFF ${_('version')}</dt>
                     <dd>${version}</dd>
-                    <dt>Cherrypy version</dt>
+                    <dt>Cherrypy ${_('version')}</dt>
                     <dd>${cversion}</dd>
-                    <dt>pyFF cmdline</dt>
+                    <dt>pyFF ${_('startup arguments')}</dt>
                     <dd>${cmdline}</dd>
-                    <dt>System info</dt>
+                    <dt>${_('System information')}</dt>
                     <dd>${sysinfo}</dd>
-                    <dt>Repository Size</dt>
+                    <dt>${_('Repository size')}</dt>
                     <dd>${stats['Repository Size']}</dd>
-                    <dt>Last update</dt>
+                    <dt>${_('Last update')}</dt>
                     <dd>${stats['Repository Update Time']}</dd>
                 </dl>
             </div>

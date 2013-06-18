@@ -83,11 +83,11 @@
     </div>
     <div class="container">
         <div class="span6">
-            <h2>How do you want to sign in?</h2>
+            <h2>${_('How do you want to sign in?')}</h2>
             <div class="tabbable tabs-top">
                 <ul id="idptab" class="nav nav-tabs">
-                    <li><a href="#suggested" data-toggle="tab">Suggested</a></li>
-                    <li><a href="#search" data-toggle="tab">All Login Providers</a></li>
+                    <li><a href="#suggested" data-toggle="tab">${_('Suggested')}</a></li>
+                    <li><a href="#search" data-toggle="tab">${_('All Login Providers')}</a></li>
                 </ul>
                 <div class="tab-content">
                     <div class="tab-pane" id="suggested">
@@ -99,15 +99,15 @@
                         <!-- div style="width: 99%;" class="visible-desktop" id="select" data-target="${search}"></div -->
                         <input type="text" style="width: 95%;" id="select"
                                data-target="${search}" data-provider="typeahead"
-                               rel="Start typing to search for your home institution or login provider..."/>
+                               rel="${_('Start typing to search for your home institution or login provider...')}"/>
                     </div>
                 </div>
             </div>
             <div class="alert alert-info message" id="remember-message">
                 <button type="button" class="close" data-dismiss="alert">&times;</button>
-                <h4>Remember choice</h4>
+                <h4>${_('Remember choice')}</h4>
                 <form class="form-inline">
-                    <label class="checkbox"><input id="remember" type="checkbox"> Remember my choice and never show me this page again!</label>
+                    <label class="checkbox"><input id="remember" type="checkbox"> ${_('Remember my choice and never show me this page again!')}</label>
                 </form>
             </div>
         </div>
@@ -117,11 +117,11 @@
             <div class="sp sp-description"></div>
             <div class="alert message" id="about">
                 <button type="button" class="close" data-dismiss="alert">&times;</button>
-                <h4>What is this?</h4>
-                <p>You are accessing a service that requires you to sign in. You
-                need to choose an identity provider - typically your home organization.</p>
+                <h4>${_('What is this?')}</h4>
                 <p>
-                    We will do our best to remember your choice for the next time you visit this service!
+                    ${_('You are accessing a service that requires you to sign in. You need to choose an identity provider - typically your home organization.')}</p>
+                <p>
+                    ${_('We will do our best to remember your choice for the next time you visit this service!')}
                 </p>
             </div>
         </div>

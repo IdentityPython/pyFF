@@ -45,20 +45,18 @@
     <div class="container">
         <div class="span8">
             <div class="page-header">
-                <h1>Ready to Clear your Settings?</h1>
+                <h1>${_('Ready to Clear your Settings?')}</h1>
             </div>
             <p>
-                The identity provider chooser allows you to save certain settings, such as your last visited
-                identity providers. This is done to make your login experience as seemless as possible. However
-                you may need to reset these settings, perhaps to disable your pre-selected identity provider(s).
+                ${_('The identity provider chooser allows you to save certain settings, such as your last visited identity providers. This is done to make your login experience as seemless as possible. However you may need to reset these settings, perhaps to disable your pre-selected identity provider(s).')}
             </p>
             <p>
-                Read more about how <a href="/settings">these settings are stored</a>.
+                ${_('Read more about how')} <a href="/settings">${_('these settings are stored')}</a>.
             </p>
             <div id="messages"></div>
             <div class="btn-toolbar">
-                <button id="reset" class="btn btn-warning">Yes, Clear my Settings</button>
-                <button id="cancel" class="btn">No, get me out of here!</button>
+                <button id="reset" class="btn btn-warning">${_('Yes, Clear my Settings')}</button>
+                <button id="cancel" class="btn">${_('No, get me out of here!')}</button>
             </div>
         </div>
     <div id="push"></div>

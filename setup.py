@@ -55,4 +55,8 @@ setup(name='pyFF',
         'console_scripts':
             ['pyff=pyff:main','pyffd=pyff.mdx:main']
     },
+    message_extractors = {'src': [
+ 		('**.py', 'python', None),
+ 		('**/templates/**.html', 'mako', None),
+    ]},
 )

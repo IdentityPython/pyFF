@@ -1,3 +1,6 @@
+lxml
+cherrypy
 sphinx-pypi-upload
 sphinx
 nose
+babel

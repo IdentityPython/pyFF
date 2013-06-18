@@ -15,7 +15,7 @@ class PyFFLogger():
                          logging.ERROR: logging.error}
 
     def _l(self, severity, msg):
-        if cherrypy.tree.apps.has_key(''):
+        if '' in cherrypy.tree.apps:
             cherrypy.tree.apps[''].log("%s" % msg, severity=severity)
         else:
             self._loggers[severity]("%s" % msg)
@@ -35,11 +35,18 @@ class PyFFLogger():
     def debug(self, msg):
         return self._l(logging.DEBUG, msg)
 
+    def isEnabledFor(self, lvl):
+        return logging.getLogger(__name__).isEnabledFor(lvl)
+
+    def isDebugEnabled(self):
+        return self.isEnabledFor(logging.DEBUG)
+
 
 log = PyFFLogger()
 
 # http://www.aminus.org/blogs/index.php/2008/07/03/writing-high-efficiency-large-python-sys-1?blog=2
 # blog post explicitly gives permission for use
+
 
 class SysLogLibHandler(logging.Handler):
     """A logging handler that emits messages to syslog.syslog."""

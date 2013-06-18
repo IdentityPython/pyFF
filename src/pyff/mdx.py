@@ -76,6 +76,8 @@ __author__ = 'leifj'
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 cherrypy.tools.staticdirs = HandlerTool(_staticdirs)
 
+import i18n
+_ = i18n.language.ugettext
 
 class MDUpdate(Monitor):
     def __init__(self, bus, frequency=600, server=None):
@@ -167,7 +169,7 @@ class MDStats(StatsPage):
         body = tree.getroot().find("body")
         body.tag = 'div'
         hstr = etree.tostring(body, pretty_print=True, method="html")
-        return template("basic.html").render(content=hstr, http=cherrypy.request)
+        return template("basic.html").render(content=hstr, http=cherrypy.request, _=_)
 
 
 class WellKnown():
@@ -283,7 +285,7 @@ Disallow: /
 
     @cherrypy.expose
     def finger(self, domain="localhost"):
-        return template("finger.html").render(http=cherrypy.request, domain=domain)
+        return template("finger.html").render(http=cherrypy.request, domain=domain, _=_)
 
     @cherrypy.expose
     def about(self):
@@ -294,6 +296,7 @@ Disallow: /
         version = pkg_resources.require("pyFF")[0].version
         return template("about.html").render(version=version,
                                              cversion=cherrypy.__version__,
+                                             _=_,
                                              sysinfo=" ".join(os.uname()),
                                              http=cherrypy.request,
                                              cmdline=" ".join(sys.argv),
@@ -306,13 +309,13 @@ Disallow: /
         """The /reset page clears all local browser settings for the device. After visiting
         this page users of the discovery service will see a "new device" page.
         """
-        return template("reset.html").render(http=cherrypy.request)
+        return template("reset.html").render(http=cherrypy.request, _=_)
 
     @cherrypy.expose
     def settings(self):
         """The /settings page documents the (non) use of cookies.
         """
-        return template("settings.html").render(http=cherrypy.request)
+        return template("settings.html").render(http=cherrypy.request, _=_)
 
     @cherrypy.expose
     def search(self, paged=False, query=None, page=0, page_limit=10, entity_filter=None):
@@ -496,6 +499,7 @@ class MDServer():
                     raise HTTPError(400, "400 Bad Request - Missing 'return' parameter")
                 pdict['returnIDParam'] = kwargs.get('returnIDParam', 'entityID')
                 pdict['suggest'] = self._guess_idp(entityID)
+                pdict['_'] = _
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return template("ds.html").render(**pdict)
             elif ext == 's':
@@ -521,18 +525,22 @@ class MDServer():
                     if pfx:
                         title = pfx
                     else:
-                        title = "Metadata By Attributes"
+                        title = _("Metadata By Attributes")
                     return template("index.html").render(http=cherrypy.request,
                                                          md=self.md,
                                                          alias=alias,
                                                          aliases=self.aliases,
-                                                         title=title)
+                                                         title=title,
+                                                         _=_)
                 else:
                     entities = self.md.lookup(q)
                     if not entities:
                         raise NotFound()
                     if len(entities) > 1:
-                        return template("metadata.html").render(http=cherrypy.request, md=self.md, entities=entities)
+                        return template("metadata.html").render(http=cherrypy.request,
+                                                                _=_,
+                                                                md=self.md,
+                                                                entities=entities)
                     else:
                         entity = entities[0]
                         t = html.fragment_fromstring(unicode(xslt_transform(entity, "entity2html.xsl")))
@@ -545,7 +553,7 @@ class MDServer():
                             else:
                                 p.text = c_txt  # re.sub(".",escape,c_txt)
                         xml = dumptree(t, xml_declaration=False).decode('utf-8')
-                        return template("basic.html").render(http=cherrypy.request, content=xml)
+                        return template("basic.html").render(http=cherrypy.request, content=xml, _=_)
             else:
                 for p in self.plumbings:
                     state = {'request': True,
@@ -697,10 +705,10 @@ def main():
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
             'tools.proxy.on': proxy,
-            'error_page.404': lambda **kwargs: error_page(404, **kwargs),
-            'error_page.503': lambda **kwargs: error_page(503, **kwargs),
-            'error_page.500': lambda **kwargs: error_page(500, **kwargs),
-            'error_page.400': lambda **kwargs: error_page(400, **kwargs)
+            'error_page.404': lambda **kwargs: error_page(404, _=_, **kwargs),
+            'error_page.503': lambda **kwargs: error_page(503, _=_, **kwargs),
+            'error_page.500': lambda **kwargs: error_page(500, _=_, **kwargs),
+            'error_page.400': lambda **kwargs: error_page(400, _=_, **kwargs)
         },
         '/': {
             'tools.caching.delay': delay,
