@@ -20,11 +20,21 @@
         - select as /md/skolfederation-1.0:
             - http://md.skolfederation.se/md/skolfederation-1.0.xml
         - break
+    - fork:
+        - select as /md/swamid-kalmar-1.0:
+            - https://connect.sunet.se/shibboleth
+            - https://www.diva-portal.org/shibboleth
     - break
 - when request:
     - select
     - pipe:
         - when accept application/xml:
+             - pipe:
+                 - when path /md/swamid-kalmar-1.0:
+                     - xslt:
+                        stylesheet: kalmar2.xsl
+                     - break
+
              - xslt:
                  stylesheet: tidy.xsl
              - first
