@@ -28,6 +28,10 @@ def _e(error_log):
     return "\n".join(filter(lambda x: ":WARNING:" not in x, ["%s" % e for e in error_log]))
 
 
+def debug_observer(e):
+    log.error(repr(e))
+
+
 def resource_string(name, pfx=None):
     """
 Attempt to load and return the contents (as a string) of the resource named by

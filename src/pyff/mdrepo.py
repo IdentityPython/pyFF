@@ -7,7 +7,7 @@ from StringIO import StringIO
 from datetime import datetime
 import hashlib
 import urllib
-from UserDict import DictMixin
+from UserDict import DictMixin, UserDict
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
@@ -19,7 +19,7 @@ import pyff.index
 from pyff.logs import log
 from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template
 import xmlsec
-from pyff.constants import NS, NF_URI, DIGESTS
+from pyff.constants import NS, NF_URI, DIGESTS, EVENT_DROP_ENTITY, EVENT_IMPORTED_METADATA, EVENT_IMPORT_FAIL
 import traceback
 import threading
 from Queue import Queue
@@ -46,7 +46,25 @@ class MetadataException(Exception):
     pass
 
 
-class MDRepository(DictMixin):
+class Event(UserDict):
+    pass
+
+
+class Observable(object):
+    def __init__(self):
+        self.callbacks = []
+
+    def subscribe(self, callback):
+        self.callbacks.append(callback)
+
+    def fire(self, **attrs):
+        e = Event(attrs)
+        e['time'] = datetime.now()
+        for fn in self.callbacks:
+            fn(e)
+
+
+class MDRepository(DictMixin, Observable):
     """A class representing a set of SAML Metadata. Instances present as dict-like objects where
     the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
     """
@@ -59,6 +77,8 @@ class MDRepository(DictMixin):
         self.respect_cache_duration = True
         self.default_cache_duration = "PT10M"
         self.retry_limit = 5
+
+        super(MDRepository, self).__init__()
 
     def is_idp(self, entity):
         """Returns True if the supplied EntityDescriptor has an IDPSSODescriptor Role
@@ -323,6 +343,7 @@ and verified.
 
                     t = self.parse_metadata(StringIO(xml), key=thread.verify, base_url=thread.url)
                     if t is None:
+                        self.fire(type=EVENT_IMPORT_FAIL, url=thread.url)
                         raise MetadataException("No valid metadata found at %s" % thread.url)
 
                     relt = root(t)
@@ -403,7 +424,7 @@ and verified.
             with open(xrd, "w") as fd:
                 fd.write(template("trust.xrd").render(links=resolved))
 
-    def parse_metadata(self, fn, key=None, base_url=None, fail_on_error=False):
+    def parse_metadata(self, fn, key=None, base_url=None, fail_on_error=False, filter_invalid=True):
         """Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
         is stored in the MDRepository instance.
 
@@ -414,6 +435,15 @@ and verified.
         try:
             t = etree.parse(fn, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
             t.xinclude()
+            if filter_invalid:
+                for e in t.findall('{%s}EntityDescriptor' % NS['md']):
+                    if not schema().validate(e):
+                        elog = schema().error_log
+                        error = elog.last_error
+                        e.parent().delete(e)
+                        self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=e.get('entityID'), error=error)
+
+            # Having removed the invalid entities this should now never happen...
             schema().assertValid(t)
         except DocumentInvalid, ex:
             log.debug(_e(ex.error_log))
@@ -427,7 +457,10 @@ and verified.
         if key is not None:
             try:
                 log.debug("verifying signature using %s" % key)
-                xmlsec.verify(t, key)
+                refs = xmlsec.verified(t, key)
+                if len(refs) != 1:
+                    raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+                t = refs[0] # prevent wrapping attacks
             except Exception, ex:
                 tb = traceback.format_exc()
                 print tb
@@ -471,6 +504,7 @@ is stored in the MDRepository object.
                     self._index_entity(e)
                     ne += 1
 
+        self.fire(type=EVENT_IMPORTED_METADATA, size=ne, url=url)
         return ne
 
     def entities(self, t=None):

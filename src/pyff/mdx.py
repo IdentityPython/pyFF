@@ -57,12 +57,12 @@ from cherrypy.lib import cptools
 from cherrypy.process.plugins import Monitor, SimplePlugin
 from cherrypy.lib import caching
 from simplejson import dumps
-from pyff.constants import ATTRS
+from pyff.constants import ATTRS, EVENT_REPOSITORY_LIVE
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
 from pyff.tools import _staticdirs
-from pyff.utils import resource_string, template, xslt_transform, dumptree, duration2timedelta
+from pyff.utils import resource_string, template, xslt_transform, dumptree, duration2timedelta, debug_observer
 from pyff.logs import log, SysLogLibHandler
 import logging
 from pyff.stats import stats
@@ -79,6 +79,7 @@ cherrypy.tools.staticdirs = HandlerTool(_staticdirs)
 import i18n
 _ = i18n.language.ugettext
 
+
 class MDUpdate(Monitor):
     def __init__(self, bus, frequency=600, server=None):
         self.lock = RLock()
@@ -93,6 +94,9 @@ class MDUpdate(Monitor):
             if self.lock.acquire(blocking=0):
                 locked = True
                 md = self.server.new_repository()
+                for o in self.server.observers:
+                    md.subscribe(o)
+
                 for p in server.plumbings:
                     state = {'update': True, 'stats': {}}
                     p.process(md, state)
@@ -102,6 +106,7 @@ class MDUpdate(Monitor):
                 with server.lock.writelock:
                     log.debug("update produced new repository with %d entities" % md.index.size())
                     server.md = md
+                    md.fire(type=EVENT_REPOSITORY_LIVE, size=md.index.size())
                     stats['Repository Update Time'] = datetime.now()
                     stats['Repository Size'] = md.index.size()
             else:
@@ -369,7 +374,14 @@ class MDServer():
     """The MDServer class is the business logic of pyFF. This class is isolated from the request-decoding logic
     of MDRoot and from the ancilliary classes like MDStats and WellKnown.
     """
-    def __init__(self, pipes=None, autoreload=False, frequency=600, aliases=ATTRS, cache_enabled=True, hosts_dir=None):
+    def __init__(self,
+                 pipes=None,
+                 autoreload=False,
+                 frequency=600,
+                 aliases=ATTRS,
+                 cache_enabled=True,
+                 hosts_dir=None,
+                 observers=[]):
         if pipes is None:
             pipes = []
         self.cache_enabled = cache_enabled
@@ -379,6 +391,7 @@ class MDServer():
         self.refresh = MDUpdate(cherrypy.engine, server=self, frequency=frequency)
         self.refresh.subscribe()
         self.aliases = aliases
+        self.observers = observers
 
         if autoreload:
             for f in pipes:
@@ -394,7 +407,7 @@ class MDServer():
 
     md = property(_get_md, _set_md)
 
-    def new_repository(self):
+    def new_repository(self, observers=[]):
         return MDRepository(metadata_cache_enabled=self.cache_enabled)
 
     class MediaAccept():
@@ -561,6 +574,7 @@ class MDServer():
                              'accept': accept,
                              'url': cherrypy.url(relative=False),
                              'select': q,
+                             'path': path,
                              'stats': {}}
                     r = p.process(self.md, state=state)
                     if r is not None:
@@ -580,8 +594,9 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                                    'hP:p:H:CfaA:l:',
-                                   ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=', 'port=', 'host=',
-                                    'no-caching', 'autoreload', 'frequency=', 'alias=', 'dir=', 'version', 'proxy'])
+                                   ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=', 'email='
+                                    'port=', 'host=', 'no-caching', 'autoreload', 'frequency=',
+                                    'alias=', 'dir=', 'version', 'proxy'])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -601,6 +616,7 @@ def main():
     aliases = ATTRS
     base_dir = None
     proxy = False
+    email = None
 
     try:
         for o, a in opts:
@@ -634,6 +650,8 @@ def main():
                 autoreload = True
             elif o in '--frequency':
                 frequency = int(a)
+            elif o in '--email':
+                email = a
             elif o in ('-A', '--alias'):
                 (a, sep, uri) = a.lpartition(':')
                 if a and uri:
@@ -690,7 +708,17 @@ def main():
             static_dirs.append(os.path.join(hosts_dir, "%VHOST%"))
     static_dirs.append(site_dir)
 
-    server = MDServer(pipes=args, autoreload=autoreload, frequency=frequency, aliases=aliases, cache_enabled=caching)
+    observers = []
+
+    if loglevel == logging.DEBUG:
+        observers.append(debug_observer)
+
+    server = MDServer(pipes=args,
+                      autoreload=autoreload,
+                      frequency=frequency,
+                      aliases=aliases,
+                      cache_enabled=caching,
+                      observers=observers)
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
     cfg = {
         'global': {

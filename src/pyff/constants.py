@@ -18,3 +18,9 @@ ATTRS = {'collection': 'http://pyff-project.org/collection',
          'role': 'http://pyff-project.org/role'}
 
 DIGESTS = ['sha1', 'md5', 'null']
+
+EVENT_DROP_ENTITY = 'event.drop.entity'
+EVENT_RETRY_URL = 'event.retry.url'
+EVENT_IMPORTED_METADATA = 'event.imported.metadata'
+EVENT_IMPORT_FAIL = 'event.import.failed'
+EVENT_REPOSITORY_LIVE = 'event.repository.live'
