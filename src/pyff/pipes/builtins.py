@@ -143,7 +143,10 @@ active document. To avoid this do a select before your fork, thus:
 def _any(lst, d):
     for x in lst:
         if x in d:
-            return d[x]
+            if type(d) == dict:
+                return d[x]
+            else:
+                return True
     return False
 
 
