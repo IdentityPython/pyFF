@@ -5,7 +5,7 @@
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                 xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
                 xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
-		        xmlns:xi="http://www.w3.org/2001/XInclude"
+                xmlns:xi="http://www.w3.org/2001/XInclude"
                 xmlns:idpdisco="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol"
                 xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute"
                 xmlns:shibmd="urn:mace:shibboleth:metadata:1.0">
