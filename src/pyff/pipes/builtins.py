@@ -840,8 +840,8 @@ Prepares the working document for publication/rendering.
 :param opts: Options (not used)
 :return: returns the working document with @Name, @cacheDuration and @validUntil set
 
-Set Name, ID prefix, cacheDuration and validUntil on the toplevel EntitiesDescriptor element of the working document. Unless
-explicit provided the @Name is set from the request URI if the pipeline is executed in the pyFF server. The @ID is set to a string representing the current date/time and will be prefixed the string provided, which alternatively defaults to '_'. The
+Set Name, ID, cacheDuration and validUntil on the toplevel EntitiesDescriptor element of the working document. Unless
+explicit provided the @Name is set from the request URI if the pipeline is executed in the pyFF server. The @ID is set to a string representing the current date/time and will be prefixed with the string provided, which defaults to '_'. The
 @cacheDuration element must be a valid xsd duration (eg PT5H for 5 hrs) and @validUntil can be either an absolute
 ISO 8601 time string or (more comonly) a relative time on the form
 
