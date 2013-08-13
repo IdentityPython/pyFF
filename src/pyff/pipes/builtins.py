@@ -861,7 +861,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
     - finalize:
         cacheDuration: PT8H
         validUntil: +10d
-        ID: aconet
+        ID: pyff
     """
     if req.t is None:
         raise PipeException("Your plumbing is missing a select statement.")
