@@ -840,8 +840,8 @@ Prepares the working document for publication/rendering.
 :param opts: Options (not used)
 :return: returns the working document with @Name, @cacheDuration and @validUntil set
 
-Set Name, cacheDuration and validUntil on the toplevel EntitiesDescriptor element of the working document. Unless
-explicit provided the @Name is set from the request URI if the pipeline is executed in the pyFF server. The
+Set Name, ID, cacheDuration and validUntil on the toplevel EntitiesDescriptor element of the working document. Unless
+explicit provided the @Name is set from the request URI if the pipeline is executed in the pyFF server. The @ID is set to a string representing the current date/time and will be prefixed with the string provided, which defaults to '_'. The
 @cacheDuration element must be a valid xsd duration (eg PT5H for 5 hrs) and @validUntil can be either an absolute
 ISO 8601 time string or (more comonly) a relative time on the form
 
@@ -861,6 +861,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
     - finalize:
         cacheDuration: PT8H
         validUntil: +10d
+        ID: pyff
     """
     if req.t is None:
         raise PipeException("Your plumbing is missing a select statement.")
@@ -877,8 +878,9 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
         if name is not None and len(name):
             e.set('Name', name)
 
+    IDprefix = req.args.get('ID', '_')
     if not e.get('ID'):
-        e.set('ID', datetime.now().strftime("pyff%Y%m%dT%H%M%S%Z"))
+        e.set('ID', datetime.now().strftime(IDprefix + "%Y%m%dT%H%M%S%Z"))
 
     validUntil = req.args.get('validUntil', e.get('validUntil', None))
     if validUntil is not None and len(validUntil) > 0:
