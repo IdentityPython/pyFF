@@ -38,8 +38,15 @@ def _is_self_signed_err(ebuf):
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
 
-def _e(error_log):
-    return "\n".join(filter(lambda x: ":WARNING:" not in x, ["%s" % e for e in error_log]))
+def _e(error_log, m=None):
+    def _f(x):
+        if ":WARNING:" in x:
+            return False
+        if m is not None and not m in x:
+            return False
+        return True
+
+    return "\n".join(filter(_f, ["%s" % e for e in error_log]))
 
 
 class MetadataException(Exception):
@@ -439,15 +446,16 @@ and verified.
             if filter_invalid:
                 for e in t.findall('{%s}EntityDescriptor' % NS['md']):
                     if not schema().validate(e):
-                        error = _e(schema().error_log)
+                        error = _e(schema().error_log, m=base_url)
                         log.debug("removing '%s': schema validation failed (%s)" % (e.get('entityID'), error))
                         e.getparent().remove(e)
                         self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=e.get('entityID'), error=error)
-
+            else:
             # Having removed the invalid entities this should now never happen...
-            schema().assertValid(t)
+                schema().assertValid(t)
         except DocumentInvalid, ex:
-            log.debug("schema validation failed on '%s': %s" % (base_url, _e(ex.error_log)))
+            traceback.print_exc()
+            log.debug("schema validation failed on '%s': %s" % (base_url, _e(ex.error_log, m=base_url)))
             raise MetadataException("schema validation failed")
         except Exception, ex:
             #log.debug(_e(schema().error_log))

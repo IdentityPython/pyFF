@@ -24,8 +24,15 @@ class PyffException(Exception):
     pass
 
 
-def _e(error_log):
-    return "\n".join(filter(lambda x: ":WARNING:" not in x, ["%s" % e for e in error_log]))
+def _e(error_log, m=None):
+    def _f(x):
+        if ":WARNING:" in x:
+            return False
+        if m is not None and not m in x:
+            return False
+        return True
+
+    return "\n".join(filter(_f, ["%s" % e for e in error_log]))
 
 
 def debug_observer(e):
@@ -335,5 +342,5 @@ def xslt_transform(t, stylesheet, params={}):
 def total_seconds(dt):
     if hasattr(dt, "total_seconds"):
         return dt.total_seconds()
-    else: 
+    else:
         return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
