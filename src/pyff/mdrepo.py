@@ -440,7 +440,7 @@ and verified.
                 for e in t.findall('{%s}EntityDescriptor' % NS['md']):
                     if not schema().validate(e):
                         error = _e(schema().error_log)
-                        e.parent().delete(e)
+                        e.getparent().remove(e)
                         self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=e.get('entityID'), error=error)
 
             # Having removed the invalid entities this should now never happen...

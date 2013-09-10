@@ -12,6 +12,7 @@ import logging
 
 __version__ = pkg_resources.require("pyFF")[0].version
 
+
 def main():
     """
     The main entrypoint for the pyFF cmdline tool.
