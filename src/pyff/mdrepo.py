@@ -387,13 +387,14 @@ and verified.
                     else:
                         raise MetadataException("Unknown metadata type (%s)" % relt.tag)
                 except Exception, ex:
-                    traceback.print_exc(ex)
-                    log.error("Error fetching metadata: %s" % ex)
+                    #traceback.print_exc(ex)
+                    log.info(ex)
                     if info is not None:
                         info['Exception'] = ex
                     if thread.tries < self.retry_limit:
                         next_jobs.append((thread.url, thread.verify, thread.id, thread.tries + 1))
                     else:
+                        traceback.print_exc(ex)
                         log.error("Retry limit exceeded for %s" % thread.url)
                 finally:
                     nfinished += 1
@@ -438,8 +439,7 @@ and verified.
             if filter_invalid:
                 for e in t.findall('{%s}EntityDescriptor' % NS['md']):
                     if not schema().validate(e):
-                        elog = schema().error_log
-                        error = elog.last_error
+                        error = _e(schema().error_log)
                         e.parent().delete(e)
                         self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=e.get('entityID'), error=error)
 
