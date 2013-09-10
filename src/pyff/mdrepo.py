@@ -272,12 +272,12 @@ The dict in the list contains three items:
             a.append(velt)
             #log.debug(etree.tostring(a))
 
-    def fetch_metadata(self, resources, qsize=5, timeout=60, stats=None, xrd=None):
+    def fetch_metadata(self, resources, qsize=5, timeout=120, stats=None, xrd=None):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id)
 :param qsize: The number of parallell downloads to run
-:param timeout: The number of seconds to wait (60 by default) for each download
+:param timeout: The number of seconds to wait (120 by default) for each download
 :param stats: A dictionary used for storing statistics. Useful for cherrypy cpstats
 
 The list of triples is processed by first downloading the URL. If a cert-or-fingerprint
@@ -298,7 +298,7 @@ and verified.
         def producer(q, resources, cache=self.metadata_cache_enabled):
             print resources
             for url, verify, id, tries in resources:
-                log.debug("Starting fetcher for %s" % url)
+                log.debug("starting fetcher for '%s'" % url)
                 thread = URLFetch(url, verify, id, enable_cache=cache, tries=tries)
                 thread.start()
                 q.put(thread, True)
@@ -313,12 +313,12 @@ and verified.
             while nfinished < njobs:
                 info = None
                 try:
-                    log.debug("Waiting for next thread to finish...")
+                    log.debug("waiting for next thread to finish...")
                     thread = q.get(True)
                     thread.join(timeout)
 
                     if thread.isAlive():
-                        raise MetadataException("Thread timeout occured")
+                        raise MetadataException("thread timeout fetching '%s'" % thread.url)
 
                     info = {
                         'Time Spent': thread.time()
@@ -330,7 +330,7 @@ and verified.
                         if thread.result is not None:
                             info['Bytes'] = len(thread.result)
                         else:
-                            raise MetadataException("Empty response")
+                            raise MetadataException("empty response fetching '%s'" % thread.url)
                         info['Cached'] = thread.cached
                         info['Date'] = str(thread.date)
                         info['Last-Modified'] = str(thread.last_modified)
@@ -344,7 +344,7 @@ and verified.
                     t = self.parse_metadata(StringIO(xml), key=thread.verify, base_url=thread.url)
                     if t is None:
                         self.fire(type=EVENT_IMPORT_FAIL, url=thread.url)
-                        raise MetadataException("No valid metadata found at %s" % thread.url)
+                        raise MetadataException("no valid metadata found at '%s'" % thread.url)
 
                     relt = root(t)
                     if relt.tag in ('{%s}XRD' % NS['xrd'], '{%s}XRDS' % NS['xrd']):
@@ -369,13 +369,13 @@ and verified.
 
                         if thread.cached:
                             if thread.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
-                                raise MetadataException("Cached metadata expired")
+                                raise MetadataException("cached metadata expired")
                             else:
-                                log.debug("Found cached metadata (last-modified: %s)" % thread.last_modified)
+                                log.debug("found cached metadata for '%s' (last-modified: %s)" % (thread.url, thread.last_modified))
                                 ne = self.import_metadata(t, url=thread.id)
                                 info['Number of Entities'] = ne
                         else:
-                            log.debug("got fresh metadata (date: %s)" % thread.date)
+                            log.debug("got fresh metadata for '%s' (date: %s)" % (thread.url, thread.date))
                             ne = self.import_metadata(t, url=thread.id)
                             info['Number of Entities'] = ne
                         info['Cache Expiration Time'] = str(thread.last_modified + offset)
@@ -385,17 +385,17 @@ and verified.
                             cert = certs.values()[0].strip()
                         resolved.add((thread.url, cert))
                     else:
-                        raise MetadataException("Unknown metadata type (%s)" % relt.tag)
+                        raise MetadataException("unknown metadata type for '%s' (%s)" % (thread.url, relt.tag))
                 except Exception, ex:
                     #traceback.print_exc(ex)
-                    log.info(ex)
+                    log.warn("problem fetching '%s' (will retry): %s" % (thread.url, ex))
                     if info is not None:
                         info['Exception'] = ex
                     if thread.tries < self.retry_limit:
                         next_jobs.append((thread.url, thread.verify, thread.id, thread.tries + 1))
                     else:
-                        traceback.print_exc(ex)
-                        log.error("Retry limit exceeded for %s" % thread.url)
+                        #traceback.print_exc(ex)
+                        log.error("retry limit exceeded for %s (last error was: %s)" % (thread.url, ex))
                 finally:
                     nfinished += 1
                     if info is not None:
@@ -440,16 +440,17 @@ and verified.
                 for e in t.findall('{%s}EntityDescriptor' % NS['md']):
                     if not schema().validate(e):
                         error = _e(schema().error_log)
+                        log.debug("removing '%s': schema validation failed (%s)" % (e.get('entityID'), error))
                         e.getparent().remove(e)
                         self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=e.get('entityID'), error=error)
 
             # Having removed the invalid entities this should now never happen...
             schema().assertValid(t)
         except DocumentInvalid, ex:
-            log.debug(_e(ex.error_log))
-            raise MetadataException("XML schema validation failed")
+            log.debug("schema validation failed on '%s': %s" % (base_url, _e(ex.error_log)))
+            raise MetadataException("schema validation failed")
         except Exception, ex:
-            log.debug(_e(schema().error_log))
+            #log.debug(_e(schema().error_log))
             log.error(ex)
             if fail_on_error:
                 raise ex

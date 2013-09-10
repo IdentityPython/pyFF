@@ -178,12 +178,13 @@ def safe_write(fn, data):
     """
     tmpn = None
     try:
+        fn = os.path.expanduser(fn)
         dirname, basename = os.path.split(fn)
         with tempfile.NamedTemporaryFile('w', delete=False, prefix=".%s" % basename, dir=dirname) as tmp:
             tmp.write(data)
             tmpn = tmp.name
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
-            os.rename(tmpn, os.path.expanduser(fn))
+            os.rename(tmpn, fn)
             return True
     except Exception, ex:
         log.error(ex)
@@ -230,7 +231,7 @@ class URLFetch(threading.Thread):
 
     def time(self):
         if self.isAlive():
-            raise ValueError("I'm not done yet")
+            raise ValueError("caller attempted to obtain execution time while fetcher still active")
         return self.end_time - self.start_time
 
     def run(self):
@@ -242,17 +243,17 @@ class URLFetch(threading.Thread):
 
         self.start_time = clock()
         try:
-            cache = None
-            if self.enable_cache:
-                log.debug("fetching %s using cache" % self.url)
-                cache = ".cache"
-            else:
-                log.debug("fetching %s without using cache" % self.url)
+            cache = httplib2.FileCache(".cache")
+            if not self.enable_cache:
+                log.debug("removing '%s' from cache" % self.url)
+                cache.delete(self.url)
+
+            log.debug("fetching '%s'" % self.url)
 
             if self.url.startswith('file://'):
                 path = self.url[7:]
                 if not os.path.exists(path):
-                    raise IOError("File not found: %s" % path)
+                    raise IOError("file not found: %s" % path)
 
                 with open(path, 'r') as fd:
                     self.result = fd.read()
@@ -260,21 +261,21 @@ class URLFetch(threading.Thread):
                     self.date = datetime.now()
                     self.last_modified = datetime.fromtimestamp(os.stat(path).st_mtime)
             else:
-                h = httplib2.Http(cache=cache, timeout=20,
-                                  disable_ssl_certificate_validation=True) # yes this is correct!
+                h = httplib2.Http(cache=cache, timeout=60,
+                                  disable_ssl_certificate_validation=True)  # trust is done using signatures over here
                 resp, content = h.request(self.url)
                 self.resp = resp
                 self.last_modified = _parse_date(resp.get('last-modified', resp.get('date', None)))
                 self.date = _parse_date(resp['date'])
                 if resp.status != 200:
-                    log.error("got %d: %s from %s" % (resp.status, resp.reason, self.url))
                     raise IOError(resp.reason)
                 self.result = content
                 self.cached = resp.fromcache
 
-            log.debug("got %d bytes from %s" % (len(self.result), self.url))
+            log.debug("got %d bytes from '%s'" % (len(self.result), self.url))
         except Exception, ex:
-            traceback.print_exc()
+            #traceback.print_exc()
+            #log.warn("unable to fetch '%s': %s" % (self.url, ex))
             self.ex = ex
             self.result = None
         finally:
