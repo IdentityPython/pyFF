@@ -200,7 +200,6 @@ this simple pipeline.
         - break
     - when request:
         - select
-        - stats
         - pipe:
             - when accept application/xml:
                  - xslt:
