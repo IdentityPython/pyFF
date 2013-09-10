@@ -144,6 +144,9 @@
                         source: function(query,process) {
                             $.ajax(seldiv.attr('data-target'),
                                 {
+                                    timeout: 30000,
+                                    tryCount: 0,
+                                    retryLimit: 3,
                                     data: {
                                             query: query.toLowerCase(),
                                             entity_filter: '{http://pyff-project.org/role}idp'
@@ -151,13 +154,25 @@
                                 }
                             ).done(
                                 function(data) {
-                                    var resultList = data.map(function (item) {
-                                        var aItem = { id: item['id'], label: item['label'], value: item['value'] };
-                                        return JSON.stringify(aItem);
-                                    });
-                                    process(resultList);
+                                    if (data) {
+                                        var resultList = data.map(function (item) {
+                                            var aItem = { id: item['id'], label: item['label'], value: item['value'] };
+                                            return JSON.stringify(aItem);
+                                        });
+                                        process(resultList);
+                                    } else {
+
+                                    }
                                 }
-                            )
+                            ).error(function(xhr, textStatus, errorThrown) {
+                                this.tryCount++;
+                                if (this.tryCount <= this.retryLimit) {
+                                    $.ajax(this);
+                                    return;
+                                }
+                                window.location.reload(); //give up and reload the page
+                                return;
+                            });
                         },
                         matcher: function(item) {
                             var o = JSON.parse(item);
