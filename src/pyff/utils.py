@@ -49,6 +49,7 @@ This includes certain XSLT and XSD files.
 :param pfx: An optional prefix to use in searching for name
 
     """
+    name = os.path.expanduser(name)
     if os.path.exists(name):
         with open(name) as fd:
             return fd.read()
@@ -182,7 +183,7 @@ def safe_write(fn, data):
             tmp.write(data)
             tmpn = tmp.name
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
-            os.rename(tmpn, fn)
+            os.rename(tmpn, os.path.expanduser(fn))
             return True
     except Exception, ex:
         log.error(ex)
