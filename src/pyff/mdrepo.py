@@ -279,7 +279,7 @@ The dict in the list contains three items:
             a.append(velt)
             #log.debug(etree.tostring(a))
 
-    def fetch_metadata(self, resources, qsize=5, timeout=120, stats=None, xrd=None):
+    def fetch_metadata(self, resources, qsize=5, timeout=120, stats=None, xrd=None, validate=False):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id)
@@ -304,9 +304,9 @@ and verified.
 
         def producer(q, resources, cache=self.metadata_cache_enabled):
             print resources
-            for url, verify, id, tries in resources:
+            for url, verify, id, tries, post in resources:
                 log.debug("starting fetcher for '%s'" % url)
-                thread = URLFetch(url, verify, id, enable_cache=cache, tries=tries)
+                thread = URLFetch(url, verify, id, enable_cache=cache, tries=tries, post=post)
                 thread.start()
                 q.put(thread, True)
 
@@ -348,7 +348,11 @@ and verified.
                     if thread.resp is not None:
                         info['Status'] = thread.resp.status
 
-                    t = self.parse_metadata(StringIO(xml), key=thread.verify, base_url=thread.url)
+                    t = self.parse_metadata(StringIO(xml),
+                                            key=thread.verify,
+                                            base_url=thread.url,
+                                            validate=validate,
+                                            post=thread.post)
                     if t is None:
                         self.fire(type=EVENT_IMPORT_FAIL, url=thread.url)
                         raise MetadataException("no valid metadata found at '%s'" % thread.url)
@@ -366,7 +370,7 @@ and verified.
                                 if len(fingerprints) > 0:
                                     fp = fingerprints[0]
                                 log.debug("fingerprint: %s" % fp)
-                                next_jobs.append((url, fp, url, 0))
+                                next_jobs.append((url, fp, url, 0, thread.post))
 
                     elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
                         cacheDuration = self.default_cache_duration
@@ -408,7 +412,7 @@ and verified.
                     if info is not None:
                         stats[thread.url] = info
 
-        resources = [(url, verify, rid, 0) for url, verify, rid in resources]
+        resources = [(url, verify, rid, 0, post) for url, verify, rid, post in resources]
         resolved = set()
         cache = True
         while len(resources) > 0:
@@ -432,27 +436,43 @@ and verified.
             with open(xrd, "w") as fd:
                 fd.write(template("trust.xrd").render(links=resolved))
 
-    def parse_metadata(self, fn, key=None, base_url=None, fail_on_error=False, filter_invalid=True):
+    def parse_metadata(self,
+                       fn,
+                       key=None,
+                       base_url=None,
+                       fail_on_error=False,
+                       filter_invalid=True,
+                       validate=True,
+                       post=None):
         """Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
         is stored in the MDRepository instance.
 
 :param fn: a file-like object containing SAML metadata
 :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
 :param base_url: use this base url to resolve relative URLs for XInclude processing
+:param fail_on_error: (default: False)
+:param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
+:param validate: (default: True) set to False to turn off all XML schema validation
+:param post: A callable that will be called to modify the parse-tree before any validation (but after xinclud processing)
         """
         try:
             t = etree.parse(fn, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
             t.xinclude()
-            if filter_invalid:
-                for e in t.findall('{%s}EntityDescriptor' % NS['md']):
-                    if not schema().validate(e):
-                        error = _e(schema().error_log, m=base_url)
-                        log.debug("removing '%s': schema validation failed (%s)" % (e.get('entityID'), error))
-                        e.getparent().remove(e)
-                        self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=e.get('entityID'), error=error)
-            else:
-            # Having removed the invalid entities this should now never happen...
-                schema().assertValid(t)
+
+            if post is not None:
+                t = post(t)
+
+            if validate:
+                if filter_invalid:
+                    for e in t.findall('{%s}EntityDescriptor' % NS['md']):
+                        if not schema().validate(e):
+                            error = _e(schema().error_log, m=base_url)
+                            log.debug("removing '%s': schema validation failed (%s)" % (e.get('entityID'), error))
+                            e.getparent().remove(e)
+                            self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=e.get('entityID'), error=error)
+                else:
+                    # Having removed the invalid entities this should now never happen...
+                    schema().assertValid(t)
         except DocumentInvalid, ex:
             traceback.print_exc()
             log.debug("schema validation failed on '%s': %s" % (base_url, _e(ex.error_log, m=base_url)))
@@ -469,7 +489,7 @@ and verified.
                 refs = xmlsec.verified(t, key)
                 if len(refs) != 1:
                     raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
-                t = refs[0] # prevent wrapping attacks
+                t = refs[0]  # prevent wrapping attacks
             except Exception, ex:
                 tb = traceback.format_exc()
                 print tb
@@ -529,7 +549,7 @@ Returns the list of contained EntityDescriptor elements
         else:
             return t.findall(".//{%s}EntityDescriptor" % NS['md'])
 
-    def load_dir(self, directory, ext=".xml", url=None):
+    def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None):
         """
 :param directory: A directory to walk.
 :param ext: Include files with this extension (default .xml)
@@ -551,7 +571,7 @@ starting with '.' are excluded.
                     if nm.endswith(ext):
                         fn = os.path.join(top, nm)
                         try:
-                            t = self.parse_metadata(fn, fail_on_error=True)
+                            t = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
                             entities.extend(self.entities(t))  # local metadata is assumed to be ok
                         except Exception, ex:
                             log.error(ex)

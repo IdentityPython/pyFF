@@ -335,56 +335,88 @@ def local(req, *opts):
 
 @deprecated
 def _fetch(req, *opts):
-    return load(req,*opts)
+    return load(req, *opts)
 
 
 def load(req, *opts):
     """
 General-purpose resource fetcher.
 
+    :param opts:
 :param req: The request
-:param opts: Options: [qsize <5>] [timeout <30>] [xrd <output xrd file>]
+:param opts: Options: [qsize <5>] [timeout <30>] [validate <True*|False>] [xrd <output xrd file>]
 :return: None
 
 Supports both remote and local resources. Fetching remote resources is done in parallell using threads.
     """
-    remote = []
-    for x in req.args:
-        x = x.strip()
-        log.debug("load %s" % x)
-        m = re.match(FILESPEC_REGEX, x)
-        rid = None
-        if m:
-            x = m.group(1)
-            rid = m.group(2)
-        r = x.split()
-        assert len(r) in [1, 2], PipeException("Usage: load: resource [as url] [verification]")
-        verify = None
-        url = r[0]
-        if len(r) == 2:
-            verify = r[1]
-
-        if "://" in url:
-            log.debug("remote %s %s %s" % (url, verify, rid))
-            remote.append((url, verify, rid))
-        elif os.path.exists(url):
-            if os.path.isdir(url):
-                log.debug("local directory %s %s %s" % (url, verify, rid))
-                req.md.load_dir(url, url=rid)
-            elif os.path.isfile(url):
-                log.debug("local file %s %s %s" % (url, verify, rid))
-                remote.append(("file://%s" % url, verify, rid))
-            else:
-                log.error("Unknown file type for load: %s" % r[0])
-        else:
-            log.error("Don't know how to load '%s' as %s verified by %s" % (url, rid, verify))
-
     opts = dict(zip(opts[::2], opts[1::2]))
     opts.setdefault('timeout', 30)
     opts.setdefault('qsize', 5)
     opts.setdefault('xrd', None)
+    opts.setdefault('validate', True)
     stats = dict()
     opts.setdefault('stats', stats)
+
+    class PipelineCallback():
+        """
+A delayed pipeline callback used as a post for parse_metadata
+        """
+        def __init__(self, entry_point, req, stats):
+            self.entry_point = entry_point
+            self.plumbing = Plumbing(req.plumbing, "%s-via-%s" % (req.plumbing.id, entry_point))
+            self.req = req
+            self.stats = stats
+
+        def __call__(self, *args, **kwargs):
+            t = args[0]
+            if not t:
+                raise ValueError("PipelineCallback must be called with a parse-tree argument")
+            return self.plumbing.process(self.req.md, state={self.entry_point: True, 'stats': self.stats}, t=t)
+
+    remote = []
+    for x in req.args:
+        x = x.strip()
+        log.debug("load parsing '%s'" % x)
+        r = x.split()
+
+        assert len(r) in range(1, 7), PipeException("Usage: load: resource [as url] [[verify] verification] [via pipeline]")
+
+        url = r.pop(0)
+        params = dict()
+
+        while len(r) > 0:
+            elt = r.pop(0)
+            if elt in ("as", "verify", "via"):
+                if len(r) > 0:
+                    params[elt] = r.pop(0)
+                else:
+                    raise PipeException("Usage: load: resource [as url] [[verify] verification] [via pipeline]")
+            else:
+                params['verify'] = elt
+
+        for elt in ("as", "verify", "via"):
+            params.setdefault(elt, None)
+
+        post = None
+        if params['via'] is not None:
+            post = PipelineCallback(params['via'], req, stats)
+        print post
+        if "://" in url:
+            log.debug("load %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
+            remote.append((url, params['verify'], params['as'], post))
+        elif os.path.exists(url):
+            if os.path.isdir(url):
+                log.debug("directory %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
+                req.md.load_dir(url, url=params['as'], validate=opts['validate'], post=post)
+            elif os.path.isfile(url):
+                log.debug("file %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
+                remote.append(("file://%s" % url, params['verify'], params['as'], post))
+            else:
+                log.error("Unknown file type for load: '%s'" % url)
+        else:
+            log.error("Don't know how to load '%s' as %s verify %s via %s" %
+                      (url, params['as'], params['verify'], params['via']))
+    print remote
     req.md.fetch_metadata(remote, **opts)
     req.state['stats']['Metadata URLs'] = stats
 
@@ -689,7 +721,7 @@ def validate(req, *opts):
 Validate the working document
 
 :param req: The request
-:param opts: Options - the template name
+:param opts: Not used
 :return: The unmodified tree
 
 Generate an exception unless the working tree validates. Validation is done automatically during publication and

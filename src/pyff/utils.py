@@ -214,7 +214,7 @@ def template(name):
 
 
 class URLFetch(threading.Thread):
-    def __init__(self, url, verify, id=None, enable_cache=False, tries=0):
+    def __init__(self, url, verify, id=None, enable_cache=False, tries=0, post=None):
         self.url = url.strip()
         self.verify = verify
         self.id = id
@@ -230,6 +230,7 @@ class URLFetch(threading.Thread):
         self.start_time = 0
         self.end_time = 0
         self.tries = tries
+        self.post = post
 
         if self.id is None:
             self.id = self.url
