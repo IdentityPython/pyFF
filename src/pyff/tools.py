@@ -7,8 +7,12 @@ from cherrypy.lib.static import _attempt
 __author__ = 'leifj'
 
 
+def request_vhost(request):
+    return request.headers.get('X-Forwarded-Host', request.headers.get('Host', request.base))
+
+
 def _expandvhost(dir, request):
-    vhost = request.headers.get('X-Forwarded-Host', request.headers.get('Host', None))
+    vhost = request_vhost(request)
     if vhost is not None:
         return dir.replace("%VHOST%", vhost)
     else:

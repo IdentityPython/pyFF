@@ -61,7 +61,7 @@ from pyff.constants import ATTRS, EVENT_REPOSITORY_LIVE
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
-from pyff.tools import _staticdirs
+from pyff.tools import _staticdirs, request_vhost
 from pyff.utils import resource_string, template, xslt_transform, dumptree, duration2timedelta, debug_observer
 from pyff.logs import log, SysLogLibHandler
 import logging
@@ -697,6 +697,7 @@ def main():
 
     def error_page(code, **kwargs):
         kwargs['http'] = cherrypy.request
+        kwargs.setdefault('title', "pyFF @ %s" % request_vhost(cherrypy.request))
         return template("%d.html" % code).render(**kwargs)
 
     static_dirs = []
