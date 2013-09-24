@@ -403,7 +403,7 @@ and verified.
                     if info is not None:
                         info['Exception'] = ex
                     if thread.tries < self.retry_limit:
-                        next_jobs.append((thread.url, thread.verify, thread.id, thread.tries + 1))
+                        next_jobs.append((thread.url, thread.verify, thread.id, thread.tries + 1, thread.post))
                     else:
                         #traceback.print_exc(ex)
                         log.error("retry limit exceeded for %s (last error was: %s)" % (thread.url, ex))
@@ -459,6 +459,19 @@ and verified.
             t = etree.parse(fn, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
             t.xinclude()
 
+            if key is not None:
+                try:
+                    log.debug("verifying signature using %s" % key)
+                    refs = xmlsec.verified(t, key)
+                    if len(refs) != 1:
+                        raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+                    t = refs[0]  # prevent wrapping attacks
+                except Exception, ex:
+                    tb = traceback.format_exc()
+                    print tb
+                    log.error(ex)
+                    return None
+
             if post is not None:
                 t = post(t)
 
@@ -483,18 +496,6 @@ and verified.
             if fail_on_error:
                 raise ex
             return None
-        if key is not None:
-            try:
-                log.debug("verifying signature using %s" % key)
-                refs = xmlsec.verified(t, key)
-                if len(refs) != 1:
-                    raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
-                t = refs[0]  # prevent wrapping attacks
-            except Exception, ex:
-                tb = traceback.format_exc()
-                print tb
-                log.error(ex)
-                return None
 
         return t
 
@@ -604,7 +605,7 @@ Find a (set of) EntityDescriptor element(s) based on the specified 'member' expr
                 lst.extend(self._lookup(m, xp))
             return lst
         elif hasattr(member, 'xpath'):
-            log.debug("xpath filter %s <- %s" % (xp, member))
+            #log.debug("xpath filter %s <- %s" % (xp, member))
             return member.xpath(xp, namespaces=NS)
         elif type(member) is str or type(member) is unicode:
             log.debug("string lookup %s" % member)
@@ -842,7 +843,7 @@ replace old_e in t.
                 #log.debug("removed old entity from index")
                 strategy(old_e, e)
                 new_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
-                if new_e:
+                if new_e is not None:
                     self.index.add(new_e)  # we don't know which strategy was employed
             except Exception, ex:
                 traceback.print_exc()

@@ -1,9 +1,11 @@
 - when normalize:
     - xslt:
-       stylesheet: tidy.xml
+       stylesheet: tidy.xsl
+    - break
 - when edugain:
     - xslt:
-       stylesheet: tidy.xml
+       stylesheet: tidy.xsl
+    - break
 - when update:
     - load:
        - examples/links.xrd via normalize

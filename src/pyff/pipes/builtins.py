@@ -1,6 +1,7 @@
 """Package that contains the basic set of pipes - functions that can be used to put together a processing pipeling
 for pyFF.
 """
+import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
 from pyff.decorators import deprecated
@@ -363,15 +364,19 @@ A delayed pipeline callback used as a post for parse_metadata
         """
         def __init__(self, entry_point, req, stats):
             self.entry_point = entry_point
-            self.plumbing = Plumbing(req.plumbing, "%s-via-%s" % (req.plumbing.id, entry_point))
+            self.plumbing = Plumbing(req.plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
             self.req = req
             self.stats = stats
 
         def __call__(self, *args, **kwargs):
             t = args[0]
-            if not t:
+            if t is None:
                 raise ValueError("PipelineCallback must be called with a parse-tree argument")
-            return self.plumbing.process(self.req.md, state={self.entry_point: True, 'stats': self.stats}, t=t)
+            try:
+                return self.plumbing.process(self.req.md, state={self.entry_point: True, 'stats': self.stats}, t=t)
+            except Exception, ex:
+                traceback.print_exc(ex)
+                raise ex
 
     remote = []
     for x in req.args:
