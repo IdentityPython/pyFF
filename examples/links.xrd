@@ -31,12 +31,12 @@
           </ds:KeyInfo>
         </Link>
     </XRD>
-    <XRD>
+    <!-- XRD>
         <Subject>InCommon</Subject>
         <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://wayf.incommonfederation.org/InCommon/InCommon-metadata.xml">
             <Title>InCommon Metadata</Title>
         </Link>
-    </XRD>
+    </XRD -->
     <XRD>
         <Subject>Skolfederation</Subject>
         <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.skolfederation.se/md/skolfederation-1.0.xml">

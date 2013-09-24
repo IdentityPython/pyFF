@@ -8,6 +8,8 @@
     - load:
        - examples/links.xrd via normalize
        - http://mds.edugain.org via edugain
+       - http://spaces.internet2.edu/Shibboleth.sso/Metadata 
+       - http://discovery.shibboleth.net/shibboleth.net-metadata.xml 
     - select
     - fork and merge:
        - select: "!md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
