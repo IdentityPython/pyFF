@@ -28,10 +28,6 @@
         <xsl:apply-templates select=".//md:SPSSODescriptor[1]"/>
         <xsl:text>"</xsl:text>
 
-        <xsl:text>,"icon": "</xsl:text>
-        <xsl:apply-templates select=".//mdui:Logo[1]/text()"/>
-        <xsl:text>"</xsl:text>
-
         <xsl:text>,"title": "</xsl:text>
         <xsl:choose>
             <xsl:when test=".//mdui:DisplayName">
@@ -40,16 +36,16 @@
                     <xsl:with-param name="path" select=".//mdui:DisplayName"/>
                 </xsl:call-template>
             </xsl:when>
-            <xsl:when test=".//md:OrganizationDisplayName">
-                <xsl:call-template name="getString">
-                    <xsl:with-param name="preflang">en</xsl:with-param>
-                    <xsl:with-param name="path" select=".//md:OrganizationDisplayName"/>
-                </xsl:call-template>
-            </xsl:when>
             <xsl:when test=".//md:ServiceName">
                 <xsl:call-template name="getString">
                     <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//md:ServiceName"/>
+                </xsl:call-template>
+            </xsl:when>
+            <xsl:when test=".//md:OrganizationDisplayName">
+                <xsl:call-template name="getString">
+                    <xsl:with-param name="preflang">en</xsl:with-param>
+                    <xsl:with-param name="path" select=".//md:OrganizationDisplayName"/>
                 </xsl:call-template>
             </xsl:when>
             <xsl:when test=".//mdui:DomainHint">
@@ -60,12 +56,33 @@
             </xsl:otherwise>
         </xsl:choose>
         <xsl:text>"</xsl:text>
+
+        <xsl:choose>
+            <xsl:when test=".//mdui:Logo">
+                <xsl:text>,"icon": "</xsl:text>
+                <xsl:call-template name="getString">
+                    <xsl:with-param name="preflang">en</xsl:with-param>
+                    <xsl:with-param name="path" select=".//mdui:Logo/text()"/>
+                </xsl:call-template>
+                <xsl:text>"</xsl:text>
+            </xsl:when>
+        </xsl:choose>
         <xsl:choose>
             <xsl:when test=".//mdui:Description">
                 <xsl:text>,"descr": "</xsl:text>
                 <xsl:call-template name="getString">
                     <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//mdui:Description"/>
+                </xsl:call-template>
+                <xsl:text>"</xsl:text>
+            </xsl:when>
+        </xsl:choose>
+        <xsl:choose>
+            <xsl:when test=".//mdui:PrivacyStatementURL">
+                <xsl:text>,"psu": "</xsl:text>
+                <xsl:call-template name="getString">
+                    <xsl:with-param name="preflang">en</xsl:with-param>
+                    <xsl:with-param name="path" select=".//mdui:PrivacyStatementURL"/>
                 </xsl:call-template>
                 <xsl:text>"</xsl:text>
             </xsl:when>
@@ -77,7 +94,8 @@
         <xsl:text>,"auth": "saml"</xsl:text>
         <xsl:text>}</xsl:text>
         <xsl:if test="./following-sibling::*">
-            <xsl:text>,</xsl:text>
+            <xsl:text>,
+</xsl:text>
         </xsl:if>
     </xsl:template>
 
@@ -100,6 +118,18 @@
         <xsl:text>}</xsl:text>
     </xsl:template>
 
+    <xsl:template match="node()">
+        <xsl:copy>
+            <xsl:apply-templates select="@* | node()"/>
+        </xsl:copy>
+    </xsl:template>
+
+    <xsl:template match="@*">
+        <xsl:attribute name="{name()}">
+            <xsl:value-of select="normalize-space()"/>
+        </xsl:attribute>
+    </xsl:template>
+
     <xsl:template match="*"/>
 
     <!-- utilities -->
@@ -107,13 +137,14 @@
     <xsl:template name="getString">
         <xsl:param name="path"/>
         <xsl:param name="preflang"/>
+        <xsl:variable name="danger"><xsl:text>"'\</xsl:text></xsl:variable>
         <xsl:variable name="str" select="$path"/>
         <xsl:choose>
             <xsl:when test="$str[lang($preflang)]">
-                <xsl:value-of select="$str[lang($preflang)]"/>
+                <xsl:value-of select="translate(normalize-space($str[lang($preflang)]),$danger,'')"/>
             </xsl:when>
             <xsl:when test="$str">
-                <xsl:value-of select="$str[1]"/>
+                <xsl:value-of select="translate(normalize-space($str[1]),$danger,'')"/>
             </xsl:when>
             <xsl:otherwise>
                 <xsl:message terminate="no">

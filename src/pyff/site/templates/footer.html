@@ -1,8 +1,30 @@
-            </div>
-            <!-- div class="span2">
-                <img class="pull-right" src="/static/icons/pyff.png"/>
-            </div -->
-        </div>
+            </div> <!-- col -->
+        </div> <!-- row -->
     </div>
+    <script type="text/javascript">
+        $(function() {
+            prettyPrint();
+            $('.typeahead').typeahead({'remote': '/search/?query=%QUERY','template': '{{label}}','engine': Hogan});
+            $('.typeahead').bind('typeahead:selected',function(event,entity) {
+                if (entity) {
+                    document.location.href = "/metadata/"+entity.id+".html"
+                }
+            });
+            $('.tt-hint').addClass('form-control');
+            $('table').wrap($('<div>').addClass('table-wrapper')).addClass("table table-striped table-condensed");
+            $('input:submit').addClass("btn btn-mini");
+
+
+            if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
+              var msViewportStyle = document.createElement("style");
+              msViewportStyle.appendChild(
+                document.createTextNode(
+                  "@-ms-viewport{width:auto!important}"
+                )
+              );
+              document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
+            }
+        });
+    </script>
 </body>
 </html>

@@ -83,159 +83,55 @@
         });
     }
 
+    function cmp_title(a,b) {
+        if (a.title == b.title){
+            return 0;
+        }
+        return a.title > b.title ? 1 : -1;
+    }
+
     var methods;
-    var seldiv;
-
-    function sel2_focus() {
-        seldiv.select2('focus');
-    }
-
-    function ta_focus() {
-        seldiv.focus();
-    }
-
-    function use_select2() {
-        return false;
-        // return ! DetectTierIphone() && ! DetectTierTablet();
-    }
-
     methods = {
         init: function (options) {
-            this.each(function (opts) {
-                seldiv = $(this);
-                if (use_select2()) {
-                    seldiv.change(function (ev) {
-                        select_idp(ev['val'])
-                    });
-                    seldiv.select2({
-                        placeholder: seldiv.attr('rel'),
-                        ajax: {
-                            url: seldiv.attr('data-target'),
-                            data: function (term, page) {
-                                return {
-                                    query: term,
-                                    page_limit: 10,
-                                    page: page,
-                                    paged: true,
-                                    entity_filter: '{http://pyff-project.org/role}idp'
-                                };
-                            },
-                            results: function (data, page) {
-                                var more = (page * 10) < data['total'];
-                                return {results: data['entities'], more: more}
-                            }
-                        },
-                        formatResult: function(idp) {
-                            //console.log(idp);
-                            return idp['label']; //['label'];
-                        },
-                        formatSelection: function(idp) {
-                            //console.log(idp);
-                            return idp['value']; //['value'];
-                        },
-                        dropdownCssClass: 'bigdrop',
-                        width: 'resolve'
-                    });
-                    methods['focus'] = sel2_focus;
-                } else  {
-                    seldiv.parent().prepend($('<em>').append(seldiv.attr('rel')));
-                    seldiv.typeahead({
-                        minLength: 2,
-                        source: function(query,process) {
-                            $.ajax(seldiv.attr('data-target'),
-                                {
-                                    timeout: 30000,
-                                    tryCount: 0,
-                                    retryLimit: 3,
-                                    data: {
-                                            query: query.toLowerCase(),
-                                            entity_filter: '{http://pyff-project.org/role}idp'
-                                    }
-                                }
-                            ).done(
-                                function(data) {
-                                    if (data) {
-                                        var resultList = data.map(function (item) {
-                                            var aItem = { id: item['id'], label: item['label'], value: item['value'] };
-                                            return JSON.stringify(aItem);
-                                        });
-                                        process(resultList);
-                                    } else {
-
-                                    }
-                                }
-                            ).error(function(xhr, textStatus, errorThrown) {
-                                this.tryCount++;
-                                if (this.tryCount <= this.retryLimit) {
-                                    $.ajax(this);
-                                    return;
-                                }
-                                window.location.reload(); //give up and reload the page
-                                return;
-                            });
-                        },
-                        matcher: function(item) {
-                            var o = JSON.parse(item);
-                            return ~o['label'].toLowerCase().indexOf(this.query.toLowerCase())
-                        },
-                        sorter: function(items) {
-                            var beginswith = [], caseSensitive = [], caseInsensitive = [], item;
-                            var aItem
-                            while (aItem = items.shift()) {
-                                item = JSON.parse(aItem);
-                                if (!item['label'].toLowerCase().indexOf(this.query.toLowerCase()))
-                                    beginswith.push(JSON.stringify(item));
-                                else if (~item['label'].indexOf(this.query))
-                                    caseSensitive.push(JSON.stringify(item));
-                                else
-                                    caseInsensitive.push(JSON.stringify(item));
-                            }
-                            return beginswith.concat(caseSensitive, caseInsensitive)
-                        },
-                        highlighter: function (item) {
-                            var o = JSON.parse(item);
-                            var query = this.query.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, '\\$&');
-                            return o['label'].replace(new RegExp('(' + query + ')', 'ig'), function ($1, match) {
-                                return '<strong>' + match + '</strong>'
-                            });
-                        },
-                        updater: function (item) {
-                            var o = JSON.parse(item);
-                            select_idp(o['id']);
-                            seldiv.attr('value',o['value']);
-                            return o['label'];
-                        }
-                    });
-                    methods['focus'] = ta_focus;
-                }
-
+            this.filter('input').each(function (opts) {
+                var seldiv = $(this);
+                var uri = seldiv.attr('data-target');
+                seldiv.typeahead({
+                    remote: uri+"?query=%QUERY&entity_filter={http://pyff-project.org/role}idp",
+                    engine: Hogan,
+                    template: '{{label}}'
+                });
+                seldiv.bind('typeahead:selected',function(event,entity) {
+                    if (entity) {
+                       select_idp(entity.id);
+                    }
+                });
                 $.each(options,function(key,val) {
                     seldiv.dsSelect(key,val);
                 });
-                seldiv.dsSelect('resize');
-                seldiv.dsSelect('focus');
+            });
+            this.filter('select').each(function (opts) {
+                var seldiv = $(this);
+                seldiv.change(function(opt) {
+                    select_idp(opt.value); // TODO - fix id in xsltjson xslt
+                });
+                $.each(options,function(key,val) {
+                    seldiv.dsSelect(key,val);
+                });
             });
             $("button.unselect").bind('click.ds', methods.unselect);
             $("a.select").bind('click.ds',methods.select);
         },
-        resize: function() {
-            var idps;
-            idps = $.jStorage.get('pyff.discovery.idps');
-            //console.log($(this));
-            if (!idps || idps.length == 0) {
-                seldiv.trigger('empty');
-            } else {
-                seldiv.trigger('nonempty');
-            }
-        },
-        focus: function () {
-            seldiv.focus();
-        },
-        empty: function (fn) {
-            $(this).bind('empty',fn);
-        },
-        nonempty: function (fn) {
-            $(this).bind('nonempty',fn);
+        refresh: function() {
+            this.filter('select').each(function() {
+                var seldiv = $(this);
+                seldiv.html($('<option>').attr('value','').append($('<em>').append(seldiv.attr('title'))))
+                $.getJSON('/role/idp.json',function (data) {
+                    $.each($(data).sort(cmp_title),function(pos,elt) {
+                        seldiv.append($('<option>').attr('value',elt.id).append(elt.title));
+                    })
+                });
+            });
         },
         unselect: function (e) {
             e.preventDefault();
@@ -246,8 +142,7 @@
             if (idx != -1) {
                 idps.splice(idx, 1);
                 $.jStorage.set('pyff.discovery.idps', idps);
-                $(this).parent().parent().remove();
-                $(this).dsSelect('resize');
+                $(this).parent().remove();
             }
         },
         select: function(e) {
@@ -258,29 +153,34 @@
 
     $("img.fallback-icon").error(function(e) {
         $(this).error(function(e) {});
-        $(this).attr('src','1x1t.png').removeClass("img-polaroid").hide();
+        $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
     });
 
     $.fn.dsQuickLinks = function() {
         this.each(function() {
             var $this = $(this);
-            $this.html($('<ul>').addClass("nav nav-tabs nav-stacked").append(function() {
-                var item;
+            $this.html($('<div>').addClass("list-group").append(function() {
                 var lst = $.jStorage.get('pyff.discovery.idps',[]);
                 for (var i = 0; i < lst.length; i++) {
                     var item = lst[i];
-                    var outer = $('<li>');
-                    var idp = $('<a>').addClass("select").attr('href',item['entityID']);
+                    var idp = $('<a>').addClass("select list-group-item").attr('href',item['entityID']);
                     var dismiss = $('<button>').attr('type',"button").addClass('close unselect').attr('rel',item['entityID']).append("&times;");
                     idp.append(dismiss);
 
-                    idp.append($('<h4>').addClass("idp-label").append(item['title']));
+                    idp.append($('<h4>').addClass("list-group-item-heading").append(item['title']));
+                    var inner = $('<p>').addClass("list-group-item-text");
+
                     if (item['icon']) {
-                        idp.append($('<img>').attr('src',item['icon']).addClass("fallback-icon img-polaroid idp-icon"));
+                        inner.append($('<img>').attr('src',item['icon']).addClass("fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"));
+                    }
+                    if (item['descr']) {
+                        inner.append($('<div>').addClass('pull-left idp-description hidden-xs').append(item['descr']))
                     }
 
-                    outer.append(idp);
-                    $(this).append(outer);
+                    inner.append($('<div></div>').addClass("clearfix"));
+                    idp.append(inner);
+
+                    $(this).append(idp);
                 }
             }));
         });
@@ -304,9 +204,9 @@
             success: function(data) {
                 for (var i = 0; i < data.length; i++) {
                     var entity = data[i];
-                    $(o).filter(".sp-icon").each(function() {
+                    $(o).filter("img.sp-icon").each(function() {
                         if (entity.icon) {
-                            $(this).append($('img').attr('src',entity.icon))
+                            $(this).attr('src',entity.icon).addClass("img-responsive img-thumbnail")
                         }
                     });
                     $(o).filter(".sp-name").each(function() {
@@ -315,11 +215,15 @@
                         }
                     });
                     $(o).filter(".sp-description").each(function() {
-                        if (!entity.descr) {
-                            entity.descr = "<em>No description available...</em>"
-                        }
                         if (entity.descr) {
-                            $(this).append(entity.descr).addClass("alert alert-info");
+                            $(this).append(entity.descr);
+                        }
+                    });
+                    $(o).filter("a .sp-privacy-statement-url").each(function() {
+                        if (entity.psu) {
+                            $(this).attr('href',entity.psu);
+                        } else {
+                            $(this).html('')
                         }
                     });
                 }

@@ -1,59 +1,89 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 ## -*- coding: utf-8 -*-
 <html>
 <head>
-    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
-    <link href="/static/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="/static/js/select2/select2.css" rel="stylesheet"/>
-    <link href="/static/css/flags.css" rel="stylesheet"/>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="/static/css/typeahead.js-bootstrap.css" rel="stylesheet"/>
     <link href="/static/css/pyff.css" rel="stylesheet"/>
+    <link href="/static/css/ds.css" rel="stylesheet"/>
     <link href="/static/css/style.css" rel="stylesheet"/>
-    <script type="text/javascript" src="/static/js/jquery.min.js"></script>
-    <script type="text/javascript" src="/static/js/jquery.browser.js"></script>
-    <script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script>
-    <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="/static/js/json2.js"></script>
-    <script type="text/javascript" src="/static/js/jstorage.js"></script>
-    <script type="text/javascript" src="/static/js/select2.min.js"></script>
-    <script type="text/javascript" src="/static/js/mdetect.js"></script>
 
     <title>Please login...</title>
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
-    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js" type="text/javascript"></script>
+      <script src="/static/js/html5shiv.js"></script>
+      <script src="/static/js/respond.min.js"></script>
     <![endif]-->
-    <script type="text/javascript" src="/static/js/pyff.js"></script>
+<body>
+    <a href="#content" class="sr-only">${_('Skip to content')}</a>
+    <div class="container">
+        <div class="header hidden-xs text-muted">
+                <div class="pull-left">
+                    <div>
+                        <small>select a login provider for signing in to ...</small>
+                        <h3><span class="sp sp-name"></span></h3>
+                    </div>
+                    <p class="sp sp-description"></p>
+                </div>
+                <div class="pull-right">
+                    <img class="sp sp-icon"></img>
+                </div>
+                <div class="clearfix"></div>
+        </div>
+        <div class="visible-xs jumbotron">
+            <div class="container">
+                <h1 class="sp sp-name">${_('Signon to')} </h1>
+                <img class="sp sp-icon"></img>
+            </div>
+        </div>
 
-    <script type="text/javascript">
+        <div id="idpchooser">
+            <div id="thesearch">
+                <div id="quickLinks"></div>
+                <input type="text"
+                       class="form-control idselect"
+                       data-target="${search}"
+                       placeholder="${_('Start typing to search for your home institution or login provider...')}"/>
+            </div>
+            <select title="${_('Select your home institution or login provider below')}"
+                    id="thelist"
+                    class="form-control idselect hidden">
+            </select>
+            <small class="pull-right">
+                <a href="#" id="to_list">... ${_('let me choose from a list instead')}</a>
+                <a href="#" class="hidden" id="to_search">... ${_('show me some suggestions intead')}</a>
+            </small>
+        </div>
+        <div class="alert alert-success message" id="remember-message">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <form class="form-inline" role="form">
+                    <label class="checkbox">
+                        <input id="remember" type="checkbox">
+                        ${_('Remember my selection')}
+                    </label>
+            </form>
+        </div>
+    </div>
 
+<script type="text/javascript" src="/static/js/jquery.min.js"></script>
+<script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/static/js/hogan.js"></script>
+<script type="text/javascript" src="/static/js/typeahead.js"></script>
+<script type="text/javascript" src="/static/js/jquery.browser.js"></script>
+<script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script>
+<script type="text/javascript" src="/static/js/json2.js"></script>
+<script type="text/javascript" src="/static/js/jstorage.js"></script>
+<script type="text/javascript" src="/static/js/mdetect.js"></script>
+<script type="text/javascript" src="/static/js/pyff.js"></script>
+<script type="text/javascript">
         $(function() {
             $('#quickLinks').dsQuickLinks();
             $('.sp').dsRelyingParty('${sp}');
-            $('#select').dsSelect({
-                empty: function() {
-                    $('a[href="#suggested"]').parent().hide();
-                    $('a[href="#search"]').tab('show');
-                    $('#select').dsSelect('focus');
-                },
-                nonempty: function() {
-                    $('a[href="#suggested"]').parent().show();
-                    $('a[href="#suggested"]').tab('show');
-                }
-            });
-            $('#switch-to-search').click(function (ev) {
-                ev.preventDefault();
-                $('#search').tab('show');
-                $('#select').dsSelect("focus");
-            });
-            $('a[href="#search"]').click(function (e) {
-                e.preventDefault();
-                $(this).tab('show');
-                $('#select').dsSelect("focus");
-            });
-            $('a[data-toggle="tab"]').click(function (e) {
-                e.preventDefault();
-                $(this).tab('show');
-            });
+            $('.idselect').dsSelect({});
+            jQuery.fn.sort = function() {
+                return this.pushStack( [].sort.apply( this, arguments ), []);
+            };
             $('.message > button.close').click(function(e) {
                 //console.log(e);
                 //console.log($(this));
@@ -71,73 +101,20 @@
                     $(this).hide();
                 }
             });
+            $('#to_list').click(function(){
+                $('#thelist').dsSelect('refresh');
+                $('#thelist').removeClass('hidden');
+                $('#thesearch').addClass('hidden');
+                $('#to_list').addClass('hidden');
+                $('#to_search').removeClass('hidden');
+            });
+            $('#to_search').click(function() {
+                $('#thesearch').removeClass('hidden');
+                $('#thelist').addClass('hidden');
+                $('#to_search').addClass('hidden');
+                $('#to_list').removeClass('hidden');
+            });
         });
-    </script>
-<body>
-
-<div id="wrap">
-    <div style="width: 100%" class="navbar hidden-phone navbar-static-top">
-        <div class="navbar-inner" style="padding-left: 20px;">
-            <a class="brand" href="#"><span class="sp sp-name"></span></a>
-        </div>
-    </div>
-    <div class="container">
-        <div class="span6">
-            <h2>${_('How do you want to sign in?')}</h2>
-            <div class="tabbable tabs-top">
-                <ul id="idptab" class="nav nav-tabs">
-                    <li><a href="#suggested" data-toggle="tab">${_('Suggested')}</a></li>
-                    <li><a href="#search" data-toggle="tab">${_('All Login Providers')}</a></li>
-                </ul>
-                <div class="tab-content">
-                    <div class="tab-pane" id="suggested">
-                        <div id="quickLinks"></div>
-                        <div class="clearfix"></div>
-                        <!-- a id="switch-to-search" href="#">Help me find my Identity Provider!</a -->
-                    </div>
-                    <div class="tab-pane" id="search" style="min-height: 100px;">
-                        <!-- div style="width: 99%;" class="visible-desktop" id="select" data-target="${search}"></div -->
-                        <input type="text" style="width: 95%;" id="select"
-                               data-target="${search}" data-provider="typeahead"
-                               rel="${_('Start typing to search for your home institution or login provider...')}"/>
-                    </div>
-                </div>
-            </div>
-            <div class="alert alert-info message" id="remember-message">
-                <button type="button" class="close" data-dismiss="alert">&times;</button>
-                <h4>${_('Remember choice')}</h4>
-                <form class="form-inline">
-                    <label class="checkbox"><input id="remember" type="checkbox"> ${_('Remember my choice and never show me this page again!')}</label>
-                </form>
-            </div>
-        </div>
-        <div class="span4 hidden-phone">
-            <h4 class="sp sp-name"></h4>
-            <div class="sp sp-icon"></div>
-            <div class="sp sp-description"></div>
-            <div class="alert message" id="about">
-                <button type="button" class="close" data-dismiss="alert">&times;</button>
-                <h4>${_('What is this?')}</h4>
-                <p>
-                    ${_('You are accessing a service that requires you to sign in. You need to choose an identity provider - typically your home organization.')}</p>
-                <p>
-                    ${_('We will do our best to remember your choice for the next time you visit this service!')}
-                </p>
-            </div>
-        </div>
-    </div>
-    <div id="push"></div>
-</div>
-<div id="footer" class="hidden-phone">
-    <div class="container" style="padding-top: 50px">
-        <div class="row-fluid">
-            <div class="span12">
-                <div class="fluid-row">
-
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+</script>
 </body>
 </html>
