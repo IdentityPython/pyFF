@@ -3,13 +3,9 @@ import re
 from urlparse import unquote
 import cherrypy
 from cherrypy.lib.static import _attempt
+from pyff.utils import request_vhost
 
 __author__ = 'leifj'
-
-
-def request_vhost(request):
-    return request.headers.get('X-Forwarded-Host', request.headers.get('Host', request.base))
-
 
 def _expandvhost(dir, request):
     vhost = request_vhost(request)

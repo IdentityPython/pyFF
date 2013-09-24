@@ -12,44 +12,35 @@
     <xsl:output method="html" omit-xml-declaration="yes" encoding="UTF-8"/>
     <xsl:template match="md:EntityDescriptor">
       <div>
-            <h1>
-                <xsl:call-template name="truncate">
-                    <xsl:with-param name="maxlen">40</xsl:with-param>
-                    <xsl:with-param name="str">
-                    <xsl:choose>
-                        <xsl:when test="//mdui:DisplayName">
-                            <xsl:call-template name="getString">
-                                <xsl:with-param name="path" select="//mdui:DisplayName"/>
-                            </xsl:call-template>
-                        </xsl:when>
-                        <xsl:when test="//md:ServiceName">
-                            <xsl:call-template name="getString">
-                                <xsl:with-param name="path" select="//md:ServiceName"/>
-                            </xsl:call-template>
-                        </xsl:when>
-                        <xsl:when test="//md:OrganizationDisplayName">
-                            <xsl:call-template name="getString">
-                                <xsl:with-param name="path" select="//md:OrganizationDisplayName"/>
-                            </xsl:call-template>
-                        </xsl:when>
-                        <xsl:otherwise>
-                            <xsl:value-of select="@entityID"/>
-                        </xsl:otherwise>
-                    </xsl:choose>
-
-                    <xsl:if test="//mdui:Logo">
-                        <html:div class="pull-right"><html:img>
-                            <xsl:attribute name="style">vertical-align: bottom; margin-right: 5px;</xsl:attribute>
-                            <xsl:attribute name="class">img-polaroid</xsl:attribute>
-                            <xsl:attribute name="src">
+            <div class="page-header">
+                <h1>
+                    <xsl:call-template name="truncate">
+                        <xsl:with-param name="maxlen">40</xsl:with-param>
+                        <xsl:with-param name="str">
+                        <xsl:choose>
+                            <xsl:when test="//mdui:DisplayName">
                                 <xsl:call-template name="getString">
-                                    <xsl:with-param name="path" select="//mdui:Logo"/>
+                                    <xsl:with-param name="path" select="//mdui:DisplayName"/>
                                 </xsl:call-template>
-                            </xsl:attribute>
-                        </html:img></html:div>
-                    </xsl:if></xsl:with-param>
-                </xsl:call-template>
-            </h1>
+                            </xsl:when>
+                            <xsl:when test="//md:ServiceName">
+                                <xsl:call-template name="getString">
+                                    <xsl:with-param name="path" select="//md:ServiceName"/>
+                                </xsl:call-template>
+                            </xsl:when>
+                            <xsl:when test="//md:OrganizationDisplayName">
+                                <xsl:call-template name="getString">
+                                    <xsl:with-param name="path" select="//md:OrganizationDisplayName"/>
+                                </xsl:call-template>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:value-of select="@entityID"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                        </xsl:with-param>
+                    </xsl:call-template>
+                </h1>
+            </div>
         <div>
             <ul id="menu" class="nav nav-tabs">
                 <li class="active"><a href="#summary" >Summary</a></li>
@@ -69,35 +60,63 @@
             </ul>
             <div class="tab-content">
                 <div class="tab-pane active" id="summary">
-                    <div class="well">
-                        <xsl:choose>
-                            <xsl:when test="//mdui:Description">
-                                <xsl:call-template name="getString">
-                                    <xsl:with-param name="path" select="//mdui:Description"/>
-                                </xsl:call-template>
-                            </xsl:when>
-                            <xsl:when test="//md:OrganizationDisplayName">
-                                <xsl:call-template name="getString">
-                                    <xsl:with-param name="path" select="//md:OrganizationDisplayName"/>
-                                </xsl:call-template>
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <xsl:text>No information provided</xsl:text>
-                            </xsl:otherwise>
-                        </xsl:choose>
-                        <xsl:if test="//md:OrganizationURL">
-                            <div><a>
-                                <xsl:attribute name="href">
+                    <p>
+                        <dl class="dl-horizontal">
+                            <dt>About</dt>
+                            <dd>
+                            <xsl:choose>
+                                <xsl:when test="//mdui:Description">
+                                    <xsl:call-template name="getString">
+                                        <xsl:with-param name="path" select="//mdui:Description"/>
+                                    </xsl:call-template>
+                                </xsl:when>
+                                <xsl:when test="//md:OrganizationDisplayName">
+                                    <xsl:call-template name="getString">
+                                        <xsl:with-param name="path" select="//md:OrganizationDisplayName"/>
+                                    </xsl:call-template>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <em>No description found...</em>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                            </dd>
+                            <dt>Fake Login</dt>
+                            <dd>
+                              <html:a>
+                                <xsl:attribute name="href">/role/idp.ds?entityID=<xsl:value-of select="@entityID"/>&amp;return=#</xsl:attribute>
+                                <xsl:value-of select="@entityID"/>
+                              </html:a>
+                            </dd>
+                            <xsl:if test="//md:OrganizationURL">
+                            <dt>URL</dt>
+                            <dd>
+                                <div><a>
+                                    <xsl:attribute name="href">
+                                        <xsl:call-template name="getString">
+                                            <xsl:with-param name="path" select="//md:OrganizationURL"/>
+                                        </xsl:call-template>
+                                    </xsl:attribute>
                                     <xsl:call-template name="getString">
                                         <xsl:with-param name="path" select="//md:OrganizationURL"/>
                                     </xsl:call-template>
-                                </xsl:attribute>
-                                <xsl:call-template name="getString">
-                                    <xsl:with-param name="path" select="//md:OrganizationURL"/>
-                                </xsl:call-template>
-                            </a></div>
-                        </xsl:if>
-                    </div>
+                                </a></div>
+                                </dd>
+                            </xsl:if>
+                            <xsl:if test="//mdui:Logo">
+                            <dt>Logo</dt>
+                            <dd>
+                                <html:img>
+                                    <xsl:attribute name="class">img-responsive img-thumbnail</xsl:attribute>
+                                    <xsl:attribute name="src">
+                                        <xsl:call-template name="getString">
+                                            <xsl:with-param name="path" select="//mdui:Logo"/>
+                                        </xsl:call-template>
+                                    </xsl:attribute>
+                                </html:img>
+                            </dd>
+                            </xsl:if>
+                      </dl>
+                    </p>
                 </div>
                 <xsl:if test="md:IDPSSODescriptor">
                     <xsl:apply-templates select=".//md:IDPSSODescriptor"/>
@@ -107,13 +126,14 @@
                 </xsl:if>
                 <xsl:if test="md:ContactPerson">
                     <div class="tab-pane" id="contacts">
-                        <xsl:apply-templates select=".//md:ContactPerson"/>
+                        <p><xsl:apply-templates select=".//md:ContactPerson"/></p>
                     </div>
                 </xsl:if>
                 <xsl:if test="//mdui:GeolocationHint">
                     <div class="tab-pane" id="location">
-                        <div class="well">
-                            <div id="map_canvas" style="width:100%;height:350px; overflow:hidden">Unable to display map</div>
+                        <p>
+                        <div>
+                            <div class="google-map-canvas" id="map_canvas">Unable to display map</div>
                         </div>
                         <script type="text/javascript">
                             <xsl:text>
@@ -127,19 +147,22 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
                                       'zoomControlOptions': {'style': google.maps.ZoomControlStyle.LARGE},
                                       'callback': function() {
    var self = this;
-   $('#locationtab').on('shown',function(ev) {
-      self.refresh();
+   $('#locationtab').on('shown.bs.tab',function(ev) {
+        self.refresh();
    });
 </xsl:text>
                             <xsl:apply-templates select="//mdui:GeolocationHint"/>
                             <xsl:text>}})});</xsl:text>
                         </script>
+                        </p>
                     </div>
                 </xsl:if>
                 <div class="tab-pane" id="fullxml">
+                  <p>
                     <pre class="pre-scrollable prettyprint linenums language-xml">
                         <code role="entity"></code>
                     </pre>
+                  </p>
                 </div>
             </div>
         </div>
@@ -170,19 +193,14 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
 
     <xsl:template match="md:SPSSODescriptor">
         <div class="tab-pane" id="sp">
-            <div class="well">
-                <h2>Properties</h2>
-                <dl>
+            <p>
+                <dl class="dl-horizontal">
                     <dt>EntityID</dt>
                     <dd><xsl:value-of select="../@entityID"/></dd>
-                    <dt>Protocols</dt>
-                    <dd>
-                        <xsl:call-template name="output-tokens">
-                            <xsl:with-param name="list">
-                                <xsl:value-of select="@protocolSupportEnumeration"/>
-                            </xsl:with-param>
-                        </xsl:call-template>
-                    </dd>
+                    <xsl:call-template name="dtlist">
+                        <xsl:with-param name="path" select="@protocolSupportEnumeration"/>
+                        <xsl:with-param name="term">Protocols</xsl:with-param>
+                    </xsl:call-template>
                     <xsl:apply-templates select="md:AttributeConsumingService"/>
                 </dl>
                 <xsl:if test="mdattr:EntityAttributes">
@@ -190,7 +208,7 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
                     <xsl:apply-templates select="..//mdattr:EntityAttributes"/>
                 </xsl:if>
                 <xsl:apply-templates select=".//md:Extensions"/>
-            </div>
+            </p>
         </div>
     </xsl:template>
 
@@ -223,9 +241,9 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
     </xsl:template>
 
     <xsl:template match="md:ContactPerson">
-        <html:div class="well">
-            <html:h4><xsl:value-of select="@contactType"></xsl:value-of></html:h4>
-            <html:address>
+        <dl class="dl-horizontal">
+            <dt><xsl:value-of select="@contactType"></xsl:value-of></dt>
+            <dd><html:address>
                 <xsl:if test="md:GivenName">
                     <xsl:value-of select="md:GivenName"/><xsl:text> </xsl:text>
                 </xsl:if>
@@ -236,8 +254,8 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
                     <html:br/>
                 </xsl:if>
                 <xsl:apply-templates select="md:Organization|md:EmailAddress"/>
-            </html:address>
-        </html:div>
+            </html:address></dd>
+        </dl>
     </xsl:template>
 
     <xsl:template match="md:Organization">
@@ -255,18 +273,14 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
 
     <xsl:template match="md:IDPSSODescriptor">
         <div class="tab-pane" id="idp">
-            <div class="well">
-                <dl>
+            <p>
+                <dl class="dl-horizontal">
                     <dt>EntityID</dt>
                     <dd><xsl:value-of select="../@entityID"/></dd>
-                    <dt>Protocols</dt>
-                    <dd>
-                        <xsl:call-template name="output-tokens">
-                            <xsl:with-param name="list">
-                                <xsl:value-of select="@protocolSupportEnumeration"/>
-                            </xsl:with-param>
-                        </xsl:call-template>
-                    </dd>
+                    <xsl:call-template name="dtlist">
+                        <xsl:with-param name="path" select="@protocolSupportEnumeration"/>
+                        <xsl:with-param name="term">Protocols</xsl:with-param>
+                    </xsl:call-template>
                     <xsl:call-template name="dtlist">
                         <xsl:with-param name="path" select=".//shibmd:Scope"/>
                         <xsl:with-param name="term">Shibboleth scope(s)</xsl:with-param>
@@ -277,7 +291,7 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
                     </xsl:call-template>
                 </dl>
                 <xsl:apply-templates select=".//md:Extensions"/>
-            </div>
+            </p>
         </div>
     </xsl:template>
 
@@ -348,10 +362,13 @@ $(function() { $("#map_canvas").gmap({'zoom': 16,
     <xsl:template name="dtlist">
         <xsl:param name="path"/>
         <xsl:param name="term"/>
-        <html:dt><xsl:value-of select="$term"/></html:dt>
-        <xsl:for-each select="$path">
-            <html:dd><xsl:apply-templates select="."/></html:dd>
-        </xsl:for-each>
+        <xsl:variable name="list" select="$path"/>
+        <xsl:if test="$list">
+            <html:dt><xsl:value-of select="$term"/></html:dt>
+            <xsl:for-each select="$list">
+                <html:dd><xsl:apply-templates select="."/></html:dd>
+            </xsl:for-each>
+        </xsl:if>
     </xsl:template>
 
     <xsl:template name="getString">

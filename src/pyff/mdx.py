@@ -61,8 +61,8 @@ from pyff.constants import ATTRS, EVENT_REPOSITORY_LIVE
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
-from pyff.tools import _staticdirs, request_vhost
-from pyff.utils import resource_string, template, xslt_transform, dumptree, duration2timedelta, debug_observer
+from pyff.tools import _staticdirs
+from pyff.utils import resource_string, xslt_transform, dumptree, duration2timedelta, debug_observer, render_template
 from pyff.logs import log, SysLogLibHandler
 import logging
 from pyff.stats import stats
@@ -77,6 +77,7 @@ site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 cherrypy.tools.staticdirs = HandlerTool(_staticdirs)
 
 import i18n
+
 _ = i18n.language.ugettext
 
 
@@ -144,6 +145,7 @@ class EncodingDispatcher(object):
     a workaround by base64-encoding the troubling stuff and sending the result through the normal displatch
     pipeline. At the other end base64-encoded data is unpacked.
     """
+
     def __init__(self, prefixes, enc, next_dispatcher=Dispatcher()):
         self.prefixes = prefixes
         self.enc = enc
@@ -166,6 +168,7 @@ class MDStats(StatsPage):
     """Renders the standard stats page with pyFF style decoration. We use the lxml html parser to locate the
     body and replace it with a '<div>'. The result is passed as the content using the 'basic' template.
     """
+
     @cherrypy.expose
     def index(self):
         h = "".join(super(MDStats, self).index())
@@ -174,13 +177,14 @@ class MDStats(StatsPage):
         body = tree.getroot().find("body")
         body.tag = 'div'
         hstr = etree.tostring(body, pretty_print=True, method="html")
-        return template("basic.html").render(content=hstr, http=cherrypy.request, _=_)
+        return render_template("basic.html", content=hstr)
 
 
 class WellKnown():
     """Implementation of the .well-known URL namespace for pyFF. In particular this contains the webfinger
     implementation which returns information about up- and downstream metadata.
     """
+
     def __init__(self, server=None):
         self.server = server
 
@@ -247,6 +251,7 @@ class MDRoot():
     """The root application of pyFF. The root application assembles the MDStats and WellKnown classes with an
     MDServer instance.
     """
+
     def __init__(self, server):
         self.server = server
         self._well_known.server = server
@@ -290,7 +295,7 @@ Disallow: /
 
     @cherrypy.expose
     def finger(self, domain="localhost"):
-        return template("finger.html").render(http=cherrypy.request, domain=domain, _=_)
+        return render_template("finger.html", domain=domain)
 
     @cherrypy.expose
     def about(self):
@@ -299,28 +304,27 @@ Disallow: /
         import pkg_resources  # part of setuptools
 
         version = pkg_resources.require("pyFF")[0].version
-        return template("about.html").render(version=version,
-                                             cversion=cherrypy.__version__,
-                                             _=_,
-                                             sysinfo=" ".join(os.uname()),
-                                             http=cherrypy.request,
-                                             cmdline=" ".join(sys.argv),
-                                             stats=stats,
-                                             repo=self.server.md,
-                                             plumbings=["%s" % p for p in self.server.plumbings])
+        return render_template("about.html",
+                               version=version,
+                               cversion=cherrypy.__version__,
+                               sysinfo=" ".join(os.uname()),
+                               cmdline=" ".join(sys.argv),
+                               stats=stats,
+                               repo=self.server.md,
+                               plumbings=["%s" % p for p in self.server.plumbings])
 
     @cherrypy.expose
     def reset(self):
         """The /reset page clears all local browser settings for the device. After visiting
         this page users of the discovery service will see a "new device" page.
         """
-        return template("reset.html").render(http=cherrypy.request, _=_)
+        return render_template("reset.html")
 
     @cherrypy.expose
     def settings(self):
         """The /settings page documents the (non) use of cookies.
         """
-        return template("settings.html").render(http=cherrypy.request, _=_)
+        return render_template("settings.html")
 
     @cherrypy.expose
     def search(self, paged=False, query=None, page=0, page_limit=10, entity_filter=None):
@@ -374,6 +378,7 @@ class MDServer():
     """The MDServer class is the business logic of pyFF. This class is isolated from the request-decoding logic
     of MDRoot and from the ancilliary classes like MDStats and WellKnown.
     """
+
     def __init__(self,
                  pipes=None,
                  autoreload=False,
@@ -428,7 +433,7 @@ class MDServer():
         host = u.netloc
         if ':' in host:
             (host, port) = host.split(':')
-        #sp.swamid.se -> swamid.se
+            #sp.swamid.se -> swamid.se
         return
 
     def request(self, **kwargs):
@@ -498,7 +503,6 @@ class MDServer():
         with self.lock.readlock:
             if ext == 'ds':
                 pdict = dict()
-                pdict['http'] = cherrypy.request
                 entityID = kwargs.get('entityID', None)
                 if entityID is None:
                     raise HTTPError(400, "400 Bad Request - missing entityID")
@@ -512,9 +516,8 @@ class MDServer():
                     raise HTTPError(400, "400 Bad Request - Missing 'return' parameter")
                 pdict['returnIDParam'] = kwargs.get('returnIDParam', 'entityID')
                 pdict['suggest'] = self._guess_idp(entityID)
-                pdict['_'] = _
                 cherrypy.response.headers['Content-Type'] = 'text/html'
-                return template("ds.html").render(**pdict)
+                return render_template("ds.html", **pdict)
             elif ext == 's':
                 paged = bool(kwargs.get('paged', False))
                 query = kwargs.get('query', None)
@@ -539,21 +542,19 @@ class MDServer():
                         title = pfx
                     else:
                         title = _("Metadata By Attributes")
-                    return template("index.html").render(http=cherrypy.request,
-                                                         md=self.md,
-                                                         alias=alias,
-                                                         aliases=self.aliases,
-                                                         title=title,
-                                                         _=_)
+                    return render_template("index.html",
+                                           md=self.md,
+                                           alias=alias,
+                                           aliases=self.aliases,
+                                           title=title)
                 else:
                     entities = self.md.lookup(q)
                     if not entities:
                         raise NotFound()
                     if len(entities) > 1:
-                        return template("metadata.html").render(http=cherrypy.request,
-                                                                _=_,
-                                                                md=self.md,
-                                                                entities=entities)
+                        return render_template("metadata.html",
+                                               md=self.md,
+                                               entities=entities)
                     else:
                         entity = entities[0]
                         t = html.fragment_fromstring(unicode(xslt_transform(entity, "entity2html.xsl")))
@@ -566,7 +567,7 @@ class MDServer():
                             else:
                                 p.text = c_txt  # re.sub(".",escape,c_txt)
                         xml = dumptree(t, xml_declaration=False).decode('utf-8')
-                        return template("basic.html").render(http=cherrypy.request, content=xml, _=_)
+                        return render_template("basic.html", content=xml)
             else:
                 for p in self.plumbings:
                     state = {'request': True,
@@ -696,9 +697,7 @@ def main():
             return ""
 
     def error_page(code, **kwargs):
-        kwargs['http'] = cherrypy.request
-        kwargs.setdefault('title', "pyFF @ %s" % request_vhost(cherrypy.request))
-        return template("%d.html" % code).render(**kwargs)
+        return render_template("%d.html" % code, **kwargs)
 
     static_dirs = []
     if base_dir:
@@ -728,10 +727,10 @@ def main():
             'tools.caching.on': caching,
             'tools.caching.debug': caching,
             'tools.trailing_slash.on': True,
-            'tools.caching.maxobj_size': 1000000000000,  # effectively infinite
+            'tools.caching.maxobj_size': 1000000000000, # effectively infinite
             'tools.caching.maxsize': 1000000000000,
             'tools.caching.antistampede_timeout': 30,
-            'tools.caching.delay': 3600,  # this is how long we keep static stuff
+            'tools.caching.delay': 3600, # this is how long we keep static stuff
             'tools.cpstats.on': True,
             'tools.proxy.on': proxy,
             'error_page.404': lambda **kwargs: error_page(404, _=_, **kwargs),

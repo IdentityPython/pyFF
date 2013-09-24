@@ -6,6 +6,7 @@ This module contains various utilities.
 from datetime import timedelta, datetime
 import tempfile
 import traceback
+import cherrypy
 from mako.lookup import TemplateLookup
 import os
 import pkg_resources
@@ -18,6 +19,10 @@ import httplib2
 from email.utils import parsedate
 
 __author__ = 'leifj'
+
+import i18n
+
+_ = i18n.language.ugettext
 
 
 class PyffException(Exception):
@@ -211,6 +216,17 @@ templates = TemplateLookup(directories=[os.path.join(site_dir, 'templates')])
 
 def template(name):
     return templates.get_template(name)
+
+
+def request_vhost(request):
+    return request.headers.get('X-Forwarded-Host', request.headers.get('Host', request.base))
+
+
+def render_template(name, **kwargs):
+    kwargs.setdefault('http', cherrypy.request)
+    kwargs.setdefault('brand', "pyFF @ %s" % request_vhost(cherrypy.request))
+    kwargs.setdefault('_', _)
+    return template(name).render(**kwargs)
 
 
 class URLFetch(threading.Thread):
