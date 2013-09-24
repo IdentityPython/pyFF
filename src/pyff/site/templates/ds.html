@@ -39,20 +39,19 @@
         </div>
 
         <div id="idpchooser">
-            <div id="thesearch">
-                <div id="quickLinks"></div>
-                <input type="text"
-                       class="form-control idselect"
-                       data-target="${search}"
-                       placeholder="${_('Start typing to search for your home institution or login provider...')}"/>
-            </div>
+            <div id="quickLinks"></div>
+            <div id="thesearch"><input type="text"
+
+                   class="form-control idselect"
+                   data-target="${search}"
+                   placeholder="${_('Start typing to search for your home institution or login provider...')}"/></div>
             <select title="${_('Select your home institution or login provider below')}"
                     id="thelist"
                     class="form-control idselect hidden">
             </select>
             <small class="pull-right">
                 <a href="#" id="to_list">... ${_('let me choose from a list instead')}</a>
-                <a href="#" class="hidden" id="to_search">... ${_('show me some suggestions intead')}</a>
+                <a href="#" class="hidden" id="to_search">... ${_('let me search instead')}</a>
             </small>
         </div>
         <div class="alert alert-success message" id="remember-message">
@@ -75,6 +74,7 @@
 <script type="text/javascript" src="/static/js/json2.js"></script>
 <script type="text/javascript" src="/static/js/jstorage.js"></script>
 <script type="text/javascript" src="/static/js/mdetect.js"></script>
+<script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/sha1.js"></script>
 <script type="text/javascript" src="/static/js/pyff.js"></script>
 <script type="text/javascript">
         $(function() {

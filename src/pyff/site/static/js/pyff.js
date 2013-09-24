@@ -113,7 +113,8 @@
             this.filter('select').each(function (opts) {
                 var seldiv = $(this);
                 seldiv.change(function(opt) {
-                    select_idp(opt.value); // TODO - fix id in xsltjson xslt
+                    console.log(opt);
+                    select_idp(seldiv.find('option:selected').attr('value')); // TODO - fix id in xsltjson xslt
                 });
                 $.each(options,function(key,val) {
                     seldiv.dsSelect(key,val);
@@ -128,7 +129,7 @@
                 seldiv.html($('<option>').attr('value','').append($('<em>').append(seldiv.attr('title'))))
                 $.getJSON('/role/idp.json',function (data) {
                     $.each($(data).sort(cmp_title),function(pos,elt) {
-                        seldiv.append($('<option>').attr('value',elt.id).append(elt.title));
+                        seldiv.append($('<option>').attr('value','{sha1}'+CryptoJS.SHA1(elt.entityID)).append(elt.title));
                     })
                 });
             });
