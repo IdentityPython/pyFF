@@ -152,7 +152,9 @@ The dict in the list contains three items:
             for attr in ['.//{%s}DisplayName' % NS['mdui'],
                          './/{%s}ServiceName' % NS['md'],
                          './/{%s}OrganizationDisplayName' % NS['md'],
-                         './/{%s}OrganizationName' % NS['md']]:
+                         './/{%s}OrganizationName' % NS['md'],
+                         './/{%s}Scope' % NS['shibmd'],
+                         './/{%s}Keywords' % NS['mdui']]:
                 lst.extend([x.text.lower() for x in e.findall(attr)])
             return filter(lambda s: s is not None, lst)
 
@@ -173,7 +175,7 @@ The dict in the list contains three items:
             mexpr = "+".join(f)
 
         log.debug("mexpr: %s" % mexpr)
-
+        query = query.lower()
         res = [{'label': self.display(e),
                 'value': e.get('entityID'),
                 'id': pyff.index.hash_id(e, 'sha1')}

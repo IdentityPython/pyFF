@@ -10,6 +10,7 @@ NS = {"md": "urn:oasis:names:tc:SAML:2.0:metadata",
       'mdui': "urn:oasis:names:tc:SAML:metadata:ui",
       'mdattr': "urn:oasis:names:tc:SAML:metadata:attribute",
       'mdrpi': "urn:oasis:names:tc:SAML:metadata:rpi",
+      'shibmd': "urn:mace:shibboleth:metadata:1.0",
       'xrd': 'http://docs.oasis-open.org/ns/xri/xrd-1.0',
       'saml': "urn:oasis:names:tc:SAML:2.0:assertion"}
 

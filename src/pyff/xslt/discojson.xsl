@@ -58,44 +58,50 @@
             </xsl:otherwise>
         </xsl:choose>
         <xsl:text>"</xsl:text>
-
-        <xsl:choose>
-            <xsl:when test=".//mdui:Logo">
+        <xsl:if test="./md:IDPSSODescriptor/md:Extensions/shibmd:Scope">
+            <xsl:text>, "scope": [</xsl:text>
+            <xsl:apply-templates select="./md:IDPSSODescriptor/md:Extensions/shibmd:Scope"></xsl:apply-templates>
+            <xsl:text>]</xsl:text>
+        </xsl:if>
+        <xsl:if test=".//mdui:Keywords">
+                <xsl:text>,"keywords": "</xsl:text>
+                <xsl:call-template name="getString">
+                    <xsl:with-param name="preflang">en</xsl:with-param>
+                    <xsl:with-param name="path" select=".//mdui:Keywords/text()"/>
+                </xsl:call-template>
+                <xsl:text>"</xsl:text>
+        </xsl:if>
+        <xsl:if test=".//mdui:Logo">
                 <xsl:text>,"icon": "</xsl:text>
                 <xsl:call-template name="getString">
                     <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//mdui:Logo/text()"/>
                 </xsl:call-template>
                 <xsl:text>"</xsl:text>
-            </xsl:when>
-        </xsl:choose>
-        <xsl:choose>
-            <xsl:when test=".//mdui:Description">
+        </xsl:if>
+        <xsl:if test=".//mdui:Description">
                 <xsl:text>,"descr": "</xsl:text>
                 <xsl:call-template name="getString">
                     <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//mdui:Description"/>
                 </xsl:call-template>
                 <xsl:text>"</xsl:text>
-            </xsl:when>
-        </xsl:choose>
-        <xsl:choose>
-            <xsl:when test=".//mdui:PrivacyStatementURL">
+        </xsl:if>
+        <xsl:if test=".//mdui:PrivacyStatementURL">
                 <xsl:text>,"psu": "</xsl:text>
                 <xsl:call-template name="getString">
                     <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//mdui:PrivacyStatementURL"/>
                 </xsl:call-template>
                 <xsl:text>"</xsl:text>
-            </xsl:when>
-        </xsl:choose>
+        </xsl:if>
         <xsl:if test=".//mdui:GeolocationHint">
             <xsl:text>,"geo":</xsl:text>
             <xsl:apply-templates select=".//mdui:GeolocationHint[1]"></xsl:apply-templates>
         </xsl:if>
         <xsl:text>,"auth": "saml"</xsl:text>
         <xsl:text>}</xsl:text>
-        <xsl:if test="./following-sibling::*">
+        <xsl:if test="position() != last()">
             <xsl:text>,
 </xsl:text>
         </xsl:if>
@@ -111,6 +117,10 @@
         <xsl:text>idp</xsl:text>
     </xsl:template>
 
+    <xsl:template match="shibmd:Scope">
+        <xsl:text>"</xsl:text><xsl:value-of select="text()"/><xsl:text>"</xsl:text><xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
+    </xsl:template>
+    
     <xsl:template match="mdui:GeolocationHint">
         <xsl:variable name="pos" select="substring(text(),5)"/>
         <xsl:text>{"lat":</xsl:text>

@@ -115,6 +115,14 @@
                                 </html:img>
                             </dd>
                             </xsl:if>
+                            <xsl:if test="//mdui:Keywords">
+                            <dt>Keywords</dt>
+                            <dd>
+                                <xsl:call-template name="getString">
+                                    <xsl:with-param name="path" select="//mdui:Keywords"/>
+                                </xsl:call-template>
+                            </dd>
+                            </xsl:if>
                       </dl>
                     </p>
                 </div>
