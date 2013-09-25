@@ -52,7 +52,9 @@
                 <xsl:value-of select=".//mdui:DomainHint[1]/text()"/>
             </xsl:when>
             <xsl:otherwise>
-                <xsl:value-of select="@entityID"/>
+                <xsl:call-template name="getURIHostName">
+                    <xsl:with-param name="uri"><xsl:value-of select="@entityID"></xsl:value-of></xsl:with-param>
+                </xsl:call-template>
             </xsl:otherwise>
         </xsl:choose>
         <xsl:text>"</xsl:text>
@@ -133,6 +135,17 @@
     <xsl:template match="*"/>
 
     <!-- utilities -->
+
+    <xsl:template name="getURIHostName">
+        <xsl:param name="uri"></xsl:param>
+        <xsl:variable name="h"><xsl:value-of select="substring-after($uri,'://')"/></xsl:variable>
+        <xsl:if test="contains($h,'/')">
+          <xsl:value-of select="substring-before($h,'/')"/>
+        </xsl:if>
+        <xsl:if test="not(contains($h,'/'))">
+          <xsl:value-of select="$h"/>
+        </xsl:if>
+    </xsl:template>
 
     <xsl:template name="getString">
         <xsl:param name="path"/>
