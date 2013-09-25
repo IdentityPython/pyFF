@@ -220,11 +220,9 @@
                             $(this).append(entity.descr);
                         }
                     });
-                    $(o).filter("a .sp-privacy-statement-url").each(function() {
+                    $(o).filter("a.sp-privacy-statement-url").each(function() {
                         if (entity.psu) {
-                            $(this).attr('href',entity.psu);
-                        } else {
-                            $(this).html('')
+                            $(this).attr('href',entity.psu).append($(this).attr('title'));
                         }
                     });
                 }

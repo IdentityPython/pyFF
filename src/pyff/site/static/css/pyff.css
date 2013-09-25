@@ -29,7 +29,7 @@ body {
 @-o-viewport        { width: device-width; }
 @viewport           { width: device-width; }
 
-#idpchooser { margin-top: 20px; padding-bottom: 20px;}
+.idpchooser { margin-top: 20px; padding-bottom: 20px;}
 
 #map_canvas { width: 100%; height: 350px; }
 #map_canvas img { max-width: none; }
