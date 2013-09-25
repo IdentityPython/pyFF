@@ -42,7 +42,8 @@ body {
 
 .idp-icon { max-width: 29%; max-height: 50px; margin-right: 5%; margin-top: -3%;}
 
-.sp-description { min-width: 65%; }
+.sp-description { max-width: 75%; }
 .sp-icon { width: auto; margin-bottom:5px;}
+.sp-thumbnail {width: 100px; margin: 0 0; padding-left: 5px;}
 
 .idselect { width: 100%; }

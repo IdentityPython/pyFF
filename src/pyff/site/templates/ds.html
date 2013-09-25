@@ -18,24 +18,12 @@
 <body>
     <a href="#content" class="sr-only">${_('Skip to content')}</a>
     <div class="container">
-        <div class="header hidden-xs text-muted">
-                <div class="pull-left">
-                    <div>
-                        <small>select a login provider for signing in to ...</small>
-                        <h3><span class="sp sp-name"></span></h3>
-                    </div>
-                    <p class="sp sp-description"></p>
-                </div>
-                <div class="pull-right">
-                    <img class="sp sp-icon"></img>
-                </div>
-                <div class="clearfix"></div>
-        </div>
-        <div class="visible-xs jumbotron">
-            <div class="container">
-                <h1 class="sp sp-name">${_('Signon to')} </h1>
-                <img class="sp sp-icon"></img>
-            </div>
+        <div class="header text-muted">
+            <small class="hidden-xs">select a login provider for signing in to ...</small>
+            <h3>
+                <span class="sp sp-name"></span>
+                <img class="sp sp-icon sp-thumbnail"/>
+            </h3>
         </div>
 
         <div id="idpchooser">
