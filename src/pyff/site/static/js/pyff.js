@@ -222,7 +222,7 @@
                     });
                     $(o).filter("a.sp-privacy-statement-url").each(function() {
                         if (entity.psu) {
-                            $(this).attr('href',entity.psu).append($(this).attr('title'));
+                            $(this).attr('href',entity.psu).append($('<em>').append($(this).attr('title')));
                         }
                     });
                 }
