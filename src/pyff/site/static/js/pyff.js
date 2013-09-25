@@ -201,13 +201,15 @@
         var o = $(this);
         $.ajax({
             url: '/metadata/'+ id +'.json',
-            type: 'json',
+            dataType: 'json',
             success: function(data) {
                 for (var i = 0; i < data.length; i++) {
                     var entity = data[i];
                     $(o).filter("img.sp-icon").each(function() {
                         if (entity.icon) {
                             $(this).attr('src',entity.icon).addClass("img-responsive img-thumbnail")
+                        } else {
+                            $(this).hide();
                         }
                     });
                     $(o).filter(".sp-name").each(function() {

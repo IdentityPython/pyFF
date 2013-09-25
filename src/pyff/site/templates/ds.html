@@ -30,19 +30,22 @@
 
         <div id="content" class="idpchooser">
             <div id="quickLinks"></div>
-            <div id="thesearch"><input type="text"
-
-                   class="form-control idselect"
-                   data-target="${search}"
-                   placeholder="${_('Search for your login provider...')}"/></div>
-            <select title="${_('Select your login provider ...')}"
-                    id="thelist"
-                    class="form-control idselect hidden">
-            </select>
-            <small class="pull-right">
-                <a href="#" id="to_list">... ${_('let me choose from a list instead')}</a>
-                <a href="#" class="hidden" id="to_search">... ${_('let me search instead')}</a>
-            </small>
+            <form role="search">
+                <div class="form-group">
+                    <div id="thesearch"><input type="text"
+                           class="form-control idselect"
+                           data-target="${search}"
+                           placeholder="${_('Search for your login provider...')}"/></div>
+                    <select title="${_('Select your login provider ...')}"
+                            id="thelist"
+                            class="form-control idselect hidden">
+                    </select>
+                    <small class="pull-right">
+                        <a href="#" id="to_list">... ${_('let me choose from a list instead')}</a>
+                        <a href="#" class="hidden" id="to_search">... ${_('let me search instead')}</a>
+                    </small>
+                </div>
+            </form>
         </div>
         <div class="alert alert-success message" id="remember-message">
             <button type="button" class="close" data-dismiss="alert">&times;</button>
