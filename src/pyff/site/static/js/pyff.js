@@ -23,7 +23,7 @@
         var params;
         params = $.deparam.querystring();
         var qs;
-        console.log(entityID);
+        //console.log(entityID);
         qs = params['return'].indexOf('?') === -1 ? '?' : '&';
         if ($('#remember').is(':checked')) {
             $.jStorage.set('pyff.discovery.idp',entityID);
@@ -111,7 +111,7 @@
             this.filter('select').each(function (opts) {
                 var seldiv = $(this);
                 seldiv.change(function(opt) {
-                    console.log(opt);
+                    //console.log(opt);
                     select_idp(seldiv.find('option:selected').attr('value')); // TODO - fix id in xsltjson xslt
                 });
                 $.each(options,function(key,val) {
