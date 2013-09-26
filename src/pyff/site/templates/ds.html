@@ -8,23 +8,60 @@
     <link href="/static/css/pyff.css" rel="stylesheet"/>
     <link href="/static/css/ds.css" rel="stylesheet"/>
     <link href="/static/css/style.css" rel="stylesheet"/>
-    <script type="text/javascript" src="/static/js/jquery.min.js"></script>
-    <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="/static/js/hogan.js"></script>
-    <script type="text/javascript" src="/static/js/typeahead.js"></script>
-    <script type="text/javascript" src="/static/js/jquery.browser.js"></script>
-    <script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script>
-    <script type="text/javascript" src="/static/js/json2.js"></script>
-    <script type="text/javascript" src="/static/js/jstorage.js"></script>
-    <script type="text/javascript" src="/static/js/mdetect.js"></script>
-    <script type="text/javascript" src="/static/js/sha1.js"></script> <!-- google sha1 -->
-    <script type="text/javascript" src="/static/js/pyff.js"></script>
-    <title>Please login...</title>
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
       <script src="/static/js/html5shiv.js"></script>
       <script src="/static/js/respond.min.js"></script>
     <![endif]-->
+    <script type="text/javascript" src="/static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="/static/js/hogan.js"></script>
+    <script type="text/javascript" src="/static/js/typeahead.js"></script>
+    <script type="text/javascript" src="/static/js/json2.js"></script>
+    <script type="text/javascript" src="/static/js/jstorage.js"></script>
+    <script type="text/javascript" src="/static/js/sha1.js"></script> <!-- google sha1 -->
+    <script type="text/javascript" src="/static/js/pyff.js"></script>
+    <script type="text/javascript">
+        $(function() {
+            $('#quickLinks').dsQuickLinks();
+            $('.sp').dsRelyingParty('${sp}');
+            $('.idselect').dsSelect({});
+            jQuery.fn.sort = function() {
+                return this.pushStack( [].sort.apply( this, arguments ), []);
+            };
+            $('.message > button.close').click(function(e) {
+                //console.log(e);
+                //console.log($(this));
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                var id = $(this).parentsUntil('.message').attr('id');
+                $(this).parent().each(function() {
+                    //console.log($(this).attr('id'));
+                    closed[$(this).attr('id')] = true;
+                });
+                $.jStorage.set('pyff.discovery.messages',closed);
+            });
+            $('.message').each(function () {
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                if (closed[$(this).attr('id')]) {
+                    $(this).hide();
+                }
+            });
+            $('#to_list').click(function(){
+                $('#thelist').dsSelect('refresh');
+                $('#thelist').removeClass('hidden');
+                $('#thesearch').addClass('hidden');
+                $('#to_list').addClass('hidden');
+                $('#to_search').removeClass('hidden');
+            });
+            $('#to_search').click(function() {
+                $('#thesearch').removeClass('hidden');
+                $('#thelist').addClass('hidden');
+                $('#to_search').addClass('hidden');
+                $('#to_list').removeClass('hidden');
+            });
+        });
+    </script>
+    <title>Please login...</title>
 <body>
     <a href="#content" class="sr-only">${_('Skip to content')}</a>
     <div class="container">
@@ -67,45 +104,5 @@
             </form>
         </div>
     </div>
-<script type="text/javascript">
-        $(function() {
-            $('#quickLinks').dsQuickLinks();
-            $('.sp').dsRelyingParty('${sp}');
-            $('.idselect').dsSelect({});
-            jQuery.fn.sort = function() {
-                return this.pushStack( [].sort.apply( this, arguments ), []);
-            };
-            $('.message > button.close').click(function(e) {
-                //console.log(e);
-                //console.log($(this));
-                var closed = $.jStorage.get('pyff.discovery.messages',{});
-                var id = $(this).parentsUntil('.message').attr('id');
-                $(this).parent().each(function() {
-                    //console.log($(this).attr('id'));
-                    closed[$(this).attr('id')] = true;
-                });
-                $.jStorage.set('pyff.discovery.messages',closed);
-            });
-            $('.message').each(function () {
-                var closed = $.jStorage.get('pyff.discovery.messages',{});
-                if (closed[$(this).attr('id')]) {
-                    $(this).hide();
-                }
-            });
-            $('#to_list').click(function(){
-                $('#thelist').dsSelect('refresh');
-                $('#thelist').removeClass('hidden');
-                $('#thesearch').addClass('hidden');
-                $('#to_list').addClass('hidden');
-                $('#to_search').removeClass('hidden');
-            });
-            $('#to_search').click(function() {
-                $('#thesearch').removeClass('hidden');
-                $('#thelist').addClass('hidden');
-                $('#to_search').addClass('hidden');
-                $('#to_list').removeClass('hidden');
-            });
-        });
-</script>
 </body>
 </html>
