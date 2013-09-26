@@ -7,6 +7,7 @@
                 xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute"
                 xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
                 xmlns:shibmd="urn:mace:shibboleth:metadata:1.0"
+                xmlns:str="http://exslt.org/strings" extension-element-prefixes="str"
                 xmlns:html="http://www.w3.org/1999/xhtml">
 
     <xsl:output method="text" encoding="UTF-8"/>
@@ -118,7 +119,12 @@
     </xsl:template>
 
     <xsl:template match="shibmd:Scope">
-        <xsl:text>"</xsl:text><xsl:value-of select="text()"/><xsl:text>"</xsl:text><xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
+        <xsl:text>"</xsl:text>
+        <xsl:call-template name="safeString">
+            <xsl:with-param name="qstr"><xsl:value-of select="text()"/></xsl:with-param>
+        </xsl:call-template>
+        <xsl:text>"</xsl:text>
+        <xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
     </xsl:template>
     
     <xsl:template match="mdui:GeolocationHint">
@@ -157,22 +163,35 @@
         </xsl:if>
     </xsl:template>
 
+    <xsl:template name="safeString">
+        <xsl:param name="qstr"/>
+
+        <xsl:variable name="apos">'</xsl:variable><xsl:variable name="e_apos">\\'</xsl:variable>
+        <xsl:variable name="quot">"</xsl:variable><xsl:variable name="e_quot">\\"</xsl:variable>
+        <xsl:variable name="bs">\</xsl:variable><xsl:variable name="e_bs">\\</xsl:variable>
+        <xsl:value-of select="str:replace(str:replace(str:replace(str:replace(str:replace($qstr,$e_quot,$quot),$e_apos,$apos),$bs,$e_bs),$quot,$e_quot),$apos,$e_apos)"/>
+    </xsl:template>
+
     <xsl:template name="getString">
         <xsl:param name="path"/>
         <xsl:param name="preflang"/>
-        <xsl:variable name="danger"><xsl:text>"'\</xsl:text></xsl:variable>
         <xsl:variable name="str" select="$path"/>
         <xsl:choose>
             <xsl:when test="$str[lang($preflang)]">
-                <xsl:value-of select="translate(normalize-space($str[lang($preflang)]),$danger,'')"/>
+                <xsl:call-template name="safeString">
+                    <xsl:with-param name="qstr" select="normalize-space($str[lang($preflang)])"/>
+                </xsl:call-template>
             </xsl:when>
             <xsl:when test="$str">
-                <xsl:value-of select="translate(normalize-space($str[1]),$danger,'')"/>
+                <xsl:call-template name="safeString">
+                    <xsl:with-param name="qstr" select="normalize-space($str[1])"/>
+                </xsl:call-template>
             </xsl:when>
             <xsl:otherwise>
                 <xsl:message terminate="no">
                     <xsl:text>Warning: path not found: '</xsl:text>
                     <xsl:value-of select="$path"/>
+                    <xsl:text>'</xsl:text>
                 </xsl:message>
             </xsl:otherwise>
         </xsl:choose>
