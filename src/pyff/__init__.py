@@ -18,7 +18,7 @@ def main():
     The main entrypoint for the pyFF cmdline tool.
     """
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'h', ['help', 'loglevel=', 'version'])
+        opts, args = getopt.getopt(sys.argv[1:], 'h', ['help', 'loglevel=', 'logfile=', 'version'])
     except getopt.error, msg:
         print msg
         print 'for help use --help'
