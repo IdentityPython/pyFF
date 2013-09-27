@@ -49,13 +49,16 @@
                 $('#thesearch').addClass('hidden');
                 $('#to_list').addClass('hidden');
                 $('#to_search').removeClass('hidden');
+                $('#thelist').focus();
             });
             $('#to_search').click(function() {
                 $('#thesearch').removeClass('hidden');
                 $('#thelist').addClass('hidden');
                 $('#to_search').addClass('hidden');
                 $('#to_list').removeClass('hidden');
+                $('#thesearchfield').focus();
             });
+            $('#thesearchfield').focus();
         });
     </script>
     <title>Please login...</title>
@@ -83,6 +86,7 @@
                 <div class="form-group">
                     <div id="thesearch"><input type="text"
                            class="form-control idselect"
+                           id="thesearchfield"
                            data-target="${search}"
                            placeholder="${_('Search for your login provider...')}"/></div>
                     <select title="${_('Select your login provider ...')}"
@@ -104,6 +108,9 @@
                         ${_('Remember my selection')}
                     </label>
             </form>
+        </div>
+        <div class="footer">
+
         </div>
     </div>
 </body>
