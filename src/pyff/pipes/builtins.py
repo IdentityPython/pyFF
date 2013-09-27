@@ -743,7 +743,7 @@ loading of metadata so this call is seldom needed.
 
 def certreport(req, *opts):
     """
-Generate a report of the certificates (optionally limited by expiration time) found in the selection.
+Generate a report of the certificates (optionally limited by expiration time or key size) found in the selection.
 
 :param req: The request
 :param opts: Options (not used)
@@ -756,6 +756,12 @@ Generate a report of the certificates (optionally limited by expiration time) fo
     - certreport:
          error_seconds: 0
          warning_seconds: 864000
+         error_bits: 1024
+         warning_bits: 2048
+
+For key size checking this will report keys with a size *less* than the size specified, defaulting to errors
+for keys smaller than 1024 bits and warnings for keys smaller than 2048 bits. It should be understood as the
+minimum key size for each report level, as such everything below will create report entries.
 
 Remember that you need a 'publish' or 'emit' call after certreport in your plumbing to get useful output. PyFF
 ships with a couple of xslt transforms that are useful for turning metadata with certreport annotation into
@@ -771,8 +777,10 @@ HTML.
     if type(req.args) is not dict:
         raise PipeException("usage: certreport {warning: 864000, error: 0}")
 
-    error_seconds = int(req.args.get('error', "0"))
-    warning_seconds = int(req.args.get('warning', "864000"))
+    error_seconds = int(req.args.get('error_seconds', "0"))
+    warning_seconds = int(req.args.get('warning_seconds', "864000"))
+    error_bits = int(req.args.get('error_bits', "1024"))
+    warning_bits = int(req.args.get('warning_bits', "2048"))
 
     seen = {}
     for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS):
@@ -786,6 +794,17 @@ HTML.
                 if not seen.get(fp, False):
                     seen[fp] = True
                     cdict = xmlsec.b642cert(cert_pem)
+                    keysize = cdict['modulus'].bit_length()
+                    if keysize < error_bits:
+                        e = cd.getparent().getparent().getparent().getparent().getparent()
+                        req.md.annotate(e, "certificate-error", "keysize too small",
+                                        "%s has keysize of %s bits (less than %s)" % (cert.getSubject(), keysize, error_bits))
+                        log.error("%s has keysize of %s" % (eid, keysize))
+                    elif keysize < warning_bits:
+                        e = cd.getparent().getparent().getparent().getparent().getparent()
+                        req.md.annotate(e, "certificate-warning", "keysize small",
+                                        "%s has keysize of %s bits (less than %s)" % (cert.getSubject(), keysize, warning_bits))
+                        log.warn("%s has keysize of %s" % (eid, keysize))
                     cert = cdict['cert']
                     et = datetime.strptime("%s" % cert.getNotAfter(), "%y%m%d%H%M%SZ")
                     now = datetime.now()
