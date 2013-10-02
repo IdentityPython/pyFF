@@ -937,19 +937,23 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
         if name is not None and len(name):
             e.set('Name', name)
 
+    now = datetime.utcnow()
+
     IDprefix = req.args.get('ID', '_')
     if not e.get('ID'):
-        e.set('ID', datetime.now().strftime(IDprefix + "%Y%m%dT%H%M%S%Z"))
+        e.set('ID', now.strftime(IDprefix + "%Y%m%dT%H%M%SZ"))
 
-    validUntil = req.args.get('validUntil', e.get('validUntil', None))
+    validUntil = str(req.args.get('validUntil', e.get('validUntil', None)))
     if validUntil is not None and len(validUntil) > 0:
         offset = duration2timedelta(validUntil)
         if offset is not None:
-            dt = datetime.now() + offset
-            e.set('validUntil', dt.isoformat())
+            dt = now + offset
+            e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
         elif validUntil is not None:
             dt = iso8601.parse_date(validUntil)
-            offset = dt - datetime.now()
+            dt = dt.replace(tzinfo=None) # make dt "naive" (tz-unaware)
+            offset = dt - now
+            e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
             # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set
         req.state['cache'] = int(total_seconds(offset) / 50)
