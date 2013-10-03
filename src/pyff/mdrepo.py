@@ -200,13 +200,14 @@ The dict in the list contains three items:
         def _match(qq, addrs, elt):
             for qstr in _strings(elt):
                 for q in qq:
-                    log.debug("looking for '%s' in '%s'" % (q, qstr))
+                    #log.debug("looking for '%s' in '%s'" % (q, qstr))
                     if q is not None and len(q) > 0 and q in qstr:
                         return True
 
             if addrs is not None and len(addrs) > 0:
                 for net in _ip_networks(elt):
                     for ip in [ipaddr.IPAddress(x) for x in addrs]:
+                        log.debug("looking for %s in %s" % (ip,net))
                         if ip in net:
                             return True
             return False
