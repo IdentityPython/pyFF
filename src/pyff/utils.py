@@ -268,9 +268,9 @@ class URLFetch(threading.Thread):
         self.start_time = clock()
         try:
             cache = httplib2.FileCache(".cache")
+            headers = dict()
             if not self.enable_cache:
-                log.debug("removing '%s' from cache" % self.url)
-                cache.delete(self.url)
+                headers['cache-control'] = 'no-cache'
 
             log.debug("fetching '%s'" % self.url)
 
@@ -287,7 +287,7 @@ class URLFetch(threading.Thread):
             else:
                 h = httplib2.Http(cache=cache, timeout=60,
                                   disable_ssl_certificate_validation=True)  # trust is done using signatures over here
-                resp, content = h.request(self.url)
+                resp, content = h.request(self.url, headers=headers)
                 self.resp = resp
                 self.last_modified = _parse_date(resp.get('last-modified', resp.get('date', None)))
                 self.date = _parse_date(resp['date'])
