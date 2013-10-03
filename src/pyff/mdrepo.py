@@ -204,7 +204,7 @@ The dict in the list contains three items:
                     if q is not None and len(q) > 0 and q in qstr:
                         return True
 
-            if len(addrs) > 0:
+            if addrs is not None and len(addrs) > 0:
                 for net in _ip_networks(elt):
                     for ip in [ipaddr.IPAddress(x) for x in addrs]:
                         if ip in net:
