@@ -18,7 +18,9 @@ install_requires = [
     'iso8601 >=0.1.4',
     'simplejson >=2.6.2',
     'mako >=0.7.2',
-    'httplib2 >=0.7.7'
+    'httplib2 >=0.7.7',
+    'ipaddr',
+    'publicsuffix'
 ]
 
 
