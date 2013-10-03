@@ -155,7 +155,37 @@
         $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
     });
 
-    $.fn.dsQuickLinks = function() {
+    var idp_template = Hogan.compile('<a class="select list-group-item" href="{{entityID}}">' +
+        '{{^sticky}}<button type="button" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
+        '<h4 class="list-group-item-heading">{{title}}</h4>' +
+        '<p class="list-group-item-text">' +
+        '{{#icon}}<img src="{{icon}}" class="fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"/>{{/icon}}' +
+        '{{#descr}}<div class="pull-left idp-description hidden-xs">{{descr}}</div>{{/descr}}' +
+        '<div class="clearfix"></div>' +
+        '</p></a>');
+
+    $.fn.dsQuickLinks = function(id) {
+        this.each(function() {
+            var div = $(this);
+            var uri = div.attr('data-target');
+
+            div.html($('<div>').addClass("list-group").append(function() {
+                var lst = $.jStorage.get('pyff.discovery.idps',[]);
+                for (var i = 0; i < lst.length; i++) {
+                    $(this).append(idp_template.render(lst[i]));
+                }
+            }));
+
+            $.getJSON(uri+"?suggest="+id+"&suggest="+document.referrer+"&entity_filter={http://pyff-project.org/role}idp",function (data) {
+                $.each(function(pos,elt) {
+                    elt.sticky = true
+                    $(this).append(idp_template.render(elt));
+                });
+            });
+        });
+    };
+ 
+    $.fn.dsQuickLinks2 = function() {
         this.each(function() {
             var $this = $(this);
             $this.html($('<div>').addClass("list-group").append(function() {

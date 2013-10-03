@@ -356,14 +356,15 @@ Search the active set for matching entities.
         """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
         handler.
         """
-        log.debug("request default: %s" % ",".join(args))
+        #log.debug("request default: %s" % ",".join(args))
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
             if len(args) > 1:
                 kwargs['path'] = args[1]
             return self.server.request(**kwargs)
         else:
-            log.debug("not an alias: %s" % "/".join(args))
+            #
+            # log.debug("not an alias: %s" % "/".join(args))
             kwargs['pfx'] = None
             kwargs['path'] = "/" + "/".join(args)
             return self.server.request(**kwargs)
@@ -427,14 +428,6 @@ class MDServer():
                 return cptools.accept(item, debug=True)
             except HTTPError:
                 return False
-
-    def _guess_idp(self, url): # not yet implemented
-        u = urlparse.urlparse(url)
-        host = u.netloc
-        if ':' in host:
-            (host, port) = host.split(':')
-            #sp.swamid.se -> swamid.se
-        return
 
     def request(self, **kwargs):
         """The main request processor. This code implements all rendering of metadata.
@@ -515,7 +508,6 @@ class MDServer():
                 if pdict['ret'] is None:
                     raise HTTPError(400, "400 Bad Request - Missing 'return' parameter")
                 pdict['returnIDParam'] = kwargs.get('returnIDParam', 'entityID')
-                pdict['suggest'] = self._guess_idp(entityID)
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return render_template("ds.html", **pdict)
             elif ext == 's':
@@ -524,6 +516,7 @@ class MDServer():
                 page = kwargs.get('page', 0)
                 page_limit = kwargs.get('page_limit', 10)
                 entity_filter = kwargs.get('entity_filter', None)
+                suggest = kwargs.get('suggest', None)
 
                 cherrypy.response.headers['Content-Type'] = 'application/json'
                 if paged:
@@ -531,11 +524,17 @@ class MDServer():
                                                       path=q,
                                                       page=int(page),
                                                       page_limit=int(page_limit),
+                                                      suggest=suggest,
+                                                      client_ip=cherrypy.request.remote.ip,
                                                       entity_filter=entity_filter)
                     log.debug(dumps({'entities': res, 'more': more, 'total': total}))
                     return dumps({'entities': res, 'more': more, 'total': total})
                 else:
-                    return dumps(self.md.search(query, path=q, entity_filter=entity_filter))
+                    return dumps(self.md.search(query,
+                                                path=q,
+                                                suggest=suggest,
+                                                client_ip=cherrypy.request.remote.ip,
+                                                entity_filter=entity_filter))
             elif accept.get('text/html'):
                 if not q:
                     if pfx:

@@ -8,12 +8,14 @@ from datetime import datetime
 import hashlib
 import urllib
 from UserDict import DictMixin, UserDict
+import urlparse
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
 import os
 import re
 from copy import deepcopy
+from publicsuffix import PublicSuffixList
 from pyff import merge_strategies
 import pyff.index
 from pyff.logs import log
@@ -23,7 +25,7 @@ from pyff.constants import NS, NF_URI, DIGESTS, EVENT_DROP_ENTITY, EVENT_IMPORTE
 import traceback
 import threading
 from Queue import Queue
-
+import ipaddr
 
 __author__ = 'leifj'
 
@@ -84,6 +86,7 @@ class MDRepository(DictMixin, Observable):
         self.respect_cache_duration = True
         self.default_cache_duration = "PT10M"
         self.retry_limit = 5
+        self.psl = PublicSuffixList()
 
         super(MDRepository, self).__init__()
 
@@ -128,7 +131,7 @@ class MDRepository(DictMixin, Observable):
     def sha1_id(self, e):
         return pyff.index.hash_id(e, 'sha1')
 
-    def search(self, query, path=None, page=None, page_limit=10, entity_filter=None):
+    def search(self, query=None, path=None, page=None, page_limit=10, suggest=None, entity_filter=None, client_ip=None):
         """
 :param query: A string to search for.
 :param path: The repository collection (@Name) to search in - None for search in all collections
@@ -147,39 +150,81 @@ The dict in the list contains three items:
 :param id: A sha1-ID of the entityID - on the form {sha1}<sha1-hash-of-entityID>
         """
 
-        def _strings(e):
-            lst = [e.get('entityID')]
+        def _tokenize(url):
+            if "://" in url:
+                url = urlparse.urlparse(url)
+                host = url.netloc
+                if ':' in url.netloc:
+                    (host, port) = url.netloc.split(':')
+                return filter(lambda x: len(x) > 0, host.rstrip(self.psl.get_public_suffix(host)).split('.'))
+            else:
+                return []
+
+        log.debug("suggest: %s" % suggest)
+        log.debug("client_ip: %s" % client_ip)
+
+        if isinstance(query, basestring):
+            query = [query.lower()]
+
+        if isinstance(client_ip, basestring):
+            client_ip = [client_ip]
+
+        if query is None or len(query) == 0:
+            ql = []
+            if suggest is not None and len(suggest) > 0:
+                for u in suggest:
+                    ql.extend(_tokenize(u))
+            query = ql
+
+        log.debug("query: %s" % query)
+
+        def _lc_text(e):
+            if e.text is None:
+                return None
+            return e.text.lower()
+
+        def _strings(elt):
+            lst = [elt.get('entityID')]
             for attr in ['.//{%s}DisplayName' % NS['mdui'],
                          './/{%s}ServiceName' % NS['md'],
                          './/{%s}OrganizationDisplayName' % NS['md'],
                          './/{%s}OrganizationName' % NS['md'],
                          './/{%s}Scope' % NS['shibmd'],
                          './/{%s}Keywords' % NS['mdui']]:
-                lst.extend([x.text.lower() for x in e.findall(attr)])
+                lst.extend([_lc_text(x) for x in elt.findall(attr)])
             return filter(lambda s: s is not None, lst)
 
-        def _match(query, e):
-            #log.debug("looking for %s in %s" % (query,",".join(_strings(e))))
-            for qstr in _strings(e):
-                if query in qstr:
-                    return True
+        def _ip_networks(elt):
+            return [ipaddr.IPNetwork(x.text) for x in elt.findall('.//{%s}IPHInt' % NS['mdui'])]
+
+        def _match(qq, addrs, elt):
+            for qstr in _strings(elt):
+                for q in qq:
+                    log.debug("looking for '%s' in '%s'" % (q, qstr))
+                    if q is not None and len(q) > 0 and q in qstr:
+                        return True
+
+            if len(addrs) > 0:
+                for net in _ip_networks(elt):
+                    for ip in [ipaddr.IPAddress(x) for x in addrs]:
+                        if ip in net:
+                            return True
             return False
 
         f = []
-        if path is not None:
+        if path is not None and not path in f:
             f.append(path)
-        if entity_filter is not None:
+        if entity_filter is not None and not entity_filter in f:
             f.append(entity_filter)
         mexpr = None
         if f:
             mexpr = "+".join(f)
 
         log.debug("mexpr: %s" % mexpr)
-        query = query.lower()
         res = [{'label': self.display(e),
                 'value': e.get('entityID'),
                 'id': pyff.index.hash_id(e, 'sha1')}
-               for e in pyff.index.EntitySet(filter(lambda ent: _match(query, ent), self.lookup(mexpr)))]
+               for e in pyff.index.EntitySet(filter(lambda ent: _match(query, client_ip, ent), self.lookup(mexpr)))]
 
         res.sort(key=lambda i: i['label'])
 
@@ -455,7 +500,8 @@ and verified.
 :param fail_on_error: (default: False)
 :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
 :param validate: (default: True) set to False to turn off all XML schema validation
-:param post: A callable that will be called to modify the parse-tree before any validation (but after xinclud processing)
+:param post: A callable that will be called to modify the parse-tree before any validation
+(but after xinclude processing)
         """
         try:
             t = etree.parse(fn, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
@@ -733,10 +779,10 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         seen = {}  # TODO make better de-duplication
         for member in entities:
             for ent in self.lookup(member):
-                entityID = ent.get('entityID', None)
-                if (ent is not None) and (entityID is not None) and (not seen.get(entityID, False)):
+                entity_id = ent.get('entityID', None)
+                if (ent is not None) and (entity_id is not None) and (not seen.get(entity_id, False)):
                     t.append(deepcopy(ent))
-                    seen[entityID] = True
+                    seen[entity_id] = True
                     nent += 1
 
         log.debug("selecting %d entities from %d entity set(s) before validation" % (nent, len(entities)))

@@ -20,7 +20,7 @@
     <script type="text/javascript" src="/static/js/pyff.js"></script>
     <script type="text/javascript">
         $(function() {
-            $('#quickLinks').dsQuickLinks();
+            $('#quickLinks').dsQuickLinks('${sp}');
             $('.sp').dsRelyingParty('${sp}');
             $('.idselect').dsSelect({});
             jQuery.fn.sort = function() {
@@ -49,7 +49,7 @@
                 $('#thesearch').addClass('hidden');
                 $('#to_list').addClass('hidden');
                 $('#to_search').removeClass('hidden');
-                $('#thelist').focus();
+                // $('#thelist').focus(); // consider this some more - it may be better to ask the user to click...
             });
             $('#to_search').click(function() {
                 $('#thesearch').removeClass('hidden');
@@ -81,7 +81,7 @@
         </div>
 
         <div id="content" class="idpchooser">
-            <div id="quickLinks"></div>
+            <div id="quickLinks" data-target="${search}"></div>
             <form role="search">
                 <div class="form-group">
                     <div id="thesearch"><input type="text"
