@@ -39,8 +39,41 @@
     </XRD -->
     <XRD>
         <Subject>Skolfederation</Subject>
-        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.skolfederation.se/md/skolfederation-1.0.xml">
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://meta01.skolfederation.se/skolfederation-2_0.xml">
             <Title>Skolfederation Metadata</Title>
+            <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+                <ds:X509Data>
+                    <ds:X509Certificate>
+MIIE+DCCAuACCQDz68MlqYKzETANBgkqhkiG9w0BAQUFADA+MQswCQYDVQQGEwJT
+RTEhMB8GA1UEAxMYbWV0YTAxLnNrb2xmZWRlcmF0aW9uLnNlMQwwCgYDVQQKEwNJ
+SVMwHhcNMTMwNDAzMTMxMDQ3WhcNMjMwNDAxMTMxMDQ3WjA+MQswCQYDVQQGEwJT
+RTEhMB8GA1UEAxMYbWV0YTAxLnNrb2xmZWRlcmF0aW9uLnNlMQwwCgYDVQQKEwNJ
+SVMwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDTugaeIk5XZlnMWBpj
+rJZRvwm2YItd4Hbx285//LL9k2HjYhLnWwfdjv0yZSCuw49E47FdhT5j3rnQJayQ
+ifKffn6M2jMnDZh9MYx8SjT/CMFid5TXVS5jFcEtfzYfSl9Fv8rqFAjJTDDroneT
+dnMVRlcW03XVDG1ryOou3W1pCrRRsHe+HHkpP3H4cL9pSaXgR9ptAadTHfzEFFnX
+qVwvSJD1SMK7+OvFUDQCnoKYEdyNpFfsouwtessXtq4jTOZdzjTxeLIrVnfFpVPf
+F2xN8298x3fCDeoUPjQKDNYYwNq5N4U7RnsM+KYjTQ8rLelOyP5hsy/wETtUJ5vR
+OAa6WQyxPmqFJnwTALPhDhUyw4CvOHiQahlPSxouXZdBQt5pt/nu3VJ33DhF6POw
+aJUetzl6TY4bNNp2tIQQhcqBCTHDfLBnMR3VyrUMcYWZ6qNGp+4Lhjl2KRNn9VF7
+a5+TVzTFd63pLXrXY1KvUcJQFk8Su/BsrJrPKg8z6WvC+h5vXAF1dwkx3oz96VTp
+9xIwbVMGxSfx30AKWTR+V7XpoqNWtXTbtJKcxRXto2ZWI9FAmnr/a1j0knAn1v/x
+3Lqt6krJihCt5YLxq7oft6XzWw/i+rrSdmeXIZi8qV1Moo/2yCNxVpi4TyBH2Qo5
+xG2krTe4lWAI/+PcKvzYgEVP5wIDAQABMA0GCSqGSIb3DQEBBQUAA4ICAQCBqZbH
+u7DnFWiBa1pSYijGfTpws1HASiHxQc5h8UHDxqVwakLftdIn9IH6flRPEwQceNHF
+59G3wdn10QcDCURprMkVN+6XAhOIKmFz4UA6d87lR+qDasKZSMetX79l9mMWiMWl
+dX7yyy/Q8pYhZrwQySzTRV+IP7bviyfUVSTirUy4bYgS3e3KDVGi3d+kZjh70OL+
+bPAJEVmLfoFjWuaeOHxRvdNw4f2Zd5XczhiU5tHv+Fnx+tO1bNhE6ySq5JzYiTrJ
+58psZPp43uOAWZnchFZ9fGuzHkS7QgeJjeLnF2y+gCYTLYeLw0mEA2cprzOSBu2P
+4eEV2nr2vU8SX8aE4/XfE7UISzW2Q5zbpsImGCZEZG1gVO9cha1oSwkg4x+a0xBB
+rQRvEDN8AzzwHdDTH6CXcMnNSK6fDyUlw7BrAhrVYX/pF1ppD4hhxLw0VPYO71DT
+Fxcmr0p11ZHG18Jilfthhe+/7JWgRv4kuSjFlKy8B3RcUVz9hP5h1ARxtZRDBZNy
+Y3YP/wCNH8WPZb6iUk1evwV/2qYLnE5FT8V/LvbEo5oNFi9oynMK3m/uHbWTQTAm
+K0AZ2JBDFxho9PJlXqTZhCEXdtz1CU0gj3W8GRYoN/xlrCFDpCTXlChrKRQKf2fn
+eb/5QMtDmtGlRI0wxYt7B/Wfaal9/KMRTnYkoA==                                                                                 
+                    </ds:X509Certificate>
+                </ds:X509Data>
+          </ds:KeyInfo>
         </Link>
     </XRD>
 </XRDS>

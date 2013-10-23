@@ -70,6 +70,7 @@ import lxml.html as html
 from datetime import datetime
 from lxml import etree
 from pyff import __version__ as pyff_version
+from publicsuffix import PublicSuffixList
 
 __author__ = 'leifj'
 
@@ -398,6 +399,7 @@ class MDServer():
         self.refresh.subscribe()
         self.aliases = aliases
         self.observers = observers
+        self.psl = PublicSuffixList()
 
         if autoreload:
             for f in pipes:
@@ -417,6 +419,10 @@ class MDServer():
         return MDRepository(metadata_cache_enabled=self.cache_enabled)
 
     class MediaAccept():
+
+        def __init__(self):
+            pass
+
         def has_key(self, key):
             return True
 
@@ -438,8 +444,6 @@ class MDServer():
         path = kwargs.get('path', None)
         content_type = kwargs.get('content_type', None)
 
-        log.debug("request pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
-
         def escape(m):
             st = m.group(0)
             if st == '<':
@@ -456,8 +460,8 @@ class MDServer():
                 x = x[8:].decode('base64')
 
             if '.' in x:
-                (p, sep, ext) = x.rpartition('.')
-                return p, ext
+                (pth, sep, extn) = x.rpartition('.')
+                return pth, extn
             else:
                 return x, None
 
@@ -481,8 +485,8 @@ class MDServer():
         else:
             q = path
 
-        log.debug("request %s %s" % (path, ext))
-        log.debug(cherrypy.request.headers)
+        log.debug("request path: %s, ext: %s, headers: %s" % (path, ext, cherrypy.request.headers))
+
         accept = {}
         if content_type is None:
             if ext is not None and ext in _ctypes:
@@ -496,10 +500,10 @@ class MDServer():
         with self.lock.readlock:
             if ext == 'ds':
                 pdict = dict()
-                entityID = kwargs.get('entityID', None)
-                if entityID is None:
+                entity_id = kwargs.get('entityID', None)
+                if entity_id is None:
                     raise HTTPError(400, "400 Bad Request - missing entityID")
-                pdict['sp'] = self.md.sha1_id(entityID)
+                pdict['sp'] = self.md.sha1_id(entity_id)
                 pdict['ret'] = kwargs.get('return', None)
                 if not path:
                     pdict['search'] = "/search/"
@@ -516,24 +520,35 @@ class MDServer():
                 page = kwargs.get('page', 0)
                 page_limit = kwargs.get('page_limit', 10)
                 entity_filter = kwargs.get('entity_filter', None)
-                suggest = kwargs.get('suggest', None)
 
                 cherrypy.response.headers['Content-Type'] = 'application/json'
+
+                if query is None:
+                    log.debug("empty query - creating one")
+                    query = [cherrypy.request.remote.ipgit]
+                    referrer = cherrypy.request.headers.get('referrer', None)
+                    if referrer is not None:
+                        log.debug("including referrer: %s" % referrer)
+                        url = urlparse.urlparse(referrer)
+                        host = url.netloc
+                        if ':' in url.netloc:
+                            (host, port) = url.netloc.split(':')
+                        for host_part in host.rstrip(self.psl.get_public_suffix(host)).split('.'):
+                            if host_part is not None and len(host_part) > 0:
+                                query.append(host_part)
+                    log.debug("created query: %s" % ",".join(query))
+
                 if paged:
                     res, more, total = self.md.search(query,
                                                       path=q,
                                                       page=int(page),
                                                       page_limit=int(page_limit),
-                                                      suggest=suggest,
-                                                      client_ip=cherrypy.request.remote.ip,
                                                       entity_filter=entity_filter)
-                    log.debug(dumps({'entities': res, 'more': more, 'total': total}))
+                    #log.debug(dumps({'entities': res, 'more': more, 'total': total}))
                     return dumps({'entities': res, 'more': more, 'total': total})
                 else:
                     return dumps(self.md.search(query,
                                                 path=q,
-                                                suggest=suggest,
-                                                client_ip=cherrypy.request.remote.ip,
                                                 entity_filter=entity_filter))
             elif accept.get('text/html'):
                 if not q:

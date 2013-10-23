@@ -97,6 +97,7 @@
                 seldiv.typeahead({
                     remote: uri+"?query=%QUERY&entity_filter={http://pyff-project.org/role}idp",
                     engine: Hogan,
+                    limit: 10,
                     template: '{{label}}'
                 });
                 seldiv.bind('typeahead:selected',function(event,entity) {
@@ -166,52 +167,35 @@
 
     $.fn.dsQuickLinks = function(id) {
         this.each(function() {
-            var div = $(this);
-            var uri = div.attr('data-target');
+            var outer = $(this);
+            var uri = outer.attr('data-target');
+            var div = $('<div>').addClass("list-group");
+            outer.html(div);
 
-            div.html($('<div>').addClass("list-group").append(function() {
+            var from_storage = 0;
+            div.append(function() {
                 var lst = $.jStorage.get('pyff.discovery.idps',[]);
                 for (var i = 0; i < lst.length; i++) {
-                    $(this).append(idp_template.render(lst[i]));
+                    div.append(idp_template.render(lst[i]));
+                    from_storage++;
                 }
-            }));
-
-            $.getJSON(uri+"?suggest="+id+"&suggest="+document.referrer+"&entity_filter={http://pyff-project.org/role}idp",function (data) {
-                $.each(function(pos,elt) {
-                    elt.sticky = true
-                    $(this).append(idp_template.render(elt));
-                });
             });
-        });
-    };
- 
-    $.fn.dsQuickLinks2 = function() {
-        this.each(function() {
-            var $this = $(this);
-            $this.html($('<div>').addClass("list-group").append(function() {
-                var lst = $.jStorage.get('pyff.discovery.idps',[]);
-                for (var i = 0; i < lst.length; i++) {
-                    var item = lst[i];
-                    var idp = $('<a>').addClass("select list-group-item").attr('href',item['entityID']);
-                    var dismiss = $('<button>').attr('type',"button").addClass('close unselect').attr('rel',item['entityID']).append("&times;");
-                    idp.append(dismiss);
 
-                    idp.append($('<h4>').addClass("list-group-item-heading").append(item['title']));
-                    var inner = $('<p>').addClass("list-group-item-text");
-
-                    if (item['icon']) {
-                        inner.append($('<img>').attr('src',item['icon']).addClass("fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"));
-                    }
-                    if (item['descr']) {
-                        inner.append($('<div>').addClass('pull-left idp-description hidden-xs').append(item['descr']))
-                    }
-
-                    inner.append($('<div></div>').addClass("clearfix"));
-                    idp.append(inner);
-
-                    $(this).append(idp);
-                }
-            }));
+            if (from_storage == 0) {
+                $.getJSON(uri+"?entity_filter={http://pyff-project.org/role}idp", function (data) {
+                    $.each(data,function(pos,elt) {
+                        if (pos < 3) {
+                            $.getJSON("/metadata/"+elt.id+".json", function (entites) {
+                                $.each(entites,function(ipos,entity) {
+                                    console.log(entity);
+                                    entity.sticky = true
+                                    div.append(idp_template.render(entity));
+                                })
+                            });
+                        }
+                    });
+                });
+            }
         });
     };
 

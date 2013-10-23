@@ -349,10 +349,15 @@ def filter_lang(elts, langs=["en"]):
     else:
         return elts
 
+_xslt = dict()
+
 
 def xslt_transform(t, stylesheet, params={}):
-    xsl = etree.fromstring(resource_string(stylesheet, "xslt"))
-    transform = etree.XSLT(xsl)
+    transform = None
+    if not stylesheet in _xslt:
+        xsl = etree.fromstring(resource_string(stylesheet, "xslt"))
+        _xslt[stylesheet] = etree.XSLT(xsl)
+    transform = _xslt[stylesheet]
     return transform(t, **params)
 
 

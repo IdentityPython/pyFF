@@ -8,14 +8,12 @@ from datetime import datetime
 import hashlib
 import urllib
 from UserDict import DictMixin, UserDict
-import urlparse
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
 import os
 import re
 from copy import deepcopy
-from publicsuffix import PublicSuffixList
 from pyff import merge_strategies
 import pyff.index
 from pyff.logs import log
@@ -86,7 +84,6 @@ class MDRepository(DictMixin, Observable):
         self.respect_cache_duration = True
         self.default_cache_duration = "PT10M"
         self.retry_limit = 5
-        self.psl = PublicSuffixList()
 
         super(MDRepository, self).__init__()
 
@@ -131,7 +128,7 @@ class MDRepository(DictMixin, Observable):
     def sha1_id(self, e):
         return pyff.index.hash_id(e, 'sha1')
 
-    def search(self, query=None, path=None, page=None, page_limit=10, suggest=None, entity_filter=None, client_ip=None):
+    def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None):
         """
 :param query: A string to search for.
 :param path: The repository collection (@Name) to search in - None for search in all collections
@@ -150,33 +147,8 @@ The dict in the list contains three items:
 :param id: A sha1-ID of the entityID - on the form {sha1}<sha1-hash-of-entityID>
         """
 
-        def _tokenize(url):
-            if "://" in url:
-                url = urlparse.urlparse(url)
-                host = url.netloc
-                if ':' in url.netloc:
-                    (host, port) = url.netloc.split(':')
-                return filter(lambda x: len(x) > 0, host.rstrip(self.psl.get_public_suffix(host)).split('.'))
-            else:
-                return []
-
-        log.debug("suggest: %s" % suggest)
-        log.debug("client_ip: %s" % client_ip)
-
         if isinstance(query, basestring):
             query = [query.lower()]
-
-        if isinstance(client_ip, basestring):
-            client_ip = [client_ip]
-
-        if query is None or len(query) == 0:
-            ql = []
-            if suggest is not None and len(suggest) > 0:
-                for u in suggest:
-                    ql.extend(_tokenize(u))
-            query = ql
-
-        log.debug("query: %s" % query)
 
         def _lc_text(e):
             if e.text is None:
@@ -195,21 +167,25 @@ The dict in the list contains three items:
             return filter(lambda s: s is not None, lst)
 
         def _ip_networks(elt):
-            return [ipaddr.IPNetwork(x.text) for x in elt.findall('.//{%s}IPHInt' % NS['mdui'])]
+            return [ipaddr.IPNetwork(x.text) for x in elt.findall('.//{%s}IPHint' % NS['mdui'])]
 
-        def _match(qq, addrs, elt):
-            for qstr in _strings(elt):
-                for q in qq:
+        def _match(qq, elt):
+            for q in qq:
+                if ':' in q or '.' in q:
+                    nets = _ip_networks(elt)
+                    try:
+                        for net in nets:
+                            if ':' in q and ipaddr.IPv6Address(q) in net:
+                                return True
+                            if '.' in q and ipaddr.IPv4Address(q) in net:
+                                return True
+                    except ValueError, ex:
+                        pass
+                tokens = _strings(elt)
+                for qstr in tokens:
                     #log.debug("looking for '%s' in '%s'" % (q, qstr))
                     if q is not None and len(q) > 0 and q in qstr:
                         return True
-
-            if addrs is not None and len(addrs) > 0:
-                for net in _ip_networks(elt):
-                    for ip in [ipaddr.IPAddress(x) for x in addrs]:
-                        log.debug("looking for %s in %s" % (ip,net))
-                        if ip in net:
-                            return True
             return False
 
         f = []
@@ -221,15 +197,16 @@ The dict in the list contains three items:
         if f:
             mexpr = "+".join(f)
 
-        log.debug("mexpr: %s" % mexpr)
+        log.debug("match using '%s'" % mexpr)
         res = [{'label': self.display(e),
                 'value': e.get('entityID'),
+                'tokens': _strings(e),
                 'id': pyff.index.hash_id(e, 'sha1')}
-               for e in pyff.index.EntitySet(filter(lambda ent: _match(query, client_ip, ent), self.lookup(mexpr)))]
+               for e in pyff.index.EntitySet(filter(lambda ent: _match(query, ent), self.lookup(mexpr)))]
 
         res.sort(key=lambda i: i['label'])
 
-        log.debug(res)
+        log.debug("search returning %s" % res)
 
         if page is not None:
             total = len(res)
