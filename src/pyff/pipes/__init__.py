@@ -19,15 +19,14 @@ class PipeException(PyffException):
 
 class PluginsRegistry(dict):
     """
-    The plugin registry uses pkg_resources.iter_entry_points to list all EntryPoints in the group 'pyff.pipe'. All
-    entrypoints must have the '.name' property. A simple way to declare pipes is to use the @pyff.decorators.pipe
-    decorator thus:
+    The plugin registry uses pkg_resources.iter_entry_points to list all EntryPoints in the group 'pyff.pipe'. All pipe
+    entry_points must have the following prototype:
 
-    @pipe(name='something')
     def the_something_func(req,*opts):
         pass
 
-    This allows the_something_func to be called by referencing a pipe named 'something'.
+    Referencing this function as an entry_point using something = module:the_somethig_func in setup.py allows the
+    function to be referenced as 'something' in a pipeline.
     """
     def __init__(self):
         for entry_point in iter_entry_points('pyff.pipe'):

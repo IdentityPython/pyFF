@@ -72,12 +72,3 @@ def deprecated(func):
         )
         return func(*args, **kwargs)
     return new_func
-
-
-class pipe(object):
-
-    def __init__(self, name):
-        self.name = name
-
-    def __call__(self, func, req, *opts):
-        return func(req, *opts)
