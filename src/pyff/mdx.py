@@ -525,7 +525,7 @@ class MDServer():
 
                 if query is None:
                     log.debug("empty query - creating one")
-                    query = [cherrypy.request.remote.ipgit]
+                    query = [cherrypy.request.remote.ip]
                     referrer = cherrypy.request.headers.get('referrer', None)
                     if referrer is not None:
                         log.debug("including referrer: %s" % referrer)
