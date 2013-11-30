@@ -4,6 +4,7 @@ transform, sign or output SAML metadata.
 """
 
 import os
+from pkg_resources import iter_entry_points
 import yaml
 from pyff.utils import resource_string, PyffException
 from pyff.logs import log
@@ -14,6 +15,27 @@ __author__ = 'leifj'
 
 class PipeException(PyffException):
     pass
+
+
+class PluginsRegistry(dict):
+    """
+    The plugin registry uses pkg_resources.iter_entry_points to list all EntryPoints in the group 'pyff.pipe'. All
+    entrypoints must have the '.name' property. A simple way to declare pipes is to use the @pyff.decorators.pipe
+    decorator thus:
+
+    @pipe(name='something')
+    def the_something_func(req,*opts):
+        pass
+
+    This allows the_something_func to be called by referencing a pipe named 'something'.
+    """
+    def __init__(self):
+        for entry_point in iter_entry_points('pyff.pipe'):
+            if entry_point.name in self:
+                log.warn("Duplicate entry point: %s" % entry_point.name)
+            else:
+                log.debug("Registering entry point: %s" % entry_point.name)
+                self[entry_point.name] = entry_point.load()
 
 
 class PipeLoader(object):
@@ -35,11 +57,9 @@ of the pipeline to get cancelled. The pipe may also replace req.t instead of ret
 transformed copy in which case it should return None
     """
 
-    def _n(self, d):
-        lst = d.split()
-        name = lst[0]
-        opts = lst[1:]
-        return name, opts
+    def __init__(self):
+        self.registry = PluginsRegistry()
+        self.builtins = __import__("pyff.pipes.builtins", fromlist=["pyff.pipes"])
 
     def load_pipe(self, d):
         """Return a triple callable,name,args of the pipe specified by the object d.
@@ -50,18 +70,25 @@ transformed copy in which case it should return None
  - d is a dict of the form {name: args} (i.e one key) in which case the pipe named *name* is called with args
  - d is an iterable (eg tuple or list) in which case d[0] is treated as the pipe name and d[1:] becomes the args
         """
+
+        def _n(_d):
+            lst = _d.split()
+            _name = lst[0]
+            _opts = lst[1:]
+            return _name, _opts
+
         name = None
         args = None
         opts = []
         if type(d) is str or type(d) is unicode:
-            name, opts = self._n(d)
+            name, opts = _n(d)
         elif hasattr(d, '__iter__') and not type(d) is dict:
             if not len(d):
                 raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
-            name, opts = self._n(d[0])
+            name, opts = _n(d[0])
         elif type(d) is dict:
             k = d.keys()[0]
-            name, opts = self._n(k)
+            name, opts = _n(k)
             args = d[k]
         else:
             raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
@@ -69,25 +96,18 @@ transformed copy in which case it should return None
         if name is None:
             raise PipeException("Anonymous length of pipe... \n%s" % repr(d))
 
-        mname = "pyff.pipes.builtins"
-        fn = name
-        if ':' in name:
-            (mname, sep, fn) = name.rpartition(":")
-        pm = mname
-        if '.' in mname:
-            (pm, sep, mn) = mname.rpartition('.')
-            log.debug("importing %s from %s to find %s" % (mn, pm, fn))
-        else:
-            log.debug("importing %s from %s to find %s" % (mname, pm, fn))
-        module = __import__(mname, fromlist=[pm])
-        if hasattr(module, fn) and hasattr(getattr(module, fn), '__call__'):
-            return getattr(module, fn), opts, fn, args
-        elif hasattr(module, "_%s" % fn) and hasattr(getattr(module, "_%s" % fn), '__call__'):
-            return getattr(module, "_%s" % fn), opts, fn, args
-        else:
-            raise PipeException("No such method %s in %s" % (fn, mname))
+        func = None
+        if hasattr(self.builtins, name) and hasattr(getattr(self.builtins, name), '__call__'):
+            func = getattr(self.builtins, name)
+        elif hasattr(self.builtins, "_%s" % name) and hasattr(getattr(self.builtins, "_%s" % name), '__call__'):
+            func = getattr(self.builtins, "_%s" % name)
+        elif name in self.registry:
+            func = self.registry[name]
 
-            #return __import__("pyff.pipes.%s" % name, fromlist=["pyff.pipes"]),name,args
+        if func is None or not hasattr(func, '__call__'):
+            raise PipeException('No pipe named %s is installed' % name)
+
+        return func, opts, name, args
 
 
 class Plumbing(object):
