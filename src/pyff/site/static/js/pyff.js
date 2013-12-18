@@ -128,6 +128,7 @@
                 seldiv.html($('<option>').attr('value','').append($('<em>').append(seldiv.attr('title'))))
                 $.getJSON('/role/idp.json',function (data) {
                     $.each($(data).sort(cmp_title),function(pos,elt) {
+                        //console.log(elt);
                         seldiv.append($('<option>').attr('value','{sha1}'+CryptoJS.SHA1(elt.entityID)).append(elt.title));
                     })
                 });
