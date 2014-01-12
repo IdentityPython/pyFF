@@ -285,7 +285,8 @@ class URLFetch(threading.Thread):
                     self.date = datetime.now()
                     self.last_modified = datetime.fromtimestamp(os.stat(path).st_mtime)
             else:
-                h = httplib2.Http(cache=cache, timeout=60,
+                h = httplib2.Http(cache=cache,
+                                  timeout=60,
                                   disable_ssl_certificate_validation=True)  # trust is done using signatures over here
                 resp, content = h.request(self.url, headers=headers)
                 self.resp = resp

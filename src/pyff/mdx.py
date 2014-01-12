@@ -107,7 +107,7 @@ class MDUpdate(Monitor):
                     log.error("update produced insane active repository - will try again later...")
                 with server.lock.writelock:
                     log.debug("update produced new repository with %d entities" % md.index.size())
-                    server.md = md
+                    server.md = md  # this results in a update!
                     md.fire(type=EVENT_REPOSITORY_LIVE, size=md.index.size())
                     stats['Repository Update Time'] = datetime.now()
                     stats['Repository Size'] = md.index.size()
@@ -406,7 +406,10 @@ class MDServer():
                 cherrypy.engine.autoreload.files.add(f)
 
     def _set_md(self, md):
-        self._md = md
+        if self._md is None:
+            self._md = md
+        else:
+            self._md.update(md)
 
     def _get_md(self):
         if self._md is None:
