@@ -793,7 +793,7 @@ HTML.
                 fp = m.hexdigest()
                 if not seen.get(fp, False):
                     seen[fp] = True
-                    cdict = xmlsec.b642cert(cert_pem)
+                    cdict = xmlsec.utils.b642cert(cert_pem)
                     keysize = cdict['modulus'].bit_length()
                     if keysize < error_bits:
                         e = cd.getparent().getparent().getparent().getparent().getparent()
