@@ -13,7 +13,7 @@
     <xsl:output method="text" encoding="UTF-8"/>
     <xsl:template match="md:EntitiesDescriptor">
         <xsl:text>[</xsl:text>
-        <xsl:apply-templates/>
+        <xsl:apply-templates select="md:EntityDescriptor"/>
         <xsl:text>]</xsl:text>
     </xsl:template>
 
