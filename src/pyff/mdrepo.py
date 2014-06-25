@@ -602,7 +602,11 @@ starting with '.' are excluded.
                             entities.extend(self.entities(t))  # local metadata is assumed to be ok
                         except Exception, ex:
                             log.error(ex)
-            self.import_metadata(self.entity_set(entities, url))
+            if entities:
+                self.import_metadata(self.entity_set(entities, url))
+            else:
+                log.info("no entities found in %s" % directory)
+                return None
         return self.md[url]
 
     def _lookup(self, member, xp=None):
