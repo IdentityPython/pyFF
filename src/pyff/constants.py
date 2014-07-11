@@ -12,6 +12,7 @@ NS = {"md": "urn:oasis:names:tc:SAML:2.0:metadata",
       'mdrpi': "urn:oasis:names:tc:SAML:metadata:rpi",
       'shibmd': "urn:mace:shibboleth:metadata:1.0",
       'xrd': 'http://docs.oasis-open.org/ns/xri/xrd-1.0',
+      'pyff': 'http://pyff-project.org/NS',
       'saml': "urn:oasis:names:tc:SAML:2.0:assertion"}
 
 ATTRS = {'collection': 'http://pyff-project.org/collection',

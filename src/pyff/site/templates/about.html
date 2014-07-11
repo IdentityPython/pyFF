@@ -29,7 +29,7 @@
                 </dl>
             </div>
             <div class="tab-pane" id="repo">
-                % for uri in repo.keys():
+                % for uri in repo.store.collections():
                 <h2>${uri}</h2>
                 <dl>
                     % for k,v in repo.summary(uri).iteritems():

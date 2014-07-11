@@ -3,6 +3,7 @@
 This module contains various utilities.
 
 """
+from collections import MutableSet
 from datetime import timedelta, datetime
 import tempfile
 import traceback
@@ -16,6 +17,7 @@ from time import gmtime, strftime, clock
 from pyff.logs import log
 import threading
 import httplib2
+import hashlib
 from email.utils import parsedate
 
 __author__ = 'leifj'
@@ -131,6 +133,12 @@ Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours
     for k, v in re.match(regex, input).groupdict(default="0").items():
         kwargs[k] = int(v)
     return timedelta(**kwargs)
+
+
+def totimestamp(dt, epoch=datetime(1970, 1, 1)):
+    td = dt - epoch
+    # return td.total_seconds()
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 1e6
 
 
 def dumptree(t, pretty_print=False, xml_declaration=True):
@@ -260,10 +268,10 @@ class URLFetch(threading.Thread):
 
     def run(self):
 
-        def _parse_date(str):
-            if str is None:
+        def _parse_date(s):
+            if s is None:
                 return datetime.new()
-            return datetime(*parsedate(str)[:6])
+            return datetime(*parsedate(s)[:6])
 
         self.start_time = clock()
         try:
@@ -300,7 +308,7 @@ class URLFetch(threading.Thread):
             log.debug("got %d bytes from '%s'" % (len(self.result), self.url))
         except Exception, ex:
             #traceback.print_exc()
-            #log.warn("unable to fetch '%s': %s" % (self.url, ex))
+            log.warn("unable to fetch '%s': %s" % (self.url, ex))
             self.ex = ex
             self.result = None
         finally:
@@ -367,3 +375,95 @@ def total_seconds(dt):
         return dt.total_seconds()
     else:
         return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
+
+
+def etag(s):
+    return hash_str('sha1',s)
+
+
+def hash_str(hn, s):
+    if hn == 'null':
+        return s
+    if not hasattr(hashlib, hn):
+        raise ValueError("Unknown digest mechanism: '%s'" % hn)
+    hash_m = getattr(hashlib, hn)
+    h = hash_m()
+    h.update(s)
+    return h.hexdigest()
+
+
+def hash_id(entity, hn='sha1', prefix=True):
+    entity_id = entity
+    if hasattr(entity, 'get'):
+        entity_id = entity.get('entityID')
+
+    hstr = hex_digest(entity_id, hn)
+    if prefix:
+        return "{%s}%s" % (hn, hstr)
+    else:
+        return hstr
+
+
+def hex_digest(data, hn='sha1'):
+    if hn == 'null':
+        return data
+
+    if not hasattr(hashlib, hn):
+        raise ValueError("Unknown digest '%s'" % hn)
+
+    m = getattr(hashlib, hn)()
+    m.update(data)
+    return m.hexdigest()
+
+
+def parse_xml(io, base_url=None):
+    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
+
+
+class EntitySet(MutableSet):
+    def __init__(self, initial=None):
+        self._e = dict()
+        if initial is not None:
+            for e in initial:
+                self.add(e)
+
+    def add(self, value):
+        self._e[value.get('entityID')] = value
+
+    def discard(self, value):
+        entityID = value.get('entityID')
+        if entityID in self._e:
+            del self._e[entityID]
+
+    def __iter__(self):
+        for e in self._e.values():
+            yield e
+
+    def __len__(self):
+        return len(self._e.keys())
+
+    def __contains__(self, item):
+        return item.get('entityID') in self._e.keys()
+
+
+class MetadataException(Exception):
+    pass
+
+
+def find_merge_strategy(strategy_name):
+    if not '.' in strategy_name:
+        strategy_name = "pyff.merge_strategies.%s" % strategy_name
+    (mn, sep, fn) = strategy_name.rpartition('.')
+    # log.debug("import %s from %s" % (fn,mn))
+    module = None
+    if '.' in mn:
+        (pn, sep, modn) = mn.rpartition('.')
+        module = getattr(__import__(pn, globals(), locals(), [modn], -1), modn)
+    else:
+        module = __import__(mn, globals(), locals(), [], -1)
+    strategy = getattr(module, fn)  # we might aswell let this fail early if the strategy is wrongly named
+
+    if strategy is None:
+        raise MetadataException("Unable to find merge strategy %s" % strategy_name)
+
+    return strategy

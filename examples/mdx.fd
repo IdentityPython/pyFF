@@ -12,7 +12,7 @@
        - http://mds.edugain.org via edugain
     - select
     - fork and merge:
-       - select: "!md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
+       - select: "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
        - setattr:
             http://pyff-project.org/collection: swamid-2.0
     - fork and merge:

@@ -5,25 +5,26 @@ This is the implementation of the active repository of SAML metadata. The 'local
 """
 from StringIO import StringIO
 from datetime import datetime
-import hashlib
-import urllib
 from UserDict import DictMixin, UserDict
-from lxml import etree
-from lxml.builder import ElementMaker
-from lxml.etree import DocumentInvalid
 import os
 import re
-from copy import deepcopy
-from pyff import merge_strategies
-import pyff.index
-from pyff.logs import log
-from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template
-import xmlsec
-from pyff.constants import NS, NF_URI, DIGESTS, EVENT_DROP_ENTITY, EVENT_IMPORTED_METADATA, EVENT_IMPORT_FAIL
 import traceback
 import threading
 from Queue import Queue
+
+from lxml import etree
+from lxml.builder import ElementMaker
+from lxml.etree import DocumentInvalid
+import xmlsec
 import ipaddr
+
+from pyff import merge_strategies
+from pyff.logs import log
+from pyff.store import RedisStore
+from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template, \
+    hash_id, EntitySet, parse_xml, MetadataException, find_merge_strategy
+from pyff.constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
+
 
 __author__ = 'leifj'
 
@@ -49,10 +50,6 @@ def _e(error_log, m=None):
     return "\n".join(filter(_f, ["%s" % e for e in error_log]))
 
 
-class MetadataException(Exception):
-    pass
-
-
 class Event(UserDict):
     pass
 
@@ -76,30 +73,32 @@ class MDRepository(DictMixin, Observable):
     the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
     """
 
-    def __init__(self, index=pyff.index.MemoryIndex(), metadata_cache_enabled=False, min_cache_ttl="PT5M"):
-        self.md = {}
-        self.index = index
+    def __init__(self, metadata_cache_enabled=False, min_cache_ttl="PT5M", store=None):
         self.metadata_cache_enabled = metadata_cache_enabled
         self.min_cache_ttl = min_cache_ttl
         self.respect_cache_duration = True
         self.default_cache_duration = "PT10M"
         self.retry_limit = 5
+        self.store = None
+
+        if store is not None:
+            if hasattr(store, '__call__'):
+                self.store = store()
+            else:
+                self.store = store
+        else:
+            self.store = RedisStore()
 
         super(MDRepository, self).__init__()
 
-    def is_idp(self, entity):
-        """Returns True if the supplied EntityDescriptor has an IDPSSODescriptor Role
+    def sha1_id(self, e):
+        return hash_id(e, 'sha1')
 
-:param entity: An EntityDescriptor element
-        """
-        return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']) is not None)
+    def is_idp(self, e):
+        return bool(e.find(".//{%s}IDPSSODescriptor" % NS['md']) is not None)
 
-    def is_sp(self, entity):
-        """Returns True if the supplied EntityDescriptor has an SPSSODescriptor Role
-
-:param entity: An EntityDescriptor element
-        """
-        return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
+    def is_sp(self, e):
+        return bool(e.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
 
     def display(self, entity):
         """Utility-method for computing a displayable string for a given entity.
@@ -119,14 +118,6 @@ class MDRepository(DictMixin, Observable):
             return organizationName.text
 
         return entity.get('entityID')
-
-    def __iter__(self):
-        for t in [self.md[url] for url in self.md.keys()]:
-            for entity in t.findall(".//{%s}EntityDescriptor" % NS['md']):
-                yield entity
-
-    def sha1_id(self, e):
-        return pyff.index.hash_id(e, 'sha1')
 
     def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None):
         """
@@ -183,7 +174,7 @@ The dict in the list contains three items:
                         pass
                 tokens = _strings(elt)
                 for qstr in tokens:
-                    #log.debug("looking for '%s' in '%s'" % (q, qstr))
+                    # log.debug("looking for '%s' in '%s'" % (q, qstr))
                     if q is not None and len(q) > 0 and q in qstr:
                         return True
             return False
@@ -201,8 +192,8 @@ The dict in the list contains three items:
         res = [{'label': self.display(e),
                 'value': e.get('entityID'),
                 'tokens': _strings(e),
-                'id': pyff.index.hash_id(e, 'sha1')}
-               for e in pyff.index.EntitySet(filter(lambda ent: _match(query, ent), self.lookup(mexpr)))]
+                'id': hash_id(e, 'sha1')}
+               for e in EntitySet(filter(lambda ent: _match(query, ent), self.lookup(mexpr)))]
 
         res.sort(key=lambda i: i['label'])
 
@@ -222,7 +213,7 @@ The dict in the list contains three items:
 
 :return: True iff there is at least one EntityDescriptor in the active set.
         """
-        return len(self.md) > 0
+        return len(self.store.collections()) > 0
 
     def extensions(self, e):
         """Return a list of the Extensions elements in the EntityDescriptor
@@ -258,10 +249,11 @@ The dict in the list contains three items:
                      atom.category(term=category),
                      atom.content(message, type="text/plain")])
         self.extensions(e).append(atom.entry(*args))
+        self.store.update(e)
 
     def _entity_attributes(self, e):
         ext = self.extensions(e)
-        #log.debug(ext)
+        # log.debug(ext)
         ea = ext.find(".//{%s}EntityAttributes" % NS['mdattr'])
         if ea is None:
             ea = etree.Element("{%s}EntityAttributes" % NS['mdattr'])
@@ -270,7 +262,7 @@ The dict in the list contains three items:
 
     def _eattribute(self, e, attr, nf):
         ea = self._entity_attributes(e)
-        #log.debug(ea)
+        # log.debug(ea)
         a = ea.xpath(".//saml:Attribute[@NameFormat='%s' and @Name='%s']" % (nf, attr), namespaces=NS)
         if a is None or len(a) == 0:
             a = etree.Element("{%s}Attribute" % NS['saml'])
@@ -279,7 +271,7 @@ The dict in the list contains three items:
             ea.append(a)
         else:
             a = a[0]
-            #log.debug(etree.tostring(self.extensions(e)))
+            # log.debug(etree.tostring(self.extensions(e)))
         return a
 
     def set_entity_attributes(self, e, d, nf=NF_URI):
@@ -294,17 +286,15 @@ The dict in the list contains three items:
         if e.tag != "{%s}EntityDescriptor" % NS['md']:
             raise MetadataException("I can only add EntityAttribute(s) to EntityDescriptor elements")
 
-        #log.debug("set %s" % d)
         for attr, value in d.iteritems():
-            #log.debug("set %s to %s" % (attr,value))
             a = self._eattribute(e, attr, nf)
-            #log.debug(etree.tostring(a))
             velt = etree.Element("{%s}AttributeValue" % NS['saml'])
             velt.text = value
             a.append(velt)
-            #log.debug(etree.tostring(a))
 
-    def fetch_metadata(self, resources, qsize=5, timeout=120, stats=None, xrd=None, validate=False):
+        self.store.update(e)
+
+    def fetch_metadata(self, resources, qsize=1, timeout=300, stats=None, xrd=None, validate=False):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id)
@@ -325,33 +315,39 @@ elements with a X509Certificate and where the <Rel> element contains the string
 and verified.
         """
         if stats is None:
-            stats = {}
+            stats = dict()
 
-        def producer(q, resources, cache=self.metadata_cache_enabled):
-            print resources
-            for url, verify, id, tries, post in resources:
-                log.debug("starting fetcher for '%s'" % url)
-                thread = URLFetch(url, verify, id, enable_cache=cache, tries=tries, post=post)
+        def producer(queue, resource_list, is_cache_enabled=self.metadata_cache_enabled):
+            # print resources
+            for resource_url, verifier, resource_id, tries, post_cb in resource_list:
+                log.debug("starting fetcher for '%s'" % resource_url)
+                thread = URLFetch(resource_url,
+                                  verifier,
+                                  resource_id,
+                                  enable_cache=is_cache_enabled,
+                                  tries=tries,
+                                  post=post_cb)
                 thread.start()
-                q.put(thread, True)
+                queue.put(thread, True)
 
-        def consumer(q, njobs, stats, next_jobs=None, resolved=None):
-            if next_jobs is None:
-                next_jobs = []
-            if resolved is None:
-                resolved = set()
+        def consumer(queue, njobs, next_jobs_list=None, resolved_list=None, time_remaining=timeout):
+            if next_jobs_list is None:
+                next_jobs_list = []
+            if resolved_list is None:
+                resolved_list = set()
             nfinished = 0
 
-            while nfinished < njobs:
+            while nfinished < njobs and time_remaining > 0:
                 info = None
+                thread = queue.get(True)
+                thread.join(5)
+                time_remaining -= 5
+                if thread.isAlive():
+                    log.debug("waiting for %s to finish..." % thread.url)
+                    queue.put(thread, True)
+                    continue
+
                 try:
-                    log.debug("waiting for next thread to finish...")
-                    thread = q.get(True)
-                    thread.join(timeout)
-
-                    if thread.isAlive():
-                        raise MetadataException("thread timeout fetching '%s'" % thread.url)
-
                     info = {
                         'Time Spent': thread.time()
                     }
@@ -388,38 +384,43 @@ and verified.
                         for xrd in t.xpath("//xrd:XRD", namespaces=NS):
                             log.debug("xrd: %s" % xrd)
                             for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
-                                url = link.get("href")
+                                resource_url = link.get("href")
                                 certs = xmlsec.CertDict(link)
                                 fingerprints = certs.keys()
                                 fp = None
                                 if len(fingerprints) > 0:
                                     fp = fingerprints[0]
                                 log.debug("fingerprint: %s" % fp)
-                                next_jobs.append((url, fp, url, 0, thread.post))
+                                next_jobs_list.append((resource_url, fp, resource_url, 0, thread.post))
 
                     elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
-                        cacheDuration = self.default_cache_duration
+                        cache_duration = self.default_cache_duration
                         if self.respect_cache_duration:
-                            cacheDuration = root(t).get('cacheDuration', self.default_cache_duration)
-                        offset = duration2timedelta(cacheDuration)
+                            cache_duration = root(t).get('cacheDuration', self.default_cache_duration)
+                        offset = duration2timedelta(cache_duration)
 
                         if thread.cached:
                             if thread.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
-                                raise MetadataException("cached metadata expired")
+                                #raise MetadataException("cached metadata expired")
+                                log.debug("cached metadata expired - retrying %s" % thread.url)
+                                next_jobs_list.append((thread.url, thread.verify, thread.id, thread.tries + 1, thread.post))
+                                continue
                             else:
-                                log.debug("found cached metadata for '%s' (last-modified: %s)" % (thread.url, thread.last_modified))
-                                ne = self.import_metadata(t, url=thread.id)
+                                log.debug("found cached metadata for '%s' (last-modified: %s)" % (
+                                    thread.url, thread.last_modified))
+                                ne = self.store.update(t, thread.id)
                                 info['Number of Entities'] = ne
                         else:
                             log.debug("got fresh metadata for '%s' (date: %s)" % (thread.url, thread.date))
-                            ne = self.import_metadata(t, url=thread.id)
+                            ne = self.store.update(t, thread.id)
                             info['Number of Entities'] = ne
+
                         info['Cache Expiration Time'] = str(thread.last_modified + offset)
                         certs = xmlsec.CertDict(relt)
                         cert = None
                         if certs.values():
                             cert = certs.values()[0].strip()
-                        resolved.add((thread.url, cert))
+                        resolved_list.add((thread.url, cert))
                     else:
                         raise MetadataException("unknown metadata type for '%s' (%s)" % (thread.url, relt.tag))
                 except Exception, ex:
@@ -428,9 +429,9 @@ and verified.
                     if info is not None:
                         info['Exception'] = ex
                     if thread.tries < self.retry_limit:
-                        next_jobs.append((thread.url, thread.verify, thread.id, thread.tries + 1, thread.post))
+                        next_jobs_list.append((thread.url, thread.verify, thread.id, thread.tries + 1, thread.post))
                     else:
-                        #traceback.print_exc(ex)
+                        # traceback.print_exc(ex)
                         log.error("retry limit exceeded for %s (last error was: %s)" % (thread.url, ex))
                 finally:
                     nfinished += 1
@@ -445,7 +446,7 @@ and verified.
             next_jobs = []
             q = Queue(qsize)
             prod_thread = threading.Thread(target=producer, args=(q, resources, cache))
-            cons_thread = threading.Thread(target=consumer, args=(q, len(resources), stats, next_jobs, resolved))
+            cons_thread = threading.Thread(target=consumer, args=(q, len(resources), next_jobs, resolved, timeout))
             prod_thread.start()
             cons_thread.start()
             prod_thread.join()
@@ -460,6 +461,9 @@ and verified.
         if xrd is not None:
             with open(xrd, "w") as fd:
                 fd.write(template("trust.xrd").render(links=resolved))
+
+    def import_metadata(self, t, name):
+        self.store.update(t, name)
 
     def parse_metadata(self,
                        fn,
@@ -482,6 +486,7 @@ and verified.
 (but after xinclude processing)
         """
         try:
+            t = parse_xml(fn, base_url)
             t = etree.parse(fn, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
             t.xinclude()
 
@@ -490,11 +495,11 @@ and verified.
                     log.debug("verifying signature using %s" % key)
                     refs = xmlsec.verified(t, key)
                     if len(refs) != 1:
-                        raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+                        raise MetadataException(
+                            "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
                     t = refs[0]  # prevent wrapping attacks
                 except Exception, ex:
-                    tb = traceback.format_exc()
-                    print tb
+                    print traceback.format_exc()
                     log.error(ex)
                     return None
 
@@ -517,51 +522,13 @@ and verified.
             log.debug("schema validation failed on '%s': %s" % (base_url, _e(ex.error_log, m=base_url)))
             raise MetadataException("schema validation failed")
         except Exception, ex:
-            #log.debug(_e(schema().error_log))
+            # log.debug(_e(schema().error_log))
             log.error(ex)
             if fail_on_error:
                 raise ex
             return None
 
         return t
-
-    def _index_entity(self, e):
-        #log.debug("adding %s to index" % e.get('entityID'))
-        if 'ID' in e.attrib:
-            del e.attrib['ID']
-        self.index.add(e)
-
-    def import_metadata(self, t, url=None):
-        """
-:param t: An EntitiesDescriptor element
-:param url: An optional URL to used to identify the EntitiesDescriptor in the MDRepository
-
-Import an EntitiesDescriptor element using the @Name attribute (or the supplied url parameter). All
-EntityDescriptor elements are stripped of any @ID attribute and are then indexed before the collection
-is stored in the MDRepository object.
-        """
-        if url is None:
-            top = t.xpath("//md:EntitiesDescriptor", namespaces=NS)
-            if top is not None and len(top) == 1:
-                url = top[0].get("Name", None)
-        if url is None:
-            raise MetadataException("No collection name found")
-        self[url] = t
-        # we always clean incoming ID
-        # add to the index
-        ne = 0
-
-        if t is not None:
-            if root(t).tag == "{%s}EntityDescriptor" % NS['md']:
-                self._index_entity(root(t))
-                ne += 1
-            else:
-                for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
-                    self._index_entity(e)
-                    ne += 1
-
-        self.fire(type=EVENT_IMPORTED_METADATA, size=ne, url=url)
-        return ne
 
     def entities(self, t=None):
         """
@@ -587,124 +554,39 @@ starting with '.' are excluded.
         if url is None:
             url = directory
         log.debug("walking %s" % directory)
-        if not directory in self.md:
-            entities = []
-            for top, dirs, files in os.walk(directory):
-                for dn in dirs:
-                    if dn.startswith("."):
-                        dirs.remove(dn)
-                for nm in files:
-                    log.debug("found file %s" % nm)
-                    if nm.endswith(ext):
-                        fn = os.path.join(top, nm)
-                        try:
-                            t = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
-                            entities.extend(self.entities(t))  # local metadata is assumed to be ok
-                        except Exception, ex:
-                            log.error(ex)
-            self.import_metadata(self.entity_set(entities, url))
-        return self.md[url]
 
-    def _lookup(self, member, xp=None):
-        """
-:param member: Either an entity, URL or a filter expression.
+        entities = []
+        for top, dirs, files in os.walk(directory):
+            for dn in dirs:
+                if dn.startswith("."):
+                    dirs.remove(dn)
+            for nm in files:
+                log.debug("found file %s" % nm)
+                if nm.endswith(ext):
+                    fn = os.path.join(top, nm)
+                    try:
+                        t = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
+                        entities.extend(self.entities(t))  # local metadata is assumed to be ok
+                    except Exception, ex:
+                        log.error(ex)
+        self.store.update(self.entity_set(entities, url))
 
-Find a (set of) EntityDescriptor element(s) based on the specified 'member' expression.
-        """
-
-        def _hash(hn, strv):
-            if hn == 'null':
-                return strv
-            if not hasattr(hashlib, hn):
-                raise MetadataException("Unknown digest mechanism: '%s'" % hn)
-            hash_m = getattr(hashlib, hn)
-            h = hash_m()
-            h.update(strv)
-            return h.hexdigest()
-
-        if xp is None:
-            xp = "//md:EntityDescriptor"
+    def _lookup(self, member):
         if member is None:
-            lst = []
-            for m in self.keys():
-                log.debug("resolving %s filtered by %s" % (m, xp))
-                lst.extend(self._lookup(m, xp))
-            return lst
-        elif hasattr(member, 'xpath'):
-            #log.debug("xpath filter %s <- %s" % (xp, member))
-            return member.xpath(xp, namespaces=NS)
-        elif type(member) is str or type(member) is unicode:
-            log.debug("string lookup %s" % member)
+            member = "entities"
 
-            if '+' in member:
-                member = member.strip('+')
-                log.debug("lookup intersection of '%s'" % ' and '.join(member.split('+')))
-                hits = None
-                for f in member.split("+"):
-                    f = f.strip()
-                    if hits is None:
-                        hits = set(self._lookup(f, xp))
-                    else:
-                        other = self._lookup(f, xp)
-                        hits.intersection_update(other)
-
-                    if not hits:
-                        log.debug("empty intersection")
-                        return []
-
-                if hits is not None and hits:
-                    return list(hits)
-                else:
-                    return []
-
-            if "!" in member:
+        if type(member) is str or type(member) is unicode:
+            if '!' in member:
                 (src, xp) = member.split("!")
                 if len(src) == 0:
                     src = None
-                    log.debug("filtering using %s" % xp)
-                else:
-                    log.debug("selecting %s filtered by %s" % (src, xp))
-                return self._lookup(src, xp)
-
-            m = re.match("^\{(.+)\}(.+)$", member)
-            if m is not None:
-                log.debug("attribute-value match: %s='%s'" % (m.group(1), m.group(2)))
-                return self.index.get(m.group(1), m.group(2).rstrip("/"))
+                return self.lookup(src, xp)
 
             m = re.match("^(.+)=(.+)$", member)
-            if m is not None:
-                log.debug("attribute-value match: %s='%s'" % (m.group(1), m.group(2)))
-                return self.index.get(m.group(1), m.group(2).rstrip("/"))
+            if m:
+                return self._lookup("{%s}%s" % (m.group(1), m.group(2).rstrip("/")))
 
-            log.debug("basic lookup %s" % member)
-            for idx in DIGESTS:
-                e = self.index.get(idx, member)
-                if e:
-                    log.debug("found %s in %s index" % (e, idx))
-                    return e
-
-            e = self.get(member, None)
-            if e is not None:
-                return self._lookup(e, xp)
-
-            e = self.get("%s.xml" % member, None)  # hackish but helps save people from their misstakes
-            if e is not None:
-                if not "://" in member:  # not an absolute URL
-                    log.warn("Found %s.xml as an alias - AVOID extensions in 'select as' statements" % member)
-                return self._lookup(e, xp)
-
-            if "://" in member:  # looks like a URL and wasn't an entity or collection - recurse away!
-                log.debug("recursively fetching members from '%s'" % member)
-                # note that this supports remote lists which may be more rope than is healthy
-                return [self._lookup(line, xp) for line in urllib.urlopen(member).iterlines()]
-
-            return []
-        elif hasattr(member, '__iter__') and type(member) is not dict:
-            if not len(member):
-                member = self.keys()
-            return [self._lookup(m, xp) for m in member]
-        else:
-            raise MetadataException("What about %s ??" % member)
+        return self.store.lookup(member)
 
     def lookup(self, member, xp=None):
         """
@@ -735,8 +617,22 @@ the metadata repository then it is fetched an treated as a list of (one per line
 fails an empty list is returned.
 
         """
-        l = self._lookup(member, xp)
-        return list(set(filter(lambda x: x is not None, l)))
+        def _xp(e):
+            #log.debug(dumptree(e))
+            match = e.xpath(xp, namespaces=NS)
+            #log.debug(match)
+            return len(match) > 0
+
+        l = self._lookup(member)
+        if hasattr(l, 'tag'):
+            l = [l]
+        if xp is None:
+            return l
+        else:
+            log.debug("filtering %d entities using xpath %s" % (len(l), xp))
+            l = filter(_xp, l)
+            log.debug("got %d entities after filtering" % len(l))
+            return l
 
     def entity_set(self, entities, name, cacheDuration=None, validUntil=None, validate=True):
         """
@@ -759,7 +655,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             for ent in self.lookup(member):
                 entity_id = ent.get('entityID', None)
                 if (ent is not None) and (entity_id is not None) and (not seen.get(entity_id, False)):
-                    t.append(deepcopy(ent))
+                    t.append(ent)
                     seen[entity_id] = True
                     nent += 1
 
@@ -783,18 +679,6 @@ Creates an "error" EntitiesDescriptor - empty but for an annotation about the er
         t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], Name=url, nsmap=NS)
         self.annotate(t, "error", title, ex, source=url)
 
-    def keys(self):
-        return self.md.keys()
-
-    def __getitem__(self, item):
-        return self.md[item]
-
-    def __setitem__(self, key, value):
-        self.md[key] = value
-
-    def __delitem__(self, key):
-        del self.md[key]
-
     def summary(self, uri):
         """
 :param uri: An EntitiesDescriptor URI present in the MDRepository
@@ -804,23 +688,23 @@ Returns a dict object with basic information about the EntitiesDescriptor
         """
         seen = dict()
         info = dict()
-        t = root(self[uri])
+        t = self.get(uri)
         info['Name'] = t.get('Name', uri)
         info['cacheDuration'] = t.get('cacheDuration', None)
         info['validUntil'] = t.get('validUntil', None)
         info['Duplicates'] = []
         info['Size'] = 0
-        for e in self.entities(self[uri]):
-            entityID = e.get('entityID')
-            if seen.get(entityID, False):
-                info['Duplicates'].append(entityID)
+        for e in self.entities(t):
+            entity_id = e.get('entityID')
+            if seen.get(entity_id, False):
+                info['Duplicates'].append(entity_id)
             else:
-                seen[entityID] = True
+                seen[entity_id] = True
             info['Size'] += 1
 
         return info
 
-    def merge(self, t, nt, strategy=pyff.merge_strategies.replace_existing, strategy_name=None):
+    def merge(self, t, nt, strategy=merge_strategies.replace_existing, strategy_name=None):
         """
 :param t: The EntitiesDescriptor element to merge *into*
 :param nt:  The EntitiesDescriptor element to merge *from*
@@ -842,36 +726,11 @@ merge the resultant EntityDescriptor is added to the index before it is used to
 replace old_e in t.
         """
         if strategy_name is not None:
-            if not '.' in strategy_name:
-                strategy_name = "pyff.merge_strategies.%s" % strategy_name
-            (mn, sep, fn) = strategy_name.rpartition('.')
-            #log.debug("import %s from %s" % (fn,mn))
-            module = None
-            if '.' in mn:
-                (pn, sep, modn) = mn.rpartition('.')
-                module = getattr(__import__(pn, globals(), locals(), [modn], -1), modn)
-            else:
-                module = __import__(mn, globals(), locals(), [], -1)
-            strategy = getattr(module, fn)  # we might aswell let this fail early if the strategy is wrongly named
-
-        if strategy is None:
-            raise MetadataException("No merge strategy - refusing to merge")
+            strategy = find_merge_strategy(strategy_name)
 
         for e in nt.findall(".//{%s}EntityDescriptor" % NS['md']):
-            entityID = e.get("entityID")
+            entity_id = e.get("entityID")
             # we assume ddup:ed tree
-            old_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
-            #log.debug("merging %s into %s" % (e,old_e))
-            # update index!
-
-            try:
-                self.index.remove(old_e)
-                #log.debug("removed old entity from index")
-                strategy(old_e, e)
-                new_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
-                if new_e is not None:
-                    self.index.add(new_e)  # we don't know which strategy was employed
-            except Exception, ex:
-                traceback.print_exc()
-                self.index.add(old_e)
-                raise ex
+            old_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entity_id))
+            strategy(old_e, e)
+            self.store.update(e)

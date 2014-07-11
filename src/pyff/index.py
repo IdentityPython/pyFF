@@ -1,29 +1,9 @@
-import hashlib
 from collections import MutableSet
 import re
 from pyff.constants import NS, DIGESTS, ATTRS
-from pyff.logs import log
+from pyff.utils import hash_id, EntitySet
 
 __author__ = 'leifj'
-
-
-def hash_id(entity, hn='sha1', prefix=True):
-    entityID = entity
-    if hasattr(entity, 'get'):
-        entityID = entity.get('entityID')
-
-    if hn == 'null':
-        return entityID
-
-    if not hasattr(hashlib, hn):
-        raise ValueError("Unknown digest '%s'" % hn)
-
-    m = getattr(hashlib, hn)()
-    m.update(entityID)
-    if prefix:
-        return "{%s}%s" % (hn, m.hexdigest())
-    else:
-        return m.hexdigest()
 
 
 def entity_attribute_dict(entity):
@@ -78,29 +58,84 @@ class MDIndex(object):
         """
         pass
 
+def _role(e):
+    if is_idp(e):
+        return 'idp'
+    elif is_sp(e):
+        return 'sp'
+    else:
+        return 'unknown'
 
-class EntitySet(MutableSet):
-    def __init__(self, initial=None):
-        self._e = dict()
-        if initial is not None:
-            for e in initial:
-                self.add(e)
 
-    def add(self, value):
-        self._e[value.get('entityID')] = value
+def entity_index():
+    i = OIndex(lambda e: e.get('entityID'))
+    for hn in DIGESTS:
+        i.add_index(hn, lambda e: hash_id(e, hn, False))
+    i.add_index('role', _role)
+    i.add_index('')
+    return i
 
-    def discard(self, value):
-        del self._e[value.get('entityID')]
 
-    def __iter__(self):
-        for e in self._e.values():
-            yield e
+class OIndex(object):
+    def __init__(self, id_cb):
+        self.obj = {}
+        self.idx = {'_id': id_cb}
 
-    def __len__(self):
-        return len(self._e.keys())
+    def add_index(self, name, value_cb):
+        self.idx[name] = value_cb
+        self.obj[name] = {}
+        for o in self._obj('_id'):
+            self.add(o, [name])
 
-    def __contains__(self, item):
-        return item.get('entityID') in self._e.keys()
+    def _obj(self, n):
+        return self.obj.setdefault(n, {})
+
+    def add(self, o, idx_ns=None):
+        if idx_ns is None:
+            idx_ns = self.idx.keys()
+
+        for idx_n in idx_ns:
+            idx_v = self.idx[idx_n](o)
+            idx_o = self._obj(idx_n)
+            for old_v in idx_o.keys():
+                if o in idx_o[old_v] and old_v != idx_v:
+                    idx_o[old_v].discard(o)
+
+            eset = idx_o.setdefault(idx_v, EntitySet())
+            eset.add(o)
+
+    def remove(self, o, idx_ns=None):
+        if idx_ns is None:
+            idx_ns = self.idx.keys()
+
+        for idx_n in idx_ns:
+            idx_v = self.idx[idx_n](o)
+            eset = self._obj(idx_n).setdefault(idx_v, EntitySet())
+            eset.discard(o)
+
+    def get(self, a, v):
+        if not a in self.idx:
+            raise ValueError("Unknown index: %s" % a)
+
+        entities = self.obj[a].get(v, None)
+        if entities is not None:
+            return entities
+        else:
+            m = re.compile(v)
+            entities = []
+            for value, ents in self.obj[a].iteritems():
+                if m.match(value):
+                    entities.extend(ents)
+            return entities
+
+    def size(self):
+        return len(self._obj('_id').keys())
+
+    def keys(self):
+        return self.idx.keys()
+
+    def values(self, a):
+        return self.idx.setdefault(a, {}).keys()
 
 
 class MemoryIndex(MDIndex):

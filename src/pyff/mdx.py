@@ -95,22 +95,24 @@ class MDUpdate(Monitor):
         try:
             if self.lock.acquire(blocking=0):
                 locked = True
-                md = self.server.new_repository()
-                for o in self.server.observers:
-                    md.subscribe(o)
+                #md = self.server.new_repository(store=dict())
+                #for o in self.server.observers:
+                #    md.subscribe(o)
+                if hasattr(self.server.md.store, 'periodic'):
+                    self.server.md.store.periodic(stats)
 
                 for p in server.plumbings:
                     state = {'update': True, 'stats': {}}
-                    p.process(md, state)
+                    p.process(server.md, state)
                     stats.update(state.get('stats', {}))
-                if not md.sane():
-                    log.error("update produced insane active repository - will try again later...")
+                #if not md.sane():
+                #    log.error("update produced insane active repository - will try again later...")
                 with server.lock.writelock:
-                    log.debug("update produced new repository with %d entities" % md.index.size())
-                    server.md = md  # this results in a update!
-                    md.fire(type=EVENT_REPOSITORY_LIVE, size=md.index.size())
+                    log.debug("update produced new repository with %d entities" % server.md.store.size())
+                    #server.md = md  # this results in a update!
+                    server.md.fire(type=EVENT_REPOSITORY_LIVE, size=server.md.store.size())
                     stats['Repository Update Time'] = datetime.now()
-                    stats['Repository Size'] = md.index.size()
+                    stats['Repository Size'] = server.md.store.size()
             else:
                 log.error("another instance is running - will try again later...")
         except Exception, ex:
@@ -241,7 +243,7 @@ listed using the 'role' attribute to the link elements.
                                   properties=dict()))
 
         for a in self.server.aliases.keys():
-            for v in self.server.md.index.attribute(self.server.aliases[a]):
+            for v in self.server.md.store.attribute(self.server.aliases[a]):
                 _links('%s/%s' % (a, v))
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -294,9 +296,11 @@ Disallow: /
         """
         return self.server.request(path=path)
 
+
     @cherrypy.expose
     def finger(self, domain="localhost"):
         return render_template("finger.html", domain=domain)
+
 
     @cherrypy.expose
     def about(self):
@@ -388,38 +392,22 @@ class MDServer():
                  aliases=ATTRS,
                  cache_enabled=True,
                  hosts_dir=None,
-                 observers=[]):
+                 observers=[],
+                 store=None):
         if pipes is None:
             pipes = []
         self.cache_enabled = cache_enabled
-        self._md = None
         self.lock = ReadWriteLock()
         self.plumbings = [plumbing(v) for v in pipes]
         self.refresh = MDUpdate(cherrypy.engine, server=self, frequency=frequency)
         self.refresh.subscribe()
         self.aliases = aliases
-        self.observers = observers
         self.psl = PublicSuffixList()
+        self.md = MDRepository(metadata_cache_enabled=self.cache_enabled, store=store)
 
         if autoreload:
             for f in pipes:
                 cherrypy.engine.autoreload.files.add(f)
-
-    def _set_md(self, md):
-        if self._md is None:
-            self._md = md
-        else:
-            self._md.update(md)
-
-    def _get_md(self):
-        if self._md is None:
-            raise cherrypy.HTTPError(503, message="Repository loading...")
-        return self._md
-
-    md = property(_get_md, _set_md)
-
-    def new_repository(self, observers=[]):
-        return MDRepository(metadata_cache_enabled=self.cache_enabled)
 
     class MediaAccept():
 
@@ -455,14 +443,17 @@ class MDServer():
                 return '&gt;'
             return st
 
-        def _d(x):
+        def _d(x, do_split=True):
+            if x is not None:
+                x = x.strip()
+            log.debug("_d(%s,%s)" % (x, do_split))
             if x is None or len(x) == 0:
                 return None, None
 
             if x.startswith("{base64}"):
                 x = x[8:].decode('base64')
 
-            if '.' in x:
+            if do_split and '.' in x:
                 (pth, sep, extn) = x.rpartition('.')
                 return pth, extn
             else:
@@ -482,13 +473,16 @@ class MDServer():
             if pfx is None:
                 raise NotFound()
 
-        path, ext = _d(path)
+        path, ext = _d(path, content_type is None)
         if pfx and path:
             q = "{%s}%s" % (pfx, path)
         else:
             q = path
 
-        log.debug("request path: %s, ext: %s, headers: %s" % (path, ext, cherrypy.request.headers))
+        if ext is not None:
+            log.debug("request path: %s.%s, headers: %s" % (path, ext, cherrypy.request.headers))
+        else:
+            log.debug("request path: %s, headers: %s" % (path, cherrypy.request.headers))
 
         accept = {}
         if content_type is None:
@@ -500,6 +494,7 @@ class MDServer():
                     path = "%s.%s" % (path, ext)
         else:
             accept = {content_type: True}
+
         with self.lock.readlock:
             if ext == 'ds':
                 pdict = dict()
