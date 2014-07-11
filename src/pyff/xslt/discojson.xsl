@@ -97,7 +97,6 @@
                 <xsl:text>"</xsl:text>
         </xsl:if>
         <xsl:if test=".//mdui:GeolocationHint">
-            <xsl:text>,"geo":</xsl:text>
             <xsl:apply-templates select=".//mdui:GeolocationHint[1]"></xsl:apply-templates>
         </xsl:if>
         <xsl:text>,"auth": "saml"</xsl:text>
@@ -129,11 +128,16 @@
     
     <xsl:template match="mdui:GeolocationHint">
         <xsl:variable name="pos" select="substring(text(),5)"/>
-        <xsl:text>{"lat":</xsl:text>
-        <xsl:value-of select="substring-before($pos,',')"/>
-        <xsl:text>,"long":</xsl:text>
-        <xsl:value-of select="substring-after($pos,',')"/>
-        <xsl:text>}</xsl:text>
+        <xsl:variable name="lat" select="substring-before($pos,',')"/>
+        <xsl:variable name="long" select="substring-after($pos,',')"/>
+        <xsl:if test="number($lat) = $lat and number($long) = $long">
+           <xsl:text>,"geo":</xsl:text>
+           <xsl:text>{"lat":</xsl:text>
+           <xsl:value-of select="$lat"/>
+           <xsl:text>,"long":</xsl:text>
+           <xsl:value-of select="$long"/>
+           <xsl:text>}</xsl:text>
+        </xsl:if>
     </xsl:template>
 
     <xsl:template match="node()">
@@ -165,11 +169,14 @@
 
     <xsl:template name="safeString">
         <xsl:param name="qstr"/>
-
+        <xsl:variable name="remove">'"\</xsl:variable>
+        <xsl:value-of select="translate($qstr,$remove,'')"/>
+<!-- 
         <xsl:variable name="apos">'</xsl:variable><xsl:variable name="e_apos">\\'</xsl:variable>
-        <xsl:variable name="quot">"</xsl:variable><xsl:variable name="e_quot">\\"</xsl:variable>
+        <xsl:variable name="quot">"</xsl:variable><xsl:variable name="e_quot">\"</xsl:variable>
         <xsl:variable name="bs">\</xsl:variable><xsl:variable name="e_bs">\\</xsl:variable>
         <xsl:value-of select="str:replace(str:replace(str:replace(str:replace(str:replace($qstr,$e_quot,$quot),$e_apos,$apos),$bs,$e_bs),$quot,$e_quot),$apos,$e_apos)"/>
+-->
     </xsl:template>
 
     <xsl:template name="getString">
