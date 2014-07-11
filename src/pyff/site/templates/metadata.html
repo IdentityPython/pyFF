@@ -1,16 +1,16 @@
 <%include file="header.html"/>
         <h1>Entities</h1>
-        <ul class="unstyled">
+        <ul class="list-unstyled">
     % for entity in entities:
             <li><a href="/metadata/${md.sha1_id(entity)}.html">
                 % if md.is_idp(entity):
-                <i class="icon-user"></i>
+                <span class="glyphicon glyphicon-home"></span>
                 % elif md.is_sp(entity):
-                <i class="icon-globe"></i>
+                <span class="glyphicon glyphicon-cloud"></span>
                 % else:
-                <i class="icon-question-sign"></i>
+                <span class="glyphicon glyphicon-question-sign"></span>
                 % endif
-                &nbsp;${md.display(entity)}
+                ${md.display(entity)}
             </a></li>
     % endfor
         </ul>
