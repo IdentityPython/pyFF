@@ -11,9 +11,9 @@
                 }
             });
             $('.tt-hint').addClass('form-control');
-            $('table').wrap($('<div>').addClass('table-wrapper')).addClass("table table-striped table-condensed");
-            $('input:submit').addClass("btn btn-mini");
-
+            $('table').wrap($('<div>').addClass('table-wrapper')).addClass("table table-striped table-condensed table-bordered");
+            $('form[action="pause"] > input:submit').addClass("btn btn-xs btn-danger");
+            $('form[action="resume"] > input:submit').addClass("btn btn-xs btn-success");
 
             if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
               var msViewportStyle = document.createElement("style");
