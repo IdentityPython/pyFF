@@ -1,10 +1,11 @@
 import StringIO
 from datetime import datetime
+import re
 from iso8601 import iso8601
 from redis import Redis
 import time
 from pyff.constants import NS, ATTRS
-from pyff.utils import root, dumptree, duration2timedelta, totimestamp, parse_xml, hex_digest
+from pyff.utils import root, dumptree, duration2timedelta, totimestamp, parse_xml, hex_digest, hash_id, EntitySet
 from pyff.logs import log
 
 
@@ -39,6 +40,154 @@ def entity_attribute_dict(entity):
 
 def _now():
     return int(time.time())
+
+DINDEX = ('sha1', 'sha256', 'null')
+
+
+class MemoryStore(object):
+    def __init__(self):
+        self.md = dict()
+        self.index = dict()
+
+        for hn in DINDEX:
+            self.index.setdefault(hn, {})
+        self.index.setdefault('attr', {})
+
+    def __str__(self):
+        return repr(self.index)
+
+    def size(self):
+        return len(self.index['null'])
+
+    def attributes(self):
+        return self.index.setdefault('attr', {}).keys()
+
+    def attribute(self, a):
+        return self.index.setdefault('attr', {}).setdefault(a, {}).keys()
+
+    def _index(self, entity):
+        attr_idx = self.index.setdefault('attr', {})
+        nd = 0
+        for hn in DINDEX:
+            hid = hash_id(entity, hn, False)
+            #log.debug("computing index %s(%s) = %s" % (hn, entity.get('entityID'), hid))
+            self.index[hn].setdefault(hid, EntitySet())
+            self.index[hn][hid].add(entity)
+            nd += 1
+
+        na = 0
+        for attr, values in entity_attribute_dict(entity).iteritems():
+            for v in values:
+                vidx = attr_idx.setdefault(attr, {})
+                vidx.setdefault(v, EntitySet())
+                na += 1
+                vidx[v].add(entity)
+
+        vidx = attr_idx.setdefault(ATTRS['role'], {})
+        if is_idp(entity):
+            vidx.setdefault('idp', EntitySet())
+            na += 1
+            vidx['idp'].add(entity)
+
+        if is_sp(entity):
+            vidx.setdefault('sp', EntitySet())
+            na += 1
+            vidx['sp'].add(entity)
+
+            #log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'), na, nd))
+            #log.debug(self.index)
+
+    def _unindex(self, entity):
+        attr_idx = self.index.setdefault('attr', {})
+        nd = 0
+        for hn in DINDEX:
+            #log.debug("computing %s" % hn)
+            hid = hash_id(entity, hn, False)
+            self.index[hn].setdefault(hid, EntitySet())
+            self.index[hn][hid].discard(entity)
+            nd += 1
+
+        na = 0
+        for attr, values in entity_attribute_dict(entity).iteritems():
+            #log.debug("indexing %s on %s" % (attr,entity.get('entityID')))
+            for v in values:
+                vidx = attr_idx.setdefault(attr, {})
+                vidx.setdefault(v, EntitySet())
+                na += 1
+                vidx[v].discard(entity)
+
+        vidx = attr_idx.setdefault(ATTRS['role'], {})
+        if is_idp(entity):
+            vidx.setdefault('idp', EntitySet())
+            na += 1
+            vidx['idp'].discard(entity)
+
+        if is_sp(entity):
+            vidx.setdefault('sp', EntitySet())
+            na += 1
+            vidx['sp'].discard(entity)
+
+            #log.debug("(un)indexed %s (%d attributes, %d digests)" % (entity.get('entityID'),na,nd))
+
+    def _get_index(self, a, v):
+        if a in DINDEX:
+            return self.index[a].get(v, [])
+        else:
+            idx = self.index['attr'].setdefault(a, {})
+            entities = idx.get(v, None)
+            if entities is not None:
+                return entities
+            else:
+                m = re.compile(v)
+                entities = []
+                for value, ents in idx.iteritems():
+                    if m.match(value):
+                        entities.extend(ents)
+                return entities
+
+    def reset(self):
+        self.__init__()
+
+    def collections(self):
+        return self.md.keys()
+
+    def update(self, t, tid=None, ts=None, merge_strategy=None):
+        relt = root(t)
+        ne = 0
+        if relt.tag == "{%s}EntityDescriptor" % NS['md']:
+            if tid is None:
+                tid = relt.get('entityID')
+            self._unindex(relt)
+            self._index(relt)
+            ne += 1
+        elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
+            if tid is None:
+                tid = relt.get('Name')
+            for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
+                self.update(e)
+                ne += 1
+            self.md[tid] = relt
+
+        return ne
+
+    def lookup(self, key):
+        if '+' in key:
+            for k  in key.split('+'):
+                pass
+            raise ValueError("intersection filters not implemented for MemoryStore")
+
+        m = re.match("^(.+)=(.+)$", key)
+        if m:
+            return self._get_index(m.group(1), m.group(2).rstrip("/"))
+
+        m = re.match("^{(.+)}(.+)$", key)
+        if m:
+            return self._get_index(m.group(1), m.group(2).rstrip("/"))
+
+        if key in self.md:
+            return self.md[key]
+
+        return []
 
 
 class RedisStore(object):
@@ -144,7 +293,7 @@ class RedisStore(object):
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('Name')
-            ts = self._expiration(relt, ts)
+            ts = self._expiration(relt)
             with self.rc.pipeline() as p:
                 self.update_entity(relt, t, tid, ts, p)
                 for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
