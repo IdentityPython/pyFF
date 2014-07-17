@@ -172,9 +172,25 @@ class MemoryStore(object):
 
     def lookup(self, key):
         if '+' in key:
-            for k  in key.split('+'):
-                pass
-            raise ValueError("intersection filters not implemented for MemoryStore")
+            key = key.strip('+')
+            log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
+            hits = None
+            for f in key.split("+"):
+                f = f.strip()
+                if hits is None:
+                    hits = set(self.lookup(f))
+                else:
+                    other = self.lookup(f)
+                    hits.intersection_update(other)
+
+                if not hits:
+                    log.debug("empty intersection")
+                    return []
+
+            if hits is not None and hits:
+                return list(hits)
+            else:
+                return []
 
         m = re.match("^(.+)=(.+)$", key)
         if m:
