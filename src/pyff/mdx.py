@@ -23,6 +23,8 @@ An implementation of draft-lajoie-md-query
             Listen on the specified port
     -H<host>|--host=<host>
             Listen on the specified interface
+    -R
+            Use redis-based store
     --frequency=<seconds>
             Wake up every <seconds> and run the update pipeline. By
             default the frequency is set to 600.
@@ -69,7 +71,7 @@ from pyff.stats import stats
 import lxml.html as html
 from datetime import datetime
 from lxml import etree
-from pyff import __version__ as pyff_version
+from pyff import __version__ as pyff_version, MemoryStore, RedisStore
 from publicsuffix import PublicSuffixList
 
 __author__ = 'leifj'
@@ -606,7 +608,7 @@ def main():
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   'hP:p:H:CfaA:l:',
+                                   'hP:p:H:CfaA:l:R',
                                    ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=', 'email=',
                                     'port=', 'host=', 'no-caching', 'autoreload', 'frequency=',
                                     'alias=', 'dir=', 'version', 'proxy'])
@@ -630,6 +632,7 @@ def main():
     base_dir = None
     proxy = False
     email = None
+    store = MemoryStore()
 
     try:
         for o, a in opts:
@@ -653,6 +656,8 @@ def main():
                 port = int(a)
             elif o in ('--pidfile', '-p'):
                 pidfile = a
+            elif o in '-R':
+                store = RedisStore()
             elif o in ('--no-caching', '-C'):
                 caching = False
             elif o in ('--caching-delay', 'D'):
@@ -730,7 +735,8 @@ def main():
                       frequency=frequency,
                       aliases=aliases,
                       cache_enabled=caching,
-                      observers=observers)
+                      observers=observers,
+                      store=store)
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
     cfg = {
         'global': {

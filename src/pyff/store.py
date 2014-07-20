@@ -231,15 +231,15 @@ class MemoryStore(StoreBase):
 
         m = re.match("^(.+)=(.+)$", key)
         if m:
-            return self._get_index(m.group(1), m.group(2).rstrip("/"))
+            return list(self._get_index(m.group(1), m.group(2).rstrip("/")))
 
         m = re.match("^{(.+)}(.+)$", key)
         if m:
-            return self._get_index(m.group(1), m.group(2).rstrip("/"))
+            return list(self._get_index(m.group(1), m.group(2).rstrip("/")))
 
         l = self._get_index("null", key)
         if l:
-            return l
+            return list(l)
 
         log.debug("key lookup %s" % key)
 

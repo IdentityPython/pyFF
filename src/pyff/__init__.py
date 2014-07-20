@@ -9,6 +9,7 @@ from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
 import traceback
 import logging
+from pyff.store import MemoryStore, RedisStore
 
 __version__ = pkg_resources.require("pyFF")[0].version
 
@@ -18,13 +19,13 @@ def main():
     The main entrypoint for the pyFF cmdline tool.
     """
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'h', ['help', 'loglevel=', 'logfile=', 'version'])
+        opts, args = getopt.getopt(sys.argv[1:], 'hR', ['help', 'loglevel=', 'logfile=', 'version'])
     except getopt.error, msg:
         print msg
         print 'for help use --help'
         sys.exit(2)
 
-    md = MDRepository()
+    store = MemoryStore()
     loglevel = logging.WARN
     logfile = None
     for o, a in opts:
@@ -37,11 +38,15 @@ def main():
                 raise ValueError('Invalid log level: %s' % loglevel)
         elif o in '--logfile':
             logfile = a
+        elif o in '-R':
+            store = RedisStore()
         elif o in '--version':
             print "pyff version %s" % __version__
             sys.exit(0)
         else:
             raise ValueError("Unknown option '%s'" % o)
+
+    md = MDRepository(store=store)
 
     log_args = {'level': loglevel}
     if logfile is not None:
