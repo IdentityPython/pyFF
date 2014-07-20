@@ -203,8 +203,7 @@ class MemoryStore(StoreBase):
         return ne
 
     def lookup(self, key):
-        log.debug("MemoryStore lookup %s" % key)
-        if key == 'entities':
+        if key == 'entities' or key is None:
             return self.entities.values()
         if '+' in key:
             key = key.strip('+')
@@ -227,8 +226,6 @@ class MemoryStore(StoreBase):
             else:
                 return []
 
-        log.debug("trying kv lookup")
-
         m = re.match("^(.+)=(.+)$", key)
         if m:
             return list(self._get_index(m.group(1), m.group(2).rstrip("/")))
@@ -240,8 +237,6 @@ class MemoryStore(StoreBase):
         l = self._get_index("null", key)
         if l:
             return list(l)
-
-        log.debug("key lookup %s" % key)
 
         if key in self.md:
             return entities_list(self.md[key])
