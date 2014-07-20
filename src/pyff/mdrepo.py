@@ -653,7 +653,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                 nent += 1
             else:
                 for ent in self.lookup(member):
-                    log.debug(ent)
+                    # log.debug(ent)
                     _a(ent, t, seen)
                     nent += 1
 
