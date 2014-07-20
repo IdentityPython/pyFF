@@ -14,6 +14,7 @@ import pkg_resources
 import re
 from lxml import etree
 from time import gmtime, strftime, clock
+from pyff.constants import NS
 from pyff.logs import log
 import threading
 import httplib2
@@ -467,3 +468,17 @@ def find_merge_strategy(strategy_name):
         raise MetadataException("Unable to find merge strategy %s" % strategy_name)
 
     return strategy
+
+
+def entities_list(t=None):
+        """
+        :param t: An EntitiesDescriptor or EntityDescriptor element
+
+        Returns the list of contained EntityDescriptor elements
+        """
+        if t is None:
+            return []
+        elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
+            return [root(t)]
+        else:
+            return t.findall(".//{%s}EntityDescriptor" % NS['md'])

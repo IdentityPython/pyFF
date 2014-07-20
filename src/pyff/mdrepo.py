@@ -5,7 +5,7 @@ This is the implementation of the active repository of SAML metadata. The 'local
 """
 from StringIO import StringIO
 from datetime import datetime
-from UserDict import DictMixin, UserDict
+from UserDict import UserDict
 import os
 import re
 import traceback
@@ -22,7 +22,7 @@ from pyff import merge_strategies
 from pyff.logs import log
 from pyff.store import RedisStore
 from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template, \
-    hash_id, EntitySet, parse_xml, MetadataException, find_merge_strategy
+    hash_id, EntitySet, parse_xml, MetadataException, find_merge_strategy, entities_list
 from pyff.constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 
@@ -68,7 +68,7 @@ class Observable(object):
             fn(e)
 
 
-class MDRepository(DictMixin, Observable):
+class MDRepository(Observable):
     """A class representing a set of SAML Metadata. Instances present as dict-like objects where
     the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
     """
@@ -88,7 +88,7 @@ class MDRepository(DictMixin, Observable):
                 self.store = store
         else:
             self.store = RedisStore()
-
+        print self.store
         super(MDRepository, self).__init__()
 
     def sha1_id(self, e):
@@ -530,19 +530,6 @@ and verified.
 
         return t
 
-    def entities(self, t=None):
-        """
-:param t: An EntitiesDescriptor element
-
-Returns the list of contained EntityDescriptor elements
-        """
-        if t is None:
-            return []
-        elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
-            return [root(t)]
-        else:
-            return t.findall(".//{%s}EntityDescriptor" % NS['md'])
-
     def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None):
         """
 :param directory: A directory to walk.
@@ -566,7 +553,7 @@ starting with '.' are excluded.
                     fn = os.path.join(top, nm)
                     try:
                         t = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
-                        entities.extend(self.entities(t))  # local metadata is assumed to be ok
+                        entities.extend(entities_list(t))  # local metadata is assumed to be ok
                     except Exception, ex:
                         log.error(ex)
         self.store.update(self.entity_set(entities, url))
@@ -617,6 +604,7 @@ the metadata repository then it is fetched an treated as a list of (one per line
 fails an empty list is returned.
 
         """
+
         def _xp(e):
             #log.debug(dumptree(e))
             match = e.xpath(xp, namespaces=NS)
@@ -643,6 +631,14 @@ fails an empty list is returned.
 
 Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
         """
+
+        log.debug("entities: %s" % entities)
+        def _a(ent, t, seen):
+            entity_id = ent.get('entityID', None)
+            if (ent is not None) and (entity_id is not None) and (not seen.get(entity_id, False)):
+                t.append(ent)
+                seen[entity_id] = True
+
         attrs = dict(Name=name, nsmap=NS)
         if cacheDuration is not None:
             attrs['cacheDuration'] = cacheDuration
@@ -652,11 +648,13 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         nent = 0
         seen = {}  # TODO make better de-duplication
         for member in entities:
-            for ent in self.lookup(member):
-                entity_id = ent.get('entityID', None)
-                if (ent is not None) and (entity_id is not None) and (not seen.get(entity_id, False)):
-                    t.append(ent)
-                    seen[entity_id] = True
+            if hasattr(member, 'tag'):
+                _a(member, t, seen)
+                nent += 1
+            else:
+                for ent in self.lookup(member):
+                    log.debug(ent)
+                    _a(ent, t, seen)
                     nent += 1
 
         log.debug("selecting %d entities from %d entity set(s) before validation" % (nent, len(entities)))
@@ -688,13 +686,13 @@ Returns a dict object with basic information about the EntitiesDescriptor
         """
         seen = dict()
         info = dict()
-        t = self.get(uri)
+        t = self.store.lookup(uri)
         info['Name'] = t.get('Name', uri)
         info['cacheDuration'] = t.get('cacheDuration', None)
         info['validUntil'] = t.get('validUntil', None)
         info['Duplicates'] = []
         info['Size'] = 0
-        for e in self.entities(t):
+        for e in entities_list(t):
             entity_id = e.get('entityID')
             if seen.get(entity_id, False):
                 info['Duplicates'].append(entity_id)

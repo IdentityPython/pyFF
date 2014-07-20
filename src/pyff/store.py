@@ -5,7 +5,8 @@ from iso8601 import iso8601
 from redis import Redis
 import time
 from pyff.constants import NS, ATTRS
-from pyff.utils import root, dumptree, duration2timedelta, totimestamp, parse_xml, hex_digest, hash_id, EntitySet
+from pyff.utils import root, dumptree, duration2timedelta, totimestamp, parse_xml, hex_digest, hash_id, EntitySet, \
+    entities_list
 from pyff.logs import log
 
 
@@ -44,10 +45,39 @@ def _now():
 DINDEX = ('sha1', 'sha256', 'null')
 
 
-class MemoryStore(object):
+class StoreBase(object):
+    def lookup(self, key):
+        raise NotImplementedError()
+
+    def __iter__(self):
+        for e in self.lookup("entities"):
+            log.debug("**** yield entityID=%s" % e.get('entityID'))
+            yield e
+
+    def size(self):
+        raise NotImplementedError()
+
+    def collections(self):
+        raise NotImplementedError()
+
+    def update(self, t, tid=None, ts=None, merge_strategy=None):
+        raise NotImplementedError()
+
+    def reset(self):
+        raise NotImplementedError()
+
+    def set(self, key, mapping):
+        raise NotImplementedError()
+
+    def get(self, key):
+        raise NotImplementedError()
+
+
+class MemoryStore(StoreBase):
     def __init__(self):
         self.md = dict()
         self.index = dict()
+        self.entities = dict()
 
         for hn in DINDEX:
             self.index.setdefault(hn, {})
@@ -57,7 +87,7 @@ class MemoryStore(object):
         return repr(self.index)
 
     def size(self):
-        return len(self.index['null'])
+        return len(self.entities)
 
     def attributes(self):
         return self.index.setdefault('attr', {}).keys()
@@ -153,12 +183,14 @@ class MemoryStore(object):
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):
         relt = root(t)
+        assert(relt is not None)
         ne = 0
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('entityID')
             self._unindex(relt)
             self._index(relt)
+            self.entities[relt.get('entityID')] = relt  # TODO: merge?
             ne += 1
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
@@ -171,6 +203,9 @@ class MemoryStore(object):
         return ne
 
     def lookup(self, key):
+        log.debug("MemoryStore lookup %s" % key)
+        if key == 'entities':
+            return self.entities.values()
         if '+' in key:
             key = key.strip('+')
             log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
@@ -192,6 +227,8 @@ class MemoryStore(object):
             else:
                 return []
 
+        log.debug("trying kv lookup")
+
         m = re.match("^(.+)=(.+)$", key)
         if m:
             return self._get_index(m.group(1), m.group(2).rstrip("/"))
@@ -200,13 +237,19 @@ class MemoryStore(object):
         if m:
             return self._get_index(m.group(1), m.group(2).rstrip("/"))
 
+        l = self._get_index("null", key)
+        if l:
+            return l
+
+        log.debug("key lookup %s" % key)
+
         if key in self.md:
-            return self.md[key]
+            return entities_list(self.md[key])
 
         return []
 
 
-class RedisStore(object):
+class RedisStore(StoreBase):
     def __init__(self, version=_now(), default_ttl=3600*24*4, respect_validity=True):
         self.rc = Redis()
         self.default_ttl = default_ttl
@@ -282,7 +325,7 @@ class RedisStore(object):
     def get(self, key):
         return self.rc.hgetall(key)
 
-    def update(self, t, tid=None, ts=None, merge_strategy=None):
+    def update(self, t, tid=None, ts=None, merge_strategy=None):  # TODO: merge ?
         relt = root(t)
         ne = 0
         if ts is None:

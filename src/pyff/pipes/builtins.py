@@ -317,7 +317,7 @@ Publish the working document in XML form.
         if os.path.isdir(output_file):
             out = "%s.xml" % os.path.join(output_file, req.id)
         safe_write(out, dumptree(req.t))
-        req.md[resource_name] = req.t
+        req.md.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
 
 @deprecated
@@ -489,12 +489,14 @@ Note that you should not include an extension in your "as foo-bla-something" sin
 alias invisible for anything except the corresponding mime type.
     """
     args = req.args
+    log.debug("selecting using args: %s" % args)
+    if args is None and 'select' in req.state:
+        args = [req.state.get('select')]
     if args is None:
-        args = [req.state.get('select', None)]
-    if args is None:
-        args = req.md.keys()
-    if args is None:
+        args = req.md.store.collections()
+    if args is None or not args:
         args = []
+
     name = req.plumbing.id
     alias = False
     if len(opts) > 0:
@@ -527,7 +529,7 @@ Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information a
     """
     args = req.args
     if args is None:
-        args = req.md.keys()
+        args = req.md.store.collections()
     ot = req.md.entity_set(args, req.plumbing.id, validate=False)
     if ot is None:
         raise PipeException("empty select '%s' - stop" % ",".join(args))
@@ -636,7 +638,7 @@ Display statistics about the current working document.
 
     """
     print "---"
-    print "total size:     %d" % len(req.md.keys())
+    print "total size:     %d" % req.md.store.size()
     if not hasattr(req.t, 'xpath'):
         raise PipeException("Unable to call stats on non-XML")
 
