@@ -1,4 +1,5 @@
 redis
+mako
 ipaddr
 publicsuffix
 lxml
