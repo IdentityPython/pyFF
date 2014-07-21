@@ -153,7 +153,6 @@
     };
 
     $("img.fallback-icon").error(function(e) {
-        $(this).error(function(e) {});
         $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
     });
 
