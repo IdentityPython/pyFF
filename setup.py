@@ -19,7 +19,8 @@ install_requires = [
     'mako >=0.7.2',
     'httplib2 >=0.7.7',
     'ipaddr',
-    'publicsuffix'
+    'publicsuffix',
+    'redis'
 ]
 
 setup(name='pyFF',
