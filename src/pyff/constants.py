@@ -17,7 +17,8 @@ NS = {"md": "urn:oasis:names:tc:SAML:2.0:metadata",
 
 ATTRS = {'collection': 'http://pyff-project.org/collection',
          'entity-category': 'http://macedir.org/entity-category',
-         'role': 'http://pyff-project.org/role'}
+         'role': 'http://pyff-project.org/role',
+         'domain': 'http://pyff-project.org/domain'}
 
 DIGESTS = ['sha1', 'md5', 'null']
 

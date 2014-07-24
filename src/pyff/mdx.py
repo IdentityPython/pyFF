@@ -109,12 +109,12 @@ class MDUpdate(Monitor):
                     stats.update(state.get('stats', {}))
                 #if not md.sane():
                 #    log.error("update produced insane active repository - will try again later...")
-                with server.lock.writelock:
-                    log.debug("update produced new repository with %d entities" % server.md.store.size())
-                    #server.md = md  # this results in a update!
-                    server.md.fire(type=EVENT_REPOSITORY_LIVE, size=server.md.store.size())
-                    stats['Repository Update Time'] = datetime.now()
-                    stats['Repository Size'] = server.md.store.size()
+                #with server.lock.writelock:
+                log.debug("update produced new repository with %d entities" % server.md.store.size())
+                #server.md = md  # this results in a update!
+                server.md.fire(type=EVENT_REPOSITORY_LIVE, size=server.md.store.size())
+                stats['Repository Update Time'] = datetime.now()
+                stats['Repository Size'] = server.md.store.size()
             else:
                 log.error("another instance is running - will try again later...")
         except Exception, ex:
@@ -157,7 +157,7 @@ class EncodingDispatcher(object):
         self.next_dispatcher = next_dispatcher
 
     def dispatch(self, path_info):
-        #log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes),path_info))
+        #log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
         vpath = path_info.replace("%2F", "/")
         for prefix in self.prefixes:
             if vpath.startswith(prefix):
@@ -334,7 +334,7 @@ Disallow: /
         return render_template("settings.html")
 
     @cherrypy.expose
-    def search(self, paged=False, query=None, page=0, page_limit=10, entity_filter=None):
+    def search(self, paged=False, query=None, page=0, page_limit=10, entity_filter=None, related=None):
         """
 Search the active set for matching entities.
         :param paged: page the result when True
@@ -342,15 +342,19 @@ Search the active set for matching entities.
         :param page: the page to return of the paged result
         :param page_limit: the number of result per page
         :param entity_filter: an optional filter to apply to the active set before searching
+        :param related: an optional '+'-separated list of related domain names for prioritizing search results
         :return: a JSON-formatted search result
         """
         cherrypy.response.headers['Content-Type'] = 'application/json'
         if paged:
-            res, more, total = self.server.md.search(query, page=int(page), page_limit=int(page_limit),
-                                                     entity_filter=entity_filter)
+            res, more, total = self.server.md.search(query,
+                                                     page=int(page),
+                                                     page_limit=int(page_limit),
+                                                     entity_filter=entity_filter,
+                                                     related=related)
             return dumps({'entities': res, 'more': more, 'total': total})
         else:
-            return dumps(self.server.md.search(query))
+            return dumps(self.server.md.search(query, entity_filter=entity_filter, related=related))
 
     @cherrypy.expose
     def index(self):
@@ -457,9 +461,10 @@ class MDServer():
 
             if do_split and '.' in x:
                 (pth, sep, extn) = x.rpartition('.')
-                return pth, extn
-            else:
-                return x, None
+                if extn in _ctypes:
+                    return pth, extn
+
+            return x, None
 
         _ctypes = {'xml': 'application/xml',
                    'json': 'application/json',
@@ -504,6 +509,14 @@ class MDServer():
                 if entity_id is None:
                     raise HTTPError(400, "400 Bad Request - missing entityID")
                 pdict['sp'] = self.md.sha1_id(entity_id)
+                e = self.md.store.lookup(entity_id)
+                if e is None or len(e) == 0:
+                    raise HTTPError(404)
+
+                if len(e) > 1:
+                    raise HTTPError(400, "400 Bad Request - multiple matches")
+
+                pdict['entity'] = self.md.simple_summary(e[0])
                 pdict['ret'] = kwargs.get('return', None)
                 if not path:
                     pdict['search'] = "/search/"
@@ -520,6 +533,7 @@ class MDServer():
                 page = kwargs.get('page', 0)
                 page_limit = kwargs.get('page_limit', 10)
                 entity_filter = kwargs.get('entity_filter', None)
+                related = kwargs.get('related', None)
 
                 cherrypy.response.headers['Content-Type'] = 'application/json'
 
@@ -543,13 +557,15 @@ class MDServer():
                                                       path=q,
                                                       page=int(page),
                                                       page_limit=int(page_limit),
-                                                      entity_filter=entity_filter)
+                                                      entity_filter=entity_filter,
+                                                      related=related)
                     #log.debug(dumps({'entities': res, 'more': more, 'total': total}))
                     return dumps({'entities': res, 'more': more, 'total': total})
                 else:
                     return dumps(self.md.search(query,
                                                 path=q,
-                                                entity_filter=entity_filter))
+                                                entity_filter=entity_filter,
+                                                related=related))
             elif accept.get('text/html'):
                 if not q:
                     if pfx:

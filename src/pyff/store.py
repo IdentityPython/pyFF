@@ -1,4 +1,5 @@
 import StringIO
+from copy import deepcopy
 from datetime import datetime
 import re
 from iso8601 import iso8601
@@ -6,7 +7,7 @@ from redis import Redis
 import time
 from pyff.constants import NS, ATTRS
 from pyff.utils import root, dumptree, duration2timedelta, totimestamp, parse_xml, hex_digest, hash_id, EntitySet, \
-    entities_list
+    entities_list, url2host, filter_lang, subdomains
 from pyff.logs import log
 
 
@@ -16,6 +17,13 @@ def is_idp(entity):
 
 def is_sp(entity):
     return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
+
+
+def _domains(entity):
+        domains = [url2host(entity.get('entityID'))]
+        for d in filter_lang(entity.findall(".//{%s}DomainHint" % NS['mdui'])):
+            domains.append(d.text)
+        return domains
 
 
 def entity_attribute_dict(entity):
@@ -30,6 +38,13 @@ def entity_attribute_dict(entity):
                 d[an] = values
 
     d[ATTRS['role']] = []
+
+    domains = []
+    for domain in _domains(entity):
+        for subdomain in subdomains(domain):
+            domains.append(subdomain)
+
+    d[ATTRS['domain']] = domains
 
     if is_idp(entity):
         d[ATTRS['role']].append('idp')
@@ -203,6 +218,9 @@ class MemoryStore(StoreBase):
         return ne
 
     def lookup(self, key):
+        return [deepcopy(x) for x in self._lookup(key)]
+
+    def _lookup(self, key):
         if key == 'entities' or key is None:
             return self.entities.values()
         if '+' in key:
@@ -212,9 +230,9 @@ class MemoryStore(StoreBase):
             for f in key.split("+"):
                 f = f.strip()
                 if hits is None:
-                    hits = set(self.lookup(f))
+                    hits = set(self._lookup(f))
                 else:
-                    other = self.lookup(f)
+                    other = self._lookup(f)
                     hits.intersection_update(other)
 
                 if not hits:
@@ -228,11 +246,15 @@ class MemoryStore(StoreBase):
 
         m = re.match("^(.+)=(.+)$", key)
         if m:
-            return list(self._get_index(m.group(1), m.group(2).rstrip("/")))
+            return self._lookup("{%s}%s" % (m.group(1), m.group(2).rstrip("/")))
 
         m = re.match("^{(.+)}(.+)$", key)
         if m:
-            return list(self._get_index(m.group(1), m.group(2).rstrip("/")))
+            res = set()
+            for v in m.group(2).rstrip("/").split(';'):
+                #log.debug("... adding %s=%s" % (m.group(1),v))
+                res.update(self._get_index(m.group(1), v))
+            return list(res)
 
         l = self._get_index("null", key)
         if l:
@@ -372,6 +394,18 @@ class RedisStore(StoreBase):
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):
                 self.rc.zinterstore(hk, ["%s#members" % k for k in key.split('+')], 'min')
+                self.rc.expire(hk, 30)  # XXX bad juju - only to keep clients from hammering
+            return self.lookup(hk)
+
+        m = re.match("^(.+)=(.+)$", key)
+        if m:
+            return self.lookup("{%s}%s" % (m.group(1), m.group(2)))
+
+        m = re.match("^{(.+)}(.+)$", key)
+        if m and ';' in m.group(2):
+            hk = hex_digest(key)
+            if not self.rc.exists("%s#members" % hk):
+                self.rc.zunionstore(hk, ["{%s}%s#members" % (m.group(1), v) for v in m.group(2).split(';')], 'min')
                 self.rc.expire(hk, 30)  # XXX bad juju - only to keep clients from hammering
             return self.lookup(hk)
         elif self.rc.exists("%s#alias" % key):

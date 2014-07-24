@@ -87,18 +87,46 @@
         }
         return a.title > b.title ? 1 : -1;
     }
-
-    var methods;
-    methods = {
+    var match_template = Hogan.compile('<div><p>{{title}}</br><small>{{descr}}</small></p></div>');
+    var match_template_icon = Hogan.compile('<div><ul class="list-inline"><li>{{title}}<br/><small>{{descr}}</small></li>' +
+        '{{#icon}}<li class="pull-right xs-hidden">' +
+        '<img class="img-responsive img-thumbnail fallback-icon img-small" src="{{icon}}"/>' +
+        '</li>{{/icon}}</ul></div>');
+    var methods = {
         init: function (options) {
             this.filter('input').each(function (opts) {
                 var seldiv = $(this);
                 var uri = seldiv.attr('data-target');
-                seldiv.typeahead({
-                    remote: uri+"?query=%QUERY&entity_filter={http://pyff-project.org/role}idp",
-                    engine: Hogan,
-                    limit: 10,
-                    template: '{{label}}'
+                var related = seldiv.attr('data-related');
+                console.log(related);
+                var remote = uri+"?query=%QUERY&entity_filter={http://pyff-project.org/role}idp";
+                if (related) {
+                    remote = remote + "&related="+related
+                }
+                var engine = new Bloodhound({
+                    name: 'idps',
+                    limit: 50,
+                    remote: remote,
+                    datumTokenizer: Bloodhound.tokenizers.obj.whitespace('title'),
+                    queryTokenizer: Bloodhound.tokenizers.whitespace
+                });
+                engine.initialize().done(function() {
+                    seldiv.typeahead({
+                            hint: true,
+                            highlight: true,
+                            minLength: 2
+                        },
+                        {
+                            name: 'idps',
+                            source: engine.ttAdapter(),
+                            displayKey: 'title',
+                            templates: {
+                                suggestion: function(o) {
+                                    return match_template.render(o)
+                                }
+                            }
+                        }
+                    )
                 });
                 seldiv.bind('typeahead:selected',function(event,entity) {
                     if (entity) {
@@ -108,6 +136,8 @@
                 $.each(options,function(key,val) {
                     seldiv.dsSelect(key,val);
                 });
+                $('body').on('click.ds', 'button.unselect', methods.unselect);
+                $('body').on('click.ds', 'a.select', methods.select);
             });
             this.filter('select').each(function (opts) {
                 var seldiv = $(this);
@@ -119,8 +149,7 @@
                     seldiv.dsSelect(key,val);
                 });
             });
-            $("button.unselect").bind('click.ds', methods.unselect);
-            $("a.select").bind('click.ds',methods.select);
+
         },
         refresh: function() {
             this.filter('select').each(function() {
@@ -148,7 +177,7 @@
         },
         select: function(e) {
             e.preventDefault();
-            return ds_select($(this).attr('href'));
+            return ds_select($(this).attr('data-href'));
         }
     };
 
@@ -156,14 +185,14 @@
         $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
     });
 
-    var idp_template = Hogan.compile('<a class="select list-group-item" href="{{entityID}}">' +
+    var idp_template = Hogan.compile('<a class="select list-group-item" data-href="{{entityID}}">' +
         '{{^sticky}}<button type="button" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
         '{{#icon}}<img src="{{icon}}" class="fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"/>{{/icon}}' +
-        '{{#descr}}<div class="pull-left idp-description hidden-xs">{{descr}}</div>{{/descr}}' +
+        '{{#descr}}<div class="pull-left idp-description hidden-xs">{{descr}}</div>{{/descr}}</p>' +
         '<div class="clearfix"></div>' +
-        '</p></a>');
+        '</a>');
 
     $.fn.dsQuickLinks = function(id) {
         this.each(function() {
@@ -176,23 +205,22 @@
             div.append(function() {
                 var lst = $.jStorage.get('pyff.discovery.idps',[]);
                 for (var i = 0; i < lst.length; i++) {
-                    div.append(idp_template.render(lst[i]));
+                    var idp = idp_template.render(lst[i])
+                    $(idp).bind('click.ds',methods.select);
+                    div.append(idp);
+
                     from_storage++;
                 }
             });
 
-            if (from_storage == 0) {
-                $.getJSON(uri+"?entity_filter={http://pyff-project.org/role}idp", function (data) {
+            if (from_storage < 2) {
+                $.getJSON(uri, function (data) {
                     $.each(data,function(pos,elt) {
-                        if (pos < 3) {
-                            $.getJSON("/metadata/"+elt.id+".json", function (entites) {
-                                $.each(entites,function(ipos,entity) {
-                                    console.log(entity);
-                                    entity.sticky = true
-                                    div.append(idp_template.render(entity));
-                                })
-                            });
-                        }
+                        elt.sticky = true;
+                        var idp = idp_template.render(elt);
+                        $(idp).bind('click.ds',methods.select);
+                        div.append(idp);
+                        from_storage++;
                     });
                 });
             }

@@ -245,9 +245,9 @@ the request state.
 The condition operates on the state: if 'foo' is present in the state (with any value), then the something branch is
 followed. If 'bar' is present in the state with the value 'bill' then the other branch is followed.
     """
-    log.debug("condition key: %s" % repr(condition))
+    #log.debug("condition key: %s" % repr(condition))
     c = req.state.get(condition, None)
-    log.debug("condition %s" % repr(c))
+    #log.debug("condition %s" % repr(c))
     if c is not None:
         if not values or _any(values, c):
             return Plumbing(pipeline=req.args, id="%s.when" % req.plumbing.id)._process(req)

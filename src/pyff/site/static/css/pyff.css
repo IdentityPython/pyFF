@@ -47,3 +47,7 @@ body {
 .sp-thumbnail {width: 100px; margin: 0 0; padding-left: 5px;}
 
 .idselect { width: 100%; }
+
+.img-small {
+    max-height: 50px;
+}

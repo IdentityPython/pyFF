@@ -6,7 +6,6 @@ This module contains various utilities.
 from collections import MutableSet
 from datetime import timedelta, datetime
 import tempfile
-import traceback
 import cherrypy
 from mako.lookup import TemplateLookup
 import os
@@ -20,6 +19,7 @@ import threading
 import httplib2
 import hashlib
 from email.utils import parsedate
+from urlparse import urlparse
 
 __author__ = 'leifj'
 
@@ -239,7 +239,7 @@ def render_template(name, **kwargs):
 
 
 class URLFetch(threading.Thread):
-    def __init__(self, url, verify, id=None, enable_cache=False, tries=0, post=None):
+    def __init__(self, url, verify, id=None, enable_cache=False, tries=0, post=None, timeout=120):
         self.url = url.strip()
         self.verify = verify
         self.id = id
@@ -256,6 +256,7 @@ class URLFetch(threading.Thread):
         self.end_time = 0
         self.tries = tries
         self.post = post
+        self.timeout = timeout
 
         if self.id is None:
             self.id = self.url
@@ -295,7 +296,7 @@ class URLFetch(threading.Thread):
                     self.last_modified = datetime.fromtimestamp(os.stat(path).st_mtime)
             else:
                 h = httplib2.Http(cache=cache,
-                                  timeout=60,
+                                  timeout=self.timeout,
                                   disable_ssl_certificate_validation=True)  # trust is done using signatures over here
                 resp, content = h.request(self.url, headers=headers)
                 self.resp = resp
@@ -482,3 +483,19 @@ def entities_list(t=None):
             return [root(t)]
         else:
             return t.findall(".//{%s}EntityDescriptor" % NS['md'])
+
+
+def url2host(url):
+    try:
+        (host, sep, port) = urlparse(url).netloc.partition(':')
+        return host
+    except ValueError:
+        return None
+
+
+def subdomains(domain):
+    domains = []
+    dsplit = domain.split('.')
+    for i in range(0, len(dsplit)-1):
+        domains.append(".".join(dsplit[i:]))
+    return domains

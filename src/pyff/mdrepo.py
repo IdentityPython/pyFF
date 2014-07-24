@@ -15,6 +15,7 @@ from Queue import Queue
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
+import operator
 import xmlsec
 import ipaddr
 
@@ -22,7 +23,7 @@ from pyff import merge_strategies
 from pyff.logs import log
 from pyff.store import RedisStore
 from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template, \
-    hash_id, EntitySet, parse_xml, MetadataException, find_merge_strategy, entities_list
+    hash_id, parse_xml, MetadataException, find_merge_strategy, entities_list, url2host, subdomains
 from pyff.constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 
@@ -100,10 +101,55 @@ class MDRepository(Observable):
     def is_sp(self, e):
         return bool(e.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
 
+    def icon(self, entity):
+        for icon in filter_lang(entity.findall(".//{%s}Logo" % NS['mdui'])):
+            return icon.text
+
+    def domains(self, entity):
+        domains = [url2host(entity.get('entityID'))]
+        for d in filter_lang(entity.findall(".//{%s}DomainHint" % NS['mdui'])):
+            domains.append(d.text)
+        return domains
+
+    def ext_display(self, entity):
+        """Utility-method for computing a displayable string for a given entity.
+
+        :param entity: An EntityDescriptor element
+        """
+        display = entity.get('entityID')
+        info = ''
+
+        for organizationName in filter_lang(entity.findall(".//{%s}OrganizationName" % NS['md'])):
+            info = display
+            display = organizationName.text
+
+        for organizationDisplayName in filter_lang(entity.findall(".//{%s}OrganizationDisplayName" % NS['md'])):
+            info = display
+            display = organizationDisplayName.text
+
+        for serviceName in filter_lang(entity.findall(".//{%s}ServiceName" % NS['md'])):
+            info = display
+            display = serviceName.text
+
+        for displayName in filter_lang(entity.findall(".//{%s}DisplayName" % NS['mdui'])):
+            info = display
+            display = displayName.text
+
+        for organizationUrl in filter_lang(entity.findall(".//{%s}OrganizationURL" % NS['md'])):
+            info = organizationUrl.text
+
+        for description in filter_lang(entity.findall(".//{%s}Description" % NS['mdui'])):
+            info = description.text
+
+        if info == entity.get('entityID'):
+            info = ''
+
+        return display, info
+
     def display(self, entity):
         """Utility-method for computing a displayable string for a given entity.
 
-:param entity: An EntityDescriptor element
+        :param entity: An EntityDescriptor element
         """
         for displayName in filter_lang(entity.findall(".//{%s}DisplayName" % NS['mdui'])):
             return displayName.text
@@ -119,13 +165,40 @@ class MDRepository(Observable):
 
         return entity.get('entityID')
 
-    def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None):
+    def sub_domains(self, e):
+        lst = []
+        domains = self.domains(e)
+        for d in domains:
+            lst.extend(subdomains(d))
+        return lst
+
+    def simple_summary(self, e):
+        if e is None:
+            return dict()
+
+        title, descr = self.ext_display(e)
+        entity_id = e.get('entityID')
+        d = dict(title=title,
+                 value=entity_id,
+                 descr=descr,
+                 icon=self.icon(e),
+                 entity_id=entity_id,
+                 domains=";".join(self.sub_domains(e)),
+                 id=hash_id(e, 'sha1'))
+        icon_url = self.icon(e)
+        if icon_url is not None:
+            d['icon_url'] = icon_url
+
+        return d
+
+    def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None, related=None):
         """
 :param query: A string to search for.
 :param path: The repository collection (@Name) to search in - None for search in all collections
 :param page:  When using paged search, the page index
 :param page_limit: When using paged search, the maximum entry per page
-:param entity_filter: A lookup expression used to filter the entries before search is done.
+:param entity_filter: An optional lookup expression used to filter the entries before search is done.
+:param related: an optional '+'-separated list of related domain names for prioritizing search results
 
 Returns a list of dict's for each EntityDescriptor present in the metadata store such
 that any of the DisplayName, ServiceName, OrganizationName or OrganizationDisplayName
@@ -133,7 +206,7 @@ elements match the query (as in contains the query as a substring).
 
 The dict in the list contains three items:
 
-:param label: A displayable string, useful as a UI label
+:param title: A displayable string, useful as a UI label
 :param value: The entityID of the EntityDescriptor
 :param id: A sha1-ID of the entityID - on the form {sha1}<sha1-hash-of-entityID>
         """
@@ -147,14 +220,15 @@ The dict in the list contains three items:
             return e.text.lower()
 
         def _strings(elt):
-            lst = [elt.get('entityID')]
+            lst = []
             for attr in ['.//{%s}DisplayName' % NS['mdui'],
                          './/{%s}ServiceName' % NS['md'],
                          './/{%s}OrganizationDisplayName' % NS['md'],
                          './/{%s}OrganizationName' % NS['md'],
-                         './/{%s}Scope' % NS['shibmd'],
-                         './/{%s}Keywords' % NS['mdui']]:
-                lst.extend([_lc_text(x) for x in elt.findall(attr)])
+                         './/{%s}Keywords' % NS['mdui'],
+                         './/{%s}Scope' % NS['shibmd']]:
+                lst.extend([s.text for s in elt.findall(attr)])
+            lst.append(elt.get('entityID'))
             return filter(lambda s: s is not None, lst)
 
         def _ip_networks(elt):
@@ -163,21 +237,24 @@ The dict in the list contains three items:
         def _match(qq, elt):
             for q in qq:
                 if ':' in q or '.' in q:
-                    nets = _ip_networks(elt)
                     try:
+                        nets = _ip_networks(elt)
                         for net in nets:
                             if ':' in q and ipaddr.IPv6Address(q) in net:
-                                return True
+                                return net
                             if '.' in q and ipaddr.IPv4Address(q) in net:
-                                return True
+                                return net
                     except ValueError, ex:
                         pass
-                tokens = _strings(elt)
-                for qstr in tokens:
-                    # log.debug("looking for '%s' in '%s'" % (q, qstr))
-                    if q is not None and len(q) > 0 and q in qstr:
-                        return True
-            return False
+
+                if q is not None and len(q) > 0:
+                    tokens = _strings(elt)
+                    for tstr in tokens:
+                        for tpart in tstr.split():
+                            # log.debug("looking for '%s' in '%s'" % (q, qstr))
+                            if tpart.lower().startswith(q):
+                                return tstr
+            return None
 
         f = []
         if path is not None and not path in f:
@@ -189,13 +266,19 @@ The dict in the list contains three items:
             mexpr = "+".join(f)
 
         log.debug("match using '%s'" % mexpr)
-        res = [{'label': self.display(e),
-                'value': e.get('entityID'),
-                'tokens': _strings(e),
-                'id': hash_id(e, 'sha1')}
-               for e in EntitySet(filter(lambda ent: _match(query, ent), self.lookup(mexpr)))]
+        res = []
+        for e in self.lookup(mexpr):
+            m = _match(query, e)
+            if m is not None:
+                d = self.simple_summary(e)
+                ll = d['title'].lower()
+                if m != ll and not query[0] in ll:
+                    d['title'] = "%s - %s" % (d['title'], m)
 
-        res.sort(key=lambda i: i['label'])
+                res.append(d)
+
+        #res.sort(key=operator.itemgetter('edist'), reverse=True)
+        res.sort(key=operator.itemgetter('title'))
 
         log.debug("search returning %s" % res)
 
@@ -299,7 +382,7 @@ The dict in the list contains three items:
 
 :param resources: A list of triples (url,cert-or-fingerprint,id)
 :param qsize: The number of parallell downloads to run
-:param timeout: The number of seconds to wait (120 by default) for each download
+:param timeout: The number of seconds to wait (300 by default) for each download
 :param stats: A dictionary used for storing statistics. Useful for cherrypy cpstats
 
 The list of triples is processed by first downloading the URL. If a cert-or-fingerprint
@@ -326,22 +409,22 @@ and verified.
                                   resource_id,
                                   enable_cache=is_cache_enabled,
                                   tries=tries,
+                                  timeout=timeout,
                                   post=post_cb)
                 thread.start()
                 queue.put(thread, True)
 
-        def consumer(queue, njobs, next_jobs_list=None, resolved_list=None, time_remaining=timeout):
+        def consumer(queue, njobs, next_jobs_list=None, resolved_list=None):
             if next_jobs_list is None:
                 next_jobs_list = []
             if resolved_list is None:
                 resolved_list = set()
             nfinished = 0
 
-            while nfinished < njobs and time_remaining > 0:
+            while nfinished < njobs:
                 info = None
                 thread = queue.get(True)
-                thread.join(5)
-                time_remaining -= 5
+                thread.join(2)
                 if thread.isAlive():
                     log.debug("waiting for %s to finish..." % thread.url)
                     queue.put(thread, True)
@@ -446,7 +529,7 @@ and verified.
             next_jobs = []
             q = Queue(qsize)
             prod_thread = threading.Thread(target=producer, args=(q, resources, cache))
-            cons_thread = threading.Thread(target=consumer, args=(q, len(resources), next_jobs, resolved, timeout))
+            cons_thread = threading.Thread(target=consumer, args=(q, len(resources), next_jobs, resolved))
             prod_thread.start()
             cons_thread.start()
             prod_thread.join()
