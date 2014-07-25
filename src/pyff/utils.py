@@ -496,6 +496,31 @@ def url2host(url):
 def subdomains(domain):
     domains = []
     dsplit = domain.split('.')
-    for i in range(0, len(dsplit)-1):
+    for i in range(1, len(dsplit)-1):
         domains.append(".".join(dsplit[i:]))
     return domains
+
+
+def ddist(a, b):
+    if len(a) > len(b):
+        return ddist(b, a)
+
+    a = a.split('.')
+    b = b.split('.')
+
+    d = [x[0] == x[1] for x in zip(a[::-1], b[::-1])]
+    if False in d:
+        return d.index(False)
+    return len(a)
+
+
+def avg_domain_distance(d1, d2):
+    dd = 0
+    n = 0
+    for a in d1.split(';'):
+        for b in d2.split(';'):
+            d = ddist(a, b)
+            log.debug("ddist %s %s -> %d" % (a,b,d))
+            dd += d
+            n += 1
+    return int(dd / n)

@@ -23,7 +23,7 @@ from pyff import merge_strategies
 from pyff.logs import log
 from pyff.store import RedisStore
 from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template, \
-    hash_id, parse_xml, MetadataException, find_merge_strategy, entities_list, url2host, subdomains
+    hash_id, parse_xml, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance
 from pyff.constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 
@@ -275,10 +275,13 @@ The dict in the list contains three items:
                 if m != ll and not query[0] in ll:
                     d['title'] = "%s - %s" % (d['title'], m)
 
+                if related is not None:
+                    d['ddist'] = avg_domain_distance(related, d['domains'])
+
                 res.append(d)
 
-        #res.sort(key=operator.itemgetter('edist'), reverse=True)
         res.sort(key=operator.itemgetter('title'))
+        res.sort(key=operator.itemgetter('ddist'), reverse=True)
 
         log.debug("search returning %s" % res)
 

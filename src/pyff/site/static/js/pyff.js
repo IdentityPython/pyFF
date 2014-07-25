@@ -98,7 +98,7 @@
                 var seldiv = $(this);
                 var uri = seldiv.attr('data-target');
                 var related = seldiv.attr('data-related');
-                console.log(related);
+                //console.log(related);
                 var remote = uri+"?query=%QUERY&entity_filter={http://pyff-project.org/role}idp";
                 if (related) {
                     remote = remote + "&related="+related
@@ -205,10 +205,7 @@
             div.append(function() {
                 var lst = $.jStorage.get('pyff.discovery.idps',[]);
                 for (var i = 0; i < lst.length; i++) {
-                    var idp = idp_template.render(lst[i])
-                    $(idp).bind('click.ds',methods.select);
-                    div.append(idp);
-
+                    div.append(idp_template.render(lst[i]));
                     from_storage++;
                 }
             });
@@ -217,10 +214,7 @@
                 $.getJSON(uri, function (data) {
                     $.each(data,function(pos,elt) {
                         elt.sticky = true;
-                        var idp = idp_template.render(elt);
-                        $(idp).bind('click.ds',methods.select);
-                        div.append(idp);
-                        from_storage++;
+                        div.append(idp_template.render(elt));
                     });
                 });
             }

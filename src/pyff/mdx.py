@@ -73,6 +73,7 @@ from datetime import datetime
 from lxml import etree
 from pyff import __version__ as pyff_version, MemoryStore, RedisStore
 from publicsuffix import PublicSuffixList
+from cherrypy._cpnative_server import CPHTTPServer
 
 __author__ = 'leifj'
 
@@ -514,7 +515,7 @@ class MDServer():
                     raise HTTPError(404)
 
                 if len(e) > 1:
-                    raise HTTPError(400, "400 Bad Request - multiple matches")
+                    raise HTTPError(400, "400 Bad Request - multiple matches for %s" % entity_id)
 
                 pdict['entity'] = self.md.simple_summary(e[0])
                 pdict['ret'] = kwargs.get('return', None)
@@ -705,6 +706,8 @@ def main():
         print __doc__
         sys.exit(3)
 
+    cherrypy.server.httpserver = CPHTTPServer(cherrypy.server)
+
     engine = cherrypy.engine
     plugins = cherrypy.process.plugins
 
@@ -814,6 +817,7 @@ def main():
 
     app.log.error_log.setLevel(loglevel)
 
+    engine.signals.subscribe()
     try:
         engine.start()
     except Exception, ex:
