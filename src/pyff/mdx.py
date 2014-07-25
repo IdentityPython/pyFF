@@ -706,7 +706,7 @@ def main():
         print __doc__
         sys.exit(3)
 
-    cherrypy.server.httpserver = CPHTTPServer(cherrypy.server)
+    #cherrypy.server.httpserver = CPHTTPServer(cherrypy.server)
 
     engine = cherrypy.engine
     plugins = cherrypy.process.plugins
