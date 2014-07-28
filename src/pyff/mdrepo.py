@@ -92,6 +92,11 @@ class MDRepository(Observable):
         print self.store
         super(MDRepository, self).__init__()
 
+    def clone(self):
+        return MDRepository(metadata_cache_enabled=self.metadata_cache_enabled,
+                            min_cache_ttl=self.min_cache_ttl,
+                            store=self.store.clone())
+
     def sha1_id(self, e):
         return hash_id(e, 'sha1')
 

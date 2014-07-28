@@ -64,6 +64,9 @@ class StoreBase(object):
     def lookup(self, key):
         raise NotImplementedError()
 
+    def clone(self):
+        return self
+
     def __iter__(self):
         for e in self.lookup("entities"):
             log.debug("**** yield entityID=%s" % e.get('entityID'))
@@ -100,6 +103,9 @@ class MemoryStore(StoreBase):
 
     def __str__(self):
         return repr(self.index)
+
+    def clone(self):
+        return deepcopy(self)
 
     def size(self):
         return len(self.entities)

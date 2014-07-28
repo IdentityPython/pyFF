@@ -98,26 +98,24 @@ class MDUpdate(Monitor):
         try:
             if self.lock.acquire(blocking=0):
                 locked = True
-                #md = self.server.new_repository(store=dict())
-                #for o in self.server.observers:
-                #    md.subscribe(o)
-                if hasattr(self.server.md.store, 'periodic'):
-                    self.server.md.store.periodic(stats)
+                md = self.server.md.clone()
 
                 for p in server.plumbings:
                     state = {'update': True, 'stats': {}}
-                    p.process(server.md, state)
+                    p.process(md, state)
                     stats.update(state.get('stats', {}))
-                #if not md.sane():
-                #    log.error("update produced insane active repository - will try again later...")
-                #with server.lock.writelock:
-                log.debug("update produced new repository with %d entities" % server.md.store.size())
-                #server.md = md  # this results in a update!
-                server.md.fire(type=EVENT_REPOSITORY_LIVE, size=server.md.store.size())
-                stats['Repository Update Time'] = datetime.now()
-                stats['Repository Size'] = server.md.store.size()
+
+                with server.lock.writelock:
+                    log.debug("update produced new repository with %d entities" % server.md.store.size())
+                    server.md = md
+                    server.md.fire(type=EVENT_REPOSITORY_LIVE, size=server.md.store.size())
+                    stats['Repository Update Time'] = datetime.now()
+                    stats['Repository Size'] = server.md.store.size()
+
+                if hasattr(self.server.md.store, 'periodic'):
+                    self.server.md.store.periodic(stats)
             else:
-                log.error("another instance is running - will try again later...")
+                log.error("another instance of MDUpdate is running - will try again later...")
         except Exception, ex:
             traceback.print_exc(ex)
         finally:
