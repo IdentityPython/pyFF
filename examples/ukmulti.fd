@@ -1,0 +1,23 @@
+- load:
+     -  http://www.home.umk.pl/~twoln/uk0.xml as UK0
+     -  http://www.home.umk.pl/~twoln/uk1.xml as UK1
+- select:
+     - UK0!//md:EntityDescriptor[md:Extensions/mdrpi:RegistrationInfo/@registrationAuthority='http://ukfederation.org.uk']
+     - UK1!//md:EntityDescriptor[md:Extensions/mdrpi:RegistrationInfo/@registrationAuthority='http://ukfederation.org.uk']
+- xslt:
+     stylesheet: tidy.xsl
+- xslt:
+     stylesheet: pubinfo.xsl
+     publisher: http://mds.edugain.org/
+- finalize:
+     Name: http://edugain.org/
+     ID: eduGAIN
+     cacheDuration: PT6H
+     validUntil: P4D
+- xslt:
+     stylesheet: pp.xsl
+- sign:
+     key: sign.key
+     cert: sign.crt
+- publish: edugain-test.xml
+- stats 
