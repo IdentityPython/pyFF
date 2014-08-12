@@ -594,6 +594,11 @@ and verified.
                     log.error(ex)
                     return None
 
+            # get rid of ID as early as possible - probably not unique
+            for e in t.findall('{%s}EntityDescriptor' % NS['md']):
+                if e.get('ID') is not None:
+                    del e.attrib['ID']
+
             if post is not None:
                 t = post(t)
 
@@ -618,6 +623,9 @@ and verified.
             if fail_on_error:
                 raise ex
             return None
+
+        if log.isDebugEnabled():
+            log.debug("returning %d valid entities" % len(t.findall('{%s}EntityDescriptor' % NS['md'])))
 
         return t
 
