@@ -228,18 +228,18 @@ The dict in the list contains three items:
 
         def _strings(elt):
             lst = []
-            for attr in ['.//{%s}DisplayName' % NS['mdui'],
-                         './/{%s}ServiceName' % NS['md'],
-                         './/{%s}OrganizationDisplayName' % NS['md'],
-                         './/{%s}OrganizationName' % NS['md'],
-                         './/{%s}Keywords' % NS['mdui'],
-                         './/{%s}Scope' % NS['shibmd']]:
+            for attr in ['{%s}DisplayName' % NS['mdui'],
+                         '{%s}ServiceName' % NS['md'],
+                         '{%s}OrganizationDisplayName' % NS['md'],
+                         '{%s}OrganizationName' % NS['md'],
+                         '{%s}Keywords' % NS['mdui'],
+                         '{%s}Scope' % NS['shibmd']]:
                 lst.extend([s.text for s in elt.iter(attr)])
             lst.append(elt.get('entityID'))
             return filter(lambda s: s is not None, lst)
 
         def _ip_networks(elt):
-            return [ipaddr.IPNetwork(x.text) for x in elt.iter('.//{%s}IPHint' % NS['mdui'])]
+            return [ipaddr.IPNetwork(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
 
         def _match(qq, elt):
             for q in qq:
