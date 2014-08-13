@@ -224,8 +224,11 @@ class MemoryStore(StoreBase):
 
         return ne
 
+    #def lookup(self, key):
+    #    return [deepcopy(x) for x in self._lookup(key)]
+
     def lookup(self, key):
-        return [deepcopy(x) for x in self._lookup(key)]
+        return self._lookup(key)
 
     def _lookup(self, key):
         if key == 'entities' or key is None:

@@ -405,7 +405,7 @@ A delayed pipeline callback used as a post for parse_metadata
         post = None
         if params['via'] is not None:
             post = PipelineCallback(params['via'], req, stats)
-        print post
+
         if "://" in url:
             log.debug("load %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
             remote.append((url, params['verify'], params['as'], post))
@@ -421,7 +421,7 @@ A delayed pipeline callback used as a post for parse_metadata
         else:
             log.error("Don't know how to load '%s' as %s verify %s via %s" %
                       (url, params['as'], params['verify'], params['via']))
-    print remote
+
     req.md.fetch_metadata(remote, **opts)
     req.state['stats']['Metadata URLs'] = stats
 

@@ -4,6 +4,7 @@ This module contains various utilities.
 
 """
 from collections import MutableSet, namedtuple
+from copy import deepcopy
 from datetime import timedelta, datetime
 import tempfile
 import traceback
@@ -17,11 +18,11 @@ from time import gmtime, strftime, clock
 from pyff.constants import NS
 from pyff.decorators import cached, retry
 from pyff.logs import log
-import threading
 import httplib2
 import hashlib
 from email.utils import parsedate
 from urlparse import urlparse
+from threading import local, Thread
 
 __author__ = 'leifj'
 
@@ -291,7 +292,7 @@ def load_url(url, enable_cache=True, timeout=60):
                          last_modified=_parse_date(resp.get('last-modified', resp.get('date', None))))
 
 
-class URLFetch(threading.Thread):
+class URLFetch(Thread):
     def __init__(self, url, verify, id=None, enable_cache=False, tries=0, post=None, timeout=120):
         self.url = url.strip()
         self.verify = verify
@@ -314,7 +315,7 @@ class URLFetch(threading.Thread):
         if self.id is None:
             self.id = self.url
 
-        threading.Thread.__init__(self)
+        Thread.__init__(self)
 
     def time(self):
         if self.isAlive():
@@ -413,16 +414,18 @@ def filter_lang(elts, langs=["en"]):
     else:
         return elts
 
-_xslt = dict()
-
+thread_data = local()
 
 def xslt_transform(t, stylesheet, params={}):
+    if not hasattr(thread_data,'xslt'):
+        thread_data.xslt = dict()
+
     transform = None
-    if not stylesheet in _xslt:
+    if not stylesheet in thread_data.xslt:
         xsl = etree.fromstring(resource_string(stylesheet, "xslt"))
-        _xslt[stylesheet] = etree.XSLT(xsl)
-    transform = _xslt[stylesheet]
-    return transform(t, **params)
+        thread_data.xslt[stylesheet] = etree.XSLT(xsl)
+    transform = thread_data.xslt[stylesheet]
+    return transform(deepcopy(t), **params)
 
 
 def total_seconds(dt):
@@ -582,7 +585,8 @@ def avg_domain_distance(d1, d2):
     for a in d1.split(';'):
         for b in d2.split(';'):
             d = ddist(a, b)
-            log.debug("ddist %s %s -> %d" % (a,b,d))
+            if log.isDebugEnabled():
+                log.debug("ddist %s %s -> %d" % (a,b,d))
             dd += d
             n += 1
     return int(dd / n)

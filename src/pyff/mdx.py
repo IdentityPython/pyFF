@@ -51,7 +51,7 @@ from cherrypy._cptools import HandlerTool
 from cherrypy.lib.cpstats import StatsPage
 import os
 import sys
-from threading import RLock
+from threading import RLock, Lock
 import cherrypy
 from cherrypy._cpdispatch import Dispatcher
 from cherrypy._cperror import NotFound, HTTPError
@@ -87,7 +87,7 @@ _ = i18n.language.ugettext
 
 class MDUpdate(Monitor):
     def __init__(self, bus, frequency=600, server=None):
-        self.lock = RLock()
+        self.lock = Lock()
         self.server = server
         self.bus = bus
         Monitor.__init__(self, bus, lambda: self.run(server), frequency=frequency)
@@ -96,26 +96,24 @@ class MDUpdate(Monitor):
     def run(self, server):
         locked = False
         try:
-            if self.lock.acquire(blocking=0):
-                locked = True
-                md = self.server.md.clone()
+            self.lock.acquire()
+            locked = True
+            md = self.server.md.clone()
 
-                for p in server.plumbings:
-                    state = {'update': True, 'stats': {}}
-                    p.process(md, state)
-                    stats.update(state.get('stats', {}))
+            for p in server.plumbings:
+                state = {'update': True, 'stats': {}}
+                p.process(md, state)
+                stats.update(state.get('stats', {}))
 
-                with server.lock.writelock:
-                    log.debug("update produced new repository with %d entities" % server.md.store.size())
-                    server.md = md
-                    server.md.fire(type=EVENT_REPOSITORY_LIVE, size=server.md.store.size())
-                    stats['Repository Update Time'] = datetime.now()
-                    stats['Repository Size'] = server.md.store.size()
+            with server.lock.writelock:
+                log.debug("update produced new repository with %d entities" % server.md.store.size())
+                server.md = md
+                server.md.fire(type=EVENT_REPOSITORY_LIVE, size=server.md.store.size())
+                stats['Repository Update Time'] = datetime.now()
+                stats['Repository Size'] = server.md.store.size()
 
-                if hasattr(self.server.md.store, 'periodic'):
-                    self.server.md.store.periodic(stats)
-            else:
-                log.error("another instance of MDUpdate is running - will try again later...")
+            if hasattr(self.server.md.store, 'periodic'):
+                self.server.md.store.periodic(stats)
         except Exception, ex:
             traceback.print_exc(ex)
         finally:
