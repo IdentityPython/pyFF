@@ -621,9 +621,10 @@ This example signs the document using the plain key and cert found in the signer
         log.info("Attempting to extract certificate from token...")
 
     opts = dict()
-    re = root(req.t)
-    if re.get('ID'):
-        opts['reference_uri'] = "#%s" % re.get('ID')
+    relt = root(req.t)
+    idattr = relt.get('ID')
+    if idattr:
+        opts['reference_uri'] = "#%s" % idattr
     xmlsec.sign(req.t, key_file, cert_file, **opts)
 
     return req.t
