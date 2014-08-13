@@ -46,7 +46,7 @@
         return false;
     }
 
-    function addIdP(item) {
+    function add_idp(item) {
         var idps = $.jStorage.get('pyff.discovery.idps',[]);
         //console.log(item);
         if (!contains_idp(item,idps)) {
@@ -75,7 +75,7 @@
             success: function (data) {
                 for (var i = 0; i < data.length; i++) {
                     //console.log("fetched: "+data[i]);
-                    return addIdP(data[i]);
+                    return add_idp(data[i]);
                 }
             }
         });
@@ -138,6 +138,7 @@
                 });
                 $('body').on('click.ds', 'button.unselect', methods.unselect);
                 $('body').on('click.ds', 'a.select', methods.select);
+                $('body').on('click.ds', 'a.save_select', methods.save_select);
             });
             this.filter('select').each(function (opts) {
                 var seldiv = $(this);
@@ -165,7 +166,7 @@
         },
         unselect: function (e) {
             e.preventDefault();
-            //e.stopPropagation();
+            e.stopPropagation();
             var id = $(this).attr('rel');
             var idps = $.jStorage.get('pyff.discovery.idps', []);
             var idx = find_idp(id, idps);
@@ -178,6 +179,10 @@
         select: function(e) {
             e.preventDefault();
             return ds_select($(this).attr('data-href'));
+        },
+        save_select: function(e) {
+            e.preventDefault();
+            return select_idp("{sha1}"+CryptoJS.SHA1($(this).attr('data-href')));
         }
     };
 
@@ -185,7 +190,7 @@
         $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
     });
 
-    var idp_template = Hogan.compile('<a class="select list-group-item" data-href="{{entityID}}">' +
+    var idp_template = Hogan.compile('<a class="{{#save}}save_select{{/save}}{{^save}}select{{/save}} list-group-item" data-href="{{entityID}}">' +
         '{{^sticky}}<button type="button" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
@@ -201,20 +206,25 @@
             var div = $('<div>').addClass("list-group");
             outer.html(div);
 
+            var seen = {};
             var from_storage = 0;
             div.append(function() {
                 var lst = $.jStorage.get('pyff.discovery.idps',[]);
                 for (var i = 0; i < lst.length; i++) {
                     div.append(idp_template.render(lst[i]));
                     from_storage++;
+                    seen[lst[i].entityID] = true
                 }
             });
 
-            if (from_storage < 2) {
+            if (from_storage == 0) {
                 $.getJSON(uri, function (data) {
                     $.each(data,function(pos,elt) {
-                        elt.sticky = true;
-                        div.append(idp_template.render(elt));
+                        if (!(elt.entityID in seen)) {
+                            elt.sticky = true;
+                            elt.save = true
+                            div.append(idp_template.render(elt));
+                        }
                     });
                 });
             }
