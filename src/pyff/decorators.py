@@ -1,6 +1,7 @@
 """
 Various decorators used in pyFF.
 """
+from collections import namedtuple
 import functools
 import warnings
 
@@ -73,5 +74,94 @@ def deprecated(func):
         return func(*args, **kwargs)
     return new_func
 
+
+class _HashedSeq(list):
+    __slots__ = 'hashvalue'
+
+    def __init__(self, tup, hash=hash):
+        self[:] = tup
+        self.hashvalue = hash(tup)
+
+    def __hash__(self):
+        return self.hashvalue
+
+
+def _make_key(args, kwds, typed,
+              kwd_mark = (object(),),
+              fasttypes = {int, str, frozenset, type(None)},
+              sorted=sorted,
+              tuple=tuple,
+              type=type,
+              len=len):
+    'Make a cache key from optionally typed positional and keyword arguments'
+    key = args
+    if kwds:
+        sorted_items = sorted(kwds.items())
+        key += kwd_mark
+        for item in sorted_items:
+            key += item
+    if typed:
+        key += tuple(type(v) for v in args)
+        if kwds:
+            key += tuple(type(v) for k, v in sorted_items)
+    elif len(key) == 1 and type(key[0]) in fasttypes:
+        return key[0]
+    return _HashedSeq(key)
+
+_CacheObject = namedtuple("CacheObject", ['valid_until', 'object'])
+
+
+def cached(typed=False, ttl=None, hash_key=None):
+
+    def decorating(func):
+
+        cache = dict()
+        stats = dict(hits=0, misses=0)
+        make_key = hash_key or _make_key
+
+        def wrapper(*args, **kwargs):
+            key = make_key(args, kwargs, typed)
+            now = time.time()
+            if key in cache:
+                o = cache[key]
+                if o.valid_until is None or o.valid_until > now:
+                    stats['hits'] += 1
+                    return o.object
+
+            result = func(*args, **kwargs)
+            stats['misses'] += 1
+            expires = None
+            if ttl is not None:
+                expires = now+ttl
+            cache[key] = _CacheObject(valid_until=expires, object=result)
+            return result
+
+        def clear():
+            cache.clear()
+            stats.hits = 0
+            stats.misses = 0
+
+        @property
+        def hits():
+            return stats['hits']
+
+        @property
+        def misses():
+            return stats['misses']
+
+        def invalidate(*args, **kwargs):
+            key = make_key(args, kwargs, typed)
+            if key in cache:
+                del cache[key]
+
+        wrapper.__wrapped__ = func
+        wrapper.clear = clear
+        wrapper.hits = hits
+        wrapper.misses = misses
+        wrapper.invalidate = invalidate
+
+        return functools.update_wrapper(wrapper, func)
+
+    return decorating
 
 

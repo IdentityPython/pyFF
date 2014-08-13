@@ -3,9 +3,10 @@
 This module contains various utilities.
 
 """
-from collections import MutableSet
+from collections import MutableSet, namedtuple
 from datetime import timedelta, datetime
 import tempfile
+import traceback
 import cherrypy
 from mako.lookup import TemplateLookup
 import os
@@ -14,6 +15,7 @@ import re
 from lxml import etree
 from time import gmtime, strftime, clock
 from pyff.constants import NS
+from pyff.decorators import cached, retry
 from pyff.logs import log
 import threading
 import httplib2
@@ -27,6 +29,7 @@ import i18n
 
 _ = i18n.language.ugettext
 
+sentinel = object()
 
 class PyffException(Exception):
     pass
@@ -191,6 +194,11 @@ def schema():
     return _SCHEMA
 
 
+@cached(hash_key=lambda *args, **kwargs: hash(args[0]))
+def validate_document(t):
+    schema().assertValid(t)
+
+
 def safe_write(fn, data):
     """Safely write data to a file with name fn
     :param fn: a filename
@@ -236,6 +244,51 @@ def render_template(name, **kwargs):
     kwargs.setdefault('brand', "pyFF @ %s" % request_vhost(cherrypy.request))
     kwargs.setdefault('_', _)
     return template(name).render(**kwargs)
+
+_Resource = namedtuple("Resource", ["result", "cached", "date", "last_modified", "resp", "time"])
+
+
+@retry(IOError)
+def load_url(url, enable_cache=True, timeout=60):
+
+    def _parse_date(s):
+        if s is None:
+            return datetime.new()
+        return datetime(*parsedate(s)[:6])
+
+    start_time = clock()
+    cache = httplib2.FileCache(".cache")
+    headers = dict()
+    if not enable_cache:
+        headers['cache-control'] = 'no-cache'
+
+    log.debug("fetching (caching: %s) '%s'" % (enable_cache, url))
+
+    if url.startswith('file://'):
+        path = url[7:]
+        if not os.path.exists(path):
+            raise IOError("file not found: %s" % path)
+
+        with open(path, 'r') as fd:
+            return _Resource(result=fd.read(),
+                             cached=False,
+                             date=datetime.now(),
+                             resp=None,
+                             time=clock()-start_time,
+                             last_modified=datetime.fromtimestamp(os.stat(path).st_mtime))
+    else:
+        h = httplib2.Http(cache=cache,
+                          timeout=timeout,
+                          disable_ssl_certificate_validation=True)  # trust is done using signatures over here
+        resp, content = h.request(url, headers=headers)
+        if resp.status != 200:
+            raise IOError(resp.reason)
+        return _Resource(result=content,
+                         cached=resp.fromcache,
+                         date=_parse_date(resp['date']),
+                         resp=resp,
+                         time=clock()-start_time,
+                         last_modified=_parse_date(resp.get('last-modified', resp.get('date', None))))
 
 
 class URLFetch(threading.Thread):
@@ -351,7 +404,7 @@ def filter_lang(elts, langs=["en"]):
     def _l(elt):
         return elt.get("{http://www.w3.org/XML/1998/namespace}lang", None) in langs
 
-    if elts is None or len(elts) == 0:
+    if elts is None:
         return []
 
     lst = filter(_l, elts)
@@ -482,7 +535,16 @@ def entities_list(t=None):
         elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
             return [root(t)]
         else:
-            return t.findall(".//{%s}EntityDescriptor" % NS['md'])
+            return iter_entities(t)
+
+
+def iter_entities(t):
+    return t.iter('{%s}EntityDescriptor' % NS['md'])
+
+
+def has_tag(t, tag):
+    tags = t.iter(tag)
+    return next(tags, sentinel) is not sentinel
 
 
 def url2host(url):
@@ -524,3 +586,4 @@ def avg_domain_distance(d1, d2):
             dd += d
             n += 1
     return int(dd / n)
+

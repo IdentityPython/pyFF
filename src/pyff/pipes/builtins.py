@@ -5,7 +5,8 @@ import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
 from pyff.decorators import deprecated
-from pyff.utils import total_seconds, dumptree, schema, safe_write, root, duration2timedelta, xslt_transform
+from pyff.utils import total_seconds, dumptree, schema, safe_write, root, duration2timedelta, xslt_transform, \
+    iter_entities, validate_document
 from pyff.mdrepo import NS
 from pyff.pipes import Plumbing, PipeException
 from copy import deepcopy
@@ -292,7 +293,7 @@ Publish the working document in XML form.
         raise PipeException("Empty document submitted for publication")
 
     try:
-        schema().assertValid(req.t)
+        validate_document(req.t)
     except DocumentInvalid, ex:
         log.error(ex.error_log)
         raise PipeException("XML schema validation failed")
@@ -351,9 +352,8 @@ General-purpose resource fetcher.
 Supports both remote and local resources. Fetching remote resources is done in parallell using threads.
     """
     opts = dict(zip(opts[::2], opts[1::2]))
-    opts.setdefault('timeout', 30)
-    opts.setdefault('qsize', 5)
-    opts.setdefault('xrd', None)
+    opts.setdefault('timeout', 120)
+    opts.setdefault('max_workers', 5)
     opts.setdefault('validate', True)
     stats = dict()
     opts.setdefault('stats', stats)
@@ -547,11 +547,18 @@ If the working document is a single EntityDescriptor, strip the outer EntitiesDe
 Sometimes (eg when running an MDX pipeline) it is usually expected that if a single EntityDescriptor is being returned
 then the outer EntitiesDescriptor is stripped. This method does exactly that:
     """
-    nent = len(req.t.findall("//{%s}EntityDescriptor" % NS['md']))
-    if nent == 1:
-        return req.t.find("//{%s}EntityDescriptor" % NS['md'])
-    else:
-        return req.t
+    gone = object()  # sentinel
+    entities = iter_entities(req.t)
+    one = next(entities, gone)
+    if one is gone:
+        return req.t  # empty tree - return it as is
+
+    two = next(entities, gone)  # one EntityDescriptor in tree - return just that one
+    if two is gone:
+        return one
+
+    return req.t
+
 
 
 def sign(req, *opts):
@@ -738,7 +745,7 @@ Generate an exception unless the working tree validates. Validation is done auto
 loading of metadata so this call is seldom needed.
     """
     if req.t is not None:
-        schema().assertValid(req.t)
+        validate_document(req.t)
 
     return req.t
 
@@ -941,32 +948,36 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
 
     now = datetime.utcnow()
 
-    IDprefix = req.args.get('ID', '_')
+    idprefix = req.args.get('ID', '_')
     if not e.get('ID'):
-        e.set('ID', now.strftime(IDprefix + "%Y%m%dT%H%M%SZ"))
+        e.set('ID', now.strftime(idprefix + "%Y%m%dT%H%M%SZ"))
 
-    validUntil = str(req.args.get('validUntil', e.get('validUntil', None)))
-    if validUntil is not None and len(validUntil) > 0:
-        offset = duration2timedelta(validUntil)
+    valid_until = str(req.args.get('validUntil', e.get('validUntil', None)))
+    if valid_until is not None and len(valid_until) > 0:
+        offset = duration2timedelta(valid_until)
         if offset is not None:
             dt = now + offset
             e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
-        elif validUntil is not None:
-            dt = iso8601.parse_date(validUntil)
-            dt = dt.replace(tzinfo=None) # make dt "naive" (tz-unaware)
-            offset = dt - now
-            e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+        elif valid_until is not None:
+            try:
+                dt = iso8601.parse_date(valid_until)
+                dt = dt.replace(tzinfo=None) # make dt "naive" (tz-unaware)
+                offset = dt - now
+                e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+            except ValueError, ex:
+                log.error("Unable to parse validUntil: %s" % valid_until)
+
             # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set
         req.state['cache'] = int(total_seconds(offset) / 50)
 
-    cacheDuration = req.args.get('cacheDuration', e.get('cacheDuration', None))
-    if cacheDuration is not None and len(cacheDuration) > 0:
-        offset = duration2timedelta(cacheDuration)
+    cache_duration = req.args.get('cacheDuration', e.get('cacheDuration', None))
+    if cache_duration is not None and len(cache_duration) > 0:
+        offset = duration2timedelta(cache_duration)
         if offset is None:
-            raise PipeException("Unable to parse %s as xs:duration" % cacheDuration)
+            raise PipeException("Unable to parse %s as xs:duration" % cache_duration)
 
-        e.set('cacheDuration', cacheDuration)
+        e.set('cacheDuration', cache_duration)
         req.state['cache'] = int(total_seconds(offset))
 
     return req.t
@@ -995,6 +1006,6 @@ elements of the active document.
 Normally this would be combined with the 'merge' feature of fork to add attributes to the working
 document for later processing.
     """
-    for e in req.t.findall(".//{%s}EntityDescriptor" % NS['md']):
+    for e in iter_entities(req.t):
         #log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         req.md.set_entity_attributes(e, req.args)

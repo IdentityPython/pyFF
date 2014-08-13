@@ -11,6 +11,7 @@ import re
 import traceback
 import threading
 from Queue import Queue
+from concurrent import futures
 
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -23,7 +24,8 @@ from pyff import merge_strategies
 from pyff.logs import log
 from pyff.store import RedisStore
 from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template, \
-    hash_id, parse_xml, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance
+    hash_id, parse_xml, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
+    iter_entities, validate_document, load_url
 from pyff.constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 
@@ -107,12 +109,12 @@ class MDRepository(Observable):
         return bool(e.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
 
     def icon(self, entity):
-        for icon in filter_lang(entity.findall(".//{%s}Logo" % NS['mdui'])):
+        for icon in filter_lang(entity.iter("{%s}Logo" % NS['mdui'])):
             return icon.text
 
     def domains(self, entity):
         domains = [url2host(entity.get('entityID'))]
-        for d in filter_lang(entity.findall(".//{%s}DomainHint" % NS['mdui'])):
+        for d in filter_lang(entity.iter("{%s}DomainHint" % NS['mdui'])):
             domains.append(d.text)
         return domains
 
@@ -124,26 +126,26 @@ class MDRepository(Observable):
         display = entity.get('entityID')
         info = ''
 
-        for organizationName in filter_lang(entity.findall(".//{%s}OrganizationName" % NS['md'])):
+        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md'])):
             info = display
             display = organizationName.text
 
-        for organizationDisplayName in filter_lang(entity.findall(".//{%s}OrganizationDisplayName" % NS['md'])):
+        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md'])):
             info = display
             display = organizationDisplayName.text
 
-        for serviceName in filter_lang(entity.findall(".//{%s}ServiceName" % NS['md'])):
+        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md'])):
             info = display
             display = serviceName.text
 
-        for displayName in filter_lang(entity.findall(".//{%s}DisplayName" % NS['mdui'])):
+        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui'])):
             info = display
             display = displayName.text
 
-        for organizationUrl in filter_lang(entity.findall(".//{%s}OrganizationURL" % NS['md'])):
+        for organizationUrl in filter_lang(entity.iter("{%s}OrganizationURL" % NS['md'])):
             info = organizationUrl.text
 
-        for description in filter_lang(entity.findall(".//{%s}Description" % NS['mdui'])):
+        for description in filter_lang(entity.iter("{%s}Description" % NS['mdui'])):
             info = description.text
 
         if info == entity.get('entityID'):
@@ -156,16 +158,16 @@ class MDRepository(Observable):
 
         :param entity: An EntityDescriptor element
         """
-        for displayName in filter_lang(entity.findall(".//{%s}DisplayName" % NS['mdui'])):
+        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui'])):
             return displayName.text
 
-        for serviceName in filter_lang(entity.findall(".//{%s}ServiceName" % NS['md'])):
+        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md'])):
             return serviceName.text
 
-        for organizationDisplayName in filter_lang(entity.findall(".//{%s}OrganizationDisplayName" % NS['md'])):
+        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md'])):
             return organizationDisplayName.text
 
-        for organizationName in filter_lang(entity.findall(".//{%s}OrganizationName" % NS['md'])):
+        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md'])):
             return organizationName.text
 
         return entity.get('entityID')
@@ -232,12 +234,12 @@ The dict in the list contains three items:
                          './/{%s}OrganizationName' % NS['md'],
                          './/{%s}Keywords' % NS['mdui'],
                          './/{%s}Scope' % NS['shibmd']]:
-                lst.extend([s.text for s in elt.findall(attr)])
+                lst.extend([s.text for s in elt.iter(attr)])
             lst.append(elt.get('entityID'))
             return filter(lambda s: s is not None, lst)
 
         def _ip_networks(elt):
-            return [ipaddr.IPNetwork(x.text) for x in elt.findall('.//{%s}IPHint' % NS['mdui'])]
+            return [ipaddr.IPNetwork(x.text) for x in elt.iter('.//{%s}IPHint' % NS['mdui'])]
 
         def _match(qq, elt):
             for q in qq:
@@ -385,7 +387,123 @@ The dict in the list contains three items:
 
         self.store.update(e)
 
-    def fetch_metadata(self, resources, qsize=1, timeout=300, stats=None, xrd=None, validate=False):
+    def fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, validate=False):
+        """Fetch a series of metadata URLs and optionally verify signatures.
+
+:param resources: A list of triples (url,cert-or-fingerprint,id, post-callback)
+:param workers: The number of parallell downloads to run
+:param stats: A dictionary used for storing statistics. Useful for cherrypy cpstats
+:param validate: Turn on or off schema validation
+
+The list of triples is processed by first downloading the URL. If a cert-or-fingerprint
+is supplied it is used to validate the signature on the received XML. Two forms of XML
+is supported: SAML Metadata and XRD.
+
+SAML metadata is (if valid and contains a valid signature) stored under the 'id'
+identifier (which defaults to the URL unless provided in the triple.
+
+XRD elements are processed thus: for all <Link> elements that contain a ds;KeyInfo
+elements with a X509Certificate and where the <Rel> element contains the string
+'urn:oasis:names:tc:SAML:2.0:metadata', the corresponding <URL> element is download
+and verified.
+        """
+        resources = [(url, verifier, tid, post, True) for url, verifier, tid, post in resources]
+        return self._fetch_metadata(resources,
+                                    max_workers=max_workers,
+                                    stats=stats,
+                                    timeout=timeout,
+                                    validate=validate)
+
+    def _fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, validate=False):
+        if stats is None:
+            stats = dict()
+
+        def _process_url(url, verifier, tid, post, enable_cache=True):
+            resource = load_url(url, timeout=timeout, enable_cache=enable_cache)
+            xml = resource.result.strip()
+            retry_resources = []
+            info = {
+                'Time Spent': resource.time
+            }
+
+            if resource.result is not None:
+                info['Bytes'] = len(resource.result)
+            else:
+                raise MetadataException("empty response fetching '%s'" % resource.url)
+            info['Cached'] = resource.cached
+            info['Date'] = str(resource.date)
+            info['Last-Modified'] = str(resource.last_modified)
+
+            if resource.resp is not None:
+                info['Status'] = resource.resp.status
+
+            t = self.parse_metadata(StringIO(xml),
+                                    key=verifier,
+                                    base_url=url,
+                                    validate=validate,
+                                    post=post)
+            if t is None:
+                self.fire(type=EVENT_IMPORT_FAIL, url=url)
+                raise MetadataException("no valid metadata found at '%s'" % url)
+
+            relt = root(t)
+            if relt.tag in ('{%s}XRD' % NS['xrd'], '{%s}XRDS' % NS['xrd']):
+                log.debug("%s looks like an xrd document" % url)
+                for xrd in t.xpath("//xrd:XRD", namespaces=NS):
+                    log.debug("xrd: %s" % xrd)
+                    for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
+                        resource_url = link.get("href")
+                        certs = xmlsec.CertDict(link)
+                        fingerprints = certs.keys()
+                        fp = None
+                        if len(fingerprints) > 0:
+                            fp = fingerprints[0]
+                        log.debug("fingerprint: %s" % fp)
+                        retry_resources.append((resource_url, fp, resource_url, post, True))
+
+            elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
+                cache_duration = self.default_cache_duration
+                if self.respect_cache_duration:
+                    cache_duration = root(t).get('cacheDuration', self.default_cache_duration)
+                offset = duration2timedelta(cache_duration)
+
+                if resource.cached:
+                    if resource.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
+                        #raise MetadataException("cached metadata expired")
+                        log.debug("cached metadata expired - retrying %s" % url)
+                        retry_resources.append((url, verifier, tid, post, False))
+                    else:
+                        log.debug("found cached metadata for '%s' (last-modified: %s)" % (url, resource.last_modified))
+                        ne = self.store.update(t, tid)
+                        info['Number of Entities'] = ne
+                else:
+                    log.debug("got fresh metadata for '%s' (date: %s)" % (url, resource.date))
+                    ne = self.store.update(t, tid)
+                    info['Number of Entities'] = ne
+
+                info['Cache Expiration Time'] = str(resource.last_modified + offset)
+            else:
+                raise MetadataException("unknown metadata type for '%s' (%s)" % (url, relt.tag))
+
+            stats[url] = info
+            return retry_resources
+
+        while resources:
+            with futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_url = dict((executor.submit(_process_url, url, verifier, tid, post, enable_cache), url)
+                                     for url, verifier, tid, post, enable_cache in resources)
+
+                next_resources = []
+                for future in futures.as_completed(future_to_url):
+                    url = future_to_url[future]
+                    if future.exception() is not None:
+                        log.error('%r generated an exception: %s' % (url, future.exception()))
+                    next_resources.extend(future.result())
+                resources = next_resources
+                log.debug("retrying %s" % resources)
+
+
+    def fetch_metadata_o(self, resources, qsize=1, timeout=300, stats=None, xrd=None, validate=False):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id)
@@ -432,7 +550,7 @@ and verified.
             while nfinished < njobs:
                 info = None
                 thread = queue.get(True)
-                thread.join(2)
+                thread.join()
                 if thread.isAlive():
                     log.debug("waiting for %s to finish..." % thread.url)
                     queue.put(thread, True)
@@ -595,7 +713,7 @@ and verified.
                     return None
 
             # get rid of ID as early as possible - probably not unique
-            for e in t.findall('{%s}EntityDescriptor' % NS['md']):
+            for e in iter_entities(t):
                 if e.get('ID') is not None:
                     del e.attrib['ID']
 
@@ -604,7 +722,7 @@ and verified.
 
             if validate:
                 if filter_invalid:
-                    for e in t.findall('{%s}EntityDescriptor' % NS['md']):
+                    for e in iter_entities(t):
                         if not schema().validate(e):
                             error = _e(schema().error_log, m=base_url)
                             log.debug("removing '%s': schema validation failed (%s)" % (e.get('entityID'), error))
@@ -612,7 +730,7 @@ and verified.
                             self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=e.get('entityID'), error=error)
                 else:
                     # Having removed the invalid entities this should now never happen...
-                    schema().assertValid(t)
+                    validate_document(t)
         except DocumentInvalid, ex:
             traceback.print_exc()
             log.debug("schema validation failed on '%s': %s" % (base_url, _e(ex.error_log, m=base_url)))
@@ -625,7 +743,7 @@ and verified.
             return None
 
         if log.isDebugEnabled():
-            log.debug("returning %d valid entities" % len(t.findall('{%s}EntityDescriptor' % NS['md'])))
+            log.debug("returning %d valid entities" % len(list(iter_entities(t))))
 
         return t
 
@@ -763,7 +881,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
         if validate:
             try:
-                schema().assertValid(t)
+                validate_document(t)
             except DocumentInvalid, ex:
                 log.debug(_e(ex.error_log))
                 raise MetadataException("XML schema validation failed: %s" % name)
@@ -825,7 +943,7 @@ replace old_e in t.
         if strategy_name is not None:
             strategy = find_merge_strategy(strategy_name)
 
-        for e in nt.findall(".//{%s}EntityDescriptor" % NS['md']):
+        for e in iter_entities(nt):
             entity_id = e.get("entityID")
             # we assume ddup:ed tree
             old_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entity_id))

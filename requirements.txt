@@ -9,3 +9,4 @@ sphinx
 nose
 babel
 httplib2
+futures

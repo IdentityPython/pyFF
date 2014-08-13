@@ -20,7 +20,8 @@ install_requires = [
     'httplib2 >=0.7.7',
     'ipaddr',
     'publicsuffix',
-    'redis'
+    'redis',
+    'futures'
 ]
 
 setup(name='pyFF',

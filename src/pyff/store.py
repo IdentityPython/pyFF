@@ -6,22 +6,23 @@ from iso8601 import iso8601
 from redis import Redis
 import time
 from pyff.constants import NS, ATTRS
+from pyff.decorators import cached
 from pyff.utils import root, dumptree, duration2timedelta, totimestamp, parse_xml, hex_digest, hash_id, EntitySet, \
-    entities_list, url2host, filter_lang, subdomains
+    entities_list, url2host, filter_lang, subdomains, has_tag, iter_entities
 from pyff.logs import log
 
 
 def is_idp(entity):
-    return bool(entity.find(".//{%s}IDPSSODescriptor" % NS['md']) is not None)
+    return has_tag(entity, "{%s}IDPSSODescriptor" % NS['md'])
 
 
 def is_sp(entity):
-    return bool(entity.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
+    return has_tag(entity, "{%s}SPSSODescriptor" % NS['md'])
 
 
 def _domains(entity):
         domains = [url2host(entity.get('entityID'))]
-        for d in filter_lang(entity.findall(".//{%s}DomainHint" % NS['mdui'])):
+        for d in filter_lang(entity.iter("{%s}DomainHint" % NS['mdui'])):
             domains.append(d.text)
         return domains
 
@@ -29,12 +30,12 @@ def _domains(entity):
 def entity_attribute_dict(entity):
     d = {}
     entity_id = entity.get('entityID')
-    for ea in entity.findall(".//{%s}EntityAttributes" % NS['mdattr']):
+    for ea in entity.iter("{%s}EntityAttributes" % NS['mdattr']):
         a = ea.find(".//{%s}Attribute" % NS['saml'])
         if a is not None:
             an = a.get('Name', None)
             if a is not None:
-                values = [v.text.strip() for v in a.findall(".//{%s}AttributeValue" % NS['saml'])]
+                values = [v.text.strip() for v in a.iter("{%s}AttributeValue" % NS['saml'])]
                 d[an] = values
 
     d[ATTRS['role']] = []
@@ -216,7 +217,7 @@ class MemoryStore(StoreBase):
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('Name')
-            for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
+            for e in iter_entities(t):
                 self.update(e)
                 ne += 1
             self.md[tid] = relt
@@ -318,6 +319,7 @@ class RedisStore(StoreBase):
         if p is None:
             p = self.rc
         p.set("%s#metadata" % tid, dumptree(t))
+        self._get_metadata.invalidate(tid)  # invalidate the parse-cache entry
         if ts is not None:
             p.expireat("%s#metadata" % tid, ts)
         nfo = dict(expires=ts)
@@ -378,7 +380,7 @@ class RedisStore(StoreBase):
             ts = self._expiration(relt)
             with self.rc.pipeline() as p:
                 self.update_entity(relt, t, tid, ts, p)
-                for e in t.findall(".//{%s}EntityDescriptor" % NS['md']):
+                for e in iter_entities(t):
                     ne += self.update(e, ts=ts)
                     entity_id = e.get("entityID")
                     self.membership(tid, entity_id, ts, p)
@@ -389,11 +391,15 @@ class RedisStore(StoreBase):
 
         return ne
 
-    def members(self, k):
+    def _members(self, k):
         if self.rc.exists("%s#members" % k):
             return [self.lookup(entity_id) for entity_id in self.rc.zrangebyscore("%s#members" % k, _now(), "+inf")]
         else:
             return []
+
+    @cached(ttl=30)
+    def _get_metadata(self, key):
+        return root(parse_xml(StringIO.StringIO(self.rc.get("%s#metadata" % key))))
 
     def lookup(self, key):
         if '+' in key:
@@ -417,9 +423,9 @@ class RedisStore(StoreBase):
         elif self.rc.exists("%s#alias" % key):
             return self.lookup(self.rc.get("%s#alias" % key))
         elif self.rc.exists("%s#metadata" % key):
-            return root(parse_xml(StringIO.StringIO(self.rc.get("%s#metadata" % key))))
+            return self._get_metadata(key)
         else:
-            return self.members(key)
+            return self._members(key)
 
     def size(self):
         return self.rc.zcount("entities#members", _now(), "+inf")
