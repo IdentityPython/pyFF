@@ -1,9 +1,13 @@
 - load:
      -  http://www.home.umk.pl/~twoln/uk0.xml as UK0
      -  http://www.home.umk.pl/~twoln/uk1.xml as UK1
+     -  http://www.home.umk.pl/~twoln/uk2.xml as UK2
+     -  http://www.home.umk.pl/~twoln/uk3.xml as UK3
 - select:
-     - UK0!//md:EntityDescriptor[md:Extensions/mdrpi:RegistrationInfo/@registrationAuthority='http://ukfederation.org.uk']
-     - UK1!//md:EntityDescriptor[md:Extensions/mdrpi:RegistrationInfo/@registrationAuthority='http://ukfederation.org.uk']
+     - UK0!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     - UK1!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     - UK2!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     - UK3!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
 - xslt:
      stylesheet: tidy.xsl
 - xslt:
