@@ -73,7 +73,6 @@ from datetime import datetime
 from lxml import etree
 from pyff import __version__ as pyff_version, MemoryStore, RedisStore
 from publicsuffix import PublicSuffixList
-from cherrypy._cpnative_server import CPHTTPServer
 
 __author__ = 'leifj'
 
@@ -249,6 +248,14 @@ listed using the 'role' attribute to the link elements.
         return dumps(jrd)
 
 
+class NotImplementedFunction():
+    def __init__(self, message):
+        self.message = message
+
+    def index(self):
+        return self.message
+
+
 class MDRoot():
     """The root application of pyFF. The root application assembles the MDStats and WellKnown classes with an
     MDServer instance.
@@ -259,6 +266,14 @@ class MDRoot():
         self._well_known.server = server
 
     stats = MDStats()
+
+    try:
+        import dowser
+        memory = dowser.Root()
+    except ImportError:
+        memory = NotImplementedFunction('Memory profiling needs dowser')
+        pass
+
     _well_known = WellKnown()
     static = cherrypy.tools.staticdirs.handler("/static", dir="static")
 

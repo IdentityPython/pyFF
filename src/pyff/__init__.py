@@ -1,6 +1,7 @@
 """
 pyFF is a SAML metadata aggregator.
 """
+from os import environ
 
 import sys
 import getopt
@@ -12,6 +13,15 @@ import logging
 from pyff.store import MemoryStore, RedisStore
 
 __version__ = pkg_resources.require("pyFF")[0].version
+
+
+def interact(**kwargs):
+    import code
+
+    v = dict()
+    v.update(globals())
+    v.update(**kwargs)
+    code.InteractiveConsole(locals=v).interact()
 
 
 def main():
@@ -46,6 +56,15 @@ def main():
         else:
             raise ValueError("Unknown option '%s'" % o)
 
+    hp = None
+    if environ.get('MEMORY_DEBUG', None) is not None:
+        try:
+            from guppy import hpy
+            hp = hpy()
+            hp.setrelheap()
+        except ImportError:
+            pass
+
     md = MDRepository(store=store)
 
     log_args = {'level': loglevel}
@@ -56,6 +75,9 @@ def main():
     try:
         for p in args:
             plumbing(p).process(md, state={'batch': True, 'stats': {}})
+        if hp is not None:
+            h = hp.heap()
+            interact(h=h, hp=hp, store=store, md=md)
         sys.exit(0)
     except Exception, ex:
         if logging.getLogger().isEnabledFor(logging.DEBUG):

@@ -590,4 +590,3 @@ def avg_domain_distance(d1, d2):
             dd += d
             n += 1
     return int(dd / n)
-

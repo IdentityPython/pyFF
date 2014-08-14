@@ -627,7 +627,7 @@ starting with '.' are excluded.
             m = re.match("^(.+)=(.+)$", member)
             if m:
                 return self._lookup("{%s}%s" % (m.group(1), m.group(2).rstrip("/")))
-
+        log.debug("calling store lookup %s" % member)
         return self.store.lookup(member)
 
     def lookup(self, member, xp=None):
@@ -667,12 +667,19 @@ fails an empty list is returned.
         l = self._lookup(member)
         if hasattr(l, 'tag'):
             l = [l]
+        elif hasattr(l,'__iter__'):
+            l = list(l)
+
         if xp is None:
             return l
         else:
             if log.isDebugEnabled():
                 log.debug("filtering %d entities using xpath %s" % (len(l), xp))
-            l = filter(_xp, l)
+            t = self.entity_set(l, 'dummy')
+            if t is None:
+                return []
+            l = root(t).xpath(xp, namespaces=NS)
+
             if log.isDebugEnabled():
                 log.debug("got %d entities after filtering" % len(l))
             return l
@@ -689,6 +696,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
         if log.isDebugEnabled():
             log.debug("entities: %s" % entities)
+
         def _a(ent, t, seen):
             entity_id = ent.get('entityID', None)
             if (ent is not None) and (entity_id is not None) and (not seen.get(entity_id, False)):
@@ -713,7 +721,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                     nent += 1
 
         if log.isDebugEnabled():
-            log.debug("selecting %d entities from %d entity set(s) before validation" % (nent, len(entities)))
+            log.debug("selecting %d entities before validation" % nent)
 
         if not nent:
             return None
