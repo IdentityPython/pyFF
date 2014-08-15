@@ -4,6 +4,7 @@ for pyFF.
 import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
+import psutil
 from pyff.decorators import deprecated
 from pyff.utils import total_seconds, dumptree, schema, safe_write, root, duration2timedelta, xslt_transform, \
     iter_entities, validate_document
@@ -267,7 +268,7 @@ Dumps the working document on stdout. Useful for testing.
     if req.t is None:
         raise PipeException("Your plumbing is missing a select statement.")
 
-    for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS):
+    for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS, smart_strings=False):
         print e.get('entityID')
     return req.t
 
@@ -345,9 +346,9 @@ def load(req, *opts):
 General-purpose resource fetcher.
 
     :param opts:
-:param req: The request
-:param opts: Options: [qsize <5>] [timeout <30>] [validate <True*|False>] [xrd <output xrd file>]
-:return: None
+    :param req: The request
+    :param opts: Options: [qsize <5>] [timeout <30>] [validate <True*|False>] [xrd <output xrd file>]
+    :return: None
 
 Supports both remote and local resources. Fetching remote resources is done in parallell using threads.
     """
@@ -425,7 +426,6 @@ A delayed pipeline callback used as a post for parse_metadata
     req.md.fetch_metadata(remote, **opts)
     req.state['stats']['Metadata URLs'] = stats
 
-
 def select(req, *opts):
     """
 Select a set of EntityDescriptor elements as the working document.
@@ -489,7 +489,8 @@ Note that you should not include an extension in your "as foo-bla-something" sin
 alias invisible for anything except the corresponding mime type.
     """
     args = req.args
-    log.debug("selecting using args: %s" % args)
+    if log.isDebugEnabled():
+        log.debug("selecting using args: %s" % args)
     if args is None and 'select' in req.state:
         args = [req.state.get('select')]
     if args is None:
@@ -685,7 +686,7 @@ before you call store.
             os.makedirs(target_dir)
         if req.t is None:
             raise PipeException("Your plumbing is missing a select statement.")
-        for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS):
+        for e in iter_entities(req.t):
             eid = e.get('entityID')
             if eid is None or len(eid) == 0:
                 raise PipeException("Missing entityID in %s" % e)
@@ -793,8 +794,8 @@ HTML.
     warning_bits = int(req.args.get('warning_bits', "2048"))
 
     seen = {}
-    for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS):
-        for cd in req.t.xpath("md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid, namespaces=NS):
+    for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS, smart_strings=False):
+        for cd in req.t.xpath("md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid, namespaces=NS, smart_strings=False):
             try:
                 cert_pem = cd.text
                 cert_der = base64.b64decode(cert_pem)
@@ -855,17 +856,15 @@ Content-Type HTTP response header.
     """
 
     d = req.t
-    #log.debug("before getroot (%s) %s" % (type(d), repr(d)))
     if hasattr(d, 'getroot') and hasattr(d.getroot, '__call__'):
         nd = d.getroot()
         if nd is None:
             d = str(d)
         else:
             d = nd
-    #log.debug("after getroot (%s) %s" % (type(d), repr(d)))
+
     if hasattr(d, 'tag'):
         d = dumptree(d)
-    #log.debug("after dumptree (%s) %s" % (type(d), repr(d)))
 
     if d is not None:
         m = hashlib.sha1()

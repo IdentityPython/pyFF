@@ -5,6 +5,7 @@ transform, sign or output SAML metadata.
 
 import os
 from pkg_resources import iter_entry_points
+import psutil
 import yaml
 from pyff.utils import resource_string, PyffException
 from pyff.logs import log
@@ -203,7 +204,6 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
                 ot = pipe(req, *opts)
                 if ot is not None:
                     req.t = ot
-                    #log.debug("new state after %s: %s (done=%s)" % (pipe,req.state,req.done))
                 if req.done:
                     break
             except PipeException, ex:

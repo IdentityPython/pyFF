@@ -11,17 +11,9 @@ from pyff.pipes import plumbing
 import traceback
 import logging
 from pyff.store import MemoryStore, RedisStore
+from pyff.logs import log
 
 __version__ = pkg_resources.require("pyFF")[0].version
-
-
-def interact(**kwargs):
-    import code
-
-    v = dict()
-    v.update(globals())
-    v.update(**kwargs)
-    code.InteractiveConsole(locals=v).interact()
 
 
 def main():
@@ -56,16 +48,18 @@ def main():
         else:
             raise ValueError("Unknown option '%s'" % o)
 
-    hp = None
+    mem = None
     if environ.get('MEMORY_DEBUG', None) is not None:
         try:
             from guppy import hpy
-            hp = hpy()
-            hp.setrelheap()
+            mem = hpy()
+            mem.setrelheap()
+            import pdb
+            import objgraph
+            print objgraph.show_growth()
+            pdb.set_trace()
         except ImportError:
             pass
-
-    md = MDRepository(store=store)
 
     log_args = {'level': loglevel}
     if logfile is not None:
@@ -73,11 +67,10 @@ def main():
     logging.basicConfig(**log_args)
 
     try:
+        md = MDRepository(store=store)
         for p in args:
             plumbing(p).process(md, state={'batch': True, 'stats': {}})
-        if hp is not None:
-            h = hp.heap()
-            interact(h=h, hp=hp, store=store, md=md)
+
         sys.exit(0)
     except Exception, ex:
         if logging.getLogger().isEnabledFor(logging.DEBUG):

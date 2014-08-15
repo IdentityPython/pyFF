@@ -22,7 +22,7 @@ import httplib2
 import hashlib
 from email.utils import parsedate
 from urlparse import urlparse
-from threading import local, Thread
+from threading import local
 
 __author__ = 'leifj'
 
@@ -31,6 +31,8 @@ import i18n
 _ = i18n.language.ugettext
 
 sentinel = object()
+thread_data = local()
+
 
 class PyffException(Exception):
     pass
@@ -126,16 +128,16 @@ Deep merge of two isomorphically structured dictionaries.
     a.update(b)
 
 
-def tdelta(input):
+def tdelta(td):
     """
 Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours and/or seconds.
 
-:param input: A human-friendly string representation of a timedelta
+:param td: A human-friendly string representation of a timedelta
     """
     keys = ["weeks", "days", "hours", "minutes"]
     regex = "".join(["((?P<%s>\d+)%s ?)?" % (k, k[0]) for k in keys])
     kwargs = {}
-    for k, v in re.match(regex, input).groupdict(default="0").items():
+    for k, v in re.match(regex, td).groupdict(default="0").items():
         kwargs[k] = int(v)
     return timedelta(**kwargs)
 
@@ -143,7 +145,7 @@ Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours
 def totimestamp(dt, epoch=datetime(1970, 1, 1)):
     td = dt - epoch
     # return td.total_seconds()
-    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 1e6
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 1e6
 
 
 def dumptree(t, pretty_print=False, xml_declaration=True):
@@ -178,26 +180,26 @@ class ResourceResolver(etree.Resolver):
             raise ValueError("Unable to locate %s" % fn)
 
 
-_SCHEMA = None
-
-
 def schema():
-    global _SCHEMA
-    if _SCHEMA is None:
+    if not hasattr(thread_data, 'schema'):
+        thread_data.schema = None
+
+    if thread_data.schema is None:
         try:
             parser = etree.XMLParser()
             parser.resolvers.add(ResourceResolver())
             st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
-            _SCHEMA = etree.XMLSchema(st)
+            thread_data.schema = etree.XMLSchema(st)
         except etree.XMLSchemaParseError, ex:
             log.error(_e(ex.error_log))
             raise ex
-    return _SCHEMA
+    return thread_data.schema
 
 
-@cached(hash_key=lambda *args, **kwargs: hash(args[0]))
+# @cached(hash_key=lambda *args, **kwargs: hash(args[0]))
 def validate_document(t):
     schema().assertValid(t)
+    pass
 
 
 def safe_write(fn, data):
@@ -246,12 +248,12 @@ def render_template(name, **kwargs):
     kwargs.setdefault('_', _)
     return template(name).render(**kwargs)
 
+
 _Resource = namedtuple("Resource", ["result", "cached", "date", "last_modified", "resp", "time"])
 
 
 @retry(IOError)
 def load_url(url, enable_cache=True, timeout=60):
-
     def _parse_date(s):
         if s is None:
             return datetime.new()
@@ -275,7 +277,7 @@ def load_url(url, enable_cache=True, timeout=60):
                              cached=False,
                              date=datetime.now(),
                              resp=None,
-                             time=clock()-start_time,
+                             time=clock() - start_time,
                              last_modified=datetime.fromtimestamp(os.stat(path).st_mtime))
     else:
         h = httplib2.Http(cache=cache,
@@ -288,87 +290,8 @@ def load_url(url, enable_cache=True, timeout=60):
                          cached=resp.fromcache,
                          date=_parse_date(resp['date']),
                          resp=resp,
-                         time=clock()-start_time,
+                         time=clock() - start_time,
                          last_modified=_parse_date(resp.get('last-modified', resp.get('date', None))))
-
-
-class URLFetch(Thread):
-    def __init__(self, url, verify, id=None, enable_cache=False, tries=0, post=None, timeout=120):
-        self.url = url.strip()
-        self.verify = verify
-        self.id = id
-        self.result = None
-        self.ex = None
-        self.cached = False
-        self.enable_cache = enable_cache
-        self.cache_ttl = 0
-        self.last_modified = None
-        self.date = None
-        self.tries = 0
-        self.resp = None
-        self.start_time = 0
-        self.end_time = 0
-        self.tries = tries
-        self.post = post
-        self.timeout = timeout
-
-        if self.id is None:
-            self.id = self.url
-
-        Thread.__init__(self)
-
-    def time(self):
-        if self.isAlive():
-            raise ValueError("caller attempted to obtain execution time while fetcher still active")
-        return self.end_time - self.start_time
-
-    def run(self):
-
-        def _parse_date(s):
-            if s is None:
-                return datetime.new()
-            return datetime(*parsedate(s)[:6])
-
-        self.start_time = clock()
-        try:
-            cache = httplib2.FileCache(".cache")
-            headers = dict()
-            if not self.enable_cache:
-                headers['cache-control'] = 'no-cache'
-
-            log.debug("fetching '%s'" % self.url)
-
-            if self.url.startswith('file://'):
-                path = self.url[7:]
-                if not os.path.exists(path):
-                    raise IOError("file not found: %s" % path)
-
-                with open(path, 'r') as fd:
-                    self.result = fd.read()
-                    self.cached = False
-                    self.date = datetime.now()
-                    self.last_modified = datetime.fromtimestamp(os.stat(path).st_mtime)
-            else:
-                h = httplib2.Http(cache=cache,
-                                  timeout=self.timeout,
-                                  disable_ssl_certificate_validation=True)  # trust is done using signatures over here
-                resp, content = h.request(self.url, headers=headers)
-                self.resp = resp
-                self.last_modified = _parse_date(resp.get('last-modified', resp.get('date', None)))
-                self.date = _parse_date(resp['date'])
-                if resp.status != 200:
-                    raise IOError(resp.reason)
-                self.result = content
-                self.cached = resp.fromcache
-
-            log.debug("got %d bytes from '%s'" % (len(self.result), self.url))
-        except Exception, ex:
-            #traceback.print_exc()
-            log.warn("unable to fetch '%s': %s" % (self.url, ex))
-            self.ex = ex
-            self.result = None
-        finally:
-            self.end_time = clock()
 
 
 def root(t):
@@ -414,10 +337,9 @@ def filter_lang(elts, langs=["en"]):
     else:
         return elts
 
-thread_data = local()
 
 def xslt_transform(t, stylesheet, params={}):
-    if not hasattr(thread_data,'xslt'):
+    if not hasattr(thread_data, 'xslt'):
         thread_data.xslt = dict()
 
     transform = None
@@ -425,7 +347,8 @@ def xslt_transform(t, stylesheet, params={}):
         xsl = etree.fromstring(resource_string(stylesheet, "xslt"))
         thread_data.xslt[stylesheet] = etree.XSLT(xsl)
     transform = thread_data.xslt[stylesheet]
-    return transform(deepcopy(t), **params)
+    res = transform(t, **params)
+    return res
 
 
 def total_seconds(dt):
@@ -436,7 +359,7 @@ def total_seconds(dt):
 
 
 def etag(s):
-    return hash_str('sha1',s)
+    return hash_str('sha1', s)
 
 
 def hash_str(hn, s):
@@ -478,7 +401,7 @@ def parse_xml(io, base_url=None):
     return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
 
 
-class EntitySet(MutableSet):
+class EntitySet(object):
     def __init__(self, initial=None):
         self._e = dict()
         if initial is not None:
@@ -489,9 +412,9 @@ class EntitySet(MutableSet):
         self._e[value.get('entityID')] = value
 
     def discard(self, value):
-        entityID = value.get('entityID')
-        if entityID in self._e:
-            del self._e[entityID]
+        entity_id = value.get('entityID')
+        if entity_id in self._e:
+            del self._e[entity_id]
 
     def __iter__(self):
         for e in self._e.values():
@@ -528,17 +451,17 @@ def find_merge_strategy(strategy_name):
 
 
 def entities_list(t=None):
-        """
+    """
         :param t: An EntitiesDescriptor or EntityDescriptor element
 
         Returns the list of contained EntityDescriptor elements
         """
-        if t is None:
-            return []
-        elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
-            return [root(t)]
-        else:
-            return iter_entities(t)
+    if t is None:
+        return []
+    elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
+        return [root(t)]
+    else:
+        return iter_entities(t)
 
 
 def iter_entities(t):
@@ -561,7 +484,7 @@ def url2host(url):
 def subdomains(domain):
     domains = []
     dsplit = domain.split('.')
-    for i in range(1, len(dsplit)-1):
+    for i in range(1, len(dsplit) - 1):
         domains.append(".".join(dsplit[i:]))
     return domains
 
@@ -586,7 +509,7 @@ def avg_domain_distance(d1, d2):
         for b in d2.split(';'):
             d = ddist(a, b)
             if log.isDebugEnabled():
-                log.debug("ddist %s %s -> %d" % (a,b,d))
+                log.debug("ddist %s %s -> %d" % (a, b, d))
             dd += d
             n += 1
     return int(dd / n)

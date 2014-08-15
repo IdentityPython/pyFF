@@ -3,31 +3,34 @@
 This is the implementation of the active repository of SAML metadata. The 'local' and 'remote' pipes operate on this.
 
 """
-from StringIO import StringIO
 from datetime import datetime
 from UserDict import UserDict
 import os
 import re
 import traceback
-import threading
-from Queue import Queue
 from concurrent import futures
 
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
 import operator
+import psutil
 import xmlsec
 import ipaddr
 
 from pyff import merge_strategies
 from pyff.logs import log
 from pyff.store import RedisStore
-from pyff.utils import schema, URLFetch, filter_lang, root, duration2timedelta, template, \
-    hash_id, parse_xml, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
+from pyff.utils import schema, filter_lang, root, duration2timedelta, \
+    hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
     iter_entities, validate_document, load_url
 from pyff.constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    log.warn("missing cStringIO")
+    from StringIO import StringIO
 
 __author__ = 'leifj'
 
@@ -220,10 +223,10 @@ The dict in the list contains three items:
         if isinstance(query, basestring):
             query = [query.lower()]
 
-        def _lc_text(e):
-            if e.text is None:
+        def _lc_text(elt):
+            if elt.text is None:
                 return None
-            return e.text.lower()
+            return elt.text.lower()
 
         def _strings(elt):
             lst = []
@@ -235,7 +238,7 @@ The dict in the list contains three items:
                          '{%s}Scope' % NS['shibmd']]:
                 lst.extend([s.text for s in elt.iter(attr)])
             lst.append(elt.get('entityID'))
-            return filter(lambda s: s is not None, lst)
+            return filter(lambda item: item is not None, lst)
 
         def _ip_networks(elt):
             return [ipaddr.IPNetwork(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
@@ -356,7 +359,9 @@ The dict in the list contains three items:
 
     def _eattribute(self, e, attr, nf):
         ea = self._entity_attributes(e)
-        a = ea.xpath(".//saml:Attribute[@NameFormat='%s' and @Name='%s']" % (nf, attr), namespaces=NS)
+        a = ea.xpath(".//saml:Attribute[@NameFormat='%s' and @Name='%s']" % (nf, attr),
+                     namespaces=NS,
+                     smart_strings=False)
         if a is None or len(a) == 0:
             a = etree.Element("{%s}Attribute" % NS['saml'])
             a.set('NameFormat', nf)
@@ -390,7 +395,7 @@ The dict in the list contains three items:
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id, post-callback)
-:param workers: The number of parallell downloads to run
+:param max_workers: The maximum number of parallell downloads to run
 :param stats: A dictionary used for storing statistics. Useful for cherrypy cpstats
 :param validate: Turn on or off schema validation
 
@@ -417,8 +422,8 @@ and verified.
         if stats is None:
             stats = dict()
 
-        def _process_url(url, verifier, tid, post, enable_cache=True):
-            resource = load_url(url, timeout=timeout, enable_cache=enable_cache)
+        def _process_url(rurl, verifier, tid, post, enable_cache=True):
+            resource = load_url(rurl, timeout=timeout, enable_cache=enable_cache)
             xml = resource.result.strip()
             retry_resources = []
             info = {
@@ -438,22 +443,22 @@ and verified.
 
             t = self.parse_metadata(StringIO(xml),
                                     key=verifier,
-                                    base_url=url,
+                                    base_url=rurl,
                                     validate=validate,
                                     post=post)
             if t is None:
-                self.fire(type=EVENT_IMPORT_FAIL, url=url)
-                raise MetadataException("no valid metadata found at '%s'" % url)
+                self.fire(type=EVENT_IMPORT_FAIL, url=rurl)
+                raise MetadataException("no valid metadata found at '%s'" % rurl)
 
             relt = root(t)
             if relt.tag in ('{%s}XRD' % NS['xrd'], '{%s}XRDS' % NS['xrd']):
                 if log.isDebugEnabled():
-                    log.debug("%s looks like an xrd document" % url)
-                for xrd in t.xpath("//xrd:XRD", namespaces=NS):
+                    log.debug("%s looks like an xrd document" % rurl)
+                for xrd in t.xpath("//xrd:XRD", namespaces=NS, smart_strings=False):
                     if log.isDebugEnabled():
                         log.debug("xrd: %s" % xrd)
                     for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
-                        resource_url = link.get("href")
+                        link_href = link.get("href")
                         certs = xmlsec.CertDict(link)
                         fingerprints = certs.keys()
                         fp = None
@@ -461,7 +466,7 @@ and verified.
                             fp = fingerprints[0]
                         if log.isDebugEnabled():
                             log.debug("fingerprint: %s" % fp)
-                        retry_resources.append((resource_url, fp, resource_url, post, True))
+                        retry_resources.append((link_href, fp, link_href, post, True))
 
             elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
                 cache_duration = self.default_cache_duration
@@ -472,24 +477,23 @@ and verified.
                 if resource.cached:
                     if resource.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
                         if log.isDebugEnabled():
-                            log.debug("cached metadata expired - retrying %s" % url)
-                        retry_resources.append((url, verifier, tid, post, False))
+                            log.debug("cached metadata expired - retrying %s" % rurl)
+                        del t
+                        retry_resources.append((rurl, verifier, tid, post, False))
                     else:
                         if log.isDebugEnabled():
-                            log.debug("found cached metadata for '%s' (last-modified: %s)" % (url, resource.last_modified))
-                        ne = self.store.update(t, tid)
-                        info['Number of Entities'] = ne
+                            log.debug("found cached metadata for '%s' (last-modified: %s)" % (rurl, resource.last_modified))
+                        info['Number of Entities'] = self.store.update(t, tid)
                 else:
                     if log.isDebugEnabled():
-                        log.debug("got fresh metadata for '%s' (date: %s)" % (url, resource.date))
-                    ne = self.store.update(t, tid)
-                    info['Number of Entities'] = ne
+                        log.debug("got fresh metadata for '%s' (date: %s)" % (rurl, resource.date))
+                    info['Number of Entities'] = self.store.update(t, tid)
 
                 info['Cache Expiration Time'] = str(resource.last_modified + offset)
             else:
-                raise MetadataException("unknown metadata type for '%s' (%s)" % (url, relt.tag))
+                raise MetadataException("unknown metadata type for '%s' (%s)" % (rurl, relt.tag))
 
-            stats[url] = info
+            stats[rurl] = info
             return retry_resources
 
         while resources:
@@ -511,7 +515,7 @@ and verified.
         self.store.update(t, name)
 
     def parse_metadata(self,
-                       fn,
+                       source,
                        key=None,
                        base_url=None,
                        fail_on_error=False,
@@ -521,7 +525,7 @@ and verified.
         """Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
         is stored in the MDRepository instance.
 
-:param fn: a file-like object containing SAML metadata
+:param source: a file-like object containing SAML metadata
 :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
 :param base_url: use this base url to resolve relative URLs for XInclude processing
 :param fail_on_error: (default: False)
@@ -531,8 +535,8 @@ and verified.
 (but after xinclude processing)
         """
         try:
-            t = parse_xml(fn, base_url)
-            t = etree.parse(fn, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
+            parser = etree.XMLParser(resolve_entities=False)
+            t = etree.parse(source, base_url=base_url, parser=parser)
             t.xinclude()
 
             if key is not None:
@@ -559,15 +563,16 @@ and verified.
 
             if validate:
                 if filter_invalid:
+                    xsd = schema()
                     for e in iter_entities(t):
-                        if not schema().validate(e):
-                            error = _e(schema().error_log, m=base_url)
-                            if log.isDebugEnabled():
-                                log.debug("removing '%s': schema validation failed (%s)" % (e.get('entityID'), error))
+                        #log.debug("validating %s" % e.get("entityID"))
+                        if not xsd.validate(e):
+                            error = _e(xsd.error_log, m=base_url)
+                            entity_id = e.get("entityID")
+                            log.warn("removing '%s': schema validation failed (%s)" % (entity_id, error))
                             e.getparent().remove(e)
-                            self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=e.get('entityID'), error=error)
-                else:
-                    # Having removed the invalid entities this should now never happen...
+                            self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=entity_id, error=error)
+                else:  # all or nothing
                     validate_document(t)
         except DocumentInvalid, ex:
             traceback.print_exc()
@@ -661,13 +666,13 @@ fails an empty list is returned.
         """
 
         def _xp(e):
-            match = e.xpath(xp, namespaces=NS)
+            match = e.xpath(xp, namespaces=NS, smart_strings=False)
             return len(match) > 0
 
         l = self._lookup(member)
         if hasattr(l, 'tag'):
             l = [l]
-        elif hasattr(l,'__iter__'):
+        elif hasattr(l, '__iter__'):
             l = list(l)
 
         if xp is None:
@@ -678,7 +683,7 @@ fails an empty list is returned.
             t = self.entity_set(l, 'dummy')
             if t is None:
                 return []
-            l = root(t).xpath(xp, namespaces=NS)
+            l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
 
             if log.isDebugEnabled():
                 log.debug("got %d entities after filtering" % len(l))
@@ -694,14 +699,14 @@ fails an empty list is returned.
 Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
         """
 
-        if log.isDebugEnabled():
-            log.debug("entities: %s" % entities)
+        #if log.isDebugEnabled():
+        #    log.debug("entities: %s" % entities)
 
-        def _a(ent, t, seen):
+        def _a(ent, doc, seens):
             entity_id = ent.get('entityID', None)
-            if (ent is not None) and (entity_id is not None) and (not seen.get(entity_id, False)):
-                t.append(ent)
-                seen[entity_id] = True
+            if (ent is not None) and (entity_id is not None) and (not entity_id in seens):
+                doc.append(ent)
+                seens[entity_id] = True
 
         attrs = dict(Name=name, nsmap=NS)
         if cacheDuration is not None:
@@ -716,8 +721,8 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                 _a(member, t, seen)
                 nent += 1
             else:
-                for ent in self.lookup(member):
-                    _a(ent, t, seen)
+                for entity in self.lookup(member):
+                    _a(entity, t, seen)
                     nent += 1
 
         if log.isDebugEnabled():
