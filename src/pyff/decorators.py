@@ -3,7 +3,6 @@ Various decorators used in pyFF.
 """
 from collections import namedtuple
 import functools
-import warnings
 
 __author__ = 'leifj'
 
@@ -42,8 +41,8 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=log):
                     break
                 except ExceptionToCheck, e:
                     msg = "%s, Retrying in %d seconds..." % (str(e), mdelay)
-                    if logger:
-                        logger.warning(msg)
+                    if log:
+                        log.warn(msg)
                     else:
                         print msg
                     time.sleep(mdelay)
@@ -65,54 +64,55 @@ def deprecated(func):
 
     @functools.wraps(func)
     def new_func(*args, **kwargs):
-        warnings.warn_explicit(
+        log.warn(
             "Call to deprecated function {}.".format(func.__name__),
             category=DeprecationWarning,
             filename=func.func_code.co_filename,
             lineno=func.func_code.co_firstlineno + 1
         )
         return func(*args, **kwargs)
+
     return new_func
 
 
 class _HashedSeq(list):
     __slots__ = 'hashvalue'
 
-    def __init__(self, tup, hash=hash):
+    def __init__(self, tup, thehash=hash):
         self[:] = tup
-        self.hashvalue = hash(tup)
+        self.hashvalue = thehash(tup)
 
     def __hash__(self):
         return self.hashvalue
 
 
 def _make_key(args, kwds, typed,
-              kwd_mark = (object(),),
-              fasttypes = {int, str, frozenset, type(None)},
-              sorted=sorted,
-              tuple=tuple,
-              type=type,
-              len=len):
+              kwd_mark=(object(),),
+              fasttypes={int, str, frozenset, type(None)},
+              thesorted=sorted,
+              thetuple=tuple,
+              thetype=type,
+              thelen=len):
     'Make a cache key from optionally typed positional and keyword arguments'
     key = args
     if kwds:
-        sorted_items = sorted(kwds.items())
+        sorted_items = thesorted(kwds.items())
         key += kwd_mark
         for item in sorted_items:
             key += item
     if typed:
-        key += tuple(type(v) for v in args)
+        key += thetuple(thetype(v) for v in args)
         if kwds:
-            key += tuple(type(v) for k, v in sorted_items)
-    elif len(key) == 1 and type(key[0]) in fasttypes:
+            key += thetuple(thetype(v) for k, v in sorted_items)
+    elif thelen(key) == 1 and thetype(key[0]) in fasttypes:
         return key[0]
     return _HashedSeq(key)
+
 
 _CacheObject = namedtuple("CacheObject", ['valid_until', 'object'])
 
 
 def cached(typed=False, ttl=None, hash_key=None):
-
     def decorating(func):
 
         cache = dict()
@@ -132,7 +132,7 @@ def cached(typed=False, ttl=None, hash_key=None):
             stats['misses'] += 1
             expires = None
             if ttl is not None:
-                expires = now+ttl
+                expires = now + ttl
             cache[key] = _CacheObject(valid_until=expires, object=result)
             return result
 
