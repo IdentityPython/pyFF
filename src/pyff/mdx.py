@@ -275,7 +275,7 @@ class MDRoot():
         pass
 
     _well_known = WellKnown()
-    static = cherrypy.tools.staticdirs.handler("/static", dir="static")
+    static = cherrypy.tools.staticdirs.handler("/static", "static")
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600, debug=True)
