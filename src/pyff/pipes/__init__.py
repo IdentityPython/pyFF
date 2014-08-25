@@ -5,7 +5,6 @@ transform, sign or output SAML metadata.
 
 import os
 from pkg_resources import iter_entry_points
-import psutil
 import yaml
 from pyff.utils import resource_string, PyffException
 from pyff.logs import log

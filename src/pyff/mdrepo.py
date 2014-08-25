@@ -14,7 +14,6 @@ from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
 import operator
-import psutil
 import xmlsec
 import ipaddr
 
@@ -23,7 +22,7 @@ from pyff.logs import log
 from pyff.store import RedisStore
 from pyff.utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
-    iter_entities, validate_document, load_url
+    iter_entities, validate_document, load_url, MetadataExpiredException
 from pyff.constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 try:
@@ -82,6 +81,13 @@ class MDRepository(Observable):
     def __init__(self, metadata_cache_enabled=False, min_cache_ttl="PT5M", store=None):
         self.metadata_cache_enabled = metadata_cache_enabled
         self.min_cache_ttl = min_cache_ttl
+
+        if not isinstance(self.min_cache_ttl, int):
+            try:
+                self.min_cache_ttl = duration2timedelta(self.min_cache_ttl).total_seconds()
+            except Exception, ex:
+                log.error(ex)
+                self.min_cache_ttl = 300
         self.respect_cache_duration = True
         self.default_cache_duration = "PT10M"
         self.retry_limit = 5
@@ -245,6 +251,7 @@ The dict in the list contains three items:
 
         def _match(qq, elt):
             for q in qq:
+                q = q.strip()
                 if ':' in q or '.' in q:
                     try:
                         nets = _ip_networks(elt)
@@ -391,6 +398,17 @@ The dict in the list contains three items:
 
         self.store.update(e)
 
+    def expiration(self, t):
+        relt = root(t)
+        if relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
+            cache_duration = self.default_cache_duration
+            if self.respect_cache_duration:
+                cache_duration = relt.get('cacheDuration', self.default_cache_duration)
+            offset = duration2timedelta(cache_duration)
+
+            return offset
+        return None
+
     def fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, validate=False):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
@@ -441,58 +459,52 @@ and verified.
             if resource.resp is not None:
                 info['Status'] = resource.resp.status
 
-            t = self.parse_metadata(StringIO(xml),
-                                    key=verifier,
-                                    base_url=rurl,
-                                    validate=validate,
-                                    post=post)
+            t, offset = self.parse_metadata(StringIO(xml),
+                                            key=verifier,
+                                            base_url=rurl,
+                                            validate=validate,
+                                            expiration=lambda d: self.expiration(d),
+                                            post=post)
+
+            relt = root(t)
+
             if t is None:
                 self.fire(type=EVENT_IMPORT_FAIL, url=rurl)
                 raise MetadataException("no valid metadata found at '%s'" % rurl)
 
-            relt = root(t)
-            if relt.tag in ('{%s}XRD' % NS['xrd'], '{%s}XRDS' % NS['xrd']):
-                if log.isDebugEnabled():
-                    log.debug("%s looks like an xrd document" % rurl)
-                for xrd in t.xpath("//xrd:XRD", namespaces=NS, smart_strings=False):
+            expired = False
+            if offset is not None:
+                expire_time = resource.last_modified + offset
+                ttl = expire_time - datetime.now()
+                info['Cache Expiration Time'] = str(expire_time)
+                info['Cache TTL'] = str(ttl)
+                if ttl.total_seconds() < self.min_cache_ttl:  # try to get fresh md but we'll use what we have anyway
+                    retry_resources.append((rurl, verifier, tid, post, False))
+                if ttl.total_seconds() < 0:
+                    expired = True
+
+            if not expired:
+                if relt.tag in ('{%s}XRD' % NS['xrd'], '{%s}XRDS' % NS['xrd']):
                     if log.isDebugEnabled():
-                        log.debug("xrd: %s" % xrd)
-                    for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
-                        link_href = link.get("href")
-                        certs = xmlsec.CertDict(link)
-                        fingerprints = certs.keys()
-                        fp = None
-                        if len(fingerprints) > 0:
-                            fp = fingerprints[0]
-                        if log.isDebugEnabled():
-                            log.debug("fingerprint: %s" % fp)
-                        retry_resources.append((link_href, fp, link_href, post, True))
-
-            elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
-                cache_duration = self.default_cache_duration
-                if self.respect_cache_duration:
-                    cache_duration = root(t).get('cacheDuration', self.default_cache_duration)
-                offset = duration2timedelta(cache_duration)
-
-                if resource.cached:
-                    if resource.last_modified + offset < datetime.now() - duration2timedelta(self.min_cache_ttl):
-                        if log.isDebugEnabled():
-                            log.debug("cached metadata expired - retrying %s" % rurl)
-                        del t
-                        retry_resources.append((rurl, verifier, tid, post, False))
-                    else:
-                        if log.isDebugEnabled():
-                            log.debug("found cached metadata for '%s' (last-modified: %s)" % (rurl, resource.last_modified))
-                        info['Number of Entities'] = self.store.update(t, tid)
+                        log.debug("%s looks like an xrd document" % rurl)
+                    for xrd in t.iter("{%s}XRD" % NS['xrd']):
+                        for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
+                            link_href = link.get("href")
+                            certs = xmlsec.CertDict(link)
+                            fingerprints = certs.keys()
+                            fp = None
+                            if len(fingerprints) > 0:
+                                fp = fingerprints[0]
+                            if log.isDebugEnabled():
+                                log.debug("XRD: '%s' verified by '%s'" % (link_href, fp))
+                            retry_resources.append((link_href, fp, link_href, post, True))
+                elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
+                    number_of_entities = self.store.update(t, tid)
+                    info['Number of Entities'] = number_of_entities
                 else:
-                    if log.isDebugEnabled():
-                        log.debug("got fresh metadata for '%s' (date: %s)" % (rurl, resource.date))
-                    info['Number of Entities'] = self.store.update(t, tid)
+                    raise MetadataException("unknown metadata type for '%s' (%s)" % (rurl, relt.tag))
 
-                info['Cache Expiration Time'] = str(resource.last_modified + offset)
-            else:
-                raise MetadataException("unknown metadata type for '%s' (%s)" % (rurl, relt.tag))
-
+            log.debug(info)
             stats[rurl] = info
             return retry_resources
 
@@ -506,7 +518,8 @@ and verified.
                     url = future_to_url[future]
                     if future.exception() is not None:
                         log.error('%r generated an exception: %s' % (url, future.exception()))
-                    next_resources.extend(future.result())
+                    else:
+                        next_resources.extend(future.result())
                 resources = next_resources
                 if log.isDebugEnabled():
                     log.debug("retrying %s" % resources)
@@ -521,6 +534,7 @@ and verified.
                        fail_on_error=False,
                        filter_invalid=True,
                        validate=True,
+                       expiration=None,
                        post=None):
         """Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
         is stored in the MDRepository instance.
@@ -538,6 +552,10 @@ and verified.
             parser = etree.XMLParser(resolve_entities=False)
             t = etree.parse(source, base_url=base_url, parser=parser)
             t.xinclude()
+
+            valid_until = None
+            if expiration is not None:
+                valid_until = expiration(t)
 
             if key is not None:
                 try:
@@ -588,7 +606,7 @@ and verified.
         if log.isDebugEnabled():
             log.debug("returning %d valid entities" % len(list(iter_entities(t))))
 
-        return t
+        return t,valid_until
 
     def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None):
         """

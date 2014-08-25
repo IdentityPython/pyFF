@@ -4,9 +4,8 @@ for pyFF.
 import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-import psutil
 from pyff.decorators import deprecated
-from pyff.utils import total_seconds, dumptree, schema, safe_write, root, duration2timedelta, xslt_transform, \
+from pyff.utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
     iter_entities, validate_document
 from pyff.mdrepo import NS
 from pyff.pipes import Plumbing, PipeException

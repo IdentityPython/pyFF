@@ -3,11 +3,9 @@
 This module contains various utilities.
 
 """
-from collections import MutableSet, namedtuple
-from copy import deepcopy
+from collections import namedtuple
 from datetime import timedelta, datetime
 import tempfile
-import traceback
 import cherrypy
 from mako.lookup import TemplateLookup
 import os
@@ -252,7 +250,7 @@ def render_template(name, **kwargs):
 _Resource = namedtuple("Resource", ["result", "cached", "date", "last_modified", "resp", "time"])
 
 
-@retry(IOError)
+@retry((IOError, httplib2.HttpLib2Error))
 def load_url(url, enable_cache=True, timeout=60):
     def _parse_date(s):
         if s is None:
@@ -428,6 +426,10 @@ class EntitySet(object):
 
 
 class MetadataException(Exception):
+    pass
+
+
+class MetadataExpiredException(MetadataException):
     pass
 
 

@@ -10,4 +10,3 @@ nose
 babel
 httplib2
 futures
-psutil
