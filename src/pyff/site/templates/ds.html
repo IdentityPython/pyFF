@@ -103,13 +103,17 @@
                 </div>
             </form>
         </div>
-        <div class="alert alert-success message" id="remember-message">
-            <button type="button" class="close" data-dismiss="alert">&times;</button>
-            <form class="form-inline" role="form">
-                    <label class="checkbox">
-                        <input id="remember" type="checkbox">
-                        ${_('Remember my selection')}
-                    </label>
+        <div class="hidden" id="remember-selection-dlg">
+            <form class="form" role="form">
+                <div id="confirm" class="list-group"></div>
+                <div>
+                    <a id="proceed" class="btn btn-large btn-primary proceed">${_('Proceed with Login')}</a>
+                    <a id="proceed_and_remember" class="btn btn-large btn-warning proceed_and_remember">${_('Select and Remember')}</a>
+                </div>
+                <label class="checkbox">
+                    <input id="never-remember-selection-again" type="checkbox">
+                    ${_('I want to choose login provider every time - never show this step again!')}
+                </label>
             </form>
         </div>
         <div class="footer">

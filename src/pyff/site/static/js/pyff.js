@@ -13,26 +13,47 @@
         var use_idp;
         use_idp = $.jStorage.get('pyff.discovery.idp');
         if (use_idp) {
-            ds_select(use_idp);
+            discovery_response(use_idp);
         }
     }
 
     _autoselect();
 
-    function ds_select(entityID) {
+    function cancel_confirm(item) {
+        $('#remember-selection-dlg').hide();
+        $('.idpchooser').show();
+    }
+
+    function ds_select(item, confirm) {
+        confirm &= $.jStorage.get('pyff.discovery.allow_confirm',true);
+        if (confirm) {
+            $('.idpchooser').hide();
+            item.sticky = true;
+            item.save = false;
+            item.proceed = true;
+            $("#confirm").html(idp_template.render(item));
+            $('#proceed').attr("data-href", item['entityID']);
+            $('#proceed_and_remember').attr("data-href", item['entityID']);
+            if ($('#never-remember-selection-again').is(':checked')) {
+                $.jStorage.set('pyff.discovery.allow_confirm', false);
+            }
+            $('#remember-selection-dlg').removeClass('hidden').show();
+        } else {
+            return discovery_response(item['entityID']);
+        }
+    }
+
+    function discovery_response(entityID) {
         var params;
         params = $.deparam.querystring();
         var qs;
         //console.log(entityID);
         qs = params['return'].indexOf('?') === -1 ? '?' : '&';
-        if ($('#remember').is(':checked')) {
-            $.jStorage.set('pyff.discovery.idp',entityID);
-        }
         var returnIDParam = params['returnIDParam'];
-        if (! returnIDParam) {
+        if (!returnIDParam) {
             returnIDParam = "entityID";
         }
-        window.location = params['return']+qs+returnIDParam+'='+entityID;
+        window.location = params['return'] + qs + returnIDParam + '=' + entityID;
         return false;
     }
 
@@ -46,17 +67,19 @@
         return false;
     }
 
-    function add_idp(item) {
-        var idps = $.jStorage.get('pyff.discovery.idps',[]);
-        //console.log(item);
-        if (!contains_idp(item,idps)) {
-            idps.unshift(item);
+    function add_idp(item, save) {
+        if (save) {
+            var idps = $.jStorage.get('pyff.discovery.idps', []);
+            //console.log(item);
+            if (!contains_idp(item, idps)) {
+                idps.unshift(item);
+            }
+            while (idps.length > 3) {
+                idps.pop()
+            }
+            $.jStorage.set('pyff.discovery.idps', idps);
         }
-        while (idps.length > 3) {
-            idps.pop()
-        }
-        $.jStorage.set('pyff.discovery.idps',idps);
-        return ds_select(item['entityID']);
+        return ds_select(item, true);
     }
 
     function find_idp(id,lst) {
@@ -68,14 +91,14 @@
         return -1
     }
 
-    function select_idp(id) {
+    function select_idp(id, save) {
         $.ajax({
             datatype: 'json',
             url: '/metadata/' + id + ".json",
             success: function (data) {
                 for (var i = 0; i < data.length; i++) {
                     //console.log("fetched: "+data[i]);
-                    return add_idp(data[i]);
+                    return add_idp(data[i], save);
                 }
             }
         });
@@ -130,7 +153,7 @@
                 });
                 seldiv.bind('typeahead:selected',function(event,entity) {
                     if (entity) {
-                       select_idp(entity.id);
+                       select_idp(entity.id, true);
                     }
                 });
                 $.each(options,function(key,val) {
@@ -138,19 +161,21 @@
                 });
                 $('body').on('click.ds', 'button.unselect', methods.unselect);
                 $('body').on('click.ds', 'a.select', methods.select);
+                $('body').on('click.ds', 'a.proceed', methods.proceed);
+                $('body').on('click.ds', 'a.proceed_and_remember', methods.proceed_and_remember);
                 $('body').on('click.ds', 'a.save_select', methods.save_select);
             });
             this.filter('select').each(function (opts) {
                 var seldiv = $(this);
                 seldiv.change(function(opt) {
                     //console.log(opt);
-                    select_idp(seldiv.find('option:selected').attr('value')); // TODO - fix id in xsltjson xslt
+                    var sel = seldiv.find('option:selected')
+                    select_idp(sel.attr('value'), true); // TODO - fix id in xsltjson xslt
                 });
                 $.each(options,function(key,val) {
                     seldiv.dsSelect(key,val);
                 });
             });
-
         },
         refresh: function() {
             this.filter('select').each(function() {
@@ -178,11 +203,20 @@
         },
         select: function(e) {
             e.preventDefault();
-            return ds_select($(this).attr('data-href'));
+            return select_idp("{sha1}"+CryptoJS.SHA1($(this).attr('data-href')), false);
+        },
+        proceed: function(e) {
+            e.preventDefault();
+            return ds_select($(this).attr('data-href'), $(this).attr('alt'), false);
+        },
+        proceed_and_remember: function(e) {
+            e.preventDefault();
+            $.jStorage.set('pyff.discovery.idp',$(this).attr('data-href'));
+            return ds_select($(this).attr('data-href'), $(this).attr('alt'), false);
         },
         save_select: function(e) {
             e.preventDefault();
-            return select_idp("{sha1}"+CryptoJS.SHA1($(this).attr('data-href')));
+            return select_idp("{sha1}"+CryptoJS.SHA1($(this).attr('data-href')), true);
         }
     };
 
@@ -190,7 +224,7 @@
         $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
     });
 
-    var idp_template = Hogan.compile('<a class="{{#save}}save_select{{/save}}{{^save}}select{{/save}} list-group-item" data-href="{{entityID}}">' +
+    var idp_template = Hogan.compile('<a class="{{#proceed}}proceed{{/proceed}}{{^proceed}}{{#save}}save_select{{/save}}{{^save}}select{{/save}}{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
         '{{^sticky}}<button type="button" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
@@ -222,7 +256,7 @@
                     $.each(data,function(pos,elt) {
                         if (!(elt.entityID in seen)) {
                             elt.sticky = true;
-                            elt.save = true
+                            elt.save = true;
                             div.append(idp_template.render(elt));
                         }
                     });
