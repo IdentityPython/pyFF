@@ -630,7 +630,7 @@ starting with '.' are excluded.
                         log.debug("parsing from file %s" % nm)
                     fn = os.path.join(top, nm)
                     try:
-                        t = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
+                        t,valid_until = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
                         entities.extend(entities_list(t))  # local metadata is assumed to be ok
                     except Exception, ex:
                         log.error(ex)
