@@ -14,6 +14,7 @@ import re
 from lxml import etree
 from time import gmtime, strftime, clock
 from pyff.constants import NS
+import pytz
 from pyff.decorators import cached, retry
 from pyff.logs import log
 import httplib2
@@ -141,9 +142,11 @@ Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours
 
 
 def totimestamp(dt, epoch=datetime(1970, 1, 1)):
+    epoch = epoch.replace(tzinfo=dt.tzinfo)
+
     td = dt - epoch
-    # return td.total_seconds()
-    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 1e6
+    ts = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 1e6
+    return int(ts)
 
 
 def dumptree(t, pretty_print=False, xml_declaration=True):

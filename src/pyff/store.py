@@ -294,7 +294,7 @@ class RedisStore(StoreBase):
 
             cache_duration = relt.get("cacheDuration", None)
             if cache_duration is not None:
-                dt = datetime.now() + duration2timedelta(cache_duration)
+                dt = datetime.utcnow() + duration2timedelta(cache_duration)
                 if dt is not None:
                     ts = totimestamp(dt)
 
