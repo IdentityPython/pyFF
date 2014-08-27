@@ -21,6 +21,7 @@
     <script type="text/javascript" src="/static/js/pyff.js"></script>
     <script type="text/javascript">
         $(function() {
+            $("*[data-toggle='tooltip']").tooltip({});
             $('#quickLinks').dsQuickLinks('${sp}');
             $('.sp').dsRelyingParty('${sp}');
             $('.idselect').dsSelect({});
@@ -108,13 +109,17 @@
             <form class="form" role="form">
                 <div id="confirm" class="list-group"></div>
                 <div>
-                    <a id="proceed" class="btn btn-large btn-primary proceed">${_('Proceed to Login')}</a>
-                    <a id="proceed_and_remember" class="btn btn-large btn-warning proceed_and_remember">${_('Select and use Forever')}</a>
+                    <a id="proceed" class="btn btn-large btn-success proceed">${_('Proceed to Login')}</a>
+                    <a id="proceed_and_remember" class="btn btn-large btn-warning proceed_and_remember" data-toggle="tooltip" data-placement="right" title="${_('Select this option if you always use one and the same login provider for everything.')}">${_('Select and use Forever')}</a>
                     <a id="cancel" class="pull-right btn btn-large btn-default cancel">${_('Cancel Selection')}</a>
                 </div>
                 <label class="checkbox">
-                    <input id="never-remember-selection-again" type="checkbox">
-                    ${_('I want to choose login provider every time - never show this step again!')}
+                    <input id="never-remember-selection-again"
+                           type="checkbox"
+                           data-toggle="tooltip"
+                           data-placement="right"
+                           title="${_('Select this checkbox if you use more than one login providers.')}">
+                    ${_('Never show this step again!')}
                 </label>
             </form>
         </div>
