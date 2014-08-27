@@ -17,19 +17,35 @@
         }
     }
 
+    function sha1_id(entityID) {
+        return "{sha1}"+SHA1(entityID);
+    }
+
+    function _convert_local_store_fmt() {
+        var lst = $.jStorage.get('pyff.discovery.idps',[]);
+        for (var i = 0; i < lst.length; i++) {
+            if ($.type(lst[i]) == 'string') {
+            } else {
+                lst[i] = lst[i].id
+            }
+        }
+        $.jStorage.set('pyff.discovery.idps',lst);
+    }
+
+    _convert_local_store_fmt();
     _autoselect();
 
-    function cancel_confirm(item) {
+    function cancel_confirm() {
         $('#remember-selection-dlg').hide();
         $('.idpchooser').show();
     }
 
-    function ds_select(item, confirm) {
-        confirm &= $.jStorage.get('pyff.discovery.allow_confirm',true);
-        if (confirm) {
+    function ds_confirm_select(item, save) {
+        var allow_confirm = $.jStorage.get('pyff.discovery.allow_confirm',true);
+        if (allow_confirm) {
             $('.idpchooser').hide();
             item.sticky = true;
-            item.save = false;
+            item.save = true;
             item.proceed = true;
             $("#confirm").html(idp_template.render(item));
             $('#proceed').attr("data-href", item['entityID']);
@@ -44,6 +60,20 @@
     }
 
     function discovery_response(entityID) {
+        var idps = $.jStorage.get('pyff.discovery.idps', []);
+        console.log(idps);
+        console.log(entityID);
+        if ($.inArray(entityID, idps) != -1) {
+
+        } else {
+            idps.unshift(entityID);
+        }
+        console.log(idps);
+        while (idps.length > 3) {
+            idps.pop()
+        }
+        $.jStorage.set('pyff.discovery.idps', idps);
+
         var params;
         params = $.deparam.querystring();
         var qs;
@@ -57,51 +87,43 @@
         return false;
     }
 
-    function contains_idp(idp,lst) {
-        for (var i = 0; i < lst.length; i++) {
-            var item = lst[i];
-            if (item['entityID'] == idp['entityID']) {
-                return true;
-            }
-        }
-        return false;
+    function with_entity_id(entityID, func) {
+        console.log("with entity id "+entityID);
+        with_id(sha1_id(entityID), func);
     }
 
-    function add_idp(item, save) {
-        if (save) {
-            var idps = $.jStorage.get('pyff.discovery.idps', []);
-            //console.log(item);
-            if (!contains_idp(item, idps)) {
-                idps.unshift(item);
-            }
-            while (idps.length > 3) {
-                idps.pop()
-            }
-            $.jStorage.set('pyff.discovery.idps', idps);
-        }
-        return ds_select(item, true);
-    }
-
-    function find_idp(id,lst) {
-        for (var i = 0; i < lst.length; i++) {
-            if (id == lst[i]['entityID']) {
-                return i
-            }
-        }
-        return -1
-    }
-
-    function select_idp(id, save) {
-        $.ajax({
-            datatype: 'json',
-            url: '/metadata/' + id + ".json",
-            success: function (data) {
-                for (var i = 0; i < data.length; i++) {
-                    //console.log("fetched: "+data[i]);
-                    return add_idp(data[i], save);
+    function with_id(id, func) {
+        console.log("with_id "+id);
+        var cached = $.jStorage.get(id);
+        if (cached) {
+            console.log("cached...");
+            console.log(cached);
+            func(cached);
+        } else {
+            console.log('GET /metadata/' + id + ".json");
+            $.ajax({
+                datatype: 'json',
+                url: '/metadata/' + id + ".json"
+            }).done(function (data) {
+                if ($.isArray(data)) {
+                    for (var i = 0; i < data.length; i++) {
+                        console.log("fetched: ")
+                        console.log(data[i]);
+                        $.jStorage.set(id,data[i],{TTL: 300000});
+                        func(data[i]);
+                    }
+                } else {
+                    console.log("got: ")
+                    console.log(data);
+                    $.jStorage.set(id,data,{TTL: 300000});
+                    func(data);
                 }
-            }
-        });
+            });
+        }
+    }
+
+    function select_idp(id) {
+        with_id(id, ds_confirm_select);
     }
 
     function cmp_title(a,b) {
@@ -153,7 +175,8 @@
                 });
                 seldiv.bind('typeahead:selected',function(event,entity) {
                     if (entity) {
-                       select_idp(entity.id, true);
+                        console.log("selected "+entity.id);
+                        select_idp(entity.id);
                     }
                 });
                 $.each(options,function(key,val) {
@@ -163,14 +186,12 @@
                 $('body').on('click.ds', 'a.select', methods.select);
                 $('body').on('click.ds', 'a.proceed', methods.proceed);
                 $('body').on('click.ds', 'a.proceed_and_remember', methods.proceed_and_remember);
-                $('body').on('click.ds', 'a.save_select', methods.save_select);
+                $('body').on('click.ds', 'a.cancel', cancel_confirm)
             });
             this.filter('select').each(function (opts) {
                 var seldiv = $(this);
                 seldiv.change(function(opt) {
-                    //console.log(opt);
-                    var sel = seldiv.find('option:selected')
-                    select_idp(sel.attr('value'), true); // TODO - fix id in xsltjson xslt
+                    select_idp(seldiv.find('option:selected').attr('value')); // TODO - fix id in xsltjson xslt
                 });
                 $.each(options,function(key,val) {
                     seldiv.dsSelect(key,val);
@@ -184,7 +205,7 @@
                 $.getJSON('/role/idp.json',function (data) {
                     $.each($(data).sort(cmp_title),function(pos,elt) {
                         //console.log(elt);
-                        seldiv.append($('<option>').attr('value','{sha1}'+CryptoJS.SHA1(elt.entityID)).append(elt.title));
+                        seldiv.append($('<option>').attr('value',sha1_id(entityID)).append(elt.title));
                     })
                 });
             });
@@ -194,7 +215,7 @@
             e.stopPropagation();
             var id = $(this).attr('rel');
             var idps = $.jStorage.get('pyff.discovery.idps', []);
-            var idx = find_idp(id, idps);
+            var idx = $.inArray(id, idps);
             if (idx != -1) {
                 idps.splice(idx, 1);
                 $.jStorage.set('pyff.discovery.idps', idps);
@@ -203,20 +224,17 @@
         },
         select: function(e) {
             e.preventDefault();
-            return select_idp("{sha1}"+CryptoJS.SHA1($(this).attr('data-href')), false);
+            return select_idp(sha1_id($(this).attr('data-href')));
         },
         proceed: function(e) {
             e.preventDefault();
-            return ds_select($(this).attr('data-href'), $(this).attr('alt'), false);
+            return discovery_response($(this).attr('data-href'));
         },
         proceed_and_remember: function(e) {
             e.preventDefault();
-            $.jStorage.set('pyff.discovery.idp',$(this).attr('data-href'));
-            return ds_select($(this).attr('data-href'), $(this).attr('alt'), false);
-        },
-        save_select: function(e) {
-            e.preventDefault();
-            return select_idp("{sha1}"+CryptoJS.SHA1($(this).attr('data-href')), true);
+            var entityID = $(this).attr('data-href')
+            $.jStorage.set('pyff.discovery.idp',entityID);
+            return discovery_response(entityID);
         }
     };
 
@@ -224,7 +242,7 @@
         $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
     });
 
-    var idp_template = Hogan.compile('<a class="{{#proceed}}proceed{{/proceed}}{{^proceed}}{{#save}}save_select{{/save}}{{^save}}select{{/save}}{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
+    var idp_template = Hogan.compile('<a class="{{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
         '{{^sticky}}<button type="button" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
@@ -241,22 +259,29 @@
             outer.html(div);
 
             var seen = {};
-            var from_storage = 0;
-            div.append(function() {
-                var lst = $.jStorage.get('pyff.discovery.idps',[]);
+            var lst = $.jStorage.get('pyff.discovery.idps',[]);
+            if (lst.length > 0) {
+                console.log("adding previously used");
                 for (var i = 0; i < lst.length; i++) {
-                    div.append(idp_template.render(lst[i]));
-                    from_storage++;
-                    seen[lst[i].entityID] = true
+                    console.log("adding ... " + lst[i]);
+                    with_entity_id(lst[i], function (elt) {
+                        console.log("blaha");
+                        console.log(elt);
+                        elt.sticky = false;
+                        div.append(idp_template.render(elt));
+                        seen[elt.entityID] = true
+                    });
                 }
-            });
-
-            if (from_storage == 0) {
+            } else {
+                console.log("adding suggestions...")
                 $.getJSON(uri, function (data) {
                     $.each(data,function(pos,elt) {
-                        if (!(elt.entityID in seen)) {
+                        console.log(elt);
+                        if (elt.entityID in seen) {
+                            // nothing
+                        } else {
                             elt.sticky = true;
-                            elt.save = true;
+                            seen[elt.entityID] = true
                             div.append(idp_template.render(elt));
                         }
                     });
