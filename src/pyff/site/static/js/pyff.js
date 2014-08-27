@@ -26,7 +26,7 @@
         for (var i = 0; i < lst.length; i++) {
             if ($.type(lst[i]) == 'string') {
             } else {
-                lst[i] = lst[i].id
+                lst[i] = lst[i].entityID;
             }
         }
         $.jStorage.set('pyff.discovery.idps',lst);
@@ -35,28 +35,26 @@
     _convert_local_store_fmt();
     _autoselect();
 
-    function cancel_confirm() {
-        $('#remember-selection-dlg').hide();
-        $('.idpchooser').show();
+    function _clone(o) {
+        return jQuery.extend({},o);
     }
 
-    function ds_confirm_select(item, save) {
-        var allow_confirm = $.jStorage.get('pyff.discovery.allow_confirm',true);
-        if (allow_confirm) {
-            $('.idpchooser').hide();
-            item.sticky = true;
-            item.save = true;
-            item.proceed = true;
-            $("#confirm").html(idp_template.render(item));
-            $('#proceed').attr("data-href", item['entityID']);
-            $('#proceed_and_remember').attr("data-href", item['entityID']);
-            if ($('#never-remember-selection-again').is(':checked')) {
-                $.jStorage.set('pyff.discovery.allow_confirm', false);
-            }
-            $('#remember-selection-dlg').removeClass('hidden').show();
-        } else {
-            return discovery_response(item['entityID']);
+    function cancel_confirm() {
+        window.location.reload();
+    }
+
+    function ds_confirm_select(item) {
+        $('.idpchooser').hide();
+        item.sticky = true;
+        item.save = true;
+        item.proceed = true;
+        $(".confirm").html(idp_template.render(item));
+        $('#proceed').attr("data-href", item['entityID']);
+        $('#proceed_and_remember').attr("data-href", item['entityID']);
+        if ($('#never-remember-selection-again').is(':checked')) {
+            $.jStorage.set('pyff.discovery.allow_confirm', false);
         }
+        $('#remember-selection-dlg').removeClass('hidden').show();
     }
 
     function discovery_response(entityID) {
@@ -98,7 +96,7 @@
         if (cached) {
             console.log("cached...");
             console.log(cached);
-            func(cached);
+            func(_clone(cached));
         } else {
             console.log('GET /metadata/' + id + ".json");
             $.ajax({
@@ -107,15 +105,15 @@
             }).done(function (data) {
                 if ($.isArray(data)) {
                     for (var i = 0; i < data.length; i++) {
-                        console.log("fetched: ")
+                        console.log("fetched: ");
                         console.log(data[i]);
-                        $.jStorage.set(id,data[i],{TTL: 300000});
+                        $.jStorage.set(id,_clone(data[i]),{TTL: 300000});
                         func(data[i]);
                     }
                 } else {
-                    console.log("got: ")
+                    console.log("got: ");
                     console.log(data);
-                    $.jStorage.set(id,data,{TTL: 300000});
+                    $.jStorage.set(id,_clone(data),{TTL: 300000});
                     func(data);
                 }
             });
@@ -123,7 +121,7 @@
     }
 
     function select_idp(id) {
-        with_id(id, ds_confirm_select);
+        with_entity_id(id, ds_confirm_select);
     }
 
     function cmp_title(a,b) {
@@ -175,8 +173,8 @@
                 });
                 seldiv.bind('typeahead:selected',function(event,entity) {
                     if (entity) {
-                        console.log("selected "+entity.id);
-                        select_idp(entity.id);
+                        console.log("selected "+entity.entity_id);
+                        select_idp(entity.entity_id);
                     }
                 });
                 $.each(options,function(key,val) {
@@ -185,6 +183,7 @@
                 $('body').on('click.ds', 'button.unselect', methods.unselect);
                 $('body').on('click.ds', 'a.select', methods.select);
                 $('body').on('click.ds', 'a.proceed', methods.proceed);
+                $('body').on('click.ds', 'a.remember', methods.remember);
                 $('body').on('click.ds', 'a.proceed_and_remember', methods.proceed_and_remember);
                 $('body').on('click.ds', 'a.cancel', cancel_confirm)
             });
@@ -205,10 +204,17 @@
                 $.getJSON('/role/idp.json',function (data) {
                     $.each($(data).sort(cmp_title),function(pos,elt) {
                         //console.log(elt);
-                        seldiv.append($('<option>').attr('value',sha1_id(entityID)).append(elt.title));
+                        seldiv.append($('<option>').attr('value',elt.entityID).append(elt.title));
                     })
                 });
             });
+        },
+        remember: function (e) {
+            e.preventDefault();
+            $('#remember').hide();
+            $('#proceed').text("Proceed Without Remembering").removeClass('btn-primary').addClass('btn-default');
+            $('#proceed_and_remember').removeClass('hidden').show();
+            $('#reset_info').removeClass('hidden').show();
         },
         unselect: function (e) {
             e.preventDefault();
@@ -224,7 +230,12 @@
         },
         select: function(e) {
             e.preventDefault();
-            return select_idp(sha1_id($(this).attr('data-href')));
+            var lst = $.jStorage.get('pyff.discovery.idps', []);
+            if (lst.length < 2) {
+                return select_idp($(this).attr('data-href'));
+            } else {
+                return discovery_response($(this).attr('data-href'));
+            }
         },
         proceed: function(e) {
             e.preventDefault();

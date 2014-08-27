@@ -106,22 +106,16 @@
             </form>
         </div>
         <div class="hidden" id="remember-selection-dlg">
-            <form class="form" role="form">
-                <div id="confirm" class="list-group"></div>
-                <div>
-                    <a id="proceed" class="btn btn-large btn-success proceed">${_('Proceed to Login')}</a>
-                    <a id="proceed_and_remember" class="btn btn-large btn-warning proceed_and_remember" data-toggle="tooltip" data-placement="right" title="${_('Select this option if you always use one and the same login provider for everything.')}">${_('Select and use Forever')}</a>
-                    <a id="cancel" class="pull-right btn btn-large btn-default cancel">${_('Cancel Selection')}</a>
-                </div>
-                <label class="checkbox">
-                    <input id="never-remember-selection-again"
-                           type="checkbox"
-                           data-toggle="tooltip"
-                           data-placement="right"
-                           title="${_('Select this checkbox if you use more than one login providers.')}">
-                    ${_('Never show this step again!')}
-                </label>
-            </form>
+            <div class="list-group confirm"></div>
+            <div>
+                <a id="proceed" class="btn btn-large btn-primary proceed">${_('Proceed to Login')}</a>
+                <a id="remember" class="btn btn-large btn-warning remember" data-toggle="tooltip" data-placement="right" title="${_('Select this option if you always use one and the same login provider for everything.')}">${_('Login and use Forever')}</a>
+                <a id="proceed_and_remember" class="btn btn-large btn-success hidden proceed_and_remember">${_('Yes I am Sure - Remember my Choice Forever')}</a>
+                <a id="cancel" class="pull-right btn btn-large btn-default cancel">${_('Select Again')}</a>
+            </div>
+            <small id="reset_info" class="hidden">
+                <i class="glyphicon glyphicon-exclamation-sign"></i> If you change your mind later, visit <a href="${http.base}/reset">${http.base}/reset</a>.
+            </small>
         </div>
         <div class="footer">
 
