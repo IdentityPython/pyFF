@@ -21,7 +21,10 @@
     <script type="text/javascript" src="/static/js/pyff.js"></script>
     <script type="text/javascript">
         $(function() {
-            $("*[data-toggle='tooltip']").tooltip({});
+            $("*[data-toggle='popover']").popover({trigger: 'hover'});
+            $("*[data-toggle='popover']").on('show.bs.popover', function() {
+                $(this).delay(500).popover('hide');
+            });
             $('#quickLinks').dsQuickLinks('${sp}');
             $('.sp').dsRelyingParty('${sp}');
             $('.idselect').dsSelect({});
@@ -109,9 +112,9 @@
             <div class="list-group confirm"></div>
             <div class="btn-block">
                 <a id="proceed" class="btn btn-large btn-primary proceed btn-responsive">${_('Proceed to Login')}</a>
-                <a id="remember" class="btn btn-large btn-warning remember btn-responsive" data-toggle="tooltip" data-placement="bottom" title="${_('Select this option if you always use one and the same login provider for everything.')}">${_('Login and use Forever')}</a>
+                <a id="remember" class="btn btn-large btn-warning remember btn-responsive" data-toggle="popover" data-placement="bottom" title="What is this?" data-content="${_('Select this option if you always use one and the same login provider for everything.')}">${_('Login and use Forever')}</a>
                 <a id="proceed_and_remember" class="btn btn-large btn-success hidden proceed_and_remember btn-responsive">${_('Yes I am Sure - Use Forever')}</a>
-                <a id="cancel" class="btn btn-large btn-default cancel btn-responsive" data-toggle="tooltip" data-placement="bottom" title="${_('Click here to start over and select another login provider.')}">${_('Select Again')}</a>
+                <a id="cancel" class="btn btn-large btn-default cancel btn-responsive" data-toggle="popover" data-placement="bottom" title="What is this?" data-content="${_('Click here to start over and select another login provider.')}">${_('Select Again')}</a>
             </div>
         </div>
         <div class="footer">
