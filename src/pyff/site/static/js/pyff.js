@@ -212,7 +212,7 @@
         remember: function (e) {
             e.preventDefault();
             $('#remember').hide();
-            $('#proceed').text("Proceed Without Remembering").removeClass('btn-primary').addClass('btn-default');
+            $('#proceed').text("Use this time only");
             $('#proceed_and_remember').removeClass('hidden').show();
             $('#reset_info').removeClass('hidden').show();
         },
