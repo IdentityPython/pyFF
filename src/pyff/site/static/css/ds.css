@@ -81,9 +81,10 @@ body {
 
 @media (max-width: 768px) {
   .btn-responsive {
-    padding: 2px 4px;
-    font-size:80%;
-    line-height: 1;
+    padding: 6px 8px;
+    margin-bottom: 10px;
+    font-size:90%;
+    line-height: 1.2;
     width: 100%;
     border-radius:3px;
   }
