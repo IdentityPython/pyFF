@@ -21,7 +21,7 @@
     <script type="text/javascript" src="/static/js/pyff.js"></script>
     <script type="text/javascript">
         $(function() {
-            $("*[data-toggle='popover']").popover({trigger: 'hover'});
+            $("*[data-toggle='popover']").popover({trigger: 'hover', container: 'body'});
             $("*[data-toggle='popover']").on('show.bs.popover', function() {
                 $(this).delay(500).popover('hide');
             });
@@ -77,9 +77,14 @@
         <div class="header text-muted">
             <div class="row">
                 <div class="col-sm-10">
-                    <small>${_('Select a login provider for ...')}</small>
+                    <small>${_('Select a login provider for ...')}</small><small><i data-toggle="popover"
+                           data-placement="bottom"
+                           title="${_('About this step...')}"
+                           data-content="${_('The service you are visiting wants you to sign in. Below you are given a choice of several login (aka identity) providers. Pick one and you will be sent on to the login screen for that login provider.')}"
+                           class="glyphicon glyphicon-question-sign text-info"></i></small>
                     <h3><span class="sp sp-name"></span></h3>
                 </div>
+
                 <div class="col-sm-2 pull-right hidden-xs"><img class="sp sp-icon sp-thumbnail fallback-icon"/></div>
             </div>
             <small class="pull-right"><a class="sp sp-privacy-statement-url" title="Privacy Statement"></a></small>
@@ -104,6 +109,11 @@
                     <small class="pull-right">
                         <a href="#" id="to_list">... ${_('let me choose from a list instead')}</a>
                         <a href="#" class="hidden" id="to_search">... ${_('let me search instead')}</a>
+                        <i data-toggle="popover"
+                           data-placement="bottom"
+                           title="${_('Choosing a login provider...')}"
+                           data-content="${_('This service knows about a lot of login providers. The best way to find the one for you is to start typing the name of the organization/entity you belong to into the search box. If you don\'t want to search you can list all known login providers but beware that this may take time.')}"
+                           class="glyphicon glyphicon-question-sign text-info"></i>
                     </small>
                 </div>
             </form>
@@ -112,9 +122,15 @@
             <div class="list-group confirm"></div>
             <div class="btn-block">
                 <a id="proceed" class="btn btn-large btn-primary proceed btn-responsive">${_('Proceed to Login')}</a>
-                <a id="remember" class="btn btn-large btn-warning remember btn-responsive" data-toggle="popover" data-placement="bottom" title="What is this?" data-content="${_('Select this option if you always use one and the same login provider for everything.')}">${_('Login and use Forever')}</a>
+                <a id="remember" class="btn btn-large btn-warning remember btn-responsive">${_('Login and use Forever')}</a>
                 <a id="proceed_and_remember" class="btn btn-large btn-success hidden proceed_and_remember btn-responsive">${_('Yes I am Sure - Use Forever')}</a>
-                <a id="cancel" class="btn btn-large btn-default cancel btn-responsive" data-toggle="popover" data-placement="bottom" title="What is this?" data-content="${_('Click here to start over and select another login provider.')}">${_('Select Again')}</a>
+                <a id="cancel" class="btn btn-large btn-default cancel btn-responsive">${_('Select Again')}</a>
+
+            <small><i data-toggle="popover"
+                           data-placement="bottom"
+                           title="${_('What should I do now?')}"
+                           data-content="${_('If you always use one and the same login provider for everything it might be a good idea to remember your choice. Press Search Again to redo the search and pick another login provider.')}"
+                           class="glyphicon glyphicon-question-sign top text-info"></i></small>
             </div>
         </div>
         <div class="footer">

@@ -59,14 +59,14 @@
 
     function discovery_response(entityID) {
         var idps = $.jStorage.get('pyff.discovery.idps', []);
-        console.log(idps);
-        console.log(entityID);
+        //console.log(idps);
+        //console.log(entityID);
         if ($.inArray(entityID, idps) != -1) {
 
         } else {
             idps.unshift(entityID);
         }
-        console.log(idps);
+        //console.log(idps);
         while (idps.length > 3) {
             idps.pop()
         }
@@ -86,33 +86,33 @@
     }
 
     function with_entity_id(entityID, func) {
-        console.log("with entity id "+entityID);
+        //console.log("with entity id "+entityID);
         with_id(sha1_id(entityID), func);
     }
 
     function with_id(id, func) {
-        console.log("with_id "+id);
+        //console.log("with_id "+id);
         var cached = $.jStorage.get(id);
         if (cached) {
-            console.log("cached...");
-            console.log(cached);
+            //console.log("cached...");
+            //console.log(cached);
             func(_clone(cached));
         } else {
-            console.log('GET /metadata/' + id + ".json");
+            //console.log('GET /metadata/' + id + ".json");
             $.ajax({
                 datatype: 'json',
                 url: '/metadata/' + id + ".json"
             }).done(function (data) {
                 if ($.isArray(data)) {
                     for (var i = 0; i < data.length; i++) {
-                        console.log("fetched: ");
-                        console.log(data[i]);
+                        //console.log("fetched: ");
+                        //console.log(data[i]);
                         $.jStorage.set(id,_clone(data[i]),{TTL: 300000});
                         func(data[i]);
                     }
                 } else {
-                    console.log("got: ");
-                    console.log(data);
+                    //console.log("got: ");
+                    //console.log(data);
                     $.jStorage.set(id,_clone(data),{TTL: 300000});
                     func(data);
                 }
@@ -173,7 +173,7 @@
                 });
                 seldiv.bind('typeahead:selected',function(event,entity) {
                     if (entity) {
-                        console.log("selected "+entity.entity_id);
+                        //console.log("selected "+entity.entity_id);
                         select_idp(entity.entity_id);
                     }
                 });
@@ -272,22 +272,22 @@
             var seen = {};
             var lst = $.jStorage.get('pyff.discovery.idps',[]);
             if (lst.length > 0) {
-                console.log("adding previously used");
+                //console.log("adding previously used");
                 for (var i = 0; i < lst.length; i++) {
-                    console.log("adding ... " + lst[i]);
+                    //console.log("adding ... " + lst[i]);
                     with_entity_id(lst[i], function (elt) {
-                        console.log("blaha");
-                        console.log(elt);
+                        //console.log("blaha");
+                        //console.log(elt);
                         elt.sticky = false;
                         div.append(idp_template.render(elt));
                         seen[elt.entityID] = true
                     });
                 }
             } else {
-                console.log("adding suggestions...")
+                //console.log("adding suggestions...")
                 $.getJSON(uri, function (data) {
                     $.each(data,function(pos,elt) {
-                        console.log(elt);
+                        //console.log(elt);
                         if (elt.entityID in seen) {
                             // nothing
                         } else {

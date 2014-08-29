@@ -5,11 +5,12 @@ body {
 }
 
 /* Everything but the jumbotron gets side spacing for mobile first views */
+
 .header,
 .marketing,
 .footer {
-  padding-left: 15px;
-  padding-right: 15px;
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 /* Custom page header */
@@ -96,4 +97,8 @@ body {
     font-size:90%;
     line-height: 1.2;
   }
+}
+
+.top {
+    vertical-align: top;
 }
