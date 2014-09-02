@@ -254,7 +254,7 @@
     });
 
     var idp_template = Hogan.compile('<a class="{{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
-        '{{^sticky}}<button type="button" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
+        '{{^sticky}}<button type="button" data-toggle="tooltip" data-placement="left" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
         '{{#icon}}<img src="{{icon}}" class="fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"/>{{/icon}}' +
