@@ -204,6 +204,7 @@ class MemoryStore(StoreBase):
         return self.md.keys()
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):
+        log.debug("memory store update: %s: %s" % (t, tid))
         relt = root(t)
         assert(relt is not None)
         ne = 0
@@ -228,6 +229,7 @@ class MemoryStore(StoreBase):
     #    return [deepcopy(x) for x in self._lookup(key)]
 
     def lookup(self, key):
+        log.debug("memory store lookup: %s" % key)
         return self._lookup(key)
 
     def _lookup(self, key):
@@ -354,6 +356,7 @@ class RedisStore(StoreBase):
         return self.rc.hgetall(key)
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):  # TODO: merge ?
+        log.debug("redis store update: %s: %s" % (t, tid))
         relt = root(t)
         ne = 0
         if ts is None:
@@ -405,6 +408,7 @@ class RedisStore(StoreBase):
         return root(parse_xml(StringIO.StringIO(self.rc.get("%s#metadata" % key))))
 
     def lookup(self, key):
+        log.debug("redis store lookup: %s" % key)
         if '+' in key:
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):
