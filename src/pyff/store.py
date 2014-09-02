@@ -213,7 +213,9 @@ class MemoryStore(StoreBase):
                 tid = relt.get('entityID')
             self._unindex(relt)
             self._index(relt)
-            self.entities[relt.get('entityID')] = relt  # TODO: merge?
+            self.entities[tid] = relt  # TODO: merge?
+            if tid != relt.get('entityID'):
+                self.md[tid] = relt
             ne += 1
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
