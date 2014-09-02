@@ -22,9 +22,7 @@
     <script type="text/javascript">
         $(function() {
             $("*[data-toggle='popover']").popover({trigger: 'hover', container: 'body'});
-            $("*[data-toggle='popover']").on('show.bs.popover', function() {
-                $(this).delay(500).popover('hide');
-            });
+            $("*[data-toggle='tooltip']").tooltip({trigger: 'hover', container: 'body'});
             $('#quickLinks').dsQuickLinks('${sp}');
             $('.sp').dsRelyingParty('${sp}');
             $('.idselect').dsSelect({});
