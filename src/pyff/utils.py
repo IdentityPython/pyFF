@@ -22,6 +22,7 @@ import hashlib
 from email.utils import parsedate
 from urlparse import urlparse
 from threading import local
+import iso8601
 
 __author__ = 'leifj'
 
@@ -165,6 +166,10 @@ Current time in ISO format
     return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
 
 
+def iso2datetime(s):
+    return iso8601.parse_date(s)
+
+
 class ResourceResolver(etree.Resolver):
     def resolve(self, system_url, public_id, context):
         """
@@ -253,13 +258,13 @@ def render_template(name, **kwargs):
 _Resource = namedtuple("Resource", ["result", "cached", "date", "last_modified", "resp", "time"])
 
 
+def parse_date(s):
+    if s is None:
+        return datetime.new()
+    return datetime(*parsedate(s)[:6])
+
 @retry((IOError, httplib2.HttpLib2Error))
 def load_url(url, enable_cache=True, timeout=60):
-    def _parse_date(s):
-        if s is None:
-            return datetime.new()
-        return datetime(*parsedate(s)[:6])
-
     start_time = clock()
     cache = httplib2.FileCache(".cache")
     headers = dict()
@@ -287,12 +292,15 @@ def load_url(url, enable_cache=True, timeout=60):
         resp, content = h.request(url, headers=headers)
         if resp.status != 200:
             raise IOError(resp.reason)
+        log.debug("last-modified header: %s" % resp.get('last-modified'))
+        log.debug("date header: %s" % resp.get('date'))
+        log.debug("last modified: %s" % resp.get('date', resp.get('last-modified', None)))
         return _Resource(result=content,
                          cached=resp.fromcache,
-                         date=_parse_date(resp['date']),
+                         date=parse_date(resp['date']),
                          resp=resp,
                          time=clock() - start_time,
-                         last_modified=_parse_date(resp.get('last-modified', resp.get('date', None))))
+                         last_modified=parse_date(resp.get('date', resp.get('last-modified', None))))
 
 
 def root(t):

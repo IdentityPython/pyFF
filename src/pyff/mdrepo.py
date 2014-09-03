@@ -23,7 +23,7 @@ from pyff.logs import log
 from pyff.store import RedisStore
 from pyff.utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
-    iter_entities, validate_document, load_url, MetadataExpiredException
+    iter_entities, validate_document, load_url, MetadataExpiredException, iso2datetime
 from pyff.constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 try:
@@ -403,11 +403,17 @@ The dict in the list contains three items:
         relt = root(t)
         if relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
             cache_duration = self.default_cache_duration
-            if self.respect_cache_duration:
+            valid_until = relt.get('validUntil', None)
+            if valid_until is not None:
+                now = datetime.utcnow()
+                vu = iso2datetime(valid_until)
+                now = now.replace(microsecond=0)
+                vu = vu.replace(microsecond=0, tzinfo=None)
+                return vu - now
+            elif self.respect_cache_duration:
                 cache_duration = relt.get('cacheDuration', self.default_cache_duration)
-            offset = duration2timedelta(cache_duration)
+                return duration2timedelta(cache_duration)
 
-            return offset
         return None
 
     def fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, validate=False):
@@ -475,13 +481,13 @@ and verified.
 
             expired = False
             if offset is not None:
-                expire_time = resource.last_modified + offset
-                ttl = expire_time - datetime.now()
-                info['Cache Expiration Time'] = str(expire_time)
+                expire_time = datetime.now() + offset
+                ttl = offset.total_seconds()
+                info['Expiration Time'] = str(expire_time)
                 info['Cache TTL'] = str(ttl)
-                if ttl.total_seconds() < self.min_cache_ttl:  # try to get fresh md but we'll use what we have anyway
+                if ttl < self.min_cache_ttl:  # try to get fresh md but we'll use what we have anyway
                     retry_resources.append((rurl, verifier, tid, post, False))
-                if ttl.total_seconds() < 0:
+                if ttl < 0:
                     expired = True
 
             if not expired:
