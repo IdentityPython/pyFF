@@ -29,6 +29,10 @@
             - http://meta01.skolfederation.se/skolfederation-2_0.xml 
         - break
     - fork:
+        - select as /ndn:
+           - https://idp.nordu.net/idp/shibboleth
+        - break
+    - fork:
         - select as /md/swamid-kalmar-1.0:
             - https://connect.sunet.se/shibboleth
             - https://www.diva-portal.org/shibboleth
