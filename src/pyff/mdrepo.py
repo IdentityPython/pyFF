@@ -3,6 +3,7 @@
 This is the implementation of the active repository of SAML metadata. The 'local' and 'remote' pipes operate on this.
 
 """
+from copy import deepcopy
 from datetime import datetime
 from UserDict import UserDict
 import os
@@ -630,7 +631,7 @@ starting with '.' are excluded.
                         log.debug("parsing from file %s" % nm)
                     fn = os.path.join(top, nm)
                     try:
-                        t,valid_until = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
+                        t, valid_until = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
                         entities.extend(entities_list(t))  # local metadata is assumed to be ok
                     except Exception, ex:
                         log.error(ex)
@@ -720,11 +721,13 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         #if log.isDebugEnabled():
         #    log.debug("entities: %s" % entities)
 
-        def _a(ent, doc, seens):
+        def _a(ent):
             entity_id = ent.get('entityID', None)
-            if (ent is not None) and (entity_id is not None) and (not entity_id in seens):
-                doc.append(ent)
-                seens[entity_id] = True
+            log.debug("adding %s to set" % entity_id)
+            if (ent is not None) and (entity_id is not None) and (not entity_id in seen):
+                t.append(deepcopy(ent))
+                log.debug("really adding %s to set" % entity_id)
+                seen[entity_id] = True
 
         attrs = dict(Name=name, nsmap=NS)
         if cacheDuration is not None:
@@ -736,11 +739,11 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         seen = {}  # TODO make better de-duplication
         for member in entities:
             if hasattr(member, 'tag'):
-                _a(member, t, seen)
+                _a(member)
                 nent += 1
             else:
                 for entity in self.lookup(member):
-                    _a(entity, t, seen)
+                    _a(entity)
                     nent += 1
 
         if log.isDebugEnabled():

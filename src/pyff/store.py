@@ -204,19 +204,19 @@ class MemoryStore(StoreBase):
         return self.md.keys()
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):
-        log.debug("memory store update: %s: %s" % (t, tid))
+        #log.debug("memory store update: %s: %s" % (repr(t), tid))
         relt = root(t)
         assert(relt is not None)
         ne = 0
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
-            if tid is None:
-                tid = relt.get('entityID')
+            #log.debug("memory store setting entity descriptor")
             self._unindex(relt)
             self._index(relt)
-            self.entities[tid] = relt  # TODO: merge?
-            if tid != relt.get('entityID'):
+            self.entities[relt.get('entityID')] = relt  # TODO: merge?
+            if tid is not None:
                 self.md[tid] = relt
             ne += 1
+            #log.debug("keys %s" % self.md.keys())
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('Name')
@@ -231,7 +231,7 @@ class MemoryStore(StoreBase):
     #    return [deepcopy(x) for x in self._lookup(key)]
 
     def lookup(self, key):
-        log.debug("memory store lookup: %s" % key)
+        #log.debug("memory store lookup: %s" % key)
         return self._lookup(key)
 
     def _lookup(self, key):
@@ -239,7 +239,7 @@ class MemoryStore(StoreBase):
             return self.entities.values()
         if '+' in key:
             key = key.strip('+')
-            log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
+            #log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
             hits = None
             for f in key.split("+"):
                 f = f.strip()
@@ -270,11 +270,14 @@ class MemoryStore(StoreBase):
                 res.update(self._get_index(m.group(1), v))
             return list(res)
 
+        #log.debug("trying null index lookup %s" % key)
         l = self._get_index("null", key)
         if l:
             return list(l)
 
+        #log.debug("trying main index lookup %s: " % key)
         if key in self.md:
+            #log.debug("entities list %s: %s" % (key, self.md[key]))
             return entities_list(self.md[key])
 
         return []
