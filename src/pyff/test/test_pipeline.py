@@ -1,7 +1,8 @@
 import os
 import tempfile
 from mako.lookup import TemplateLookup
-from pyff import MDRepository, plumbing
+from pyff.mdrepo import MDRepository
+from pyff.pipes import plumbing
 from pyff.store import MemoryStore
 from pyff.test import SignerTestCase
 

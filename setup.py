@@ -55,7 +55,7 @@ setup(name='pyFF',
       zip_safe=False,
       install_requires=install_requires,
       entry_points={
-          'console_scripts': ['pyff=pyff:main', 'pyffd=pyff.mdx:main']
+          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main']
       },
       message_extractors={'src': [
           ('**.py', 'python', None),

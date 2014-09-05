@@ -71,7 +71,8 @@ from pyff.stats import stats
 import lxml.html as html
 from datetime import datetime
 from lxml import etree
-from pyff import __version__ as pyff_version, MemoryStore, RedisStore
+from pyff import __version__ as pyff_version
+from pyff.store import MemoryStore, RedisStore
 from publicsuffix import PublicSuffixList
 
 __author__ = 'leifj'

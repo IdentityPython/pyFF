@@ -13,10 +13,9 @@ import pkg_resources
 import re
 from lxml import etree
 from time import gmtime, strftime, clock
-from pyff.constants import NS
-import pytz
-from pyff.decorators import cached, retry
-from pyff.logs import log
+from .constants import NS
+from .decorators import cached, retry
+from .logs import log
 import httplib2
 import hashlib
 from email.utils import parsedate

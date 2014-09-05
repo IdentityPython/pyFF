@@ -18,13 +18,12 @@ import operator
 import xmlsec
 import ipaddr
 
-from pyff import merge_strategies
-from pyff.logs import log
-from pyff.store import RedisStore
-from pyff.utils import schema, filter_lang, root, duration2timedelta, \
+from . import merge_strategies
+from .logs import log
+from .utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
-    iter_entities, validate_document, load_url, MetadataExpiredException, iso2datetime
-from pyff.constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
+    iter_entities, validate_document, load_url, iso2datetime
+from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 try:
     from cStringIO import StringIO
@@ -100,7 +99,8 @@ class MDRepository(Observable):
             else:
                 self.store = store
         else:
-            self.store = RedisStore()
+            from .store import MemoryStore
+            self.store = MemoryStore()
         super(MDRepository, self).__init__()
 
     def clone(self):
