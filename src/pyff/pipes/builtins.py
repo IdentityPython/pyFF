@@ -8,7 +8,7 @@ from pyff.decorators import deprecated
 from pyff.utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
     iter_entities, validate_document
 from pyff.constants import NS
-from pyff.pipes import Plumbing, PipeException
+from pyff.pipes import Plumbing, PipeException, PipelineCallback
 from copy import deepcopy
 import sys
 import os
@@ -357,26 +357,6 @@ Supports both remote and local resources. Fetching remote resources is done in p
     opts.setdefault('validate', True)
     stats = dict()
     opts.setdefault('stats', stats)
-
-    class PipelineCallback():
-        """
-A delayed pipeline callback used as a post for parse_metadata
-        """
-        def __init__(self, entry_point, req, stats):
-            self.entry_point = entry_point
-            self.plumbing = Plumbing(req.plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
-            self.req = req
-            self.stats = stats
-
-        def __call__(self, *args, **kwargs):
-            t = args[0]
-            if t is None:
-                raise ValueError("PipelineCallback must be called with a parse-tree argument")
-            try:
-                return self.plumbing.process(self.req.md, state={self.entry_point: True, 'stats': self.stats}, t=t)
-            except Exception, ex:
-                traceback.print_exc(ex)
-                raise ex
 
     remote = []
     for x in req.args:
