@@ -48,7 +48,7 @@ def _e(error_log, m=None):
     def _f(x):
         if ":WARNING:" in x:
             return False
-        if m is not None and not m in x:
+        if m is not None and m not in x:
             return False
         return True
 
@@ -231,11 +231,6 @@ The dict in the list contains three items:
         if isinstance(query, basestring):
             query = [query.lower()]
 
-        def _lc_text(elt):
-            if elt.text is None:
-                return None
-            return elt.text.lower()
-
         def _strings(elt):
             lst = []
             for attr in ['{%s}DisplayName' % NS['mdui'],
@@ -262,7 +257,7 @@ The dict in the list contains three items:
                                 return net
                             if '.' in q and ipaddr.IPv4Address(q) in net:
                                 return net
-                    except ValueError, ex:
+                    except ValueError:
                         pass
 
                 if q is not None and len(q) > 0:
@@ -274,9 +269,9 @@ The dict in the list contains three items:
             return None
 
         f = []
-        if path is not None and not path in f:
+        if path is not None and path not in f:
             f.append(path)
-        if entity_filter is not None and not entity_filter in f:
+        if entity_filter is not None and entity_filter not in f:
             f.append(entity_filter)
         mexpr = None
         if f:
@@ -482,7 +477,7 @@ and verified.
                                             base_url=rurl,
                                             validate=validate,
                                             validation_errors=info['Validation Errors'],
-                                            expiration=lambda d: self.expiration(d),
+                                            expiration=self.expiration,
                                             post=post)
 
             relt = root(t)
@@ -712,10 +707,6 @@ fails an empty list is returned.
 
         """
 
-        def _xp(e):
-            match = e.xpath(xp, namespaces=NS, smart_strings=False)
-            return len(match) > 0
-
         l = self._lookup(member)
         if hasattr(l, 'tag'):
             l = [l]
@@ -752,7 +743,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         def _a(ent):
             entity_id = ent.get('entityID', None)
             log.debug("adding %s to set" % entity_id)
-            if (ent is not None) and (entity_id is not None) and (not entity_id in seen):
+            if (ent is not None) and (entity_id is not None) and (entity_id not in seen):
                 t.append(deepcopy(ent))
                 log.debug("really adding %s to set" % entity_id)
                 seen[entity_id] = True
