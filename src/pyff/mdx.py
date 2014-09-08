@@ -51,7 +51,7 @@ from cherrypy._cptools import HandlerTool
 from cherrypy.lib.cpstats import StatsPage
 import os
 import sys
-from threading import RLock, Lock
+from threading import Lock
 import cherrypy
 from cherrypy._cpdispatch import Dispatcher
 from cherrypy._cperror import NotFound, HTTPError
