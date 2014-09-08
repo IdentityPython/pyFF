@@ -1,14 +1,13 @@
-from os import environ
+
 import sys
 import getopt
 import traceback
 import logging
 
-import pkg_resources
-
 from .mdrepo import MDRepository
 from .pipes import plumbing
 from .store import MemoryStore
+from . import __version__
 
 
 def main():
@@ -45,19 +44,6 @@ def main():
         else:
             raise ValueError("Unknown option '%s'" % o)
 
-    mem = None
-    if environ.get('MEMORY_DEBUG', None) is not None:
-        try:
-            from guppy import hpy
-            mem = hpy()
-            mem.setrelheap()
-            import pdb
-            import objgraph
-            print objgraph.show_growth()
-            pdb.set_trace()
-        except ImportError:
-            pass
-
     log_args = {'level': loglevel}
     if logfile is not None:
         log_args['filename'] = logfile
@@ -65,12 +51,8 @@ def main():
 
     try:
         md = MDRepository(store=store)
-        if mem is not None:
-            pdb.set_trace()
         for p in args:
             plumbing(p).process(md, state={'batch': True, 'stats': {}})
-        if mem is not None:
-            pdb.set_trace()
         sys.exit(0)
     except Exception, ex:
         if logging.getLogger().isEnabledFor(logging.DEBUG):

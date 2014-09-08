@@ -3,6 +3,12 @@
 This is the implementation of the active repository of SAML metadata. The 'local' and 'remote' pipes operate on this.
 
 """
+try:
+    from cStringIO import StringIO
+except ImportError:
+    print(" *** install cStringIO for better performance")
+    from StringIO import StringIO
+
 from copy import deepcopy
 from datetime import datetime
 from UserDict import UserDict
@@ -24,12 +30,6 @@ from .utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
     iter_entities, validate_document, load_url, iso2datetime
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    log.warn("missing cStringIO")
-    from StringIO import StringIO
 
 __author__ = 'leifj'
 

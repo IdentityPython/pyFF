@@ -43,7 +43,12 @@ An implementation of draft-lajoie-md-query
             One or more pipeline files
 
 """
-from StringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    print(" *** install cStringIO for better performance")
+    from StringIO import StringIO
+
 import getopt
 import traceback
 import urlparse

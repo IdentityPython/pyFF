@@ -7,7 +7,7 @@ from lxml.etree import DocumentInvalid
 from pyff.decorators import deprecated
 from pyff.utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
     iter_entities, validate_document
-from pyff.mdrepo import NS
+from pyff.constants import NS
 from pyff.pipes import Plumbing, PipeException
 from copy import deepcopy
 import sys

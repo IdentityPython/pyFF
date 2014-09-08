@@ -1,4 +1,9 @@
-import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    print(" *** install cStringIO for better performance")
+    from StringIO import StringIO
+
 from copy import deepcopy
 from datetime import datetime
 import re
@@ -410,7 +415,7 @@ class RedisStore(StoreBase):
 
     @cached(ttl=30)
     def _get_metadata(self, key):
-        return root(parse_xml(StringIO.StringIO(self.rc.get("%s#metadata" % key))))
+        return root(parse_xml(StringIO(self.rc.get("%s#metadata" % key))))
 
     def lookup(self, key):
         log.debug("redis store lookup: %s" % key)

@@ -14,7 +14,7 @@ import re
 from lxml import etree
 from time import gmtime, strftime, clock
 from .constants import NS
-from .decorators import cached, retry
+from .decorators import retry
 from .logs import log
 import httplib2
 import hashlib
