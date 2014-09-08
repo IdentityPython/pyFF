@@ -5,7 +5,7 @@ install:
    - "pip install . --use-mirrors"
    - "pip install -r requirements.txt --use-mirrors"
    - "pip install coveralls"
-script: "nosetests && coverage run --source=pyff manage.py test"
+script: "coverage run --source=pyff setup.py nosetests"
 before_install:
    - sudo apt-get update -qq
    - sudo apt-get install -qq python-dev libyaml-dev libxml2-dev libxslt-dev libsofthsm softhsm opensc libengine-pkcs11-openssl
