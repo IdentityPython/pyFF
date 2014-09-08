@@ -259,7 +259,7 @@ _Resource = namedtuple("Resource", ["result", "cached", "date", "last_modified",
 
 def parse_date(s):
     if s is None:
-        return datetime.new()
+        return datetime.now()
     return datetime(*parsedate(s)[:6])
 
 @retry((IOError, httplib2.HttpLib2Error))

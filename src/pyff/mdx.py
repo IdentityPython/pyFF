@@ -187,7 +187,7 @@ class MDStats(StatsPage):
         return render_template("basic.html", content=hstr)
 
 
-class WellKnown():
+class WellKnown(object):
     """Implementation of the .well-known URL namespace for pyFF. In particular this contains the webfinger
     implementation which returns information about up- and downstream metadata.
     """
@@ -254,7 +254,7 @@ listed using the 'role' attribute to the link elements.
         return dumps(jrd)
 
 
-class NotImplementedFunction():
+class NotImplementedFunction(object):
     def __init__(self, message):
         self.message = message
 
@@ -262,7 +262,7 @@ class NotImplementedFunction():
         return self.message
 
 
-class MDRoot():
+class MDRoot(object):
     """The root application of pyFF. The root application assembles the MDStats and WellKnown classes with an
     MDServer instance.
     """
@@ -385,26 +385,17 @@ Search the active set for matching entities.
         """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
         handler.
         """
-        #log.debug("request default: %s" % ",".join(args))
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
             if len(args) > 1:
                 kwargs['path'] = args[1]
             return self.server.request(**kwargs)
         else:
-            #
-            # log.debug("not an alias: %s" % "/".join(args))
             kwargs['pfx'] = None
             kwargs['path'] = "/" + "/".join(args)
             return self.server.request(**kwargs)
 
-            #@cherrypy.expose
-            #def default(self,pfx,path=None):
-            #    log.debug("pfx=%s,path=%s" % (pfx,path))
-            #    return self.server.request(pfx,path)
-
-
-class MDServer():
+class MDServer(object):
     """The MDServer class is the business logic of pyFF. This class is isolated from the request-decoding logic
     of MDRoot and from the ancilliary classes like MDStats and WellKnown.
     """
@@ -433,7 +424,7 @@ class MDServer():
             for f in pipes:
                 cherrypy.engine.autoreload.files.add(f)
 
-    class MediaAccept():
+    class MediaAccept(object):
 
         def __init__(self):
             pass

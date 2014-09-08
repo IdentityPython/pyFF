@@ -7,12 +7,13 @@ from pyff.utils import request_vhost
 
 __author__ = 'leifj'
 
-def _expandvhost(dir, request):
+
+def _expandvhost(dirn, request):
     vhost = request_vhost(request)
     if vhost is not None:
-        return dir.replace("%VHOST%", vhost)
+        return dirn.replace("%VHOST%", vhost)
     else:
-        return dir
+        return dirn
 
 
 def _staticdirs(section, directory, roots=[], match="", content_types=None, index="", debug=False):
@@ -36,7 +37,7 @@ def _staticdirs(section, directory, roots=[], match="", content_types=None, inde
         'index.html', the file '/home/me/myapp/index.html' will be sought.
     """
     if debug:
-        cherrypy.log("dir=%s, roots=%s" % (repr(directory),repr(roots)))
+        cherrypy.log("dir=%s, roots=%s" % (repr(directory), repr(roots)))
     request = cherrypy.serving.request
     if request.method not in ('GET', 'HEAD'):
         if debug:
@@ -93,13 +94,13 @@ def _staticdirs(section, directory, roots=[], match="", content_types=None, inde
         if not handled:
             if debug:
                 cherrypy.log("not handled using %s" % filename)
-            # Check for an index file if a folder was requested.
-            #if index:
-            #    handled = _attempt(os.path.join(filename, index), content_types)
-            #    if handled:
-            #        request.is_index = filename[-1] in (r"\/")
-            #
-            #         return True
+                # Check for an index file if a folder was requested.
+                # if index:
+                #    handled = _attempt(os.path.join(filename, index), content_types)
+                #    if handled:
+                #        request.is_index = filename[-1] in (r"\/")
+                #
+                #         return True
         else:
             return True
     return False
