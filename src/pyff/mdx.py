@@ -470,7 +470,8 @@ class MDServer(object):
                 x = x[8:].decode('base64')
 
             if do_split and '.' in x:
-                (pth, x, extn) = x.rpartition('.')
+                (pth, dot, extn) = x.rpartition('.')
+                assert(dot == '.')
                 if extn in _ctypes:
                     return pth, extn
 
@@ -697,7 +698,8 @@ def main():
             elif o in '--email':
                 email = a
             elif o in ('-A', '--alias'):
-                (a, x, uri) = a.lpartition(':')
+                (a, colon, uri) = a.lpartition(':')
+                assert(colon == ':')
                 if a and uri:
                     aliases[a] = uri
             elif o in '--dir':
