@@ -237,7 +237,7 @@ listed using the 'role' attribute to the link elements.
             links.append(dict(rel='disco-json', href='%s/%s.json' % (cherrypy.request.base, a)))
 
         for a in self.server.md.keys():
-            if not '://' in a:
+            if '://' not in a:
                 a = a.lstrip('/')
                 _links(a)
             elif 'http://' in a or 'https://' in a:
@@ -278,7 +278,6 @@ class MDRoot(object):
         memory = dowser.Root()
     except ImportError:
         memory = NotImplementedFunction('Memory profiling needs dowser')
-        pass
 
     _well_known = WellKnown()
     static = cherrypy.tools.staticdirs.handler("/static", "static")
@@ -469,7 +468,7 @@ class MDServer(object):
                 x = x[8:].decode('base64')
 
             if do_split and '.' in x:
-                (pth, sep, extn) = x.rpartition('.')
+                (pth, _, extn) = x.rpartition('.')
                 if extn in _ctypes:
                     return pth, extn
 
@@ -555,7 +554,7 @@ class MDServer(object):
                         url = urlparse.urlparse(referrer)
                         host = url.netloc
                         if ':' in url.netloc:
-                            (host, port) = url.netloc.split(':')
+                            (host, _) = url.netloc.split(':')
                         for host_part in host.rstrip(self.psl.get_public_suffix(host)).split('.'):
                             if host_part is not None and len(host_part) > 0:
                                 query.append(host_part)
@@ -696,7 +695,7 @@ def main():
             elif o in '--email':
                 email = a
             elif o in ('-A', '--alias'):
-                (a, sep, uri) = a.lpartition(':')
+                (a, _, uri) = a.lpartition(':')
                 if a and uri:
                     aliases[a] = uri
             elif o in '--dir':
