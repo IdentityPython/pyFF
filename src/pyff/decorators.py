@@ -39,8 +39,8 @@ def retry(ex, tries=4, delay=3, backoff=2, logger=log):
                     return f(*args, **kwargs)
                 except ex, e:
                     msg = "%s, Retrying in %d seconds..." % (str(e), mdelay)
-                    if log:
-                        log.warn(msg)
+                    if logger:
+                        logger.warn(msg)
                     else:
                         print msg
                     time.sleep(mdelay)
