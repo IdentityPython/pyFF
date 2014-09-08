@@ -643,24 +643,6 @@ starting with '.' are excluded.
         """
         if url is None:
             url = directory
-        log.debug("walking %s" % directory)
-        if not directory in self.md:
-            entities = []
-            for top, dirs, files in os.walk(directory):
-                for dn in dirs:
-                    if dn.startswith("."):
-                        dirs.remove(dn)
-                for nm in files:
-                    log.debug("found file %s" % nm)
-                    if nm.endswith(ext):
-                        fn = os.path.join(top, nm)
-                        try:
-                            t = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
-                            entities.extend(self.entities(t))  # local metadata is assumed to be ok
-                        except Exception, ex:
-                            log.error(ex)
-            self.import_metadata(self.entity_set(entities, url))
-        return self.md[url]
 
         entities = []
         for top, dirs, files in os.walk(directory):
@@ -677,7 +659,11 @@ starting with '.' are excluded.
                         entities.extend(entities_list(t))  # local metadata is assumed to be ok
                     except Exception, ex:
                         log.error(ex)
-        self.store.update(self.entity_set(entities, url))
+
+        if entities:
+            self.store.update(self.entity_set(entities, url))
+        else:
+            log.info("no entities found in %s" % directory)
 
     def _lookup(self, member):
         if member is None:
