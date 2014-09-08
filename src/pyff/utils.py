@@ -332,7 +332,11 @@ def duration2timedelta(period):
     return delta
 
 
-def filter_lang(elts, langs=["en"]):
+def filter_lang(elts, langs=None):
+
+    if langs is None or type(langs) is not list:
+        langs = ['en']
+
     def _l(elt):
         return elt.get("{http://www.w3.org/XML/1998/namespace}lang", None) in langs
 
@@ -346,7 +350,10 @@ def filter_lang(elts, langs=["en"]):
         return elts
 
 
-def xslt_transform(t, stylesheet, params={}):
+def xslt_transform(t, stylesheet, params=None):
+    if not params:
+        params = dict()
+
     if not hasattr(thread_data, 'xslt'):
         thread_data.xslt = dict()
 
