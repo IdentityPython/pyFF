@@ -26,15 +26,14 @@ def is_sp(entity):
 
 
 def _domains(entity):
-        domains = [url2host(entity.get('entityID'))]
-        for d in filter_lang(entity.iter("{%s}DomainHint" % NS['mdui'])):
-            domains.append(d.text)
-        return domains
+    domains = [url2host(entity.get('entityID'))]
+    for d in filter_lang(entity.iter("{%s}DomainHint" % NS['mdui'])):
+        domains.append(d.text)
+    return domains
 
 
 def entity_attribute_dict(entity):
     d = {}
-    entity_id = entity.get('entityID')
     for ea in entity.iter("{%s}EntityAttributes" % NS['mdattr']):
         a = ea.find(".//{%s}Attribute" % NS['saml'])
         if a is not None:
@@ -127,7 +126,7 @@ class MemoryStore(StoreBase):
         nd = 0
         for hn in DINDEX:
             hid = hash_id(entity, hn, False)
-            #log.debug("computing index %s(%s) = %s" % (hn, entity.get('entityID'), hid))
+            # log.debug("computing index %s(%s) = %s" % (hn, entity.get('entityID'), hid))
             self.index[hn].setdefault(hid, EntitySet())
             self.index[hn][hid].add(entity)
             nd += 1
@@ -151,14 +150,13 @@ class MemoryStore(StoreBase):
             na += 1
             vidx['sp'].add(entity)
 
-            #log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'), na, nd))
-            #log.debug(self.index)
+        # log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'), na, nd))
 
     def _unindex(self, entity):
         attr_idx = self.index.setdefault('attr', {})
         nd = 0
         for hn in DINDEX:
-            #log.debug("computing %s" % hn)
+            # log.debug("computing %s" % hn)
             hid = hash_id(entity, hn, False)
             self.index[hn].setdefault(hid, EntitySet())
             self.index[hn][hid].discard(entity)
@@ -166,7 +164,7 @@ class MemoryStore(StoreBase):
 
         na = 0
         for attr, values in entity_attribute_dict(entity).iteritems():
-            #log.debug("indexing %s on %s" % (attr,entity.get('entityID')))
+            # log.debug("indexing %s on %s" % (attr,entity.get('entityID')))
             for v in values:
                 vidx = attr_idx.setdefault(attr, {})
                 vidx.setdefault(v, EntitySet())
@@ -184,7 +182,7 @@ class MemoryStore(StoreBase):
             na += 1
             vidx['sp'].discard(entity)
 
-            #log.debug("(un)indexed %s (%d attributes, %d digests)" % (entity.get('entityID'),na,nd))
+        # log.debug("(un)indexed %s (%d attributes, %d digests)" % (entity.get('entityID'), na, nd))
 
     def _get_index(self, a, v):
         if a in DINDEX:
@@ -209,19 +207,19 @@ class MemoryStore(StoreBase):
         return self.md.keys()
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):
-        #log.debug("memory store update: %s: %s" % (repr(t), tid))
+        # log.debug("memory store update: %s: %s" % (repr(t), tid))
         relt = root(t)
         assert(relt is not None)
         ne = 0
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
-            #log.debug("memory store setting entity descriptor")
+            # log.debug("memory store setting entity descriptor")
             self._unindex(relt)
             self._index(relt)
             self.entities[relt.get('entityID')] = relt  # TODO: merge?
             if tid is not None:
                 self.md[tid] = relt
             ne += 1
-            #log.debug("keys %s" % self.md.keys())
+            # log.debug("keys %s" % self.md.keys())
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('Name')
@@ -236,7 +234,7 @@ class MemoryStore(StoreBase):
     #    return [deepcopy(x) for x in self._lookup(key)]
 
     def lookup(self, key):
-        #log.debug("memory store lookup: %s" % key)
+        # log.debug("memory store lookup: %s" % key)
         return self._lookup(key)
 
     def _lookup(self, key):
@@ -244,7 +242,7 @@ class MemoryStore(StoreBase):
             return self.entities.values()
         if '+' in key:
             key = key.strip('+')
-            #log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
+            # log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
             hits = None
             for f in key.split("+"):
                 f = f.strip()
@@ -271,18 +269,18 @@ class MemoryStore(StoreBase):
         if m:
             res = set()
             for v in m.group(2).rstrip("/").split(';'):
-                #log.debug("... adding %s=%s" % (m.group(1),v))
+                # log.debug("... adding %s=%s" % (m.group(1),v))
                 res.update(self._get_index(m.group(1), v))
             return list(res)
 
-        #log.debug("trying null index lookup %s" % key)
+        # log.debug("trying null index lookup %s" % key)
         l = self._get_index("null", key)
         if l:
             return list(l)
 
-        #log.debug("trying main index lookup %s: " % key)
+        # log.debug("trying main index lookup %s: " % key)
         if key in self.md:
-            #log.debug("entities list %s: %s" % (key, self.md[key]))
+            # log.debug("entities list %s: %s" % (key, self.md[key]))
             return entities_list(self.md[key])
 
         return []
@@ -378,7 +376,7 @@ class RedisStore(StoreBase):
                 self.update_entity(relt, t, tid, ts, p)
                 for ea, eav in entity_attribute_dict(relt).iteritems():
                     for v in eav:
-                        #log.debug("%s=%s" % (ea, v))
+                        # log.debug("%s=%s" % (ea, v))
                         self.membership("{%s}%s" % (ea, v), tid, ts, p)
                         p.zadd("%s#values" % ea, v, ts)
                     p.sadd("#attributes", ea)
