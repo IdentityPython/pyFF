@@ -1,10 +1,15 @@
 language: python
-python: 
+python:
    - "2.7"
-install: 
+install:
    - "pip install . --use-mirrors"
    - "pip install -r requirements.txt --use-mirrors"
-script: nosetests
+   - "pip install coveralls"
+script: 
+   nosetests
+   coverage run --source=pyff manage.py test
 before_install:
    - sudo apt-get update -qq
    - sudo apt-get install -qq python-dev libyaml-dev libxml2-dev libxslt-dev libsofthsm softhsm opensc libengine-pkcs11-openssl
+after_success:
+   coveralls
