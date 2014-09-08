@@ -37,7 +37,7 @@
             <Title>InCommon Metadata</Title>
         </Link>
     </XRD -->
-    <XRD>
+    <!-- XRD>
         <Subject>Skolfederation</Subject>
         <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://meta01.skolfederation.se/skolfederation-2_0.xml">
             <Title>Skolfederation Metadata</Title>
@@ -75,5 +75,5 @@ eb/5QMtDmtGlRI0wxYt7B/Wfaal9/KMRTnYkoA==
                 </ds:X509Data>
           </ds:KeyInfo>
         </Link>
-    </XRD>
+    </XRD -->
 </XRDS>

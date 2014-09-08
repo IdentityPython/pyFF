@@ -1,10 +1,14 @@
 import os
 import tempfile
+
 from mako.lookup import TemplateLookup
-import pkg_resources
+
 from pyff.constants import NS
-from pyff import MDRepository, plumbing
-from pyff.test import SignerTestCase, _p
+from pyff.mdrepo import MDRepository
+from pyff.pipes import plumbing
+from pyff.store import MemoryStore
+from pyff.test import SignerTestCase
+
 
 __author__ = 'leifj'
 
@@ -19,8 +23,8 @@ class SimplePipeLineTest(SignerTestCase):
         self.signer_template = self.templates.get_template('signer.fd')
         self.validator = tempfile.NamedTemporaryFile('w').name
         self.validator_template = self.templates.get_template('validator.fd')
-        self.md_signer = MDRepository()
-        self.md_validator = MDRepository()
+        self.md_signer = MDRepository(store=MemoryStore())
+        self.md_validator = MDRepository(store=MemoryStore())
         with open(self.signer, "w") as fd:
             fd.write(self.signer_template.render(ctx=self))
         with open(self.validator, "w") as fd:
@@ -29,19 +33,19 @@ class SimplePipeLineTest(SignerTestCase):
         self.validator_result = plumbing(self.validator).process(self.md_validator, state={'batch': True, 'stats': {}})
 
     def testEntityIDPresent(self):
-        eIDs = [e.get('entityID') for e in self.md_signer]
+        eIDs = [e.get('entityID') for e in self.md_signer.store]
         assert('https://idp.aco.net/idp/shibboleth' in eIDs)
         assert('https://skriptenforum.net/shibboleth' in eIDs)
 
-        eIDs = [e.get('entityID') for e in self.md_validator]
+        eIDs = [e.get('entityID') for e in self.md_validator.store]
         assert('https://idp.aco.net/idp/shibboleth' in eIDs)
         assert('https://skriptenforum.net/shibboleth' in eIDs)
 
     def testNonZeroOutput(self):
         assert(self.md_signer is not None)
-        assert(len(self.md_signer) == 2)
+        assert(self.md_signer.store.size() == 2)
         assert(self.md_validator is not None)
-        assert(len(self.md_validator) == 1)
+        assert(self.md_validator.store.size() == 2)
         assert(os.path.getsize(self.output) > 0)
 
     def testSelectSingle(self):

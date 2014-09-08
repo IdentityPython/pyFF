@@ -3,9 +3,9 @@
 This module contains various utilities.
 
 """
+from collections import namedtuple
 from datetime import timedelta, datetime
 import tempfile
-import traceback
 import cherrypy
 from mako.lookup import TemplateLookup
 import os
@@ -13,16 +13,24 @@ import pkg_resources
 import re
 from lxml import etree
 from time import gmtime, strftime, clock
-from pyff.logs import log
-import threading
+from .constants import NS
+from .decorators import retry
+from .logs import log
 import httplib2
+import hashlib
 from email.utils import parsedate
+from urlparse import urlparse
+from threading import local
+import iso8601
 
 __author__ = 'leifj'
 
 import i18n
 
 _ = i18n.language.ugettext
+
+sentinel = object()
+thread_data = local()
 
 
 class PyffException(Exception):
@@ -119,18 +127,26 @@ Deep merge of two isomorphically structured dictionaries.
     a.update(b)
 
 
-def tdelta(input):
+def tdelta(td):
     """
 Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours and/or seconds.
 
-:param input: A human-friendly string representation of a timedelta
+:param td: A human-friendly string representation of a timedelta
     """
     keys = ["weeks", "days", "hours", "minutes"]
     regex = "".join(["((?P<%s>\d+)%s ?)?" % (k, k[0]) for k in keys])
     kwargs = {}
-    for k, v in re.match(regex, input).groupdict(default="0").items():
+    for k, v in re.match(regex, td).groupdict(default="0").items():
         kwargs[k] = int(v)
     return timedelta(**kwargs)
+
+
+def totimestamp(dt, epoch=datetime(1970, 1, 1)):
+    epoch = epoch.replace(tzinfo=dt.tzinfo)
+
+    td = dt - epoch
+    ts = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 1e6
+    return int(ts)
 
 
 def dumptree(t, pretty_print=False, xml_declaration=True):
@@ -149,6 +165,10 @@ Current time in ISO format
     return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
 
 
+def iso2datetime(s):
+    return iso8601.parse_date(s)
+
+
 class ResourceResolver(etree.Resolver):
     def resolve(self, system_url, public_id, context):
         """
@@ -165,21 +185,26 @@ class ResourceResolver(etree.Resolver):
             raise ValueError("Unable to locate %s" % fn)
 
 
-_SCHEMA = None
-
-
 def schema():
-    global _SCHEMA
-    if _SCHEMA is None:
+    if not hasattr(thread_data, 'schema'):
+        thread_data.schema = None
+
+    if thread_data.schema is None:
         try:
             parser = etree.XMLParser()
             parser.resolvers.add(ResourceResolver())
             st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
-            _SCHEMA = etree.XMLSchema(st)
+            thread_data.schema = etree.XMLSchema(st)
         except etree.XMLSchemaParseError, ex:
             log.error(_e(ex.error_log))
             raise ex
-    return _SCHEMA
+    return thread_data.schema
+
+
+# @cached(hash_key=lambda *args, **kwargs: hash(args[0]))
+def validate_document(t):
+    schema().assertValid(t)
+    pass
 
 
 def safe_write(fn, data):
@@ -229,82 +254,52 @@ def render_template(name, **kwargs):
     return template(name).render(**kwargs)
 
 
-class URLFetch(threading.Thread):
-    def __init__(self, url, verify, id=None, enable_cache=False, tries=0, post=None):
-        self.url = url.strip()
-        self.verify = verify
-        self.id = id
-        self.result = None
-        self.ex = None
-        self.cached = False
-        self.enable_cache = enable_cache
-        self.cache_ttl = 0
-        self.last_modified = None
-        self.date = None
-        self.tries = 0
-        self.resp = None
-        self.start_time = 0
-        self.end_time = 0
-        self.tries = tries
-        self.post = post
+_Resource = namedtuple("Resource", ["result", "cached", "date", "last_modified", "resp", "time"])
 
-        if self.id is None:
-            self.id = self.url
 
-        threading.Thread.__init__(self)
+def parse_date(s):
+    if s is None:
+        return datetime.now()
+    return datetime(*parsedate(s)[:6])
 
-    def time(self):
-        if self.isAlive():
-            raise ValueError("caller attempted to obtain execution time while fetcher still active")
-        return self.end_time - self.start_time
+@retry((IOError, httplib2.HttpLib2Error))
+def load_url(url, enable_cache=True, timeout=60):
+    start_time = clock()
+    cache = httplib2.FileCache(".cache")
+    headers = dict()
+    if not enable_cache:
+        headers['cache-control'] = 'no-cache'
 
-    def run(self):
+    log.debug("fetching (caching: %s) '%s'" % (enable_cache, url))
 
-        def _parse_date(str):
-            if str is None:
-                return datetime.new()
-            return datetime(*parsedate(str)[:6])
+    if url.startswith('file://'):
+        path = url[7:]
+        if not os.path.exists(path):
+            raise IOError("file not found: %s" % path)
 
-        self.start_time = clock()
-        try:
-            cache = httplib2.FileCache(".cache")
-            headers = dict()
-            if not self.enable_cache:
-                headers['cache-control'] = 'no-cache'
-
-            log.debug("fetching '%s'" % self.url)
-
-            if self.url.startswith('file://'):
-                path = self.url[7:]
-                if not os.path.exists(path):
-                    raise IOError("file not found: %s" % path)
-
-                with open(path, 'r') as fd:
-                    self.result = fd.read()
-                    self.cached = False
-                    self.date = datetime.now()
-                    self.last_modified = datetime.fromtimestamp(os.stat(path).st_mtime)
-            else:
-                h = httplib2.Http(cache=cache,
-                                  timeout=60,
-                                  disable_ssl_certificate_validation=True)  # trust is done using signatures over here
-                resp, content = h.request(self.url, headers=headers)
-                self.resp = resp
-                self.last_modified = _parse_date(resp.get('last-modified', resp.get('date', None)))
-                self.date = _parse_date(resp['date'])
-                if resp.status != 200:
-                    raise IOError(resp.reason)
-                self.result = content
-                self.cached = resp.fromcache
-
-            log.debug("got %d bytes from '%s'" % (len(self.result), self.url))
-        except Exception, ex:
-            #traceback.print_exc()
-            #log.warn("unable to fetch '%s': %s" % (self.url, ex))
-            self.ex = ex
-            self.result = None
-        finally:
-            self.end_time = clock()
+        with open(path, 'r') as fd:
+            return _Resource(result=fd.read(),
+                             cached=False,
+                             date=datetime.now(),
+                             resp=None,
+                             time=clock() - start_time,
+                             last_modified=datetime.fromtimestamp(os.stat(path).st_mtime))
+    else:
+        h = httplib2.Http(cache=cache,
+                          timeout=timeout,
+                          disable_ssl_certificate_validation=True)  # trust is done using signatures over here
+        resp, content = h.request(url, headers=headers)
+        if resp.status != 200:
+            raise IOError(resp.reason)
+        log.debug("last-modified header: %s" % resp.get('last-modified'))
+        log.debug("date header: %s" % resp.get('date'))
+        log.debug("last modified: %s" % resp.get('date', resp.get('last-modified', None)))
+        return _Resource(result=content,
+                         cached=resp.fromcache,
+                         date=parse_date(resp['date']),
+                         resp=resp,
+                         time=clock() - start_time,
+                         last_modified=parse_date(resp.get('date', resp.get('last-modified', None))))
 
 
 def root(t):
@@ -341,7 +336,7 @@ def filter_lang(elts, langs=["en"]):
     def _l(elt):
         return elt.get("{http://www.w3.org/XML/1998/namespace}lang", None) in langs
 
-    if elts is None or len(elts) == 0:
+    if elts is None:
         return []
 
     lst = filter(_l, elts)
@@ -350,16 +345,18 @@ def filter_lang(elts, langs=["en"]):
     else:
         return elts
 
-_xslt = dict()
-
 
 def xslt_transform(t, stylesheet, params={}):
+    if not hasattr(thread_data, 'xslt'):
+        thread_data.xslt = dict()
+
     transform = None
-    if not stylesheet in _xslt:
+    if not stylesheet in thread_data.xslt:
         xsl = etree.fromstring(resource_string(stylesheet, "xslt"))
-        _xslt[stylesheet] = etree.XSLT(xsl)
-    transform = _xslt[stylesheet]
-    return transform(t, **params)
+        thread_data.xslt[stylesheet] = etree.XSLT(xsl)
+    transform = thread_data.xslt[stylesheet]
+    res = transform(t, **params)
+    return res
 
 
 def total_seconds(dt):
@@ -367,3 +364,164 @@ def total_seconds(dt):
         return dt.total_seconds()
     else:
         return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
+
+
+def etag(s):
+    return hash_str('sha1', s)
+
+
+def hash_str(hn, s):
+    if hn == 'null':
+        return s
+    if not hasattr(hashlib, hn):
+        raise ValueError("Unknown digest mechanism: '%s'" % hn)
+    hash_m = getattr(hashlib, hn)
+    h = hash_m()
+    h.update(s)
+    return h.hexdigest()
+
+
+def hash_id(entity, hn='sha1', prefix=True):
+    entity_id = entity
+    if hasattr(entity, 'get'):
+        entity_id = entity.get('entityID')
+
+    hstr = hex_digest(entity_id, hn)
+    if prefix:
+        return "{%s}%s" % (hn, hstr)
+    else:
+        return hstr
+
+
+def hex_digest(data, hn='sha1'):
+    if hn == 'null':
+        return data
+
+    if not hasattr(hashlib, hn):
+        raise ValueError("Unknown digest '%s'" % hn)
+
+    m = getattr(hashlib, hn)()
+    m.update(data)
+    return m.hexdigest()
+
+
+def parse_xml(io, base_url=None):
+    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
+
+
+class EntitySet(object):
+    def __init__(self, initial=None):
+        self._e = dict()
+        if initial is not None:
+            for e in initial:
+                self.add(e)
+
+    def add(self, value):
+        self._e[value.get('entityID')] = value
+
+    def discard(self, value):
+        entity_id = value.get('entityID')
+        if entity_id in self._e:
+            del self._e[entity_id]
+
+    def __iter__(self):
+        for e in self._e.values():
+            yield e
+
+    def __len__(self):
+        return len(self._e.keys())
+
+    def __contains__(self, item):
+        return item.get('entityID') in self._e.keys()
+
+
+class MetadataException(Exception):
+    pass
+
+
+class MetadataExpiredException(MetadataException):
+    pass
+
+
+def find_merge_strategy(strategy_name):
+    if not '.' in strategy_name:
+        strategy_name = "pyff.merge_strategies.%s" % strategy_name
+    (mn, sep, fn) = strategy_name.rpartition('.')
+    # log.debug("import %s from %s" % (fn,mn))
+    module = None
+    if '.' in mn:
+        (pn, sep, modn) = mn.rpartition('.')
+        module = getattr(__import__(pn, globals(), locals(), [modn], -1), modn)
+    else:
+        module = __import__(mn, globals(), locals(), [], -1)
+    strategy = getattr(module, fn)  # we might aswell let this fail early if the strategy is wrongly named
+
+    if strategy is None:
+        raise MetadataException("Unable to find merge strategy %s" % strategy_name)
+
+    return strategy
+
+
+def entities_list(t=None):
+    """
+        :param t: An EntitiesDescriptor or EntityDescriptor element
+
+        Returns the list of contained EntityDescriptor elements
+        """
+    if t is None:
+        return []
+    elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
+        return [root(t)]
+    else:
+        return iter_entities(t)
+
+
+def iter_entities(t):
+    return t.iter('{%s}EntityDescriptor' % NS['md'])
+
+
+def has_tag(t, tag):
+    tags = t.iter(tag)
+    return next(tags, sentinel) is not sentinel
+
+
+def url2host(url):
+    try:
+        (host, sep, port) = urlparse(url).netloc.partition(':')
+        return host
+    except ValueError:
+        return None
+
+
+def subdomains(domain):
+    domains = []
+    dsplit = domain.split('.')
+    for i in range(1, len(dsplit) - 1):
+        domains.append(".".join(dsplit[i:]))
+    return domains
+
+
+def ddist(a, b):
+    if len(a) > len(b):
+        return ddist(b, a)
+
+    a = a.split('.')
+    b = b.split('.')
+
+    d = [x[0] == x[1] for x in zip(a[::-1], b[::-1])]
+    if False in d:
+        return d.index(False)
+    return len(a)
+
+
+def avg_domain_distance(d1, d2):
+    dd = 0
+    n = 0
+    for a in d1.split(';'):
+        for b in d2.split(';'):
+            d = ddist(a, b)
+            if log.isDebugEnabled():
+                log.debug("ddist %s %s -> %d" % (a, b, d))
+            dd += d
+            n += 1
+    return int(dd / n)

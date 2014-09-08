@@ -22,6 +22,7 @@
         $('#reset').click(function(ev) {
             $.jStorage.set('pyff.discovery.idps',[]);
             $.jStorage.set('pyff.discovery.idp',undefined);
+            $.jStorage.set('pyff.discovery.allow_confirm',true);
             $.jStorage.set('pyff.discovery.messages',{});
             $("#messages").append($("<div></div>").addClass("alert").append("Settings cleared!"));
             $("#reset").hide();
@@ -48,7 +49,7 @@
                 <h1>${_('Ready to Clear your Settings?')}</h1>
             </div>
             <p>
-                ${_('The identity provider chooser allows you to save certain settings, such as your last visited identity providers. This is done to make your login experience as seemless as possible. However you may need to reset these settings, perhaps to disable your pre-selected identity provider(s).')}
+                ${_('The login provider chooser allows you to save certain settings, such as your last visited login providers. This is done to make your login experience as seemless as possible. However you may need to reset these settings, perhaps to disable your pre-selected login provider(s).')}
             </p>
             <p>
                 ${_('Read more about how')} <a href="/settings">${_('these settings are stored')}</a>.

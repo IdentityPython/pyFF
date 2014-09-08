@@ -23,6 +23,9 @@ class PyFFLogger():
     def warn(self, msg):
         return self._l(logging.WARN, msg)
 
+    def warning(self, msg):
+        return self._l(logging.WARN, msg)
+
     def info(self, msg):
         return self._l(logging.INFO, msg)
 

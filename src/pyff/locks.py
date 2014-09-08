@@ -1,4 +1,4 @@
-## {{{ http://code.activestate.com/recipes/502283/ (r1)
+# source http://code.activestate.com/recipes/502283/ (r1)
 # -*- coding: iso-8859-15 -*-
 """locks.py - Read-Write lock thread lock implementation
 
@@ -239,5 +239,3 @@ class ReadWriteLock(object):
                 raise ValueError("Trying to release unheld lock")
         finally:
             self.__condition.release()
-
-## end of http://code.activestate.com/recipes/502283/ }}}

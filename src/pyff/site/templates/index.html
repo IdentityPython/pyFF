@@ -2,7 +2,7 @@
     <div class="page-header"><h1>${title}</h1></div>
     % if alias:
         <ul>
-            % for v in md.index.attribute(aliases[alias]):
+            % for v in md.store.attribute(aliases[alias]):
             <li><a href="/${alias}/${v|u}.html">${v}</a>
                 <a href="/${alias}/${v|u}.xml" title="XML Metadata"><i class="icon-cog"></i></a></li>
             % endfor
@@ -10,9 +10,9 @@
     % else:
         <dl class="dl-horizontal">
         % for a in aliases:
-            % if md.index.attribute(aliases[a]):
+            % if md.store.attribute(aliases[a]):
             <dt>${a}</dt>
-            % for v in md.index.attribute(aliases[a]):
+            % for v in md.store.attribute(aliases[a]):
             <dd><a href="/${a}/${v|u}.html">${v}</a>
                 <a href="/${a}/${v|u}.xml" title="XML Metadata"><i class="icon-cog"></i></a></dd>
             % endfor

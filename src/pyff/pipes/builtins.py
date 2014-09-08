@@ -5,8 +5,9 @@ import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
 from pyff.decorators import deprecated
-from pyff.utils import total_seconds, dumptree, schema, safe_write, root, duration2timedelta, xslt_transform
-from pyff.mdrepo import NS
+from pyff.utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
+    iter_entities, validate_document
+from pyff.constants import NS
 from pyff.pipes import Plumbing, PipeException
 from copy import deepcopy
 import sys
@@ -245,9 +246,9 @@ the request state.
 The condition operates on the state: if 'foo' is present in the state (with any value), then the something branch is
 followed. If 'bar' is present in the state with the value 'bill' then the other branch is followed.
     """
-    log.debug("condition key: %s" % repr(condition))
+    #log.debug("condition key: %s" % repr(condition))
     c = req.state.get(condition, None)
-    log.debug("condition %s" % repr(c))
+    #log.debug("condition %s" % repr(c))
     if c is not None:
         if not values or _any(values, c):
             return Plumbing(pipeline=req.args, id="%s.when" % req.plumbing.id)._process(req)
@@ -266,7 +267,7 @@ Dumps the working document on stdout. Useful for testing.
     if req.t is None:
         raise PipeException("Your plumbing is missing a select statement.")
 
-    for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS):
+    for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS, smart_strings=False):
         print e.get('entityID')
     return req.t
 
@@ -292,7 +293,7 @@ Publish the working document in XML form.
         raise PipeException("Empty document submitted for publication")
 
     try:
-        schema().assertValid(req.t)
+        validate_document(req.t)
     except DocumentInvalid, ex:
         log.error(ex.error_log)
         raise PipeException("XML schema validation failed")
@@ -317,7 +318,7 @@ Publish the working document in XML form.
         if os.path.isdir(output_file):
             out = "%s.xml" % os.path.join(output_file, req.id)
         safe_write(out, dumptree(req.t))
-        req.md[resource_name] = req.t
+        req.md.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
 
 @deprecated
@@ -344,16 +345,15 @@ def load(req, *opts):
 General-purpose resource fetcher.
 
     :param opts:
-:param req: The request
-:param opts: Options: [qsize <5>] [timeout <30>] [validate <True*|False>] [xrd <output xrd file>]
-:return: None
+    :param req: The request
+    :param opts: Options: [qsize <5>] [timeout <30>] [validate <True*|False>] [xrd <output xrd file>]
+    :return: None
 
 Supports both remote and local resources. Fetching remote resources is done in parallell using threads.
     """
     opts = dict(zip(opts[::2], opts[1::2]))
-    opts.setdefault('timeout', 30)
-    opts.setdefault('qsize', 5)
-    opts.setdefault('xrd', None)
+    opts.setdefault('timeout', 120)
+    opts.setdefault('max_workers', 5)
     opts.setdefault('validate', True)
     stats = dict()
     opts.setdefault('stats', stats)
@@ -405,7 +405,7 @@ A delayed pipeline callback used as a post for parse_metadata
         post = None
         if params['via'] is not None:
             post = PipelineCallback(params['via'], req, stats)
-        print post
+
         if "://" in url:
             log.debug("load %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
             remote.append((url, params['verify'], params['as'], post))
@@ -421,10 +421,9 @@ A delayed pipeline callback used as a post for parse_metadata
         else:
             log.error("Don't know how to load '%s' as %s verify %s via %s" %
                       (url, params['as'], params['verify'], params['via']))
-    print remote
+
     req.md.fetch_metadata(remote, **opts)
     req.state['stats']['Metadata URLs'] = stats
-
 
 def select(req, *opts):
     """
@@ -489,12 +488,15 @@ Note that you should not include an extension in your "as foo-bla-something" sin
 alias invisible for anything except the corresponding mime type.
     """
     args = req.args
+    if log.isDebugEnabled():
+        log.debug("selecting using args: %s" % args)
+    if args is None and 'select' in req.state:
+        args = [req.state.get('select')]
     if args is None:
-        args = [req.state.get('select', None)]
-    if args is None:
-        args = req.md.keys()
-    if args is None:
+        args = req.md.store.collections()
+    if args is None or not args:
         args = []
+
     name = req.plumbing.id
     alias = False
     if len(opts) > 0:
@@ -527,7 +529,7 @@ Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information a
     """
     args = req.args
     if args is None:
-        args = req.md.keys()
+        args = req.md.store.collections()
     ot = req.md.entity_set(args, req.plumbing.id, validate=False)
     if ot is None:
         raise PipeException("empty select '%s' - stop" % ",".join(args))
@@ -545,11 +547,18 @@ If the working document is a single EntityDescriptor, strip the outer EntitiesDe
 Sometimes (eg when running an MDX pipeline) it is usually expected that if a single EntityDescriptor is being returned
 then the outer EntitiesDescriptor is stripped. This method does exactly that:
     """
-    nent = len(req.t.findall("//{%s}EntityDescriptor" % NS['md']))
-    if nent == 1:
-        return req.t.find("//{%s}EntityDescriptor" % NS['md'])
-    else:
-        return req.t
+    gone = object()  # sentinel
+    entities = iter_entities(req.t)
+    one = next(entities, gone)
+    if one is gone:
+        return req.t  # empty tree - return it as is
+
+    two = next(entities, gone)  # one EntityDescriptor in tree - return just that one
+    if two is gone:
+        return one
+
+    return req.t
+
 
 
 def sign(req, *opts):
@@ -612,9 +621,10 @@ This example signs the document using the plain key and cert found in the signer
         log.info("Attempting to extract certificate from token...")
 
     opts = dict()
-    re = root(req.t)
-    if re.get('ID'):
-        opts['reference_uri'] = "#%s" % re.get('ID')
+    relt = root(req.t)
+    idattr = relt.get('ID')
+    if idattr:
+        opts['reference_uri'] = "#%s" % idattr
     xmlsec.sign(req.t, key_file, cert_file, **opts)
 
     return req.t
@@ -636,7 +646,7 @@ Display statistics about the current working document.
 
     """
     print "---"
-    print "total size:     %d" % len(req.md.keys())
+    print "total size:     %d" % req.md.store.size()
     if not hasattr(req.t, 'xpath'):
         raise PipeException("Unable to call stats on non-XML")
 
@@ -675,7 +685,7 @@ before you call store.
             os.makedirs(target_dir)
         if req.t is None:
             raise PipeException("Your plumbing is missing a select statement.")
-        for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS):
+        for e in iter_entities(req.t):
             eid = e.get('entityID')
             if eid is None or len(eid) == 0:
                 raise PipeException("Missing entityID in %s" % e)
@@ -736,7 +746,7 @@ Generate an exception unless the working tree validates. Validation is done auto
 loading of metadata so this call is seldom needed.
     """
     if req.t is not None:
-        schema().assertValid(req.t)
+        validate_document(req.t)
 
     return req.t
 
@@ -783,8 +793,8 @@ HTML.
     warning_bits = int(req.args.get('warning_bits', "2048"))
 
     seen = {}
-    for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS):
-        for cd in req.t.xpath("md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid, namespaces=NS):
+    for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS, smart_strings=False):
+        for cd in req.t.xpath("md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid, namespaces=NS, smart_strings=False):
             try:
                 cert_pem = cd.text
                 cert_der = base64.b64decode(cert_pem)
@@ -845,17 +855,15 @@ Content-Type HTTP response header.
     """
 
     d = req.t
-    #log.debug("before getroot (%s) %s" % (type(d), repr(d)))
     if hasattr(d, 'getroot') and hasattr(d.getroot, '__call__'):
         nd = d.getroot()
         if nd is None:
             d = str(d)
         else:
             d = nd
-    #log.debug("after getroot (%s) %s" % (type(d), repr(d)))
+
     if hasattr(d, 'tag'):
         d = dumptree(d)
-    #log.debug("after dumptree (%s) %s" % (type(d), repr(d)))
 
     if d is not None:
         m = hashlib.sha1()
@@ -939,32 +947,36 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
 
     now = datetime.utcnow()
 
-    IDprefix = req.args.get('ID', '_')
+    idprefix = req.args.get('ID', '_')
     if not e.get('ID'):
-        e.set('ID', now.strftime(IDprefix + "%Y%m%dT%H%M%SZ"))
+        e.set('ID', now.strftime(idprefix + "%Y%m%dT%H%M%SZ"))
 
-    validUntil = str(req.args.get('validUntil', e.get('validUntil', None)))
-    if validUntil is not None and len(validUntil) > 0:
-        offset = duration2timedelta(validUntil)
+    valid_until = str(req.args.get('validUntil', e.get('validUntil', None)))
+    if valid_until is not None and len(valid_until) > 0:
+        offset = duration2timedelta(valid_until)
         if offset is not None:
             dt = now + offset
             e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
-        elif validUntil is not None:
-            dt = iso8601.parse_date(validUntil)
-            dt = dt.replace(tzinfo=None) # make dt "naive" (tz-unaware)
-            offset = dt - now
-            e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+        elif valid_until is not None:
+            try:
+                dt = iso8601.parse_date(valid_until)
+                dt = dt.replace(tzinfo=None) # make dt "naive" (tz-unaware)
+                offset = dt - now
+                e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+            except ValueError, ex:
+                log.error("Unable to parse validUntil: %s" % valid_until)
+
             # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set
         req.state['cache'] = int(total_seconds(offset) / 50)
 
-    cacheDuration = req.args.get('cacheDuration', e.get('cacheDuration', None))
-    if cacheDuration is not None and len(cacheDuration) > 0:
-        offset = duration2timedelta(cacheDuration)
+    cache_duration = req.args.get('cacheDuration', e.get('cacheDuration', None))
+    if cache_duration is not None and len(cache_duration) > 0:
+        offset = duration2timedelta(cache_duration)
         if offset is None:
-            raise PipeException("Unable to parse %s as xs:duration" % cacheDuration)
+            raise PipeException("Unable to parse %s as xs:duration" % cache_duration)
 
-        e.set('cacheDuration', cacheDuration)
+        e.set('cacheDuration', cache_duration)
         req.state['cache'] = int(total_seconds(offset))
 
     return req.t
@@ -993,6 +1005,6 @@ elements of the active document.
 Normally this would be combined with the 'merge' feature of fork to add attributes to the working
 document for later processing.
     """
-    for e in req.t.findall(".//{%s}EntityDescriptor" % NS['md']):
+    for e in iter_entities(req.t):
         #log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         req.md.set_entity_attributes(e, req.args)

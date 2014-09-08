@@ -1,3 +1,5 @@
+redis
+mako
 ipaddr
 publicsuffix
 lxml
@@ -6,3 +8,6 @@ sphinx-pypi-upload
 sphinx
 nose
 babel
+httplib2
+futures
+iso8601

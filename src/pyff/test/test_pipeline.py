@@ -1,7 +1,9 @@
 import os
 import tempfile
 from mako.lookup import TemplateLookup
-from pyff import MDRepository, plumbing
+from pyff.mdrepo import MDRepository
+from pyff.pipes import plumbing
+from pyff.store import MemoryStore
 from pyff.test import SignerTestCase
 
 __author__ = 'leifj'
@@ -9,7 +11,7 @@ __author__ = 'leifj'
 
 class PipeLineTest(SignerTestCase):
 
-    def run_pipeline(self, pl_name, ctx=dict(), md=MDRepository()):
+    def run_pipeline(self, pl_name, ctx=dict(), md=MDRepository(store=MemoryStore())):
         pipeline = tempfile.NamedTemporaryFile('w').name
         template = self.templates.get_template(pl_name)
         with open(pipeline, "w") as fd:
@@ -28,7 +30,7 @@ class SigningTest(PipeLineTest):
     def testSigning(self):
         self.output = tempfile.NamedTemporaryFile('w').name
         res, md, ctx = self.run_pipeline("signer.fd", self)
-        eIDs = [e.get('entityID') for e in md]
+        eIDs = [e.get('entityID') for e in md.store]
         assert('https://idp.aco.net/idp/shibboleth' in eIDs)
         assert('https://skriptenforum.net/shibboleth' in eIDs)
         os.unlink(self.output)
@@ -38,7 +40,7 @@ class SigningTest(PipeLineTest):
         res_s, md_s, ctx_s = self.run_pipeline("signer.fd", self)
         res_v, md_v, ctx_v = self.run_pipeline("validator.fd", self)
 
-        eIDs = [e.get('entityID') for e in md_v]
+        eIDs = [e.get('entityID') for e in md_v.store]
         assert('https://idp.aco.net/idp/shibboleth' in eIDs)
         assert('https://skriptenforum.net/shibboleth' in eIDs)
         os.unlink(self.output)
@@ -46,7 +48,7 @@ class SigningTest(PipeLineTest):
     def testCertReport(self):
         self.output = tempfile.NamedTemporaryFile('w').name
         res, md, ctx = self.run_pipeline("certreport.fd", self)
-        eIDs = [e.get('entityID') for e in md]
+        eIDs = [e.get('entityID') for e in md.store]
         assert('https://idp.aco.net/idp/shibboleth' in eIDs)
         assert('https://skriptenforum.net/shibboleth' in eIDs)
         with open(self.output, 'r') as fd:
