@@ -588,7 +588,7 @@ and verified.
                 except Exception, ex:
                     print traceback.format_exc()
                     log.error(ex)
-                    return None
+                    return None, None
 
             # get rid of ID as early as possible - probably not unique
             for e in iter_entities(t):
@@ -621,7 +621,7 @@ and verified.
             log.error(ex)
             if fail_on_error:
                 raise ex
-            return None
+            return None, None
 
         if log.isDebugEnabled():
             log.debug("returning %d valid entities" % len(list(iter_entities(t))))
