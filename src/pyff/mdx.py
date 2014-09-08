@@ -87,8 +87,6 @@ site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 cherrypy.tools.staticdirs = HandlerTool(_staticdirs)
 
 
-
-
 class MDUpdate(Monitor):
     def __init__(self, bus, frequency=600, server=None):
         self.lock = Lock()
@@ -158,7 +156,7 @@ class EncodingDispatcher(object):
         self.next_dispatcher = next_dispatcher
 
     def dispatch(self, path_info):
-        #log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
+        # log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
         vpath = path_info.replace("%2F", "/")
         for prefix in self.prefixes:
             if vpath.startswith(prefix):
@@ -274,6 +272,7 @@ class MDRoot(object):
 
     try:
         import dowser
+
         memory = dowser.Root()
     except ImportError:
         memory = NotImplementedFunction('Memory profiling needs dowser')
@@ -393,6 +392,7 @@ Search the active set for matching entities.
             kwargs['path'] = "/" + "/".join(args)
             return self.server.request(**kwargs)
 
+
 class MDServer(object):
     """The MDServer class is the business logic of pyFF. This class is isolated from the request-decoding logic
     of MDRoot and from the ancilliary classes like MDStats and WellKnown.
@@ -405,9 +405,12 @@ class MDServer(object):
                  aliases=ATTRS,
                  cache_enabled=True,
                  hosts_dir=None,
-                 observers=[],
+                 observers=None,
                  store=None):
-        if pipes is None:
+
+        if not observers:
+            observers = []
+        if not pipes:
             pipes = []
         self.cache_enabled = cache_enabled
         self.lock = ReadWriteLock()
@@ -566,7 +569,7 @@ class MDServer(object):
                                                       page_limit=int(page_limit),
                                                       entity_filter=entity_filter,
                                                       related=related)
-                    #log.debug(dumps({'entities': res, 'more': more, 'total': total}))
+                    # log.debug(dumps({'entities': res, 'more': more, 'total': total}))
                     return dumps({'entities': res, 'more': more, 'total': total})
                 else:
                     return dumps(self.md.search(query,
@@ -712,7 +715,7 @@ def main():
         print __doc__
         sys.exit(3)
 
-    #cherrypy.server.httpserver = CPHTTPServer(cherrypy.server)
+    # cherrypy.server.httpserver = CPHTTPServer(cherrypy.server)
 
     engine = cherrypy.engine
     plugins = cherrypy.process.plugins
@@ -770,10 +773,10 @@ def main():
             'tools.caching.on': caching,
             'tools.caching.debug': caching,
             'tools.trailing_slash.on': True,
-            'tools.caching.maxobj_size': 1000000000000, # effectively infinite
+            'tools.caching.maxobj_size': 1000000000000,  # effectively infinite
             'tools.caching.maxsize': 1000000000000,
             'tools.caching.antistampede_timeout': 30,
-            'tools.caching.delay': 3600, # this is how long we keep static stuff
+            'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
             'tools.proxy.on': proxy,
             'error_page.404': lambda **kwargs: error_page(404, _=_, **kwargs),
