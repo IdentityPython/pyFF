@@ -131,7 +131,8 @@ active document. To avoid this do a select before your fork, thus:
     if req.t is not None:
         nt = deepcopy(req.t)
 
-    ip = Plumbing(pipeline=req.args, id="%s.fork" % req.plumbing.id)
+    ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
+    #ip.process(req.md,t=nt)
     ireq = Plumbing.Request(ip, req.md, nt)
     ip._process(ireq)
 
@@ -216,7 +217,8 @@ is equivalent to
     - two
 
     """
-    ot = Plumbing(pipeline=req.args, id="%s.pipe" % req.plumbing.id)._process(req)
+    #req.process(Plumbing(pipeline=req.args, pid="%s.pipe" % req.plumbing.pid))
+    ot = Plumbing(pipeline=req.args, pid="%s.pipe" % req.plumbing.id)._process(req)
     req.done = False
     return ot
 
@@ -251,7 +253,7 @@ followed. If 'bar' is present in the state with the value 'bill' then the other 
     #log.debug("condition %s" % repr(c))
     if c is not None:
         if not values or _any(values, c):
-            return Plumbing(pipeline=req.args, id="%s.when" % req.plumbing.id)._process(req)
+            return Plumbing(pipeline=req.args, pid="%s.when" % req.plumbing.id)._process(req)
     return req.t
 
 
@@ -364,7 +366,7 @@ Supports both remote and local resources. Fetching remote resources is done in p
         log.debug("load parsing '%s'" % x)
         r = x.split()
 
-        assert len(r) in range(1, 7), PipeException("Usage: load: resource [as url] [[verify] verification] [via pipeline]")
+        assert len(r) in range(1, 7), PipeException("Usage: load resource [as url] [[verify] verification] [via pipeline]")
 
         url = r.pop(0)
         params = dict()
@@ -375,7 +377,7 @@ Supports both remote and local resources. Fetching remote resources is done in p
                 if len(r) > 0:
                     params[elt] = r.pop(0)
                 else:
-                    raise PipeException("Usage: load: resource [as url] [[verify] verification] [via pipeline]")
+                    raise PipeException("Usage: load resource [as url] [[verify] verification] [via pipeline]")
             else:
                 params['verify'] = elt
 
@@ -773,8 +775,12 @@ HTML.
     warning_bits = int(req.args.get('warning_bits', "2048"))
 
     seen = {}
-    for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS, smart_strings=False):
-        for cd in req.t.xpath("md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid, namespaces=NS, smart_strings=False):
+    for eid in req.t.xpath("//md:EntityDescriptor/@entityID",
+                           namespaces=NS,
+                           smart_strings=False):
+        for cd in req.t.xpath("md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid,
+                              namespaces=NS,
+                              smart_strings=False):
             try:
                 cert_pem = cd.text
                 cert_der = base64.b64decode(cert_pem)
@@ -785,28 +791,40 @@ HTML.
                     seen[fp] = True
                     cdict = xmlsec.utils.b642cert(cert_pem)
                     keysize = cdict['modulus'].bit_length()
+                    cert = cdict['cert']
                     if keysize < error_bits:
                         e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e, "certificate-error", "keysize too small",
-                                        "%s has keysize of %s bits (less than %s)" % (cert.getSubject(), keysize, error_bits))
+                        req.md.annotate(e,
+                                        "certificate-error",
+                                        "keysize too small",
+                                        "%s has keysize of %s bits (less than %s)" % (cert.getSubject(),
+                                                                                      keysize,
+                                                                                      error_bits))
                         log.error("%s has keysize of %s" % (eid, keysize))
                     elif keysize < warning_bits:
                         e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e, "certificate-warning", "keysize small",
-                                        "%s has keysize of %s bits (less than %s)" % (cert.getSubject(), keysize, warning_bits))
+                        req.md.annotate(e,
+                                        "certificate-warning",
+                                        "keysize small",
+                                        "%s has keysize of %s bits (less than %s)" % (cert.getSubject(),
+                                                                                      keysize,
+                                                                                      warning_bits))
                         log.warn("%s has keysize of %s" % (eid, keysize))
-                    cert = cdict['cert']
                     et = datetime.strptime("%s" % cert.getNotAfter(), "%y%m%d%H%M%SZ")
                     now = datetime.now()
                     dt = et - now
                     if total_seconds(dt) < error_seconds:
                         e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e, "certificate-error", "certificate has expired",
+                        req.md.annotate(e,
+                                        "certificate-error",
+                                        "certificate has expired",
                                         "%s expired %s ago" % (cert.getSubject(), -dt))
                         log.error("%s expired %s ago" % (eid, -dt))
                     elif total_seconds(dt) < warning_seconds:
                         e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e, "certificate-warning", "certificate about to expire",
+                        req.md.annotate(e,
+                                        "certificate-warning",
+                                        "certificate about to expire",
                                         "%s expires in %s" % (cert.getSubject(), dt))
                         log.warn("%s expires in %s" % (eid, dt))
             except Exception, ex:
@@ -888,7 +906,8 @@ Prepares the working document for publication/rendering.
 :return: returns the working document with @Name, @cacheDuration and @validUntil set
 
 Set Name, ID, cacheDuration and validUntil on the toplevel EntitiesDescriptor element of the working document. Unless
-explicit provided the @Name is set from the request URI if the pipeline is executed in the pyFF server. The @ID is set to a string representing the current date/time and will be prefixed with the string provided, which defaults to '_'. The
+explicit provided the @Name is set from the request URI if the pipeline is executed in the pyFF server. The @ID is set
+to a string representing the current date/time and will be prefixed with the string provided, which defaults to '_'. The
 @cacheDuration element must be a valid xsd duration (eg PT5H for 5 hrs) and @validUntil can be either an absolute
 ISO 8601 time string or (more comonly) a relative time on the form
 
@@ -962,7 +981,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
     return req.t
 
 
-def setattr(req, *opts):
+def _setattr(req, *opts):
     """
 Sets entity attributes on the working document
 
