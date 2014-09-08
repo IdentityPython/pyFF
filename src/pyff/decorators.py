@@ -10,15 +10,15 @@ import time
 from pyff.logs import log
 
 
-def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=log):
+def retry(ex, tries=4, delay=3, backoff=2, logger=log):
     """Retry calling the decorated function using exponential backoff based on
 
     * http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
     * http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
 
-    :param ExceptionToCheck: the exception to check. may be a tuple of
+    :param ex: the exception to check. may be a tuple of
         excpetions to check
-    :type ExceptionToCheck: Exception or tuple
+    :type ex: Exception or tuple
     :param tries: number of times to try (not retry) before giving up
     :type tries: int
     :param delay: initial delay between retries in seconds
@@ -37,7 +37,7 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=log):
             while mtries > 1:
                 try:
                     return f(*args, **kwargs)
-                except ExceptionToCheck, e:
+                except ex, e:
                     msg = "%s, Retrying in %d seconds..." % (str(e), mdelay)
                     if log:
                         log.warn(msg)
