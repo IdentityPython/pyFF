@@ -100,6 +100,7 @@ class MDRepository(Observable):
                 self.store = store
         else:
             from .store import MemoryStore
+
             self.store = MemoryStore()
         super(MDRepository, self).__init__()
 
@@ -606,7 +607,7 @@ and verified.
                 if filter_invalid:
                     xsd = schema()
                     for e in iter_entities(t):
-                        #log.debug("validating %s" % e.get("entityID"))
+                        # log.debug("validating %s" % e.get("entityID"))
                         if not xsd.validate(e):
                             error = _e(xsd.error_log, m=base_url)
                             entity_id = e.get("entityID")
@@ -630,7 +631,7 @@ and verified.
         if log.isDebugEnabled():
             log.debug("returning %d valid entities" % len(list(iter_entities(t))))
 
-        return t,valid_until
+        return t, valid_until
 
     def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None):
         """
@@ -741,7 +742,7 @@ fails an empty list is returned.
 Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
         """
 
-        #if log.isDebugEnabled():
+        # if log.isDebugEnabled():
         #    log.debug("entities: %s" % entities)
 
         def _a(ent):
