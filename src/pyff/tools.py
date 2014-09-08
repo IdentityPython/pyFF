@@ -16,7 +16,7 @@ def _expandvhost(dirn, request):
         return dirn
 
 
-def _staticdirs(section, directory, roots=[], match="", content_types=None, index="", debug=False):
+def _staticdirs(section, directory, roots=None, match="", content_types=None, index="", debug=False):
     """Serve a static resource from the given (root(s) +) dir - trying one in turn
     until an existing file is found.
 
@@ -36,6 +36,9 @@ def _staticdirs(section, directory, roots=[], match="", content_types=None, inde
         '/home/me', the Request-URI is 'myapp', and the index arg is
         'index.html', the file '/home/me/myapp/index.html' will be sought.
     """
+    if not roots:
+        roots = []
+
     if debug:
         cherrypy.log("dir=%s, roots=%s" % (repr(directory), repr(roots)))
     request = cherrypy.serving.request

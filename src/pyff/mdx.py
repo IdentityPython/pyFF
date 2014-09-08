@@ -79,15 +79,14 @@ from lxml import etree
 from pyff import __version__ as pyff_version
 from pyff.store import MemoryStore, RedisStore
 from publicsuffix import PublicSuffixList
+import i18n
 
-__author__ = 'leifj'
+_ = i18n.language.ugettext
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 cherrypy.tools.staticdirs = HandlerTool(_staticdirs)
 
-import i18n
 
-_ = i18n.language.ugettext
 
 
 class MDUpdate(Monitor):
@@ -468,7 +467,7 @@ class MDServer(object):
                 x = x[8:].decode('base64')
 
             if do_split and '.' in x:
-                (pth, _, extn) = x.rpartition('.')
+                (pth, x, extn) = x.rpartition('.')
                 if extn in _ctypes:
                     return pth, extn
 
@@ -554,7 +553,7 @@ class MDServer(object):
                         url = urlparse.urlparse(referrer)
                         host = url.netloc
                         if ':' in url.netloc:
-                            (host, _) = url.netloc.split(':')
+                            (host, port) = url.netloc.split(':')
                         for host_part in host.rstrip(self.psl.get_public_suffix(host)).split('.'):
                             if host_part is not None and len(host_part) > 0:
                                 query.append(host_part)
@@ -695,7 +694,7 @@ def main():
             elif o in '--email':
                 email = a
             elif o in ('-A', '--alias'):
-                (a, _, uri) = a.lpartition(':')
+                (a, x, uri) = a.lpartition(':')
                 if a and uri:
                     aliases[a] = uri
             elif o in '--dir':
