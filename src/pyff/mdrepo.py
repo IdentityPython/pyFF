@@ -416,7 +416,7 @@ The dict in the list contains three items:
 
         return None
 
-    def fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, validate=False):
+    def fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, max_tries=5, validate=False):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id, post-callback)
@@ -441,13 +441,17 @@ and verified.
                                     max_workers=max_workers,
                                     stats=stats,
                                     timeout=timeout,
+                                    max_tries=max_tries,
                                     validate=validate)
 
-    def _fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, validate=False):
+    def _fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, max_tries=5, validate=False):
         if stats is None:
             stats = dict()
+        tries = dict()
 
         def _process_url(rurl, verifier, tid, post, enable_cache=True):
+            tries.setdefault(rurl, 0)
+
             resource = load_url(rurl, timeout=timeout, enable_cache=enable_cache)
             xml = resource.result.strip()
             retry_resources = []
@@ -455,13 +459,19 @@ and verified.
                 'Time Spent': resource.time
             }
 
+            tries[rurl] += 1
+            info['Tries'] = tries[rurl]
+
             if resource.result is not None:
                 info['Bytes'] = len(resource.result)
             else:
                 raise MetadataException("empty response fetching '%s'" % resource.url)
+
+            info['URL'] = rurl
             info['Cached'] = resource.cached
             info['Date'] = str(resource.date)
             info['Last-Modified'] = str(resource.last_modified)
+            info['Validation Errors'] = dict()
 
             if resource.resp is not None:
                 info['Status'] = resource.resp.status
@@ -470,6 +480,7 @@ and verified.
                                             key=verifier,
                                             base_url=rurl,
                                             validate=validate,
+                                            validation_errors=info['Validation Errors'],
                                             expiration=lambda d: self.expiration(d),
                                             post=post)
 
@@ -485,8 +496,11 @@ and verified.
                 ttl = offset.total_seconds()
                 info['Expiration Time'] = str(expire_time)
                 info['Cache TTL'] = str(ttl)
-                if ttl < self.min_cache_ttl:  # try to get fresh md but we'll use what we have anyway
-                    retry_resources.append((rurl, verifier, tid, post, False))
+                if ttl < self.min_cache_ttl:
+                    if tries[rurl] < max_tries:  # try to get fresh md but we'll use what we have anyway
+                        retry_resources.append((rurl, verifier, tid, post, False))
+                    else:
+                        log.error("giving up on %s" % rurl)
                 if ttl < 0:
                     expired = True
 
@@ -504,7 +518,8 @@ and verified.
                                 fp = fingerprints[0]
                             if log.isDebugEnabled():
                                 log.debug("XRD: '%s' verified by '%s'" % (link_href, fp))
-                            retry_resources.append((link_href, fp, link_href, post, True))
+                            if tries[link_href] < max_tries:
+                                retry_resources.append((link_href, fp, link_href, post, True))
                 elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
                     number_of_entities = self.store.update(t, tid)
                     info['Number of Entities'] = number_of_entities
@@ -541,6 +556,7 @@ and verified.
                        fail_on_error=False,
                        filter_invalid=True,
                        validate=True,
+                       validation_errors=dict(),
                        expiration=None,
                        post=None):
         """Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
@@ -595,6 +611,7 @@ and verified.
                             error = _e(xsd.error_log, m=base_url)
                             entity_id = e.get("entityID")
                             log.warn("removing '%s': schema validation failed (%s)" % (entity_id, error))
+                            validation_errors[entity_id] = error
                             e.getparent().remove(e)
                             self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=entity_id, error=error)
                 else:  # all or nothing
