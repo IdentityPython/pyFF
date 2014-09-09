@@ -13,7 +13,7 @@ import time
 from pyff.constants import NS, ATTRS
 from pyff.decorators import cached
 from pyff.utils import root, dumptree, duration2timedelta, totimestamp, parse_xml, hex_digest, hash_id, EntitySet, \
-    entities_list, url2host, filter_lang, subdomains, has_tag, iter_entities
+    entities_list, url2host, subdomains, has_tag, iter_entities
 from pyff.logs import log
 
 
@@ -28,7 +28,7 @@ def is_sp(entity):
 def _domains(entity):
     domains = [url2host(entity.get('entityID'))]
     for d in entity.iter("{%s}DomainHint" % NS['mdui']):
-        if not d.text in domains:
+        if d.text not in domains:
             domains.append(d.text)
     return domains
 
@@ -230,9 +230,6 @@ class MemoryStore(StoreBase):
             self.md[tid] = relt
 
         return ne
-
-    #def lookup(self, key):
-    #    return [deepcopy(x) for x in self._lookup(key)]
 
     def lookup(self, key):
         # log.debug("memory store lookup: %s" % key)
