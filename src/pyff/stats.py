@@ -10,7 +10,8 @@ import logging
 __author__ = 'leifj'
 
 # Initialize the repository
-if not hasattr(logging, 'statistics'): logging.statistics = {}
+if not hasattr(logging, 'statistics'):
+    logging.statistics = {}
 # Initialize my namespace
 stats = logging.statistics.setdefault('pyFF Statistics', {})
 # Initialize my namespaces scalars and collections

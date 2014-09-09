@@ -162,7 +162,14 @@ def iso_now():
     """
 Current time in ISO format
     """
-    return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
+    return iso_fmt()
+
+
+def iso_fmt(tstamp=None):
+    """
+Timestamp in ISO format
+    """
+    return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(tstamp))
 
 
 def iso2datetime(s):
