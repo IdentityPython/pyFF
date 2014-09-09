@@ -48,6 +48,7 @@ def retry(ex, tries=4, delay=3, backoff=2, logger=log):
                     mdelay *= backoff
             if try_one_last_time:
                 return f(*args, **kwargs)
+
             return
 
         return f_retry  # true decorator
@@ -62,9 +63,14 @@ def deprecated(logger=log):
 
     def decorating(func):
         def new_func(*args, **kwargs):
-            logger.warn("Call to deprecated function %s at %s:%d" % (func.__name__,
-                                                                     func.func_code.co_filename,
-                                                                     func.func_code.co_firstlineno + 1))
+            msg = "Call to deprecated function %s at %s:%d" % (func.__name__,
+                                                               func.func_code.co_filename,
+                                                               func.func_code.co_firstlineno + 1)
+            if logger:
+                logger.warn(msg)
+            else:
+                print msg
+
             return func(*args, **kwargs)
 
         return new_func
