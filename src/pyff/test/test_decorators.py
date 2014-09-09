@@ -1,5 +1,6 @@
+import logging
 from unittest import TestCase
-from pyff.decorators import retry
+from pyff.decorators import retry, deprecated
 
 
 class TestRetry(TestCase):
@@ -25,3 +26,25 @@ class TestRetry(TestCase):
         except ValueError, ex:
             pass
         assert(not status[0])
+
+class TestDeprecated(TestCase):
+    def test_deprecate(self):
+
+        class Logger():
+            def __init__(self):
+                self.messages = []
+
+            def warn(self, message):
+                self.messages.append((logging.WARNING, message))
+
+        _logger = Logger()
+
+        @deprecated(logger=_logger)
+        def test():
+            pass
+
+        assert(len(_logger.messages) == 0)
+        test()
+        assert(len(_logger.messages) == 1)
+        assert('Call to deprecated function' in _logger.messages[0][1])
+        assert(_logger.messages[0][0] == logging.WARNING)

@@ -55,19 +55,20 @@ def retry(ex, tries=4, delay=3, backoff=2, logger=log):
     return deco_retry
 
 
-def deprecated(func):
+def deprecated(logger=log):
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
     when the function is used."""
 
-    @functools.wraps(func)
-    def new_func(*args, **kwargs):
-        log.warn("Call to deprecated function %s at %s:%d" % (func.__name__,
-                                                              func.func_code.co_filename,
-                                                              func.func_code.co_firstlineno + 1))
-        return func(*args, **kwargs)
+    def decorating(func):
+        def new_func(*args, **kwargs):
+            logger.warn("Call to deprecated function %s at %s:%d" % (func.__name__,
+                                                                     func.func_code.co_filename,
+                                                                     func.func_code.co_firstlineno + 1))
+            return func(*args, **kwargs)
 
-    return new_func
+        return new_func
+    return decorating
 
 
 class _HashedSeq(list):
