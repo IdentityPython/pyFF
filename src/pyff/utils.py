@@ -113,20 +113,6 @@ This includes certain XSLT and XSD files.
     return None
 
 
-def dmerge(a, b):
-    """
-Deep merge of two isomorphically structured dictionaries.
-
-:param a: The dictionary to merge into
-:param b: The dictionary to merge from
-    """
-    for k in a:
-        v = a[k]
-        if isinstance(v, dict) and k in b:
-            dmerge(v, b[k])
-    a.update(b)
-
-
 def tdelta(td):
     """
 Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours and/or seconds.
