@@ -41,7 +41,7 @@ def _e(error_log, m=None):
     def _f(x):
         if ":WARNING:" in x:
             return False
-        if m is not None and not m in x:
+        if m is not None and m not in x:
             return False
         return True
 
