@@ -163,6 +163,9 @@ def iso2datetime(s):
 
 
 class ResourceResolver(etree.Resolver):
+    def __init__(self):
+        super(ResourceResolver, self).__init__()
+
     def resolve(self, system_url, public_id, context):
         """
         Resolves URIs using the resource API
