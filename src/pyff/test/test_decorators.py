@@ -27,6 +27,7 @@ class TestRetry(TestCase):
             pass
         assert(not status[0])
 
+
 class TestDeprecated(TestCase):
     def test_deprecate(self):
 

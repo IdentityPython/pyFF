@@ -32,29 +32,29 @@ class SimplePipeLineTest(SignerTestCase):
         self.signer_result = plumbing(self.signer).process(self.md_signer, state={'batch': True, 'stats': {}})
         self.validator_result = plumbing(self.validator).process(self.md_validator, state={'batch': True, 'stats': {}})
 
-    def testEntityIDPresent(self):
-        eIDs = [e.get('entityID') for e in self.md_signer.store]
-        assert('https://idp.aco.net/idp/shibboleth' in eIDs)
-        assert('https://skriptenforum.net/shibboleth' in eIDs)
+    def test_entityid_present(self):
+        eids = [e.get('entityID') for e in self.md_signer.store]
+        assert('https://idp.aco.net/idp/shibboleth' in eids)
+        assert('https://skriptenforum.net/shibboleth' in eids)
 
-        eIDs = [e.get('entityID') for e in self.md_validator.store]
-        assert('https://idp.aco.net/idp/shibboleth' in eIDs)
-        assert('https://skriptenforum.net/shibboleth' in eIDs)
+        eids = [e.get('entityID') for e in self.md_validator.store]
+        assert('https://idp.aco.net/idp/shibboleth' in eids)
+        assert('https://skriptenforum.net/shibboleth' in eids)
 
-    def testNonZeroOutput(self):
+    def test_non_zero_output(self):
         assert(self.md_signer is not None)
         assert(self.md_signer.store.size() == 2)
         assert(self.md_validator is not None)
         assert(self.md_validator.store.size() == 2)
         assert(os.path.getsize(self.output) > 0)
 
-    def testSelectSingle(self):
+    def test_select_single(self):
         assert(self.validator_result is not None)
         entities = self.validator_result.findall('{%s}EntityDescriptor' % NS['md'])
         assert(len(entities) == 1)
         assert(entities[0].get('entityID') == 'https://idp.aco.net/idp/shibboleth')
 
-    def tearDown(self):
+    def tear_down(self):
         super(SimplePipeLineTest, self).tearDown()
         os.unlink(self.signer)
         os.unlink(self.validator)
