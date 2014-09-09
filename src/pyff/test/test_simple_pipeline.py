@@ -24,8 +24,10 @@ class PyFFTest(PipeLineTest):
             fd.write(self.signer_template.render(ctx=self))
 
     def test_run_signer(self):
-        out = self.run_pyff("--log-level=DEBUG", self.signer)
+        print self.signer
+        out, exit_code = self.run_pyff("--loglevel=DEBUG", self.signer)
         assert (out is not None)
+        print out
 
     def test_help(self):
         out, exit_code = self.run_pyff("--help")
@@ -42,11 +44,17 @@ class PyFFTest(PipeLineTest):
         assert (exit_code == 2)
         assert ('snartibartfast' in out)
 
+    def test_bad_loglevel(self):
+        try:
+            out, exit_code = self.run_pyff("--loglevel=TRACE")
+        except ValueError, ex:
+            assert ('TRACE' in str(ex))
 
     def tear_down(self):
         super(SimplePipeLineTest, self).tearDown()
         os.unlink(self.signer)
         os.unlink(self.output)
+
 
 class SimplePipeLineTest(SignerTestCase):
 
@@ -78,9 +86,9 @@ class SimplePipeLineTest(SignerTestCase):
 
     def test_non_zero_output(self):
         assert(self.md_signer is not None)
-        assert(self.md_signer.store.size() == 3)
+        assert(self.md_signer.store.size() == 2)
         assert(self.md_validator is not None)
-        assert(self.md_validator.store.size() == 3)
+        assert(self.md_validator.store.size() == 2)
         assert(os.path.getsize(self.output) > 0)
 
     def test_select_single(self):
