@@ -42,7 +42,7 @@ def main():
         elif o in '--loglevel':
             loglevel = getattr(logging, a.upper(), None)
             if not isinstance(loglevel, int):
-                raise ValueError('Invalid log level: %s' % loglevel)
+                raise ValueError('Invalid log level: %s' % a)
         elif o in '--logfile':
             logfile = a
         elif o in '-R':
