@@ -1,4 +1,12 @@
+"""
+pyFF is the SAML metadata aggregator
 
+Usage: [-h|--help]
+       [-R]
+       [--loglevel=<level>]
+       [--logfile=<file>]
+       [--version]
+"""
 import sys
 import getopt
 import traceback
@@ -15,11 +23,13 @@ def main():
     The main entrypoint for the pyFF cmdline tool.
     """
 
+    opts = None
+    args = None
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'hR', ['help', 'loglevel=', 'logfile=', 'version'])
     except getopt.error, msg:
         print msg
-        print 'for help use --help'
+        print __doc__
         sys.exit(2)
 
     store = MemoryStore()
@@ -41,8 +51,6 @@ def main():
         elif o in '--version':
             print "pyff version %s" % __version__
             sys.exit(0)
-        else:
-            raise ValueError("Unknown option '%s'" % o)
 
     log_args = {'level': loglevel}
     if logfile is not None:

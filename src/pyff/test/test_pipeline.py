@@ -1,17 +1,28 @@
 import os
 import tempfile
+import sys
+import imp
 from mako.lookup import TemplateLookup
+from mock import patch
+import pkg_resources
+from pyff import md
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
-from pyff.store import MemoryStore
+from StringIO import StringIO
 from pyff.test import SignerTestCase
 
 __author__ = 'leifj'
 
+class ExitException(Exception):
+    def __init__(self, code):
+        self.code = code
+
+    def __str__(self):
+        return "would have exited with %d" % self.code
 
 class PipeLineTest(SignerTestCase):
 
-    def run_pipeline(self, pl_name, ctx=dict(), md=MDRepository(store=MemoryStore())):
+    def run_pipeline(self, pl_name, ctx=dict(), md=MDRepository()):
         pipeline = tempfile.NamedTemporaryFile('w').name
         template = self.templates.get_template(pl_name)
         with open(pipeline, "w") as fd:
@@ -19,6 +30,24 @@ class PipeLineTest(SignerTestCase):
         res = plumbing(pipeline).process(md, state={'batch': True, 'stats': {}})
         os.unlink(pipeline)
         return res, md, ctx
+
+    def run_pyff(self, *args):
+        def _mock_exit(n):
+            if n != 0:
+                raise ExitException(n)
+
+        with patch('sys.stdout', new=StringIO()) as mock_stdout:
+            filename = pkg_resources.resource_filename(__name__, '../md.py')
+            opts = list(args)
+            opts.insert(0, filename)
+            sys.argv = opts
+            sys.exit = _mock_exit
+            try:
+                exit_code = 0
+                md.main()
+            except ExitException, ex:
+                exit_code = ex.code
+            return mock_stdout.getvalue(), exit_code
 
     def setUp(self):
         super(PipeLineTest, self).setUp()

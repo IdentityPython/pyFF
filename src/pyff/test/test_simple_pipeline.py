@@ -8,10 +8,45 @@ from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
 from pyff.store import MemoryStore
 from pyff.test import SignerTestCase
+from pyff.test.test_pipeline import PipeLineTest
+from pyff.md import __doc__ as pyffdoc
+from pyff import __version__ as pyffversion
 
 
-__author__ = 'leifj'
+class PyFFTest(PipeLineTest):
+    def setUp(self):
+        super(PyFFTest, self).setUp()
+        self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'simple-pipeline')])
+        self.output = tempfile.NamedTemporaryFile('w').name
+        self.signer = tempfile.NamedTemporaryFile('w').name
+        self.signer_template = self.templates.get_template('signer.fd')
+        with open(self.signer, "w") as fd:
+            fd.write(self.signer_template.render(ctx=self))
 
+    def test_run_signer(self):
+        out = self.run_pyff("--log-level=DEBUG", self.signer)
+        assert (out is not None)
+
+    def test_help(self):
+        out, exit_code = self.run_pyff("--help")
+        assert (pyffdoc in out)
+        assert (exit_code == 0)
+
+    def test_version(self):
+        out, exit_code = self.run_pyff("--version")
+        assert (pyffversion in out)
+        assert (exit_code == 0)
+
+    def test_bad_arg(self):
+        out, exit_code = self.run_pyff("--snartibartfast")
+        assert (exit_code == 2)
+        assert ('snartibartfast' in out)
+
+
+    def tear_down(self):
+        super(SimplePipeLineTest, self).tearDown()
+        os.unlink(self.signer)
+        os.unlink(self.output)
 
 class SimplePipeLineTest(SignerTestCase):
 

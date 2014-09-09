@@ -124,7 +124,7 @@ class MDRepository(Observable):
 
     def domains(self, entity):
         domains = [url2host(entity.get('entityID'))]
-        for d in filter_lang(entity.iter("{%s}DomainHint" % NS['mdui'])):
+        for d in entity.iter("{%s}DomainHint" % NS['mdui']):
             domains.append(d.text)
         return domains
 
@@ -186,7 +186,9 @@ class MDRepository(Observable):
         lst = []
         domains = self.domains(e)
         for d in domains:
-            lst.extend(subdomains(d))
+            for sub in subdomains(d):
+                if not sub in lst:
+                    lst.append(sub)
         return lst
 
     def simple_summary(self, e):
