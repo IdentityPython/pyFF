@@ -67,7 +67,6 @@ class TestRedisStore(TestCase):
         entity_id = root(self.t).get('entityID')
         assert (entity_id is not None)
         e = store.lookup("{%s}%s+{%s}%s" % (ATTRS['domain'], 'example.com', ATTRS['role'], 'idp'))
-        print e
         assert (len(e) == 1)
         assert (e[0] is not None)
         assert (e[0].get('entityID') is not None)
@@ -79,9 +78,16 @@ class TestRedisStore(TestCase):
         entity_id = root(self.t).get('entityID')
         assert (entity_id is not None)
         e = store.lookup("{%s}%s+{%s}%s" % (ATTRS['domain'], 'example.com', ATTRS['role'], 'sp'))
-        print e
         assert (len(e) == 0)
 
+    def test_maintain(self):
+        store = self._redis_store()
+        store.update(self.t)
+        entity_id = root(self.t).get('entityID')
+        assert (entity_id is not None)
+        d = dict()
+        store.periodic(d)
+        assert('Last Periodic Maintenance' in d)
 
 class TestMemoryStore(TestCase):
     def setUp(self):

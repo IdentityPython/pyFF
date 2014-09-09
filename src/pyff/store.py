@@ -316,6 +316,7 @@ class RedisStore(StoreBase):
 
     def periodic(self, stats):
         now = _now()
+        stats['Last Periodic Maintenance'] = now
         log.debug("periodic maintentance...")
         self.rc.zremrangebyscore("members", "-inf", now)
         for c in self.rc.smembers("#collections"):
@@ -438,8 +439,8 @@ class RedisStore(StoreBase):
         if m and ';' in m.group(2):
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):
-                self.rc.zunionstore(hk, ["{%s}%s#members" % (m.group(1), v) for v in m.group(2).split(';')], 'min')
-                self.rc.expire(hk, 30)  # XXX bad juju - only to keep clients from hammering
+                self.rc.zunionstore("%s#members" % hk, ["{%s}%s#members" % (m.group(1), v) for v in m.group(2).split(';')], 'min')
+                self.rc.expire("%s#members" % hk, 30)  # XXX bad juju - only to keep clients from hammering
             return self.lookup(hk)
         elif self.rc.exists("%s#alias" % key):
             return self.lookup(self.rc.get("%s#alias" % key))
