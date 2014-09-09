@@ -43,9 +43,9 @@ class SimplePipeLineTest(SignerTestCase):
 
     def test_non_zero_output(self):
         assert(self.md_signer is not None)
-        assert(self.md_signer.store.size() == 2)
+        assert(self.md_signer.store.size() == 3)
         assert(self.md_validator is not None)
-        assert(self.md_validator.store.size() == 2)
+        assert(self.md_validator.store.size() == 3)
         assert(os.path.getsize(self.output) > 0)
 
     def test_select_single(self):

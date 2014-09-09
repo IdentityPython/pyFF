@@ -494,11 +494,15 @@ def url2host(url):
 
 
 def subdomains(domain):
-    domains = []
+    dl = []
     dsplit = domain.split('.')
-    for i in range(1, len(dsplit) - 1):
-        domains.append(".".join(dsplit[i:]))
-    return domains
+    if len(dsplit) < 3:
+        dl.append(domain)
+    else:
+        for i in range(1, len(dsplit) - 1):
+            dl.append(".".join(dsplit[i:]))
+
+    return dl
 
 
 def ddist(a, b):

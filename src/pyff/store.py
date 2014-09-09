@@ -27,8 +27,9 @@ def is_sp(entity):
 
 def _domains(entity):
     domains = [url2host(entity.get('entityID'))]
-    for d in filter_lang(entity.iter("{%s}DomainHint" % NS['mdui'])):
-        domains.append(d.text)
+    for d in entity.iter("{%s}DomainHint" % NS['mdui']):
+        if not d.text in domains:
+            domains.append(d.text)
     return domains
 
 
@@ -44,12 +45,14 @@ def entity_attribute_dict(entity):
 
     d[ATTRS['role']] = []
 
-    domains = []
-    for domain in _domains(entity):
-        for subdomain in subdomains(domain):
-            domains.append(subdomain)
+    dlist = []
+    for dn in _domains(entity):
+        print dn
+        for sub in subdomains(dn):
+            print "sub: %s" % sub
+            dlist.append(sub)
 
-    d[ATTRS['domain']] = domains
+    d[ATTRS['domain']] = dlist
 
     if is_idp(entity):
         d[ATTRS['role']].append('idp')
