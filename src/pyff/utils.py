@@ -352,7 +352,7 @@ def xslt_transform(t, stylesheet, params=None):
         thread_data.xslt = dict()
 
     transform = None
-    if not stylesheet in thread_data.xslt:
+    if stylesheet not in thread_data.xslt:
         xsl = etree.fromstring(resource_string(stylesheet, "xslt"))
         thread_data.xslt[stylesheet] = etree.XSLT(xsl)
     transform = thread_data.xslt[stylesheet]
@@ -445,7 +445,7 @@ class MetadataExpiredException(MetadataException):
 
 
 def find_merge_strategy(strategy_name):
-    if not '.' in strategy_name:
+    if '.' not in strategy_name:
         strategy_name = "pyff.merge_strategies.%s" % strategy_name
     (mn, sep, fn) = strategy_name.rpartition('.')
     # log.debug("import %s from %s" % (fn,mn))
