@@ -317,7 +317,7 @@ class RedisStore(StoreBase):
     def periodic(self, stats):
         now = _now()
         log.debug("periodic maintentance...")
-        self.rc.zremrangebyscore("entities#members", "-inf", now)
+        self.rc.zremrangebyscore("members", "-inf", now)
         for c in self.rc.smembers("#collections"):
             self.rc.zremrangebyscore("%s#members", "-inf", now)
             if not self.rc.zcard("%s#members" % c) > 0:
@@ -375,6 +375,9 @@ class RedisStore(StoreBase):
                 tid = relt.get('entityID')
             with self.rc.pipeline() as p:
                 self.update_entity(relt, t, tid, ts, p)
+                entity_id = relt.get("entityID")
+                if entity_id is not None:
+                    self.membership("entities", entity_id, ts, p)
                 for ea, eav in entity_attribute_dict(relt).iteritems():
                     for v in eav:
                         # log.debug("%s=%s" % (ea, v))
@@ -398,8 +401,9 @@ class RedisStore(StoreBase):
                 for e in iter_entities(t):
                     ne += self.update(e, ts=ts)
                     entity_id = e.get("entityID")
-                    self.membership(tid, entity_id, ts, p)
-                    self.membership("entities", entity_id, ts, p)
+                    if entity_id is not None:
+                        self.membership(tid, entity_id, ts, p)
+                        self.membership("entities", entity_id, ts, p)
                 p.execute()
         else:
             raise ValueError("Bad metadata top-level element: '%s'" % root(t).tag)
@@ -407,10 +411,11 @@ class RedisStore(StoreBase):
         return ne
 
     def _members(self, k):
+        mem = []
         if self.rc.exists("%s#members" % k):
-            return [self.lookup(entity_id) for entity_id in self.rc.zrangebyscore("%s#members" % k, _now(), "+inf")]
-        else:
-            return []
+            for entity_id in self.rc.zrangebyscore("%s#members" % k, _now(), "+inf"):
+                mem.extend(self.lookup(entity_id))
+        return mem
 
     @cached(ttl=30)
     def _get_metadata(self, key):
@@ -421,8 +426,8 @@ class RedisStore(StoreBase):
         if '+' in key:
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):
-                self.rc.zinterstore(hk, ["%s#members" % k for k in key.split('+')], 'min')
-                self.rc.expire(hk, 30)  # XXX bad juju - only to keep clients from hammering
+                self.rc.zinterstore("%s#members" % hk, ["%s#members" % k for k in key.split('+')], 'min')
+                self.rc.expire("%s#members" % hk, 30)  # XXX bad juju - only to keep clients from hammering
             return self.lookup(hk)
 
         m = re.match("^(.+)=(.+)$", key)
@@ -439,7 +444,7 @@ class RedisStore(StoreBase):
         elif self.rc.exists("%s#alias" % key):
             return self.lookup(self.rc.get("%s#alias" % key))
         elif self.rc.exists("%s#metadata" % key):
-            return self._get_metadata(key)
+            return [self._get_metadata(key)]
         else:
             return self._members(key)
 
