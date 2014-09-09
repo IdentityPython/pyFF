@@ -226,7 +226,6 @@ def safe_write(fn, data):
                 os.unlink(tmpn)
             except Exception, ex:
                 log.warn(ex)
-                pass
     return False
 
 
