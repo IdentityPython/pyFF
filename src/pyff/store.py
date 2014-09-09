@@ -47,9 +47,7 @@ def entity_attribute_dict(entity):
 
     dlist = []
     for dn in _domains(entity):
-        print dn
         for sub in subdomains(dn):
-            print "sub: %s" % sub
             dlist.append(sub)
 
     d[ATTRS['domain']] = dlist
