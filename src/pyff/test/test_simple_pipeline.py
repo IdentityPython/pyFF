@@ -14,6 +14,9 @@ from pyff import __version__ as pyffversion
 
 
 class PyFFTest(PipeLineTest):
+    """
+    Runs tests through the pyff cmdline - only mocks exit
+    """
     def setUp(self):
         super(PyFFTest, self).setUp()
         self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'simple-pipeline')])
