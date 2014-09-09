@@ -1,5 +1,5 @@
 - load:
-    ${ctx.datadir}
+    ${ctx.datadir}/simple-pipeline
 - select
 - finalize:
     Name: http://federation.aco.net/metadata/edugain-export.xml
