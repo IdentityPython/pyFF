@@ -21,7 +21,8 @@ install_requires = [
     'ipaddr',
     'publicsuffix',
     'redis',
-    'futures'
+    'futures',
+    'requests'
 ]
 
 setup(name='pyFF',
