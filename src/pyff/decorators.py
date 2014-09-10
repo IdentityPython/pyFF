@@ -33,7 +33,7 @@ def retry(ex, tries=4, delay=3, backoff=2, logger=log):
     def deco_retry(f):
         def f_retry(*args, **kwargs):
             mtries, mdelay = tries, delay
-            try_one_last_time = True
+
             while mtries > 1:
                 try:
                     return f(*args, **kwargs)
@@ -46,10 +46,8 @@ def retry(ex, tries=4, delay=3, backoff=2, logger=log):
                     time.sleep(mdelay)
                     mtries -= 1
                     mdelay *= backoff
-            if try_one_last_time:
-                return f(*args, **kwargs)
 
-            return
+            return f(*args, **kwargs)
 
         return f_retry  # true decorator
 
@@ -140,8 +138,8 @@ def cached(typed=False, ttl=None, hash_key=None):
 
         def clear():
             cache.clear()
-            stats.hits = 0
-            stats.misses = 0
+            stats['hits'] = 0
+            stats['misses'] = 0
 
         @property
         def hits():
