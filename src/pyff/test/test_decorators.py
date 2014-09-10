@@ -2,8 +2,8 @@ from StringIO import StringIO
 import logging
 from unittest import TestCase
 from mock import patch
-import sys
-from pyff.decorators import retry, deprecated
+from pyff.decorators import retry, deprecated, cached
+
 
 class Logger():
     def __init__(self):
@@ -41,7 +41,6 @@ class TestRetry(TestCase):
             pass
         assert(not status[0])
 
-
     def test_retry_fail_stdout(self):
         status = [False]
         @retry(ValueError, delay=1, backoff=1, logger=None)
@@ -56,6 +55,7 @@ class TestRetry(TestCase):
                 assert(len(mock_stdout.getvalue().split("\n")) == 4)
                 pass
             assert(not status[0])
+
 
 class TestDeprecated(TestCase):
 
@@ -82,3 +82,27 @@ class TestDeprecated(TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_stdout:
             old_stuff()
             assert('Call to deprecated function' in mock_stdout.getvalue())
+
+
+class TestCached(TestCase):
+
+    def setUp(self):
+        self.counter = 0
+
+    @cached(ttl=3600)  # long enough time for the test to run ... we hope
+    def next_counter(self):
+        self.counter += 1
+        return self.counter
+
+    def test_cached_simple(self):
+        assert (self.counter == 0)
+        assert (self.next_counter() == 1)
+        assert (self.next_counter() == 1)
+        assert (self.counter == 1)
+
+    def test_cached_clear(self):
+        assert (self.counter == 0)
+        assert (self.next_counter() == 1)
+        self.next_counter.clear()
+        assert (self.counter == 1)
+        assert (self.next_counter() == 2)
