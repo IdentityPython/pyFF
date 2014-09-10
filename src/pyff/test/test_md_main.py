@@ -25,14 +25,12 @@ class PyFFTest(PipeLineTest):
             fd.write(self.bad_template.render(ctx=self))
 
     def test_run_signer(self):
-        print self.signer
         out, err, exit_code = self.run_pyff("--loglevel=DEBUG", self.signer)
         assert (not out)
         assert (not err)
         assert (exit_code == 0)
 
     def test_run_bad(self):
-        print self.signer
         out, err, exit_code = self.run_pyff("--loglevel=DEBUG", self.bad)
         assert (not out)
         assert 'Traceback' in err
@@ -40,7 +38,6 @@ class PyFFTest(PipeLineTest):
         assert (exit_code == -1)
 
     def test_run_signer_logfile(self):
-        print self.signer
         out, err, exit_code = self.run_pyff("--loglevel=DEBUG", "--logfile=%s" % self.logfile, self.signer)
         assert (not out)
         assert (not err)
