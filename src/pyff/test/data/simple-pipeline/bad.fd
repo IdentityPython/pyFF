@@ -1,0 +1,4 @@
+- load:
+    ${ctx.datadir}/simple-pipeline
+- select
+- snartibartifast
