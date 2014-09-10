@@ -1,17 +1,17 @@
 import os
 import tempfile
 import sys
-import imp
 from mako.lookup import TemplateLookup
 from mock import patch
 import pkg_resources
-from pyff import md
+from pyff import md, mdx
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
 from StringIO import StringIO
 from pyff.test import SignerTestCase
 
 __author__ = 'leifj'
+
 
 class ExitException(Exception):
     def __init__(self, code):
@@ -52,6 +52,25 @@ class PipeLineTest(SignerTestCase):
                 finally:
                     sys.exit = orig_exit
                 return mock_stdout.getvalue(), mock_stderr.getvalue(), exit_code
+
+    def run_pyffd(self, *args):
+        def _mock_exit(n):
+            if n != 0:
+                raise ExitException(n)
+
+        filename = pkg_resources.resource_filename(__name__, '../mdx.py')
+        opts = list(args)
+        opts.insert(0, filename)
+        sys.argv = opts
+        orig_exit = sys.exit
+        sys.exit = _mock_exit
+        try:
+            exit_code = 0
+            mdx.main()
+        except ExitException, ex:
+            exit_code = ex.code
+        finally:
+            sys.exit = orig_exit
 
     def setUp(self):
         super(PipeLineTest, self).setUp()
