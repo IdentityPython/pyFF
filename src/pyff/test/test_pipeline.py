@@ -37,17 +37,21 @@ class PipeLineTest(SignerTestCase):
                 raise ExitException(n)
 
         with patch('sys.stdout', new=StringIO()) as mock_stdout:
-            filename = pkg_resources.resource_filename(__name__, '../md.py')
-            opts = list(args)
-            opts.insert(0, filename)
-            sys.argv = opts
-            sys.exit = _mock_exit
-            try:
-                exit_code = 0
-                md.main()
-            except ExitException, ex:
-                exit_code = ex.code
-            return mock_stdout.getvalue(), exit_code
+            with patch('sys.stderr', new=StringIO()) as mock_stderr:
+                filename = pkg_resources.resource_filename(__name__, '../md.py')
+                opts = list(args)
+                opts.insert(0, filename)
+                sys.argv = opts
+                orig_exit = sys.exit
+                sys.exit = _mock_exit
+                try:
+                    exit_code = 0
+                    md.main()
+                except ExitException, ex:
+                    exit_code = ex.code
+                finally:
+                    sys.exit = orig_exit
+                return mock_stdout.getvalue(), mock_stderr.getvalue(), exit_code
 
     def setUp(self):
         super(PipeLineTest, self).setUp()
