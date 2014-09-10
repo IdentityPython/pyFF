@@ -5,7 +5,7 @@ This is the implementation of the active repository of SAML metadata. The 'local
 """
 try:
     from cStringIO import StringIO
-except ImportError:
+except ImportError:  # pragma: no cover
     print(" *** install cStringIO for better performance")
     from StringIO import StringIO
 

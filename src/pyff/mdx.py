@@ -45,7 +45,7 @@ An implementation of draft-lajoie-md-query
 """
 try:
     from cStringIO import StringIO
-except ImportError:
+except ImportError:  # pragma: no cover
     print(" *** install cStringIO for better performance")
     from StringIO import StringIO
 
