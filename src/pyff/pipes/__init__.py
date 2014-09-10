@@ -210,22 +210,18 @@ may modify any of the fields.
             """
             log.debug('Processing \n%s' % pl)
             for p in pl.pipeline:
-                try:
-                    cb, opts, name, args = loader.load_pipe(p)
-                    # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
-                    if type(args) is str or type(args) is unicode:
-                        args = [args]
-                    if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
-                        raise PipeException("Unknown argument type %s" % repr(args))
-                    self.args = args
-                    self.name = name
-                    ot = cb(self, *opts)
-                    if ot is not None:
-                        self.t = ot
-                    if self.done:
-                        break
-                except PipeException, ex:
-                    log.error(ex)
+                cb, opts, name, args = loader.load_pipe(p)
+                # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
+                if type(args) is str or type(args) is unicode:
+                    args = [args]
+                if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
+                    raise PipeException("Unknown argument type %s" % repr(args))
+                self.args = args
+                self.name = name
+                ot = cb(self, *opts)
+                if ot is not None:
+                    self.t = ot
+                if self.done:
                     break
             return self.t
 
