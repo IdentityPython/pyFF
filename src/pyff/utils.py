@@ -202,6 +202,10 @@ def validate_document(t):
     schema().assertValid(t)
 
 
+def request_vhost(request):
+    return request.headers.get('X-Forwarded-Host', request.headers.get('Host', request.base))
+
+
 def safe_write(fn, data):
     """Safely write data to a file with name fn
     :param fn: a filename
@@ -235,10 +239,6 @@ templates = TemplateLookup(directories=[os.path.join(site_dir, 'templates')])
 
 def template(name):
     return templates.get_template(name)
-
-
-def request_vhost(request):
-    return request.headers.get('X-Forwarded-Host', request.headers.get('Host', request.base))
 
 
 def render_template(name, **kwargs):
