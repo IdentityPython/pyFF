@@ -34,9 +34,7 @@ An implementation of draft-lajoie-md-query
             to be processed as http://server/metadata/{uri}x. The
             default alias table is presented at http://server
     --dir=<dir>
-            Chdir into <dir> after the server starts up. You can override
-            all static resources on a per-vhost basis by creating a
-            hosts/<vhost>/static directory-hierarchy in this directory.
+            Chdir into <dir> after the server starts up.
     --proxy
             The service is running behind a proxy - respect the X-Forwarded-Host header.
     {pipeline-files}+
@@ -68,7 +66,6 @@ from pyff.constants import ATTRS, EVENT_REPOSITORY_LIVE
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
-from pyff.tools import _staticdirs
 from pyff.utils import resource_string, xslt_transform, dumptree, duration2timedelta, debug_observer, render_template
 from pyff.logs import log, SysLogLibHandler
 import logging
@@ -84,7 +81,6 @@ import i18n
 _ = i18n.language.ugettext
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
-cherrypy.tools.staticdirs = HandlerTool(_staticdirs)
 
 
 class MDUpdate(Monitor):
@@ -278,7 +274,7 @@ class MDRoot(object):
         memory = NotImplementedFunction('Memory profiling needs dowser')
 
     _well_known = WellKnown()
-    static = cherrypy.tools.staticdirs.handler("/static", "static")
+    static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir,"static"))
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600, debug=True)
@@ -404,7 +400,6 @@ class MDServer(object):
                  frequency=600,
                  aliases=ATTRS,
                  cache_enabled=True,
-                 hosts_dir=None,
                  observers=None,
                  store=None):
 
@@ -746,15 +741,6 @@ def main():
     def error_page(code, **kwargs):
         return render_template("%d.html" % code, **kwargs)
 
-    static_dirs = []
-    if base_dir:
-        hosts_dir = os.path.join(base_dir, "hosts")
-        if os.path.exists(hosts_dir):
-            if not os.path.isdir(hosts_dir):
-                raise ValueError("%s exists but is not a directory" % hosts_dir)
-            static_dirs.append(os.path.join(hosts_dir, "%VHOST%"))
-    static_dirs.append(site_dir)
-
     observers = []
 
     if loglevel == logging.DEBUG:
@@ -797,8 +783,7 @@ def main():
             'tools.cpstats.on': True,
             'tools.caching.on': caching,
             'tools.caching.delay': 3600,
-            'tools.proxy.on': proxy,
-            'tools.staticdirs.roots': static_dirs,
+            'tools.proxy.on': proxy
         }
     }
     cherrypy.config.update(cfg)
