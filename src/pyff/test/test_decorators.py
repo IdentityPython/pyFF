@@ -1,5 +1,6 @@
 from StringIO import StringIO
 import logging
+from time import sleep
 from unittest import TestCase
 from mock import patch
 from pyff.decorators import retry, deprecated, cached
@@ -89,16 +90,52 @@ class TestCached(TestCase):
     def setUp(self):
         self.counter = 0
 
-    @cached(ttl=3600)  # long enough time for the test to run ... we hope
-    def next_counter(self):
+    @cached(ttl=2)
+    def next_counter(self, info="nothing"):
         self.counter += 1
+        self.info = info
         return self.counter
 
     def test_cached_simple(self):
         assert (self.counter == 0)
         assert (self.next_counter() == 1)
         assert (self.next_counter() == 1)
+        assert (self.next_counter(info="another") == 2)
+        assert (self.counter == 2)
+
+    def test_cached_clear(self):
+        assert (self.counter == 0)
+        assert (self.next_counter() == 1)
+        self.next_counter.clear()
         assert (self.counter == 1)
+        assert (self.next_counter() == 2)
+
+    def test_cached_timeout(self):
+        assert (self.counter == 0)
+        assert (self.next_counter() == 1)
+        print "sleeping for 5 seconds..."
+        sleep(5)
+        assert (self.counter == 1)
+        assert (self.next_counter() == 2)
+
+
+class TestCachedTyped(TestCase):
+
+    def setUp(self):
+        self.counter = 0
+
+    @cached(ttl=3, typed=True)  # long enough time for the test to run ... we hope
+    def next_counter(self, info="nothing"):
+        self.counter += 1
+        self.info = info
+        return self.counter
+
+    def test_cached_simple(self):
+        assert (self.counter == 0)
+        assert (self.next_counter() == 1)
+        assert (self.next_counter() == 1)
+        assert (self.next_counter(info="another") == 2)
+        assert (self.counter == 2)
 
     def test_cached_clear(self):
         assert (self.counter == 0)
