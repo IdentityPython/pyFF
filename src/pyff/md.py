@@ -64,9 +64,7 @@ def main():
         sys.exit(0)
     except Exception, ex:
         if logging.getLogger().isEnabledFor(logging.DEBUG):
-            print "-" * 64
             traceback.print_exc()
-            print "-" * 64
         logging.error(ex)
         sys.exit(-1)
 
