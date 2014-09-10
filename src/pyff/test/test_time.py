@@ -8,7 +8,8 @@ class TestDuration(TestCase):
         ('PT1H', 3600),
         ('PT1S', 1),
         ('P1DT1S', 86401),
-        ('P1YT2M', 31536120)
+        ('P1YT2M', 31536120),
+        ('-PT1H', -3600)
     ]
 
     def test_duration2timedelta(self):
@@ -19,6 +20,9 @@ class TestDuration(TestCase):
             print "expected seconds: %s" % secs
             assert(int(td.total_seconds()) == secs)
             assert(int(total_seconds(td)) == secs)
+
+    def test_bad(self):
+        assert (duration2timedelta("abrakadabra") is None)
 
 
 class TestISO(TestCase):

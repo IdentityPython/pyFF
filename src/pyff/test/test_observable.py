@@ -1,5 +1,6 @@
 from unittest import TestCase
 from pyff.mdrepo import Observable
+from pyff.utils import debug_observer
 
 
 class TestObservable(TestCase):
@@ -27,5 +28,6 @@ class TestObservable(TestCase):
 
         o = TestObservable.Foo()
         o.subscribe(_cb)
+        o.subscribe(debug_observer)
         o.fire(a=1,myself=o)
         assert o.done
