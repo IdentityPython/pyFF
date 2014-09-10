@@ -274,7 +274,16 @@ class MDRoot(object):
         memory = NotImplementedFunction('Memory profiling needs dowser')
 
     _well_known = WellKnown()
-    static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir,"static"))
+    static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
+
+    @cherrypy.expose
+    def shutdown(self):
+        cfg = cherrypy.request.app.config['global']
+        if 'allow_shutdown' in cfg and bool(cfg.get('allow_shutdown')):
+            cherrypy.engine.exit()
+            return "bye ..."
+        else:
+            raise cherrypy.HTTPError(403, "disabled")
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600, debug=True)
@@ -633,7 +642,7 @@ def main():
                                    'hP:p:H:CfaA:l:R',
                                    ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=', 'email=',
                                     'port=', 'host=', 'no-caching', 'autoreload', 'frequency=',
-                                    'alias=', 'dir=', 'version', 'proxy'])
+                                    'alias=', 'dir=', 'version', 'proxy', 'terminator'])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -655,6 +664,7 @@ def main():
     proxy = False
     email = None
     store = MemoryStore()
+    terminator = False
 
     try:
         for o, a in opts:
@@ -700,7 +710,9 @@ def main():
             elif o in '--dir':
                 base_dir = a
             elif o in '--proxy':
-                proxy = bool(a)
+                proxy = True
+            elif o in '--terminator':
+                terminator = True
             elif o in '--version':
                 print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__)
                 sys.exit(0)
@@ -711,8 +723,6 @@ def main():
         print ex
         print __doc__
         sys.exit(3)
-
-    # cherrypy.server.httpserver = CPHTTPServer(cherrypy.server)
 
     engine = cherrypy.engine
     plugins = cherrypy.process.plugins
@@ -753,6 +763,7 @@ def main():
                       cache_enabled=caching,
                       observers=observers,
                       store=store)
+
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
     cfg = {
         'global': {
@@ -767,6 +778,7 @@ def main():
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
             'tools.proxy.on': proxy,
+            'allow_shutdown': terminator,
             'error_page.404': lambda **kwargs: error_page(404, _=_, **kwargs),
             'error_page.503': lambda **kwargs: error_page(503, _=_, **kwargs),
             'error_page.500': lambda **kwargs: error_page(500, _=_, **kwargs),
