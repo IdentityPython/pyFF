@@ -31,16 +31,6 @@ from .utils import schema, filter_lang, root, duration2timedelta, \
     iter_entities, validate_document, load_url, iso2datetime
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
-__author__ = 'leifj'
-
-
-def _is_self_signed_err(ebuf):
-    for e in ebuf:
-        if e['func'] == 'xmlSecOpenSSLX509StoreVerify' and re.match('err=18', e['message']):
-            return True
-    return False
-
-
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
 
