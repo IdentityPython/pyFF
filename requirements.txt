@@ -11,3 +11,4 @@ babel
 httplib2
 futures
 iso8601
+requests
