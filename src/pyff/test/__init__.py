@@ -1,17 +1,79 @@
+try:
+    from cStringIO import StringIO
+except ImportError:  # pragma: no cover
+    print(" *** install cStringIO for better performance")
+    from StringIO import StringIO
+
 import logging
 import os
 import subprocess
 import tempfile
 from unittest import TestCase
 import pkg_resources
+import sys
+from pyff import __version__ as pyffversion
 
-__author__ = 'leifj'
+
+class ExitException(Exception):
+    def __init__(self, code):
+        self.code = code
+
+    def __str__(self):
+        return "would have exited with %d" % self.code
 
 
-def _p(args, outf=None, ignore_exit=False):
+def run_pyff(*args):
+    return run_cmdline('pyff', args)
+
+
+def run_pyffd(*args):
+    return run_cmdline('pyffd', args)
+
+
+def run_cmdline(script, *args):
+    argv = list(*args)
+    starter = tempfile.NamedTemporaryFile('w').name
+    with open(starter, 'w') as fd:
+        fd.write("""#!%s
+import sys
+import coverage
+import os
+from pkg_resources import load_entry_point
+if __name__ == '__main__':
+    cov = coverage.coverage(cover_pylib=False, source=['pyff'], omit=['test'], include=['*.py'])
+    cov.start()
+    rv = 0
+    try:
+        rv = load_entry_point('pyFF==%s', 'console_scripts', '%s')()
+    except Exception, ex:
+        raise ex
+    finally:
+        cov.stop()
+        cov.save()
+        os.rename('.coverage','.coverage.%%d' %% os.getpid())
+    sys.exit(rv)
+
+""" % (sys.executable, pyffversion, script))
+    print starter
+    os.chmod(starter, 0700)
+
+    argv.insert(0, starter)
+    proc = _pstart(argv)
+    out, err = proc.communicate()
+    rv = proc.wait()
+    #os.unlink(starter)
+    return out, err, rv
+
+
+def _pstart(args, outf=None, ignore_exit=False):
     env = {}
     proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     logging.debug(" ".join(args))
+    return proc
+
+
+def _p(args, outf=None, ignore_exit=False):
+    proc = _pstart(args)
     out, err = proc.communicate()
     if err is not None and len(err) > 0:
         logging.error(err)
@@ -28,24 +90,32 @@ def _p(args, outf=None, ignore_exit=False):
 
 class SignerTestCase(TestCase):
 
-    def setUp(self):
-        self.datadir = pkg_resources.resource_filename(__name__, 'data')
-        self.private_keyspec = tempfile.NamedTemporaryFile('w').name
-        self.public_keyspec = tempfile.NamedTemporaryFile('w').name
+    datadir = None
+    private_keyspec = None
+    public_keyspec = None
+
+    @classmethod
+    def setUpClass(cls):
+        print "setupclass called for SignerTestCase"
+        cls.datadir = pkg_resources.resource_filename(__name__, 'data')
+        cls.private_keyspec = tempfile.NamedTemporaryFile('w').name
+        cls.public_keyspec = tempfile.NamedTemporaryFile('w').name
 
         _p(['openssl', 'genrsa',
             '2048',
-            '-nodes'], outf=self.private_keyspec, ignore_exit=True)
+            '-nodes'], outf=cls.private_keyspec, ignore_exit=True)
         _p(['openssl', 'req',
             '-x509',
             '-sha1',
             '-new',
             '-subj', '/CN=Signer',
-            '-key', self.private_keyspec,
-            '-out', self.public_keyspec])
+            '-key', cls.private_keyspec,
+            '-out', cls.public_keyspec])
 
-    def tearDown(self):
-        if os.path.exists(self.private_keyspec):
-            os.unlink(self.private_keyspec)
-        if os.path.exists(self.public_keyspec):
-            os.unlink(self.public_keyspec)
+    @classmethod
+    def tearDownClass(cls):
+        print "teardownclass called for SignerTestCase"
+        if os.path.exists(cls.private_keyspec):
+            os.unlink(cls.private_keyspec)
+        if os.path.exists(cls.public_keyspec):
+            os.unlink(cls.public_keyspec)
