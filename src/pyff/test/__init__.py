@@ -97,7 +97,6 @@ class SignerTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        print "setupclass called for SignerTestCase"
         cls.datadir = pkg_resources.resource_filename(__name__, 'data')
         cls.private_keyspec = tempfile.NamedTemporaryFile('w').name
         cls.public_keyspec = tempfile.NamedTemporaryFile('w').name
@@ -115,7 +114,6 @@ class SignerTestCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        print "teardownclass called for SignerTestCase"
         if os.path.exists(cls.private_keyspec):
             os.unlink(cls.private_keyspec)
         if os.path.exists(cls.public_keyspec):

@@ -233,7 +233,7 @@ listed using the 'role' attribute to the link elements.
                      href='%s/%s.xml' % (cherrypy.request.base, a)))
             links.append(dict(rel='disco-json', href='%s/%s.json' % (cherrypy.request.base, a)))
 
-        for a in self.server.md.keys():
+        for a in self.server.md.store.collections():
             if '://' not in a:
                 a = a.lstrip('/')
                 _links(a)

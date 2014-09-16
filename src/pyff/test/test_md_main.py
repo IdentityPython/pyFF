@@ -71,6 +71,15 @@ class PyFFDTest(PipeLineTest):
         assert (root(t).get('entityID') == 'https://idp.nordu.net/idp/shibboleth')
         validate_document(t)
 
+    def test_webfinger_bad_protocol(self):
+        r = requests.get("http://127.0.0.1:8080/.well-known/webfinger")
+        assert (r.status_code == 400)
+
+    def test_webfinger(self):
+        r = requests.get("http://127.0.0.1:8080/.well-known/webfinger?resource=http://127.0.0.1:8080")
+        assert (r.status_code == 200)
+
+
     @classmethod
     def tearDownClass(cls):
         SignerTestCase.tearDownClass()
@@ -87,7 +96,6 @@ class PyFFTest(PipeLineTest):
     Runs tests through the pyff cmdline - only mocks exit
     """
     def setUp(self):
-        print "setup called for PyFFTest"
         super(PyFFTest, self).setUp()
         self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'simple-pipeline')])
         self.output = tempfile.NamedTemporaryFile('w').name
