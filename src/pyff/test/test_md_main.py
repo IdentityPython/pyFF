@@ -122,6 +122,7 @@ class PyFFTest(PipeLineTest):
 
     def test_run_signer_logfile(self):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", "--logfile=%s" % self.logfile, self.signer)
+        print "---"
         print out
         print err
         print exit_code

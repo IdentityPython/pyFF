@@ -12,7 +12,7 @@ from unittest import TestCase
 import pkg_resources
 import sys
 from pyff import __version__ as pyffversion
-import pyff.builtins
+import pyff.builtins  # this is so the tests don't have to import builtins
 
 
 class ExitException(Exception):
