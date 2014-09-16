@@ -1,3 +1,4 @@
+import unittest
 
 try:
     from cStringIO import StringIO
@@ -71,6 +72,14 @@ class PyFFDTest(PipeLineTest):
         assert (root(t).get('entityID') == 'https://idp.nordu.net/idp/shibboleth')
         validate_document(t)
 
+    def test_all_entities_parses(self):
+        r = requests.get("http://127.0.0.1:8080/entities")
+        assert (r.status_code == 200)
+        #assert (r.encoding == 'utf8')
+        t = parse_xml(StringIO(r.content))
+        assert (t is not None)
+        validate_document(t)
+
     def test_webfinger_bad_protocol(self):
         r = requests.get("http://127.0.0.1:8080/.well-known/webfinger")
         assert (r.status_code == 400)
@@ -78,6 +87,23 @@ class PyFFDTest(PipeLineTest):
     def test_webfinger(self):
         r = requests.get("http://127.0.0.1:8080/.well-known/webfinger?resource=http://127.0.0.1:8080")
         assert (r.status_code == 200)
+
+    def test_robots(self):
+        r = requests.get("http://127.0.0.1:8080/robots.txt")
+        assert (r.status_code == 200)
+
+    def test_parse_robots(self):
+        try:
+            import robotparser
+        except ImportError, ex:
+            raise unittest.SkipTest()
+
+        rp = robotparser.RobotFileParser()
+        rp.set_url("http://127.0.0.1:8080/robots.txt")
+        rp.read()
+        assert not rp.can_fetch("*", "http://127.0.0.1:8080/")
+
+
 
 
     @classmethod
