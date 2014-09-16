@@ -87,6 +87,7 @@ class PyFFDTest(PipeLineTest):
     def test_webfinger(self):
         r = requests.get("http://127.0.0.1:8080/.well-known/webfinger?resource=http://127.0.0.1:8080")
         assert (r.status_code == 200)
+        assert r.json()
 
     def test_robots(self):
         r = requests.get("http://127.0.0.1:8080/robots.txt")
@@ -103,8 +104,18 @@ class PyFFDTest(PipeLineTest):
         rp.read()
         assert not rp.can_fetch("*", "http://127.0.0.1:8080/")
 
+    def test_ds_bad_request(self):
+        r = requests.get("http://127.0.0.1:8080/role/idp.ds")
+        assert (r.status_code == 400)
 
+    def test_ds_request(self):
+        r = requests.get("http://127.0.0.1:8080/role/idp.ds?entityID=https://idp.nordu.net/idp/shibboleth&return=#")
+        assert (r.status_code == 200)
 
+    def test_ds_search(self):
+        r = requests.get("http://127.0.0.1:8080/role/idp.s")
+        assert (r.status_code == 200)
+        assert len(r.json()) == 0
 
     @classmethod
     def tearDownClass(cls):
