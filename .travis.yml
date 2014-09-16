@@ -9,6 +9,7 @@ install:
 script: 
    - ls
    - export PYTHONPATH=./src:$PYTHONPATH
+   - env
    - coverage erase
    - coverage run --source=pyff setup.py test
    - ls .coverage*
