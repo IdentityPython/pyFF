@@ -141,11 +141,9 @@ def cached(typed=False, ttl=None, hash_key=None):
             stats['hits'] = 0
             stats['misses'] = 0
 
-        @property
         def hits():
             return stats['hits']
 
-        @property
         def misses():
             return stats['misses']
 

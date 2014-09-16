@@ -50,7 +50,6 @@ except ImportError:  # pragma: no cover
 import getopt
 import traceback
 import urlparse
-from cherrypy._cptools import HandlerTool
 from cherrypy.lib.cpstats import StatsPage
 import os
 import sys
@@ -767,6 +766,7 @@ def main():
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
     cfg = {
         'global': {
+            'tools.encode.encoding': 'UTF-8',
             'server.socket_port': port,
             'server.socket_host': host,
             'tools.caching.on': caching,
