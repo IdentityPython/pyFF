@@ -4,16 +4,16 @@ for pyFF.
 import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-from pyff.decorators import deprecated
-from pyff.utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
+from .decorators import deprecated
+from .utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
     iter_entities, validate_document
-from pyff.constants import NS
-from pyff.pipes import Plumbing, PipeException, PipelineCallback
+from .constants import NS
+from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from copy import deepcopy
 import sys
 import os
 import re
-from pyff.logs import log
+from .logs import log
 import hashlib
 import xmlsec
 import base64
@@ -24,6 +24,7 @@ __author__ = 'leifj'
 FILESPEC_REGEX = "([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)"
 
 
+@pipe
 def dump(req, *opts):
     """
 Print a representation of the entities set on stdout. Useful for testing.
@@ -37,7 +38,7 @@ Print a representation of the entities set on stdout. Useful for testing.
     else:
         print "<EntitiesDescriptor xmlns=\"%s\"/>" % NS['md']
 
-
+@pipe
 def end(req, *opts):
     """
 Exit with optional error code and message.
@@ -66,6 +67,7 @@ break out of the pipeline, use break instead.
     sys.exit(code)
 
 
+@pipe
 def fork(req, *opts):
     """
 Make a copy of the working tree and process the arguments as a pipleline. This essentially resets the working
@@ -143,6 +145,7 @@ active document. To avoid this do a select before your fork, thus:
         req.md.merge(req.t, ireq.t, strategy_name=sn)
 
 
+@pipe(name='any')
 def _any(lst, d):
     for x in lst:
         if x in d:
@@ -153,6 +156,7 @@ def _any(lst, d):
     return False
 
 
+@pipe(name='break')
 def _break(req, *opts):
     """
 Break out of a pipeline.
@@ -178,7 +182,8 @@ is '_break' but the keyword is 'break' to avoid conflicting with python builtin 
     return req.t
 
 
-def pipe(req, *opts):
+@pipe(name='pipe')
+def _pipe(req, *opts):
     """
 Run the argument list as a pipleine.
 
@@ -223,6 +228,7 @@ is equivalent to
     return ot
 
 
+@pipe
 def when(req, condition, *values):
     """
 Conditionally execute part of the pipeline.
@@ -257,6 +263,7 @@ followed. If 'bar' is present in the state with the value 'bill' then the other 
     return req.t
 
 
+@pipe
 def info(req, *opts):
     """
 Dumps the working document on stdout. Useful for testing.
@@ -274,6 +281,7 @@ Dumps the working document on stdout. Useful for testing.
     return req.t
 
 
+@pipe
 def publish(req, *opts):
     """
 Publish the working document in XML form.
@@ -323,25 +331,26 @@ Publish the working document in XML form.
         req.md.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
 
+@pipe
 @deprecated
 def remote(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
     return load(req, opts)
 
-
+@pipe
 @deprecated
 def local(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
     return load(req, opts)
 
-
+@pipe
 @deprecated
 def _fetch(req, *opts):
     return load(req, *opts)
 
-
+@pipe
 def load(req, *opts):
     """
 General-purpose resource fetcher.
@@ -407,6 +416,7 @@ Supports both remote and local resources. Fetching remote resources is done in p
     req.md.fetch_metadata(remote, **opts)
     req.state['stats']['Metadata URLs'] = stats
 
+@pipe
 def select(req, *opts):
     """
 Select a set of EntityDescriptor elements as the working document.
@@ -498,7 +508,7 @@ alias invisible for anything except the corresponding mime type.
 
     return ot
 
-
+@pipe
 def pick(req, *opts):
     """
 Select a set of EntityDescriptor elements as a working document but don't validate it.
@@ -517,7 +527,7 @@ Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information a
         raise PipeException("empty select '%s' - stop" % ",".join(args))
     return ot
 
-
+@pipe
 def first(req, *opts):
     """
 If the working document is a single EntityDescriptor, strip the outer EntitiesDescriptor element and return it.
@@ -541,8 +551,7 @@ then the outer EntitiesDescriptor is stripped. This method does exactly that:
 
     return req.t
 
-
-
+@pipe
 def sign(req, *opts):
     """
 Sign the working document.
@@ -612,6 +621,7 @@ This example signs the document using the plain key and cert found in the signer
     return req.t
 
 
+@pipe
 def stats(req, *opts):
     """
 Display statistics about the current working document.
@@ -639,7 +649,7 @@ Display statistics about the current working document.
     print "---"
     return req.t
 
-
+@pipe
 def store(req, *opts):
     """
 Save the working document as separate files
@@ -677,7 +687,7 @@ before you call store.
             safe_write("%s.xml" % os.path.join(target_dir, d), dumptree(e, pretty_print=True))
     return req.t
 
-
+@pipe
 def xslt(req, *opts):
     """
 Transform the working document using an XSLT file.
@@ -715,7 +725,7 @@ user-supplied file. The rest of the keyword arguments are made available as stri
         traceback.print_exc(ex)
         raise ex
 
-
+@pipe
 def validate(req, *opts):
     """
 Validate the working document
@@ -732,7 +742,7 @@ loading of metadata so this call is seldom needed.
 
     return req.t
 
-
+@pipe
 def certreport(req, *opts):
     """
 Generate a report of the certificates (optionally limited by expiration time or key size) found in the selection.
@@ -830,7 +840,7 @@ HTML.
             except Exception, ex:
                 log.error(ex)
 
-
+@pipe
 def emit(req, ctype="application/xml", *opts):
     """
 Returns a UTF-8 encoded representation of the working tree.
@@ -873,7 +883,7 @@ Content-Type HTTP response header.
     req.state['headers']['Content-Type'] = ctype
     return unicode(d.decode('utf-8')).encode("utf-8")
 
-
+@pipe
 def signcerts(req, *opts):
     """
 Logs the fingerprints of the signing certs found in the current working tree.
@@ -896,7 +906,7 @@ Useful for testing.
         log.info("found signing cert with fingerprint %s" % fp)
     return req.t
 
-
+@pipe
 def finalize(req, *opts):
     """
 Prepares the working document for publication/rendering.
@@ -980,7 +990,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
 
     return req.t
 
-
+@pipe(name='setattr')
 def _setattr(req, *opts):
     """
 Sets entity attributes on the working document

@@ -7,7 +7,7 @@ import functools
 __author__ = 'leifj'
 
 import time
-from pyff.logs import log
+from .logs import log
 
 
 def retry(ex, tries=4, delay=3, backoff=2, logger=log):

@@ -37,10 +37,15 @@ An implementation of draft-lajoie-md-query
             Chdir into <dir> after the server starts up.
     --proxy
             The service is running behind a proxy - respect the X-Forwarded-Host header.
+    -m <module>|--modules=<module>
+            Load a module
+
     {pipeline-files}+
             One or more pipeline files
 
 """
+import importlib
+
 try:
     from cStringIO import StringIO
 except ImportError:  # pragma: no cover
@@ -638,9 +643,9 @@ def main():
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   'hP:p:H:CfaA:l:R',
+                                   'hP:p:H:CfaA:l:Rm:',
                                    ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=', 'email=',
-                                    'port=', 'host=', 'no-caching', 'autoreload', 'frequency=',
+                                    'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
                                     'alias=', 'dir=', 'version', 'proxy', 'terminator'])
     except getopt.error, msg:
         print msg
@@ -664,6 +669,7 @@ def main():
     email = None
     store = MemoryStore()
     terminator = False
+    modules = []
 
     try:
         for o, a in opts:
@@ -712,6 +718,8 @@ def main():
                 proxy = True
             elif o in '--terminator':
                 terminator = True
+            elif o in ('-m', '--module'):
+                modules.append(a)
             elif o in '--version':
                 print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__)
                 sys.exit(0)
@@ -754,6 +762,10 @@ def main():
 
     if loglevel == logging.DEBUG:
         observers.append(debug_observer)
+
+    modules.append('pyff.builtins')
+    for mn in modules:
+        importlib.import_module(mn)
 
     server = MDServer(pipes=args,
                       autoreload=autoreload,

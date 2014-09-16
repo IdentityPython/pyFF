@@ -41,7 +41,7 @@ class PyFFDTest(PipeLineTest):
                                   name="pyffd-test",
                                   args=["--loglevel=INFO", '-f', '-C', '-p', cls.pidfile, "--terminator", cls.mdx])
         cls.pyffd_thread.start()
-        sleep(10)
+        sleep(20)
 
     def test_is_running(self):
         assert (os.path.exists(self.pidfile))

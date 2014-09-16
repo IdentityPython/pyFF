@@ -12,6 +12,7 @@ from unittest import TestCase
 import pkg_resources
 import sys
 from pyff import __version__ as pyffversion
+import pyff.builtins
 
 
 class ExitException(Exception):
