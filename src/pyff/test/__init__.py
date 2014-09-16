@@ -36,7 +36,6 @@ def run_cmdline(script, *args):
     with open(starter, 'w') as fd:
         fd.write("""#!%s
 import sys
-print sys.path
 import coverage
 import os
 from pkg_resources import load_entry_point
