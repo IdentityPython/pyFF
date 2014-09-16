@@ -112,7 +112,7 @@ class PyFFTest(PipeLineTest):
 
     def test_run_bad(self):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", self.bad)
-                print out
+        print out
         print err
         print exit_code
         assert (not out)
