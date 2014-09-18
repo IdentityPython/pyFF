@@ -1,2 +1,5 @@
 [report]
-omit = */docs/* */site-packates/*
+omit = 
+	*/docs/*
+	*/site-packates/*
+	*/test/*
