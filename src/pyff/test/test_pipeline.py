@@ -60,7 +60,8 @@ class SigningTest(PipeLineTest):
         assert('https://idp.aco.net/idp/shibboleth' in eIDs)
         assert('https://skriptenforum.net/shibboleth' in eIDs)
         with open(self.output, 'r') as fd:
-            print fd.read()
+            lines = fd.readline()
+            assert (len(lines) > 0)
 
     def test_cert_report_swamid(self):
         self.output = tempfile.NamedTemporaryFile('w').name

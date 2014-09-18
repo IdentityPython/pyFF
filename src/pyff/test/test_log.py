@@ -47,6 +47,18 @@ class TestSyslog(TestCase):
     def dummy_syslog(self, code, msg):
         self._syslog.write("%d:%s\n" % (code, msg))
 
+    def test_bad_syslog(self):
+        try:
+            bad_handler = SysLogLibHandler("SLARTIBARTIFAST")
+            assert False
+        except ValueError:
+            pass
+
+    def test_kern_syslog(self):
+        kern = SysLogLibHandler(0)
+        assert (kern is not None)
+        assert (isinstance(kern, SysLogLibHandler))
+
     def test_log_syslog(self):
         with patch('syslog.syslog', new=self.dummy_syslog):
             try:

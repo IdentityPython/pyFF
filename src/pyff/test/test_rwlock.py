@@ -20,7 +20,9 @@ class TestReadWriteLock(TestCase):
 
     def timeout_writer(self, timeout=1):
         try:
-            self.lock.acquireWrite(timeout=timeout)
+            self.lock.acquireRead(timeout=timeout)   # get a read
+            self.lock.acquireWrite(timeout=timeout)  # upgrade to write
+            self.lock.acquireWrite(timeout=timeout)  # get it twice...
             print "thread (writer): %s starting" % current_thread().name
             self.writer_active = True
             sleep(1)

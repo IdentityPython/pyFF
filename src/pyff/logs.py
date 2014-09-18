@@ -69,7 +69,7 @@ class SysLogLibHandler(logging.Handler):
         if type(facility) is str or type(facility) is unicode:
             nf = getattr(syslog, "LOG_%s" % facility.upper(), None)
             if not isinstance(nf, int):
-                raise ValueError('Invalid log level: %s' % nf)
+                raise ValueError('Invalid log facility: %s' % nf)
             self.facility = nf
         else:
             self.facility = facility
