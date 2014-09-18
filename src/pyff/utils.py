@@ -481,6 +481,12 @@ def iter_entities(t):
     return t.iter('{%s}EntityDescriptor' % NS['md'])
 
 
+def find_entity(t, e_id, attr='entityID'):
+    for e in iter_entities(t):
+        if e.get(attr) == e_id:
+            return e
+    return None
+
 def has_tag(t, tag):
     tags = t.iter(tag)
     return next(tags, sentinel) is not sentinel
