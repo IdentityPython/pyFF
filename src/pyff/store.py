@@ -45,12 +45,15 @@ def entity_attribute_dict(entity):
 
     d[ATTRS['role']] = []
 
-    dlist = []
-    for dn in _domains(entity):
-        for sub in subdomains(dn):
-            dlist.append(sub)
+    try:
+        dlist = []
+        for dn in _domains(entity):
+            for sub in subdomains(dn):
+                dlist.append(sub)
 
-    d[ATTRS['domain']] = dlist
+        d[ATTRS['domain']] = dlist
+    except ValueError:
+        pass
 
     if is_idp(entity):
         d[ATTRS['role']].append('idp')

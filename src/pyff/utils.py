@@ -479,11 +479,9 @@ def has_tag(t, tag):
 
 
 def url2host(url):
-    try:
-        (host, sep, port) = urlparse(url).netloc.partition(':')
-        return host
-    except ValueError:
-        return None
+    (host, sep, port) = urlparse(url).netloc.partition(':')
+    return host
+
 
 
 def subdomains(domain):
