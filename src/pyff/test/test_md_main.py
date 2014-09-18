@@ -72,6 +72,24 @@ class PyFFDTest(PipeLineTest):
         assert (root(t).get('entityID') == 'https://idp.nordu.net/idp/shibboleth')
         validate_document(t)
 
+    def test_metadata_html(self):
+        r = requests.get('http://localhost:8080/metadata/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.html')
+        assert (r.status_code == 200)
+        assert ('text/html' in r.headers['Content-Type'])
+
+    def test_metadata_xml(self):
+        r = requests.get('http://localhost:8080/metadata/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.xml')
+        assert (r.status_code == 200)
+        assert ('application/xml' in r.headers['Content-Type'])
+
+    def test_metadata_json(self):
+        r = requests.get('http://localhost:8080/metadata/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.json')
+        assert (r.status_code == 200)
+        info = r.json()[0]
+        assert(type(info) == dict)
+        assert (info['title'] == 'NORDUnet')
+        assert ('nordu.net' in info['scope'])
+
     def test_all_entities_parses(self):
         r = requests.get("http://127.0.0.1:8080/entities")
         assert (r.status_code == 200)
@@ -89,9 +107,10 @@ class PyFFDTest(PipeLineTest):
         assert (r.status_code == 200)
         assert r.json()
 
-    def test_robots(self):
-        r = requests.get("http://127.0.0.1:8080/robots.txt")
-        assert (r.status_code == 200)
+    def test_some_pages(self):
+        for p in ('robots.txt', 'settings', 'about', 'reset'):
+            r = requests.get("http://127.0.0.1:8080/%s" % p)
+            assert (r.status_code == 200)
 
     def test_parse_robots(self):
         try:
@@ -103,6 +122,11 @@ class PyFFDTest(PipeLineTest):
         rp.set_url("http://127.0.0.1:8080/robots.txt")
         rp.read()
         assert not rp.can_fetch("*", "http://127.0.0.1:8080/")
+
+    def test_favicon(self):
+        r = requests.get("http://127.0.0.1:8080/favicon.ico")
+        assert (r.status_code == 200)
+        assert (r.headers['Content-Type'] == 'image/x-icon')
 
     def test_ds_bad_request(self):
         r = requests.get("http://127.0.0.1:8080/role/idp.ds")
@@ -116,6 +140,7 @@ class PyFFDTest(PipeLineTest):
         r = requests.get("http://127.0.0.1:8080/role/idp.s")
         assert (r.status_code == 200)
         assert len(r.json()) == 0
+
 
     @classmethod
     def tearDownClass(cls):

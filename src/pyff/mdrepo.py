@@ -28,21 +28,10 @@ from . import merge_strategies
 from .logs import log
 from .utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
-    iter_entities, validate_document, load_url, iso2datetime
+    iter_entities, validate_document, load_url, iso2datetime, xml_error
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
-
-
-def _e(error_log, m=None):
-    def _f(x):
-        if ":WARNING:" in x:
-            return False
-        if m is not None and m not in x:
-            return False
-        return True
-
-    return "\n".join(filter(_f, ["%s" % e for e in error_log]))
 
 
 class Event(UserDict):
@@ -596,7 +585,7 @@ and verified.
                     for e in iter_entities(t):
                         # log.debug("validating %s" % e.get("entityID"))
                         if not xsd.validate(e):
-                            error = _e(xsd.error_log, m=base_url)
+                            error = xml_error(xsd.error_log, m=base_url)
                             entity_id = e.get("entityID")
                             log.warn("removing '%s': schema validation failed (%s)" % (entity_id, error))
                             validation_errors[entity_id] = error
@@ -607,7 +596,7 @@ and verified.
         except DocumentInvalid, ex:
             traceback.print_exc()
             if log.isDebugEnabled():
-                log.debug("schema validation failed on '%s': %s" % (base_url, _e(ex.error_log, m=base_url)))
+                log.debug("schema validation failed on '%s': %s" % (base_url, xml_error(ex.error_log, m=base_url)))
             raise MetadataException("schema validation failed")
         except Exception, ex:
             log.error(ex)
@@ -768,7 +757,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                 validate_document(t)
             except DocumentInvalid, ex:
                 if log.isDebugEnabled():
-                    log.debug(_e(ex.error_log))
+                    log.debug(xml_error(ex.error_log))
                 raise MetadataException("XML schema validation failed: %s" % name)
         return t
 
@@ -788,7 +777,7 @@ Returns a dict object with basic information about the EntitiesDescriptor
         """
         seen = dict()
         info = dict()
-        t = self.store.lookup(uri)
+        t = self.store.lookup(uri).next()
         info['Name'] = t.get('Name', uri)
         info['cacheDuration'] = t.get('cacheDuration', None)
         info['validUntil'] = t.get('validUntil', None)

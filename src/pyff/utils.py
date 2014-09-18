@@ -37,7 +37,7 @@ class PyffException(Exception):
     pass
 
 
-def _e(error_log, m=None):
+def xml_error(error_log, m=None):
     def _f(x):
         if ":WARNING:" in x:
             return False
@@ -113,20 +113,6 @@ This includes certain XSLT and XSD files.
     return None
 
 
-def tdelta(td):
-    """
-Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours and/or seconds.
-
-:param td: A human-friendly string representation of a timedelta
-    """
-    keys = ["weeks", "days", "hours", "minutes"]
-    regex = "".join(["((?P<%s>\d+)%s ?)?" % (k, k[0]) for k in keys])
-    kwargs = {}
-    for k, v in re.match(regex, td).groupdict(default="0").items():
-        kwargs[k] = int(v)
-    return timedelta(**kwargs)
-
-
 def totimestamp(dt, epoch=datetime(1970, 1, 1)):
     epoch = epoch.replace(tzinfo=dt.tzinfo)
 
@@ -192,7 +178,7 @@ def schema():
             st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
             thread_data.schema = etree.XMLSchema(st)
         except etree.XMLSchemaParseError, ex:
-            log.error(_e(ex.error_log))
+            log.error(xml_error(ex.error_log))
             raise ex
     return thread_data.schema
 

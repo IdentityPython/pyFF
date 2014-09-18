@@ -270,7 +270,7 @@ class MDRoot(object):
 
     stats = MDStats()
 
-    try:
+    try:  # pragma: nocover
         import dowser
 
         memory = dowser.Root()
@@ -286,7 +286,7 @@ class MDRoot(object):
         if 'allow_shutdown' in cfg and bool(cfg.get('allow_shutdown')):
             cherrypy.engine.exit()
             return "bye ..."
-        else:
+        else:  # pragma: nocover
             raise cherrypy.HTTPError(403, "disabled")
 
     @cherrypy.expose

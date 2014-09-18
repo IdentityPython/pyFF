@@ -1,6 +1,8 @@
+import tempfile
 from unittest import TestCase
+from pyff import utils
 from pyff.constants import NS
-from pyff.utils import resource_filename, parse_xml, find_entity, root
+from pyff.utils import resource_filename, parse_xml, find_entity, root, resource_string, entities_list
 import os
 import copy
 
@@ -46,3 +48,65 @@ class TestMetadata(TestCase):
         remove(idp3, None)
         idp = find_entity(root(self.t2), 'kaka4711', attr='ID')
         assert (idp3 is not None)
+
+    def test_entities_list(self):
+        assert len(list(entities_list(root(self.t2)))) == 1032
+        assert len(list(entities_list(None))) == 0
+
+
+class TestResources(TestCase):
+
+    def test_resource_filename(self):
+        assert(resource_filename("missing") is None)
+        assert(resource_filename("missing", "gone") is None)
+        assert(os.path.isdir(resource_filename('test')))
+        assert(os.path.isfile(resource_filename('test/data/empty.txt')))
+        assert(os.path.isdir(resource_filename('metadata', 'test/data')))
+        assert(os.path.isfile(resource_filename('empty.txt', 'test/data')))
+        assert(resource_filename('empty.txt', 'test/data') == resource_filename('test/data/empty.txt'))
+        tmp = tempfile.NamedTemporaryFile('w').name
+        with open(tmp, "w") as fd:
+            fd.write("test")
+
+        try:
+            assert(resource_filename(tmp) == tmp)
+            (d, fn) = os.path.split(tmp)
+            assert(resource_filename(fn, d) == tmp)
+        except IOError, ex:
+            raise ex
+        finally:
+            try:
+                os.unlink(tmp)
+            except Exception:
+                pass
+
+    def test_resource_string(self):
+        assert(resource_string("missing") is None)
+        assert(resource_string("missing", "gone") is None)
+        assert(resource_string('test/data/empty.txt') == 'empty')
+        assert(resource_string('empty.txt', 'test/data') == 'empty')
+        tmp = tempfile.NamedTemporaryFile('w').name
+        with open(tmp, "w") as fd:
+            fd.write("test")
+
+        try:
+            assert(resource_string(tmp) == "test")
+            (d, fn) = os.path.split(tmp)
+            assert(resource_string(fn, d) == "test")
+        except IOError, ex:
+            raise ex
+        finally:
+            try:
+                os.unlink(tmp)
+            except Exception:
+                pass
+
+
+class TestXMLErrors(TestCase):
+
+    def test_strip_warnings(self):
+        errors = [':WARNING:', 'other']
+        assert(utils.xml_error(errors) == 'other')
+        assert(utils.xml_error(errors, m='other') == 'other')
+        assert(utils.xml_error(errors, m='kaka') == '')
+

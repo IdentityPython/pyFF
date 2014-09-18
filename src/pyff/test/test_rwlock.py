@@ -60,11 +60,17 @@ class TestReadWriteLock(TestCase):
             with self.lock.writelock:
                 print "thread (writer): %s starting" % current_thread().name
                 self.writer_active = True
+                self.lock.acquireRead(timeout=0.1)  # make sure we can get a readlock as a writer
                 sleep(1)
                 self.writer_active = False
             print "thread: %s exiting" % current_thread().name
         except Exception, ex:
             self.exceptions[current_thread().name] = ex
+        finally:
+            try:
+                self.lock.release()
+            except ValueError:  # ignore double release error
+                pass
 
     def reader(self, to_wait_for):
         try:

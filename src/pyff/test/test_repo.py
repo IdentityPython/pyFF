@@ -10,6 +10,8 @@ class TestRepo(TestCase):
         self.md = MDRepository(store=MemoryStore)
         self.datadir = resource_filename('metadata', 'test/data')
         self.xml_source = os.path.join(self.datadir, 'test01.xml')
+        self.swamid_source = os.path.join(self.datadir, 'swamid-2.0-test.xml')
+        self.swamid = root(parse_xml(self.swamid_source))
         self.t = parse_xml(self.xml_source)
 
     def test_md_exists(self):
@@ -74,3 +76,18 @@ class TestRepo(TestCase):
 
         empty = self.md.simple_summary(None)
         assert (not empty)
+
+    def test_display(self):
+        swamid = root(self.swamid)
+        self.md.import_metadata(swamid, swamid.get('Name'))
+        funet_connect = self.md.lookup('https://connect.funet.fi/shibboleth')[0]
+        name, desc = self.md.ext_display(funet_connect)
+        assert(name == 'FUNET E-Meeting Service')
+        dn = self.md.display(funet_connect)
+
+
+    def test_missing(self):
+        swamid = root(self.swamid)
+        self.md.import_metadata(swamid, swamid.get('Name'))
+        missing = self.md.lookup('https://connect.funet.fi/shibboleth+missing')
+        assert (len(missing) == 0)
