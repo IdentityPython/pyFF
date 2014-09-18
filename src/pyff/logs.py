@@ -17,8 +17,10 @@ class PyFFLogger():
     def _l(self, severity, msg):
         if '' in cherrypy.tree.apps:
             cherrypy.tree.apps[''].log("%s" % msg, severity=severity)
-        else:
+        elif severity in self._loggers:
             self._loggers[severity]("%s" % msg)
+        else:
+            raise ValueError("unknown severity %s" % severity)
 
     def warn(self, msg):
         return self._l(logging.WARN, msg)
