@@ -62,7 +62,7 @@ break out of the pipeline, use break instead.
     if req.args is not None:
         code = req.args.get('code', 0)
         msg = req.args.get('message', None)
-        if msg is None:
+        if msg is not None:
             print msg
     sys.exit(code)
 
@@ -486,6 +486,8 @@ alias invisible for anything except the corresponding mime type.
         args = [req.state.get('select')]
     if args is None:
         args = req.md.store.collections()
+    if args is None or not args:
+        args = req.md.store.lookup('entities')
     if args is None or not args:
         args = []
 

@@ -1,4 +1,5 @@
 import os
+import shutil
 import mock
 import sys
 import tempfile
@@ -9,6 +10,7 @@ from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing, Plumbing, PipeException
 from pyff.test import SignerTestCase, ExitException
 from StringIO import StringIO
+from pyff.utils import hash_id, parse_xml, resource_filename, root
 
 
 class PipeLineTest(SignerTestCase):
@@ -118,58 +120,119 @@ class SigningTest(PipeLineTest):
             except IOError:
                 raise Skip
 
-
-    def test_end(self):
-        with mock.patch("sys.exit", self.sys_exit):
-            with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
-                try:
-                    self.exec_pipeline("""
-- end 1 "slartibartifast"
+    def test_end_exit(self):
+        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            try:
+                self.exec_pipeline("""
+- end:
+    code: 22
+    message: "slartibartifast"
 """)
-                    assert False
-                except IOError:
-                    raise Skip
-                except ExitException,ex:
-                    assert ex.code == 1
-                    assert "slartibartifast" in sys.stdout.captured
+                assert False
+            except IOError:
+                raise Skip
+            except ExitException, ex:
+                assert ex.code == 22
+                assert "slartibartifast" in "".join(sys.stdout.captured)
 
-    def test_end(self):
-        with mock.patch("sys.exit", self.sys_exit):
-            with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
-                try:
-                    self.exec_pipeline("""
+    def test_single_dump(self):
+        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            try:
+                self.exec_pipeline("""
 - dump
 """)
-                    assert '<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"/>' \
-                           in "".join(sys.stdout.captured)
-                except IOError:
-                    raise Skip
+                assert '<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"/>' \
+                       in "".join(sys.stdout.captured)
+            except IOError:
+                raise Skip
 
-    def test_empty_dump(self):
-        with mock.patch("sys.exit", self.sys_exit):
-            with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
-                try:
-                    self.exec_pipeline("""
+    def test_empty_publish(self):
+        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            try:
+                self.exec_pipeline("""
 - publish
 """)
-                    assert False
-                except PipeException:
-                    pass
-                except IOError:
-                    raise Skip
+                assert False
+            except PipeException:
+                pass
+            except IOError:
+                raise Skip
 
-    def test_empty_dump(self):
-        with mock.patch("sys.exit", self.sys_exit):
-            with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
-                try:
-                    self.exec_pipeline("""
+    def test_select_as(self):
+        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            try:
+                self.exec_pipeline("""
 - load:
-  - file://%s/metadata/test01.xml
-- select
+   - file://%s/metadata/test01.xml
+- select as FOO
 - publish
 """ % self.datadir)
-                    assert False
-                except PipeException:
-                    pass
-                except IOError:
-                    raise Skip
+                assert False
+            except PipeException:
+                pass
+            except IOError:
+                raise Skip
+
+    def test_empty_store(self):
+        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            try:
+                self.exec_pipeline("""
+- store
+""")
+                assert False
+            except PipeException:
+                pass
+            except IOError:
+                raise Skip
+
+    def test_empty_store(self):
+        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            try:
+                self.exec_pipeline("""
+- store:
+   directory: /tmp
+""")
+                assert False
+            except PipeException:
+                pass
+            except IOError:
+                raise Skip
+
+    def test_store_and_retrieve(self):
+        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            tmpdir = tempfile.mkdtemp()
+            os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
+            try:
+                self.exec_pipeline("""
+- load:
+   - file://%s/metadata/test01.xml
+- select
+- store:
+   directory: %s
+""" % (self.datadir, tmpdir))
+                t1 = parse_xml(resource_filename("metadata/test01.xml", self.datadir))
+                assert t1 is not None
+                entity_id = 'https://idp.example.com/saml2/idp/metadata.php'
+                sha1id = hash_id(entity_id, prefix=False)
+                fn = "%s/%s.xml" % (tmpdir, sha1id)
+                assert os.path.exists(fn)
+                t2 = parse_xml(fn)
+                assert t2 is not None
+                assert root(t1).get('entityID') == root(t2).get('entityID')
+                assert root(t2).get('entityID') == entity_id
+            except IOError:
+                raise Skip
+            finally:
+                shutil.rmtree(tmpdir)
+
+    def test_empty_certreport(self):
+        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            try:
+                self.exec_pipeline("""
+- certreport
+""")
+                assert False
+            except PipeException:
+                pass
+            except IOError:
+                raise Skip
