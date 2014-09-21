@@ -7,7 +7,7 @@ from nose.plugins.skip import Skip
 import yaml
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing, Plumbing, PipeException
-from pyff.test import SignerTestCase
+from pyff.test import SignerTestCase, ExitException
 from StringIO import StringIO
 
 
@@ -118,3 +118,58 @@ class SigningTest(PipeLineTest):
             except IOError:
                 raise Skip
 
+
+    def test_end(self):
+        with mock.patch("sys.exit", self.sys_exit):
+            with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
+                try:
+                    self.exec_pipeline("""
+- end 1 "slartibartifast"
+""")
+                    assert False
+                except IOError:
+                    raise Skip
+                except ExitException,ex:
+                    assert ex.code == 1
+                    assert "slartibartifast" in sys.stdout.captured
+
+    def test_end(self):
+        with mock.patch("sys.exit", self.sys_exit):
+            with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
+                try:
+                    self.exec_pipeline("""
+- dump
+""")
+                    assert '<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"/>' \
+                           in "".join(sys.stdout.captured)
+                except IOError:
+                    raise Skip
+
+    def test_empty_dump(self):
+        with mock.patch("sys.exit", self.sys_exit):
+            with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
+                try:
+                    self.exec_pipeline("""
+- publish
+""")
+                    assert False
+                except PipeException:
+                    pass
+                except IOError:
+                    raise Skip
+
+    def test_empty_dump(self):
+        with mock.patch("sys.exit", self.sys_exit):
+            with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
+                try:
+                    self.exec_pipeline("""
+- load:
+  - file://%s/metadata/test01.xml
+- select
+- publish
+""" % self.datadir)
+                    assert False
+                except PipeException:
+                    pass
+                except IOError:
+                    raise Skip

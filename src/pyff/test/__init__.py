@@ -95,6 +95,9 @@ class SignerTestCase(TestCase):
     private_keyspec = None
     public_keyspec = None
 
+    def sys_exit(self, code):
+        raise ExitException(code)
+
     @classmethod
     def setUpClass(cls):
         cls.datadir = pkg_resources.resource_filename(__name__, 'data')
