@@ -354,18 +354,7 @@ def total_seconds(dt):
 
 
 def etag(s):
-    return hash_str('sha1', s)
-
-
-def hash_str(hn, s):
-    if hn == 'null':
-        return s
-    if not hasattr(hashlib, hn):
-        raise ValueError("Unknown digest mechanism: '%s'" % hn)
-    hash_m = getattr(hashlib, hn)
-    h = hash_m()
-    h.update(s)
-    return h.hexdigest()
+    return hex_digest('sha1', s)
 
 
 def hash_id(entity, hn='sha1', prefix=True):
