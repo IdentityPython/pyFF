@@ -322,12 +322,6 @@ Disallow: /
         """
         return self.server.request(path=path)
 
-
-    @cherrypy.expose
-    def finger(self, domain="localhost"):
-        return render_template("finger.html", domain=domain)
-
-
     @cherrypy.expose
     def about(self):
         """The 'about' page. Contains links to statistics etc.
