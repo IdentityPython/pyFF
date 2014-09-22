@@ -92,20 +92,6 @@ class SigningTest(PipeLineTest):
         with open(self.output, 'r') as fd:
             print fd.read()
 
-    def test_empty_select(self):
-        with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
-            try:
-                self.exec_pipeline("""
-- load:
-  - http://md.swamid.se/md/swamid-2.0.xml
-- info
-""")
-                assert False
-            except IOError:
-                raise Skip
-            except PipeException:
-                pass
-
     def test_info_and_dump(self):
         with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
             try:
@@ -116,7 +102,7 @@ class SigningTest(PipeLineTest):
 - dump
 - info
 """)
-                assert('https://idp.nordu.net/idp/shibboleth' in sys.stdout.captured)
+                assert ('https://idp.nordu.net/idp/shibboleth' in sys.stdout.captured)
             except IOError:
                 raise Skip
 
@@ -146,32 +132,47 @@ class SigningTest(PipeLineTest):
             except IOError:
                 raise Skip
 
-    def test_empty_publish(self):
-        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
-            try:
-                self.exec_pipeline("""
-- publish
-""")
-                assert False
-            except PipeException:
-                pass
-            except IOError:
-                raise Skip
+    def test_missing_select(self):
+        for stmt in ('publish', 'signcerts', 'info', 'sign', 'store', 'finalize',
+                     'xslt', 'certreport', 'emit', 'finalize', 'first', 'setattr', 'stats'):
+            with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+                try:
+                    self.exec_pipeline("""
+- %s
+""" % stmt)
+                    assert False
+                except PipeException:
+                    pass
+                except IOError:
+                    raise Skip
 
-    def test_select_as(self):
+    def test_first_select_as(self):
         with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            tmpfile = tempfile.NamedTemporaryFile('w').name
             try:
                 self.exec_pipeline("""
 - load:
    - file://%s/metadata/test01.xml
 - select as FOO
-- publish
-""" % self.datadir)
-                assert False
+- first
+- publish: %s
+""" % (self.datadir, tmpfile))
+                t1 = parse_xml(resource_filename("metadata/test01.xml", self.datadir))
+                assert t1 is not None
+                entity_id = 'https://idp.example.com/saml2/idp/metadata.php'
+                t2 = parse_xml(tmpfile)
+                assert t2 is not None
+                assert root(t1).get('entityID') == root(t2).get('entityID')
+                assert root(t2).get('entityID') == entity_id
             except PipeException:
                 pass
             except IOError:
                 raise Skip
+            finally:
+                try:
+                    os.unlink(tmpfile)
+                except:
+                    pass
 
     def test_empty_store(self):
         with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
@@ -236,3 +237,27 @@ class SigningTest(PipeLineTest):
                 pass
             except IOError:
                 raise Skip
+
+    def test_pick_invalid(self):
+        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            tmpfile = tempfile.NamedTemporaryFile('w').name
+            try:
+                self.exec_pipeline("""
+- load validate False:
+   - %s/metadata
+- pick:
+   - https://idp.example.com/saml2/idp/metadata.php1
+- publish: %s
+""" % (self.datadir, tmpfile))
+                assert False
+            except PipeException, ex:
+                print "".join(sys.stdout.captured)
+                print str(ex)
+                pass
+            except IOError:
+                raise Skip
+            finally:
+                try:
+                    os.unlink(tmpfile)
+                except:
+                    pass

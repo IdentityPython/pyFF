@@ -1,6 +1,7 @@
 """Package that contains the basic set of pipes - functions that can be used to put together a processing pipeling
 for pyFF.
 """
+from distutils.util import strtobool
 import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
@@ -274,7 +275,7 @@ Dumps the working document on stdout. Useful for testing.
 
     """
     if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
+        raise PipeException("Your pipeline is missing a select statement.")
 
     for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS, smart_strings=False):
         print e.get('entityID')
@@ -302,13 +303,14 @@ Publish the working document in XML form.
     if req.t is None:
         raise PipeException("Empty document submitted for publication")
 
+    if req.args is None:
+        raise PipeException("publish must specify output")
+
     try:
         validate_document(req.t)
     except DocumentInvalid, ex:
         log.error(ex.error_log)
         raise PipeException("XML schema validation failed")
-    if req.args is None:
-        raise PipeException("publish must specify output")
 
     output_file = None
     if type(req.args) is dict:
@@ -357,7 +359,7 @@ General-purpose resource fetcher.
 
     :param opts:
     :param req: The request
-    :param opts: Options: [qsize <5>] [timeout <30>] [validate <True*|False>] [xrd <output xrd file>]
+    :param opts: Options: [qsize <5>] [timeout <30>] [validate <True*|False>]
     :return: None
 
 Supports both remote and local resources. Fetching remote resources is done in parallell using threads.
@@ -365,7 +367,8 @@ Supports both remote and local resources. Fetching remote resources is done in p
     opts = dict(zip(opts[::2], opts[1::2]))
     opts.setdefault('timeout', 120)
     opts.setdefault('max_workers', 5)
-    opts.setdefault('validate', True)
+    opts.setdefault('validate', "True")
+    opts['validate'] = bool(strtobool(opts['validate']))
     stats = dict()
     opts.setdefault('stats', stats)
 
@@ -415,6 +418,22 @@ Supports both remote and local resources. Fetching remote resources is done in p
 
     req.md.fetch_metadata(remote, **opts)
     req.state['stats']['Metadata URLs'] = stats
+
+
+def _select_args(req):
+    args = req.args
+    if log.isDebugEnabled():
+        log.debug("selecting using args: %s" % args)
+    if args is None and 'select' in req.state:
+        args = [req.state.get('select')]
+    if args is None:
+        args = req.md.store.collections()
+    if args is None or not args:
+        args = req.md.store.lookup('entities')
+    if args is None or not args:
+        args = []
+
+    return args
 
 @pipe
 def select(req, *opts):
@@ -479,18 +498,7 @@ would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in
 Note that you should not include an extension in your "as foo-bla-something" since that would make your
 alias invisible for anything except the corresponding mime type.
     """
-    args = req.args
-    if log.isDebugEnabled():
-        log.debug("selecting using args: %s" % args)
-    if args is None and 'select' in req.state:
-        args = [req.state.get('select')]
-    if args is None:
-        args = req.md.store.collections()
-    if args is None or not args:
-        args = req.md.store.lookup('entities')
-    if args is None or not args:
-        args = []
-
+    args = _select_args(req)
     name = req.plumbing.id
     alias = False
     if len(opts) > 0:
@@ -521,9 +529,7 @@ Select a set of EntityDescriptor elements as a working document but don't valida
 
 Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information about selecting the document.
     """
-    args = req.args
-    if args is None:
-        args = req.md.store.collections()
+    args = _select_args(req)
     ot = req.md.entity_set(args, req.plumbing.id, validate=False)
     if ot is None:
         raise PipeException("empty select '%s' - stop" % ",".join(args))
@@ -541,6 +547,9 @@ If the working document is a single EntityDescriptor, strip the outer EntitiesDe
 Sometimes (eg when running an MDX pipeline) it is usually expected that if a single EntityDescriptor is being returned
 then the outer EntitiesDescriptor is stripped. This method does exactly that:
     """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
     gone = object()  # sentinel
     entities = iter_entities(req.t)
     one = next(entities, gone)
@@ -599,7 +608,7 @@ of your PKCS#11 module to find out about any other configuration you may need.
 This example signs the document using the plain key and cert found in the signer.key and signer.crt files.
     """
     if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
+        raise PipeException("Your pipeline is missing a select statement.")
 
     if not type(req.args) is dict:
         raise PipeException("Missing key and cert arguments to sign pipe")
@@ -664,6 +673,8 @@ Split the working document into EntityDescriptor-parts and save in directory/sha
 this does not erase files that may already be in the directory. If you want a "clean" directory, remove it
 before you call store.
     """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
 
     if not req.args:
         raise PipeException("store requires an argument")
@@ -677,8 +688,6 @@ before you call store.
     if target_dir is not None:
         if not os.path.isdir(target_dir):
             os.makedirs(target_dir)
-        if req.t is None:
-            raise PipeException("Your plumbing is missing a select statement.")
         for e in iter_entities(req.t):
             eid = e.get('entityID')
             if eid is None or len(eid) == 0:
@@ -711,12 +720,12 @@ user-supplied file. The rest of the keyword arguments are made available as stri
         x: foo
         y: bar
     """
+    if req.t is None:
+        raise PipeException("Your plumbing is missing a select statement.")
+
     stylesheet = req.args.get('stylesheet', None)
     if stylesheet is None:
         raise PipeException("xslt requires stylesheet")
-
-    if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
 
     params = dict((k, "\'%s\'" % v) for (k, v) in req.args.items())
     del params['stylesheet']
@@ -773,7 +782,7 @@ HTML.
     """
 
     if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
+        raise PipeException("Your pipeline is missing a select statement.")
 
     if not req.args:
         req.args = {}
@@ -863,6 +872,8 @@ Content-Type HTTP response header.
     - emit application/xml:
     - break
     """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
 
     d = req.t
     if hasattr(d, 'getroot') and hasattr(d.getroot, '__call__'):
@@ -903,7 +914,8 @@ Useful for testing.
     - signcerts
     """
     if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
+        raise PipeException("Your pipeline is missing a select statement.")
+
     for fp, pem in xmlsec.CertDict(req.t).iteritems():
         log.info("found signing cert with fingerprint %s" % fp)
     return req.t
@@ -1016,6 +1028,9 @@ elements of the active document.
 Normally this would be combined with the 'merge' feature of fork to add attributes to the working
 document for later processing.
     """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
     for e in iter_entities(req.t):
         #log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         req.md.set_entity_attributes(e, req.args)

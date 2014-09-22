@@ -548,6 +548,7 @@ and verified.
 :param post: A callable that will be called to modify the parse-tree before any validation
 (but after xinclude processing)
         """
+
         try:
             parser = etree.XMLParser(resolve_entities=False)
             t = etree.parse(source, base_url=base_url, parser=parser)
@@ -589,6 +590,8 @@ and verified.
                             entity_id = e.get("entityID")
                             log.warn("removing '%s': schema validation failed (%s)" % (entity_id, error))
                             validation_errors[entity_id] = error
+                            if e.getparent() is None:
+                                return None, None
                             e.getparent().remove(e)
                             self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=entity_id, error=error)
                 else:  # all or nothing
@@ -637,7 +640,7 @@ starting with '.' are excluded.
                         log.error(ex)
 
         if entities:
-            self.store.update(self.entity_set(entities, url))
+            self.store.update(self.entity_set(entities, url, validate=validate))
         else:
             log.info("no entities found in %s" % directory)
 
@@ -723,10 +726,10 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
         def _a(ent):
             entity_id = ent.get('entityID', None)
-            log.debug("adding %s to set" % entity_id)
+            # log.debug("adding %s to set" % entity_id)
             if (ent is not None) and (entity_id is not None) and (entity_id not in seen):
                 t.append(deepcopy(ent))
-                log.debug("really adding %s to set" % entity_id)
+                # log.debug("really adding %s to set" % entity_id)
                 seen[entity_id] = True
 
         attrs = dict(Name=name, nsmap=NS)
