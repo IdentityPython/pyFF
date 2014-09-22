@@ -533,7 +533,7 @@ and verified.
                        fail_on_error=False,
                        filter_invalid=True,
                        validate=True,
-                       validation_errors=dict(),
+                       validation_errors=None,
                        expiration=None,
                        post=None):
         """Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
@@ -548,6 +548,9 @@ and verified.
 :param post: A callable that will be called to modify the parse-tree before any validation
 (but after xinclude processing)
         """
+
+        if validation_errors is None:
+            validation_errors = dict()
 
         try:
             parser = etree.XMLParser(resolve_entities=False)

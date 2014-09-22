@@ -12,7 +12,6 @@ import sys
 import getopt
 import traceback
 import logging
-import imp
 
 from .mdrepo import MDRepository
 from .pipes import plumbing

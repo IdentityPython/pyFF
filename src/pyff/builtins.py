@@ -987,7 +987,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
                 offset = dt - now
                 e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
             except ValueError, ex:
-                log.error("Unable to parse validUntil: %s" % valid_until)
+                log.error("Unable to parse validUntil: %s (%s)" % (valid_until, ex))
 
             # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set

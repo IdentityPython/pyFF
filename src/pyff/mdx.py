@@ -405,11 +405,13 @@ class MDServer(object):
                  pipes=None,
                  autoreload=False,
                  frequency=600,
-                 aliases=ATTRS,
+                 aliases=None,
                  cache_enabled=True,
                  observers=None,
                  store=None):
 
+        if aliases is None:
+            aliases = ATTRS
         if not observers:
             observers = []
         if not pipes:
@@ -630,7 +632,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                                    'hP:p:H:CfaA:l:Rm:',
-                                   ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=', 'email=',
+                                   ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
                                     'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
                                     'alias=', 'dir=', 'version', 'proxy', 'terminator'])
     except getopt.error, msg:
@@ -652,7 +654,6 @@ def main():
     aliases = ATTRS
     base_dir = None
     proxy = False
-    email = None
     store = MemoryStore()
     terminator = False
     modules = []
@@ -691,8 +692,6 @@ def main():
                 autoreload = True
             elif o in '--frequency':
                 frequency = int(a)
-            elif o in '--email':
-                email = a
             elif o in ('-A', '--alias'):
                 (a, colon, uri) = a.lpartition(':')
                 assert(colon == ':')

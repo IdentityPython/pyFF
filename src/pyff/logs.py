@@ -5,7 +5,7 @@ import syslog
 import logging
 
 
-class PyFFLogger():
+class PyFFLogger(object):
     def __init__(self):
         self._loggers = {logging.WARN: logging.warn,
                          logging.WARNING: logging.warn,
