@@ -28,6 +28,8 @@ class PyFFDTest(PipeLineTest):
     mdx = None
     mdx_template = None
     pidfile = None
+    tmpdir = None
+    curdir = None
 
     @classmethod
     def setUpClass(cls):
@@ -38,9 +40,11 @@ class PyFFDTest(PipeLineTest):
         cls.pidfile = tempfile.NamedTemporaryFile('w').name
         with open(cls.mdx, "w") as fd:
             fd.write(cls.mdx_template.render(ctx=cls))
+        cls.curdir = os.getcwd()
         cls.pyffd_thread = Thread(target=run_pyffd,
                                   name="pyffd-test",
-                                  args=["--loglevel=INFO", '-f', '-C', '-p', cls.pidfile, "--terminator", cls.mdx])
+                                  args=["--loglevel=INFO", "--dir=%s" % cls.curdir, '-f', '-a',
+                                        '-C', '-p', cls.pidfile, "--terminator", cls.mdx])
         cls.pyffd_thread.start()
         sleep(20)
 

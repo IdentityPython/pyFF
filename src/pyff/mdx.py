@@ -658,7 +658,7 @@ def main():
     terminator = False
     modules = []
 
-    try:
+    try:  # pragma: nocover
         for o, a in opts:
             if o in ('-h', '--help'):
                 print __doc__
