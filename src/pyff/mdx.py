@@ -117,7 +117,7 @@ class MDUpdate(Monitor):
             if hasattr(self.server.md.store, 'periodic'):
                 self.server.md.store.periodic(stats)
         except Exception, ex:
-            traceback.print_exc(ex)
+            log.error(ex.message)
         finally:
             if locked:
                 self.lock.release()
