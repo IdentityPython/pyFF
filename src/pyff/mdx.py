@@ -459,14 +459,6 @@ class MDServer(object):
         path = kwargs.get('path', None)
         content_type = kwargs.get('content_type', None)
 
-        def escape(m):
-            st = m.group(0)
-            if st == '<':
-                return '&lt;'
-            if st == '>':
-                return '&gt;'
-            return st
-
         def _d(x, do_split=True):
             if x is not None:
                 x = x.strip()
@@ -612,9 +604,9 @@ class MDServer(object):
                             p = c_elt.getparent()
                             p.remove(c_elt)
                             if p.text is not None:
-                                p.text += c_txt  # re.sub(".",escape,c_txt)
+                                p.text += c_txt
                             else:
-                                p.text = c_txt  # re.sub(".",escape,c_txt)
+                                p.text = c_txt
                         xml = dumptree(t, xml_declaration=False).decode('utf-8')
                         return render_template("basic.html", content=xml)
             else:
