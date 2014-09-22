@@ -81,6 +81,9 @@ class StoreBase(object):
             log.debug("**** yield entityID=%s" % e.get('entityID'))
             yield e
 
+    def periodic(self, stats):
+        pass
+
     def size(self):
         raise NotImplementedError()
 
