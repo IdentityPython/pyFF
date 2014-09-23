@@ -495,6 +495,7 @@ and verified.
                                 fp = fingerprints[0]
                             if log.isDebugEnabled():
                                 log.debug("XRD: '%s' verified by '%s'" % (link_href, fp))
+                            tries.setdefault(link_href, 0)
                             if tries[link_href] < max_tries:
                                 retry_resources.append((link_href, fp, link_href, post, True))
                 elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
