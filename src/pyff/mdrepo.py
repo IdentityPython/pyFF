@@ -421,6 +421,7 @@ and verified.
                                     max_tries=max_tries,
                                     validate=validate)
 
+    #pylint: ignore-msg=E1103
     def _fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, max_tries=5, validate=False):
         if stats is None:
             stats = dict()
@@ -527,6 +528,32 @@ and verified.
     def import_metadata(self, t, name):
         self.store.update(t, name)
 
+    def filter_invalids(self, t, base_url, validation_errors):
+        xsd = schema()
+        for e in iter_entities(t):
+            if not xsd.validate(e):
+                error = xml_error(xsd.error_log, m=base_url)
+                entity_id = e.get("entityID")
+                log.warn("removing '%s': schema validation failed (%s)" % (entity_id, error))
+                validation_errors[entity_id] = error
+                if e.getparent() is None:
+                    return None
+                e.getparent().remove(e)
+                self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=entity_id, error=error)
+        return t
+
+    def check_signature(self, t, key):
+        if key is not None:
+            if log.isDebugEnabled():
+                log.debug("verifying signature using %s" % key)
+            refs = xmlsec.verified(t, key)
+            if len(refs) != 1:
+                raise MetadataException(
+                    "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+            t = refs[0]  # prevent wrapping attacks
+
+        return t
+
     def parse_metadata(self,
                        source,
                        key=None,
@@ -562,19 +589,7 @@ and verified.
             if expiration is not None:
                 valid_until = expiration(t)
 
-            if key is not None:
-                try:
-                    if log.isDebugEnabled():
-                        log.debug("verifying signature using %s" % key)
-                    refs = xmlsec.verified(t, key)
-                    if len(refs) != 1:
-                        raise MetadataException(
-                            "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
-                    t = refs[0]  # prevent wrapping attacks
-                except Exception, ex:
-                    print traceback.format_exc()
-                    log.error(ex)
-                    return None, None
+            t = self.check_signature(t, key)
 
             # get rid of ID as early as possible - probably not unique
             for e in iter_entities(t):
@@ -586,25 +601,14 @@ and verified.
 
             if validate:
                 if filter_invalid:
-                    xsd = schema()
-                    for e in iter_entities(t):
-                        # log.debug("validating %s" % e.get("entityID"))
-                        if not xsd.validate(e):
-                            error = xml_error(xsd.error_log, m=base_url)
-                            entity_id = e.get("entityID")
-                            log.warn("removing '%s': schema validation failed (%s)" % (entity_id, error))
-                            validation_errors[entity_id] = error
-                            if e.getparent() is None:
-                                return None, None
-                            e.getparent().remove(e)
-                            self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=entity_id, error=error)
+                    t = self.filter_invalids(t, base_url=base_url, validation_errors=validation_errors)
                 else:  # all or nothing
-                    validate_document(t)
-        except DocumentInvalid, ex:
-            traceback.print_exc()
-            if log.isDebugEnabled():
-                log.debug("schema validation failed on '%s': %s" % (base_url, xml_error(ex.error_log, m=base_url)))
-            raise MetadataException("schema validation failed")
+                    try:
+                        validate_document(t)
+                    except DocumentInvalid, ex:
+                        raise MetadataException("schema validation failed: '%s': %s" %
+                                                (base_url, xml_error(ex.error_log, m=base_url)))
+
         except Exception, ex:
             log.error(ex)
             if fail_on_error:
@@ -775,6 +779,7 @@ Creates an "error" EntitiesDescriptor - empty but for an annotation about the er
         t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], Name=url, nsmap=NS)
         self.annotate(t, "error", title, ex, source=url)
 
+    #pylint: ignore-msg=E1103
     def summary(self, uri):
         """
 :param uri: An EntitiesDescriptor URI present in the MDRepository
