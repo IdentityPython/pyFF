@@ -684,9 +684,6 @@ starting with '.' are excluded.
                     src = None
                 return self.lookup(src, xp)
 
-            m = re.match("^(.+)=(.+)$", member)
-            if m:
-                return self._lookup("{%s}%s" % (m.group(1), m.group(2).rstrip("/")))
         log.debug("calling store lookup %s" % member)
         return self.store.lookup(member)
 
