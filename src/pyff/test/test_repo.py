@@ -15,7 +15,7 @@ class TestRepo(TestCase):
         self.swamid_source = os.path.join(self.datadir, 'swamid-2.0-test.xml')
         self.swamid = root(parse_xml(self.swamid_source))
         self.t = parse_xml(self.xml_source)
-        self.non_metadata = parse_xml(resource_filename(self.datadir, "not-metadata.xml"))
+        self.non_metadata = parse_xml(resource_filename("not-metadata.xml", self.datadir))
 
     def test_md_exists(self):
         assert (self.md is not None)
