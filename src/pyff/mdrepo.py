@@ -107,7 +107,7 @@ class MDRepository(Observable):
             domains.append(d.text)
         return domains
 
-    def ext_display(self, entity):
+    def ext_display(self, entity, langs=None):
         """Utility-method for computing a displayable string for a given entity.
 
         :param entity: An EntityDescriptor element
@@ -115,26 +115,26 @@ class MDRepository(Observable):
         display = entity.get('entityID')
         info = ''
 
-        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md'])):
+        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md']), langs=langs):
             info = display
             display = organizationName.text
 
-        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md'])):
+        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md']), langs=langs):
             info = display
             display = organizationDisplayName.text
 
-        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md'])):
+        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md']), langs=langs):
             info = display
             display = serviceName.text
 
-        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui'])):
+        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui']), langs=langs):
             info = display
             display = displayName.text
 
-        for organizationUrl in filter_lang(entity.iter("{%s}OrganizationURL" % NS['md'])):
+        for organizationUrl in filter_lang(entity.iter("{%s}OrganizationURL" % NS['md']), langs=langs):
             info = organizationUrl.text
 
-        for description in filter_lang(entity.iter("{%s}Description" % NS['mdui'])):
+        for description in filter_lang(entity.iter("{%s}Description" % NS['mdui']), langs=langs):
             info = description.text
 
         if info == entity.get('entityID'):
@@ -142,21 +142,21 @@ class MDRepository(Observable):
 
         return display, info
 
-    def display(self, entity):
+    def display(self, entity, langs=None):
         """Utility-method for computing a displayable string for a given entity.
 
         :param entity: An EntityDescriptor element
         """
-        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui'])):
+        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui']), langs=langs):
             return displayName.text
 
-        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md'])):
+        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md']), langs=langs):
             return serviceName.text
 
-        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md'])):
+        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md']), langs=langs):
             return organizationDisplayName.text
 
-        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md'])):
+        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md']), langs=langs):
             return organizationName.text
 
         return entity.get('entityID')
@@ -376,6 +376,28 @@ The dict in the list contains three items:
 
         self.store.update(e)
 
+    def set_reginfo(self, e, policy=None, authority=None):
+        if e.tag != "{%s}EntityDescriptor" % NS['md']:
+            raise MetadataException("I can only set RegistrationAuthority to EntityDescriptor elements")
+        if authority is None:
+            raise MetadataException("At least authority must be provided")
+        if policy is None:
+            policy = dict()
+
+        ext = self.extensions(e)
+        ri = ext.find(".//{%s}RegistrationInfo" % NS['mdrpi'])
+        if ri is not None:
+            raise MetadataException("A RegistrationInfo element is already present")
+
+        ri = etree.Element("{%s}RegistrationInfo" % NS['mdrpi'])
+        ext.append(ri)
+        ri.set('registrationAuthority', authority)
+        for lang, policy_url in policy.iteritems():
+            rp = etree.Element("{%s}RegistrationPolicy" % NS['mdrpi'])
+            rp.text = policy_url
+            rp.set('{%s}lang' % NS['xml'], lang)
+            ri.append(rp)
+
     def expiration(self, t):
         relt = root(t)
         if relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
@@ -421,7 +443,6 @@ and verified.
                                     max_tries=max_tries,
                                     validate=validate)
 
-    #pylint: ignore-msg=E1103
     def _fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, max_tries=5, validate=False):
         if stats is None:
             stats = dict()
@@ -772,14 +793,6 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                 raise MetadataException("XML schema validation failed: %s" % name)
         return t
 
-    def error_set(self, url, title, ex):
-        """
-Creates an "error" EntitiesDescriptor - empty but for an annotation about the error that occured
-        """
-        t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], Name=url, nsmap=NS)
-        self.annotate(t, "error", title, ex, source=url)
-
-    #pylint: ignore-msg=E1103
     def summary(self, uri):
         """
 :param uri: An EntitiesDescriptor URI present in the MDRepository

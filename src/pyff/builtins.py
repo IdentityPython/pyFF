@@ -1004,6 +1004,35 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
 
     return req.t
 
+@pipe(name='reginfo')
+def _reginfo(req, *opts):
+    """
+Sets registration info extension on EntityDescription element
+
+:param req: The request
+:param opts: Options (not used)
+:return: A modified working document
+
+Transforms the working document by setting the specified attribute on all of the EntityDescriptor
+elements of the active document.
+
+**Examples**
+
+.. code-block:: yaml
+
+    - reginfo:
+       [policy:
+            <lang>: <registration policy URL>]
+       authority: <registrationAuthority URL>
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    for e in iter_entities(req.t):
+        req.md.set_reginfo(e, **req.args)
+
+    return req.t
+
 @pipe(name='setattr')
 def _setattr(req, *opts):
     """
@@ -1034,3 +1063,5 @@ document for later processing.
     for e in iter_entities(req.t):
         #log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         req.md.set_entity_attributes(e, req.args)
+
+    return req.t
