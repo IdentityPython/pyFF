@@ -304,7 +304,7 @@ The dict in the list contains three items:
 :param e: an EntityDescriptor
 :return: a list
         """
-        ext = e.find(".//{%s}Extensions" % NS['md'])
+        ext = e.find("./{%s}Extensions" % NS['md'])
         if ext is None:
             ext = etree.Element("{%s}Extensions" % NS['md'])
             e.insert(0, ext)
