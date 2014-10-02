@@ -1055,8 +1055,7 @@ elements of the active document.
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    for e in iter_entities(req.t):
-        req.md.set_pubinfo(e, **req.args)
+    req.md.set_pubinfo(req.t, **req.args)
 
     return req.t
 
