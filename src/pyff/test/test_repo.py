@@ -1,7 +1,9 @@
+from copy import deepcopy
 from unittest import TestCase
+from pyff.constants import NS
 from pyff.mdrepo import MDRepository
 from pyff.store import MemoryStore
-from pyff.utils import resource_filename, parse_xml, root, hash_id
+from pyff.utils import resource_filename, parse_xml, root, hash_id, MetadataException
 import os
 
 
@@ -13,6 +15,7 @@ class TestRepo(TestCase):
         self.swamid_source = os.path.join(self.datadir, 'swamid-2.0-test.xml')
         self.swamid = root(parse_xml(self.swamid_source))
         self.t = parse_xml(self.xml_source)
+        self.non_metadata = parse_xml(resource_filename(self.datadir, "not-metadata.xml"))
 
     def test_md_exists(self):
         assert (self.md is not None)
@@ -53,12 +56,30 @@ class TestRepo(TestCase):
         assert ('idp.example.com' in domains)
         assert ('foo.com' not in domains)
 
+        edup = deepcopy(e)
         name, desc = self.md.ext_display(e)
         assert(name == 'Example University')
         assert(desc == 'Identity Provider for Example University')
 
         disp = self.md.display(e)
         assert (disp == 'Example University')
+        for elt in e.findall(".//{%s}DisplayName" % NS['mdui']):
+            elt.getparent().remove(elt)
+
+        disp = self.md.display(e)
+        assert (disp == 'The Example University')
+        for elt in e.findall(".//{%s}OrganizationDisplayName" % NS['md']):
+            elt.getparent().remove(elt)
+
+        disp = self.md.display(e)
+        assert (disp == 'ExampleU')
+        for elt in e.findall(".//{%s}OrganizationName" % NS['md']):
+            elt.getparent().remove(elt)
+
+        disp = self.md.display(e)
+        assert (disp == entity_id)
+
+        e = edup
 
         subs = self.md.sub_domains(e)
         assert ('example.com' in subs)
@@ -91,3 +112,13 @@ class TestRepo(TestCase):
         self.md.import_metadata(swamid, swamid.get('Name'))
         missing = self.md.lookup('https://connect.funet.fi/shibboleth+missing')
         assert (len(missing) == 0)
+
+    def test_non_metadata(self):
+        e = root(self.non_metadata)
+        assert self.md.expiration(e) is None
+        try:
+            self.md.annotate(e,"kaka","x","y")
+            self.md.set_entity_attributes(e, dict(a=1))
+            assert False
+        except MetadataException:
+            pass

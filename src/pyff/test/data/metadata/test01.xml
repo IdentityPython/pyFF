@@ -30,8 +30,8 @@
   <md:Organization>
     <md:OrganizationName xml:lang="sv">ExempelU</md:OrganizationName>
     <md:OrganizationName xml:lang="en">ExampleU</md:OrganizationName>
-    <md:OrganizationDisplayName xml:lang="sv">Exempel Universitet</md:OrganizationDisplayName>
-    <md:OrganizationDisplayName xml:lang="en">Example University</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="sv">Exempel Universitetet</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="en">The Example University</md:OrganizationDisplayName>
     <md:OrganizationURL xml:lang="sv">http://www.example.com</md:OrganizationURL>
     <md:OrganizationURL xml:lang="en">http://www.example.com/english</md:OrganizationURL>
   </md:Organization>
