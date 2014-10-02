@@ -1033,6 +1033,33 @@ elements of the active document.
 
     return req.t
 
+@pipe(name='pubinfo')
+def _pubinfo(req, *opts):
+    """
+Sets publication info extension on EntityDescription element
+
+:param req: The request
+:param opts: Options (not used)
+:return: A modified working document
+
+Transforms the working document by setting the specified attribute on all of the EntityDescriptor
+elements of the active document.
+
+**Examples**
+
+.. code-block:: yaml
+
+    - pubinfo:
+       publisher: <publisher URL>
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    for e in iter_entities(req.t):
+        req.md.set_pubinfo(e, **req.args)
+
+    return req.t
+
 @pipe(name='setattr')
 def _setattr(req, *opts):
     """

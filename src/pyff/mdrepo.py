@@ -376,6 +376,19 @@ The dict in the list contains three items:
 
         self.store.update(e)
 
+    def set_pubinfo(self, e, publisher=None):
+        if e.tag != "{%s}EntitiesDescriptor" % NS['md']:
+            raise MetadataException("I can only set RegistrationAuthority to EntitiesDescriptor elements")
+        if publisher is None:
+            raise MetadataException("At least publisher must be provided")
+        ext = self.extensions(e)
+        pi = ext.find(".//{%s}PublicationInfo" % NS['mdrpi'])
+        if pi is not None:
+            raise MetadataException("A PublicationInfo element is already present")
+        pi = etree.Element("{%s}PublicationInfo" % NS['mdrpi'])
+        pi.set('publisher', publisher)
+        ext.append(pi)
+
     def set_reginfo(self, e, policy=None, authority=None):
         if e.tag != "{%s}EntityDescriptor" % NS['md']:
             raise MetadataException("I can only set RegistrationAuthority to EntityDescriptor elements")
