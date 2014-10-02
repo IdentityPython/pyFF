@@ -426,7 +426,7 @@ class RedisStore(StoreBase):
         return root(parse_xml(StringIO(self.rc.get("%s#metadata" % key))))
 
     def lookup(self, key):
-        log.debug("redis store lookup: %s" % key)
+        #log.debug("redis store lookup: %s" % key)
         if '+' in key:
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):

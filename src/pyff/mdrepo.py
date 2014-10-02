@@ -810,22 +810,22 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
 Returns a dict object with basic information about the EntitiesDescriptor
         """
-        seen = dict()
+        seen = set()
         info = dict()
-        t = self.store.lookup(uri).next()
-        info['Name'] = t.get('Name', uri)
-        info['cacheDuration'] = t.get('cacheDuration', None)
-        info['validUntil'] = t.get('validUntil', None)
+
+        info['Name'] = uri
         info['Duplicates'] = []
-        info['Size'] = 0
-        for e in entities_list(t):
+        sz = 0
+
+        for e in self.store.lookup(uri):
             entity_id = e.get('entityID')
-            if seen.get(entity_id, False):
+            if entity_id in seen:
                 info['Duplicates'].append(entity_id)
             else:
-                seen[entity_id] = True
-            info['Size'] += 1
+                seen.add(entity_id)
+            sz += 1
 
+        info['Size'] = sz
         return info
 
     def merge(self, t, nt, strategy=merge_strategies.replace_existing, strategy_name=None):
