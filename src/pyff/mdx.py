@@ -53,7 +53,6 @@ except ImportError:  # pragma: no cover
     from StringIO import StringIO
 
 import getopt
-import traceback
 import urlparse
 from cherrypy.lib.cpstats import StatsPage
 import os
