@@ -181,8 +181,9 @@
                     seldiv.dsSelect(key,val);
                 });
                 $('body').on('click.ds', 'button.unselect', methods.unselect);
-                $('body').on('click.ds', 'a.select', methods.select);
+                $('body').on('click.ds', 'span.select', methods.select);
                 $('body').on('click.ds', 'a.proceed', methods.proceed);
+                $('body').on('click.ds', 'span.proceed', methods.proceed);
                 $('body').on('click.ds', 'a.remember', methods.remember);
                 $('body').on('click.ds', 'a.proceed_and_remember', methods.proceed_and_remember);
                 $('body').on('click.ds', 'a.cancel', cancel_confirm)
@@ -217,7 +218,7 @@
             $('#reset_info').removeClass('hidden').show();
         },
         unselect: function (e) {
-            e.preventDefault();
+            //e.preventDefault();
             e.stopPropagation();
             var id = $(this).attr('rel');
             var idps = $.jStorage.get('pyff.discovery.idps', []);
@@ -229,7 +230,7 @@
             }
         },
         select: function(e) {
-            e.preventDefault();
+            //e.preventDefault();
             var lst = $.jStorage.get('pyff.discovery.idps', []);
             if (lst.length < 2) {
                 return select_idp($(this).attr('data-href'));
@@ -238,12 +239,12 @@
             }
         },
         proceed: function(e) {
-            e.preventDefault();
+            //e.preventDefault();
             return discovery_response($(this).attr('data-href'));
         },
         proceed_and_remember: function(e) {
-            e.preventDefault();
-            var entityID = $(this).attr('data-href')
+            //e.preventDefault();
+            var entityID = $(this).attr('data-href');
             $.jStorage.set('pyff.discovery.idp',entityID);
             return discovery_response(entityID);
         }
@@ -253,14 +254,14 @@
         $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
     });
 
-    var idp_template = Hogan.compile('<a class="{{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
+    var idp_template = Hogan.compile('<span class="{{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
         '{{^sticky}}<button type="button" data-toggle="tooltip" data-placement="left" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
         '{{#icon}}<img src="{{icon}}" class="fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"/>{{/icon}}' +
         '{{#descr}}<div class="pull-left idp-description hidden-xs">{{descr}}</div>{{/descr}}</p>' +
         '<div class="clearfix"></div>' +
-        '</a>');
+        '</span>');
 
     $.fn.dsQuickLinks = function(id) {
         this.each(function() {
