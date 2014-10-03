@@ -4,8 +4,34 @@
     <script type="text/javascript">
         $(function() {
             prettyPrint();
-            $('.typeahead').typeahead({'remote': '/search/?query=%QUERY','template': '{{label}}','engine': Hogan});
-            $('.typeahead').bind('typeahead:selected',function(event,entity) {
+            var match_template = Hogan.compile('<div>{{title}}</div>');
+            var seldiv = $('.typeahead');
+            var engine = new Bloodhound({
+                name: 'idps',
+                limit: 50,
+                remote: '/search/?query=%QUERY',
+                datumTokenizer: Bloodhound.tokenizers.obj.whitespace('title'),
+                queryTokenizer: Bloodhound.tokenizers.whitespace
+            });
+            engine.initialize().done(function() {
+                seldiv.typeahead({
+                        hint: true,
+                        highlight: true,
+                        minLength: 2
+                    },
+                    {
+                        name: 'idps',
+                        source: engine.ttAdapter(),
+                        displayKey: 'title',
+                        templates: {
+                            suggestion: function(o) {
+                                return match_template.render(o)
+                            }
+                        }
+                    }
+                )
+            });
+            seldiv.bind('typeahead:selected',function(event,entity) {
                 if (entity) {
                     document.location.href = "/metadata/"+entity.id+".html"
                 }
