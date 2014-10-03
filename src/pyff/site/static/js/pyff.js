@@ -6,7 +6,7 @@
  * To change this template use File | Settings | File Templates.
  */
 
-(function( $ ) {
+$(document).ready(function() {
     // send the user directly to the pre-selected idp if that setting exists
 
     function _autoselect() {
@@ -349,4 +349,4 @@
             }
         });
     };
-})( jQuery );
+});

@@ -9,7 +9,6 @@
     <link href="/static/css/ds.css" rel="stylesheet"/>
     <link href="/static/css/style.css" rel="stylesheet"/>
     <script type="text/javascript" src="/static/js/jquery.min.js"></script>
-    <script type="text/javascript" src="//code.jquery.com/mobile/1.4.4/jquery.mobile-1.4.4.min.js"></script>
     <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="/static/js/jquery.browser.js"></script>
     <script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script>
@@ -21,7 +20,7 @@
     <script type="text/javascript" src="/static/js/tinySHA1.r4.js"></script>
     <script type="text/javascript" src="/static/js/pyff.js"></script>
     <script type="text/javascript">
-        $(function() {
+        $(document).ready(function() {
             $("*[data-toggle='popover']").popover({trigger: 'hover', container: 'body'});
             $("*[data-toggle='tooltip']").tooltip({trigger: 'hover', container: 'body'});
             $('#quickLinks').dsQuickLinks('${sp}');
@@ -65,6 +64,7 @@
             $('#thesearchfield').focus();
         });
     </script>
+    <script type="text/javascript" src="/static/js/jquery.mobile.custom.min.js"></script>
     <title>Please login...</title>
 <body>
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
