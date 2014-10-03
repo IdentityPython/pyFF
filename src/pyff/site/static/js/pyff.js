@@ -181,12 +181,13 @@
                     seldiv.dsSelect(key,val);
                 });
                 $('body').on('click.ds', 'button.unselect', methods.unselect);
-                $('body').on('click.ds', 'span.select', methods.select);
-                $('body').on('click.ds', 'a.proceed', methods.proceed);
-                $('body').on('click.ds', 'span.proceed', methods.proceed);
-                $('body').on('click.ds', 'a.remember', methods.remember);
-                $('body').on('click.ds', 'a.proceed_and_remember', methods.proceed_and_remember);
-                $('body').on('click.ds', 'a.cancel', cancel_confirm)
+                $('body').on('click.ds', '.select', methods.select);
+                $('body').on('click.ds', '.proceed', methods.proceed);
+                $('body').on('click.ds', '.proceed', methods.proceed);
+                $('body').on('click.ds', '.remember', methods.remember);
+                $('body').on('click.ds', '.proceed_and_remember', methods.proceed_and_remember);
+                $('body').on('click.ds', '.cancel', cancel_confirm);
+                $('body').on('cursor', function() { this.css('cursor','pointer')});
             });
             this.filter('select').each(function (opts) {
                 var seldiv = $(this);
@@ -216,6 +217,7 @@
             $('#proceed').text("Use this time only");
             $('#proceed_and_remember').removeClass('hidden').show();
             $('#reset_info').removeClass('hidden').show();
+            return false;
         },
         unselect: function (e) {
             //e.preventDefault();
@@ -228,6 +230,7 @@
                 $.jStorage.set('pyff.discovery.idps', idps);
                 $(this).parent().remove();
             }
+            return false;
         },
         select: function(e) {
             //e.preventDefault();
@@ -237,6 +240,7 @@
             } else {
                 return discovery_response($(this).attr('data-href'));
             }
+            return false;
         },
         proceed: function(e) {
             //e.preventDefault();
@@ -254,7 +258,7 @@
         $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
     });
 
-    var idp_template = Hogan.compile('<span class="{{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
+    var idp_template = Hogan.compile('<span class="cursor {{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
         '{{^sticky}}<button type="button" data-toggle="tooltip" data-placement="left" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
