@@ -180,14 +180,13 @@
                 $.each(options,function(key,val) {
                     seldiv.dsSelect(key,val);
                 });
-                $('body').on('click.ds', 'button.unselect', methods.unselect);
-                $('body').on('click.ds', '.select', methods.select);
-                $('body').on('click.ds', '.proceed', methods.proceed);
-                $('body').on('click.ds', '.proceed', methods.proceed);
-                $('body').on('click.ds', '.remember', methods.remember);
-                $('body').on('click.ds', '.proceed_and_remember', methods.proceed_and_remember);
-                $('body').on('click.ds', '.cancel', cancel_confirm);
-                $('body').on('cursor', function() { this.css('cursor','pointer')});
+                $('body').on('vclick.ds', 'button.unselect', methods.unselect);
+                $('body').on('vclick.ds', '.select', methods.select);
+                $('body').on('vclick.ds', '.proceed', methods.proceed);
+                $('body').on('vclick.ds', '.proceed', methods.proceed);
+                $('body').on('vclick.ds', '.remember', methods.remember);
+                $('body').on('vclick.ds', '.proceed_and_remember', methods.proceed_and_remember);
+                $('body').on('vclick.ds', '.cancel', cancel_confirm);
             });
             this.filter('select').each(function (opts) {
                 var seldiv = $(this);
