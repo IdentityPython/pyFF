@@ -93,6 +93,7 @@ class MDUpdate(Monitor):
         self.bus = bus
         Monitor.__init__(self, bus, lambda: self.run(server), frequency=frequency)
         self.subscribe()
+        self.nruns = 0
 
     def run(self, server):
         locked = False
@@ -112,6 +113,10 @@ class MDUpdate(Monitor):
                 server.md.fire(type=EVENT_REPOSITORY_LIVE, size=server.md.store.size())
                 stats['Repository Update Time'] = datetime.now()
                 stats['Repository Size'] = server.md.store.size()
+
+            self.nruns += 1
+
+            stats['Updates Since Server Start'] = self.nruns
 
             if hasattr(self.server.md.store, 'periodic'):
                 self.server.md.store.periodic(stats)
@@ -428,6 +433,10 @@ class MDServer(object):
             for f in pipes:
                 cherrypy.engine.autoreload.files.add(f)
 
+    @property
+    def ready(self):
+        return self.md.store.ready()
+
     class MediaAccept(object):
 
         def __init__(self):
@@ -449,6 +458,9 @@ class MDServer(object):
         """The main request processor. This code implements all rendering of metadata.
         """
         stats['MD Requests'] += 1
+
+        if not self.ready:
+            raise HTTPError(503, "Service Unavailable (repository loading)")
 
         pfx = kwargs.get('pfx', None)
         path = kwargs.get('path', None)

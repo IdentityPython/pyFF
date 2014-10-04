@@ -73,6 +73,9 @@ class StoreBase(object):
     def lookup(self, key):
         raise NotImplementedError()
 
+    def ready(self):
+        raise NotImplementedError()
+
     def clone(self):
         return self
 
@@ -108,6 +111,7 @@ class MemoryStore(StoreBase):
         self.md = dict()
         self.index = dict()
         self.entities = dict()
+        self._ready = False
 
         for hn in DINDEX:
             self.index.setdefault(hn, {})
@@ -127,6 +131,12 @@ class MemoryStore(StoreBase):
 
     def attribute(self, a):
         return self.index.setdefault('attr', {}).setdefault(a, {}).keys()
+
+    def ready(self):
+        return self._ready
+
+    def periodic(self, stats):
+        self._ready = True
 
     def _index(self, entity):
         attr_idx = self.index.setdefault('attr', {})
@@ -313,6 +323,9 @@ class RedisStore(StoreBase):
                     ts = totimestamp(dt)
 
         return ts
+
+    def ready(self):
+        return True
 
     def reset(self):
         self.rc.flushdb()
