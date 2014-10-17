@@ -1,0 +1,114 @@
+{% extends "ui.html" %}
+{% block headline %}{{ gettext('About this server') }}{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-xs-3 col-md-3">
+            <ul class="nav nav-pills nav-stacked">
+                <li class="active"><a href="#info" data-toggle="tab">{{ gettext('Server Info') }}</a>
+                <li><a href="#repo" data-toggle="tab">{{ gettext('Repository') }}</a></li>
+            </ul>
+        </div>
+        <div class="col-xs-9 col-md-9">
+            <div class="tab-content">
+                <div class="tab-pane active" id="info">
+                    <table class="table">
+                        <tr>
+                            <th>pyFF {{ gettext('version') }}</th>
+                            <td>{{ version }}</td>
+                        </tr>
+                        <tr>
+                            <th>Cherrypy {{ gettext('version') }}</th>
+                            <td>{{ cversion }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ gettext('Startup arguments') }}</th>
+                            <td>{{ cmdline }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ gettext('System information') }}</th>
+                            <td>{{ sysinfo }}</td>
+                        </tr>
+                        <tr>
+                           <th>{{ gettext('Repository size') }}</th>
+                            <td>{{ stats['Repository Size'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ gettext('Last update') }}</th>
+                            <td>{{ stats['Repository Update Time'] }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#pipeline_source">{{ gettext('Show Pipeline') }}</button>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div class="modal fade" id="pipeline_source">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                                    <h4 class="modal-title" id="myModalLabel">{{ gettext('Pipeline Souurce') }}</h4>
+                                </div>
+                                <div class="modal-body">
+                                    {% for p in plumbings %}
+                                    <pre class="pre-scrollable prettyprint">{{ p }}</pre>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane" id="repo">
+                    {% for uri in repo.store.collections() %}
+                    {% set info = repo.summary(uri) %}
+                    <div class="panel panel-{{info['Status']}}">
+                        <div class="panel-heading" title="{{uri|trim}}">{{ uri|trim|truncate(60) }}</div>
+                        {% if info['Description'] %}
+                        <div class="panel-body small">{{ info['Description'] }}</div>
+                        {% endif %}
+                        <table class="table table-condensed">
+                            {% for k,v in info.iteritems() %}
+                            {% if k and v and not k in ('URL','Description','Validation Errors','Status') %}
+                            <tr>
+                                <th>{{ k|trim|truncate(20) }}</th>
+                                <td>
+                                    {% if v is string %}
+                                    {{ v|trim|truncate(60) }}
+                                    {% elif v is mapping %}
+                                        <dl class="dl-horizontal">
+                                            {% for h,hv in v.iteritems() %}
+                                            <dt>{{h|trim}}</dt>
+                                            <dd>{{hv|trim|truncate(30)}}</dd>
+                                            {% endfor %}
+                                        </dl>
+                                    {% elif v is iterable %}
+                                        <ul class="list-unstyled">
+                                        {% for vv in v %}
+                                            <li>{ vv }}</li>
+                                        {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </table>
+                        {% if info['Validation Errors'] %}
+                        <table class="table">
+                            {% for ei,ee in info['Validation Errors'].iteritems() %}
+                            <tr>
+                                <th>{{ei|trim|truncate(30)}}</th>
+                                <td>{{ee|trim}}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        {% endif %}
+
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

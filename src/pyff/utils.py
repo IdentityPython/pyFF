@@ -7,7 +7,6 @@ from collections import namedtuple
 from datetime import timedelta, datetime
 import tempfile
 import cherrypy
-from mako.lookup import TemplateLookup
 import os
 import pkg_resources
 import re
@@ -22,12 +21,11 @@ from email.utils import parsedate
 from urlparse import urlparse
 from threading import local
 import iso8601
+from jinja2 import Environment, PackageLoader
 
 __author__ = 'leifj'
 
 import i18n
-
-_ = i18n.language.ugettext
 
 sentinel = object()
 thread_data = local()
@@ -220,11 +218,32 @@ def safe_write(fn, data):
 
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
-templates = TemplateLookup(directories=[os.path.join(site_dir, 'templates')])
+env = Environment(loader=PackageLoader(__package__, 'templates'), extensions=['jinja2.ext.i18n'])
+env.install_gettext_callables(i18n.language.gettext, i18n.language.ngettext, newstyle=True)
 
+import urllib
+from markupsafe import Markup
+
+
+def urlencode_filter(s):
+    if type(s) == 'Markup':
+        s = s.unescape()
+    s = s.encode('utf8')
+    s = urllib.quote_plus(s)
+    return Markup(s)
+
+
+def truncate_filter(s,max_len=10):
+    if len(s) > max_len:
+        return s[0:max_len]+"..."
+    else:
+        return s
+
+env.filters['u'] = urlencode_filter
+env.filters['truncate'] = truncate_filter
 
 def template(name):
-    return templates.get_template(name)
+    return env.get_template(name)
 
 
 def render_template(name, **kwargs):

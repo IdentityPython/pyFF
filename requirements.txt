@@ -1,5 +1,4 @@
 redis
-mako
 ipaddr
 publicsuffix
 lxml
@@ -13,3 +12,4 @@ futures
 iso8601
 requests
 simplejson
+jinja2
