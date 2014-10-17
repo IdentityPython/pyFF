@@ -22,14 +22,14 @@ class TestRepo(TestCase):
 
     def test_clone(self):
         entity_id = root(self.t).get('entityID')
-        self.md.import_metadata(root(self.t), entity_id)
+        self.md.store.update(root(self.t), entity_id)
         nmd = self.md.clone()
         assert (nmd.store.size() == self.md.store.size())
         assert (nmd.lookup(entity_id) is not None)
 
     def test_sha1_hash(self):
         entity_id = root(self.t).get('entityID')
-        self.md.import_metadata(root(self.t), entity_id)
+        self.md.store.update(root(self.t), entity_id)
         e = self.md.lookup(entity_id)
         assert (self.md.sha1_id(e[0]) == "{sha1}568515f6fae8c8b4d42d543853c96d08f051ef13")
         assert (hash_id(e[0], 'sha1', prefix=False) == "568515f6fae8c8b4d42d543853c96d08f051ef13")
@@ -37,14 +37,14 @@ class TestRepo(TestCase):
     def test_entity_attribute(self):
         entity_id = root(self.t).get('entityID')
         self.md.set_entity_attributes(root(self.t), {"http://ns.example.org": "foo"})
-        self.md.import_metadata(root(self.t), entity_id)
+        self.md.store.update(root(self.t), entity_id)
         e = self.md.lookup("{%s}%s" % ("http://ns.example.org", 'foo'))[0]
         assert (e is not None)
         assert (e.get('entityID') == entity_id)
 
     def test_utils(self):
         entity_id = root(self.t).get('entityID')
-        self.md.import_metadata(root(self.t), entity_id)
+        self.md.store.update(root(self.t), entity_id)
         e = self.md.lookup(entity_id)[0]
         assert (self.md.is_idp(e))
         assert (not self.md.is_sp(e))
@@ -100,7 +100,7 @@ class TestRepo(TestCase):
 
     def test_display(self):
         swamid = root(self.swamid)
-        self.md.import_metadata(swamid, swamid.get('Name'))
+        self.md.store.update(swamid, swamid.get('Name'))
         funet_connect = self.md.lookup('https://connect.funet.fi/shibboleth')[0]
         name, desc = self.md.ext_display(funet_connect)
         assert(name == 'FUNET E-Meeting Service')
@@ -109,7 +109,7 @@ class TestRepo(TestCase):
 
     def test_missing(self):
         swamid = root(self.swamid)
-        self.md.import_metadata(swamid, swamid.get('Name'))
+        self.md.store.update(swamid, swamid.get('Name'))
         missing = self.md.lookup('https://connect.funet.fi/shibboleth+missing')
         assert (len(missing) == 0)
 
