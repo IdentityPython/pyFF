@@ -3,6 +3,8 @@
 This is the implementation of the active repository of SAML metadata. The 'local' and 'remote' pipes operate on this.
 
 """
+from pyff.stats import set_metadata_info, get_metadata_info
+
 try:
     from cStringIO import StringIO
 except ImportError:  # pragma: no cover
@@ -13,14 +15,12 @@ from copy import deepcopy
 from datetime import datetime
 from UserDict import UserDict
 import os
-import re
-import traceback
-from concurrent import futures
+import operator
 
+from concurrent import futures
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
-import operator
 import xmlsec
 import ipaddr
 
@@ -30,6 +30,7 @@ from .utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
     iter_entities, validate_document, load_url, iso2datetime, xml_error
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
+
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -376,17 +377,24 @@ The dict in the list contains three items:
 
         self.store.update(e)
 
-    def set_pubinfo(self, e, publisher=None):
+    def set_pubinfo(self, e, publisher=None, creation_instant=None):
         if e.tag != "{%s}EntitiesDescriptor" % NS['md']:
             raise MetadataException("I can only set RegistrationAuthority to EntitiesDescriptor elements")
         if publisher is None:
             raise MetadataException("At least publisher must be provided")
+
+        if creation_instant is None:
+            now = datetime.utcnow()
+            creation_instant = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+
         ext = self.extensions(e)
         pi = ext.find(".//{%s}PublicationInfo" % NS['mdrpi'])
         if pi is not None:
             raise MetadataException("A PublicationInfo element is already present")
         pi = etree.Element("{%s}PublicationInfo" % NS['mdrpi'])
         pi.set('publisher', publisher)
+        if creation_instant:
+            pi.set('creationInstant', creation_instant)
         ext.append(pi)
 
     def set_reginfo(self, e, policy=None, authority=None):
@@ -451,14 +459,11 @@ and verified.
         resources = [(url, verifier, tid, post, True) for url, verifier, tid, post in resources]
         return self._fetch_metadata(resources,
                                     max_workers=max_workers,
-                                    stats=stats,
                                     timeout=timeout,
                                     max_tries=max_tries,
                                     validate=validate)
 
-    def _fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, max_tries=5, validate=False):
-        if stats is None:
-            stats = dict()
+    def _fetch_metadata(self, resources, max_workers=5, timeout=120, max_tries=5, validate=False):
         tries = dict()
 
         def _process_url(rurl, verifier, tid, post, enable_cache=True):
@@ -468,25 +473,32 @@ and verified.
             xml = resource.result.strip()
             retry_resources = []
             info = {
-                'Time Spent': resource.time
+                'Time Spent': "%s seconds" % resource.time
             }
 
             tries[rurl] += 1
-            info['Tries'] = tries[rurl]
+            info['Tries'] = str(tries[rurl])
 
             if resource.result is not None:
-                info['Bytes'] = len(resource.result)
+                info['Bytes'] = str(len(resource.result))
             else:
                 raise MetadataException("empty response fetching '%s'" % resource.url)
 
-            info['URL'] = rurl
-            info['Cached'] = resource.cached
+            info['URL'] = str(rurl)
+            info['Cached'] = str(resource.cached)
             info['Date'] = str(resource.date)
             info['Last-Modified'] = str(resource.last_modified)
             info['Validation Errors'] = dict()
+            info['Description'] = "Remote metadata"
+            info['Status'] = 'success'
+            if not validate:
+                info['Status'] = 'warning'
+                info['Description'] += " (un-validated)"
+            if not enable_cache:
+                info['Status'] = 'info'
 
             if resource.resp is not None:
-                info['Status'] = resource.resp.status
+                info['HTTP Response'] = resource.resp
 
             t, offset = self.parse_metadata(StringIO(xml),
                                             key=verifier,
@@ -534,13 +546,15 @@ and verified.
                             if tries[link_href] < max_tries:
                                 retry_resources.append((link_href, fp, link_href, post, True))
                 elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
-                    number_of_entities = self.store.update(t, tid)
-                    info['Number of Entities'] = number_of_entities
+                    n = self.store.update(t, tid)
+                    info['Size'] = str(n)
                 else:
                     raise MetadataException("unknown metadata type for '%s' (%s)" % (rurl, relt.tag))
 
-            log.debug(info)
-            stats[rurl] = info
+            set_metadata_info(tid, info)
+            if log.isDebugEnabled():
+                log.debug(info)
+
             return retry_resources
 
         while resources:
@@ -558,9 +572,6 @@ and verified.
                 resources = next_resources
                 if log.isDebugEnabled():
                     log.debug("retrying %s" % resources)
-
-    def import_metadata(self, t, name):
-        self.store.update(t, name)
 
     def filter_invalids(self, t, base_url, validation_errors):
         xsd = schema()
@@ -654,7 +665,7 @@ and verified.
 
         return t, valid_until
 
-    def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None):
+    def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None, description=None):
         """
 :param directory: A directory to walk.
 :param ext: Include files with this extension (default .xml)
@@ -664,6 +675,9 @@ starting with '.' are excluded.
         """
         if url is None:
             url = directory
+
+        if description is None:
+            description = "All entities found in %s" % directory
 
         entities = []
         for top, dirs, files in os.walk(directory):
@@ -682,7 +696,10 @@ starting with '.' are excluded.
                         log.error(ex)
 
         if entities:
-            self.store.update(self.entity_set(entities, url, validate=validate))
+            info = dict(Description=description)
+            n = self.store.update(self.entity_set(entities, url, validate=validate), url)
+            info['Size'] = str(n)
+            set_metadata_info(url, info)
         else:
             log.info("no entities found in %s" % directory)
 
@@ -813,7 +830,6 @@ Returns a dict object with basic information about the EntitiesDescriptor
         seen = set()
         info = dict()
 
-        info['Name'] = uri
         info['Duplicates'] = []
         sz = 0
 
@@ -823,9 +839,15 @@ Returns a dict object with basic information about the EntitiesDescriptor
                 info['Duplicates'].append(entity_id)
             else:
                 seen.add(entity_id)
-            sz += 1
+                sz += 1
 
-        info['Size'] = sz
+        info['Size'] = str(sz)
+
+        info.update(get_metadata_info(uri))
+        if 'Validation Errors' in info and info['Validation Errors']:
+            info['Status'] = 'danger'
+
+        info.setdefault('Status', 'default')
         return info
 
     def merge(self, t, nt, strategy=merge_strategies.replace_existing, strategy_name=None):

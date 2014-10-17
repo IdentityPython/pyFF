@@ -6,6 +6,7 @@ import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
 from .decorators import deprecated
+from pyff.stats import set_metadata_info
 from .utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
     iter_entities, validate_document
 from .constants import NS
@@ -369,8 +370,6 @@ Supports both remote and local resources. Fetching remote resources is done in p
     opts.setdefault('max_workers', 5)
     opts.setdefault('validate', "True")
     opts['validate'] = bool(strtobool(opts['validate']))
-    stats = dict()
-    opts.setdefault('stats', stats)
 
     remote = []
     for x in req.args:
@@ -398,7 +397,7 @@ Supports both remote and local resources. Fetching remote resources is done in p
 
         post = None
         if params['via'] is not None:
-            post = PipelineCallback(params['via'], req, stats)
+            post = PipelineCallback(params['via'], req)
 
         if "://" in url:
             log.debug("load %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
@@ -417,7 +416,6 @@ Supports both remote and local resources. Fetching remote resources is done in p
                       (url, params['as'], params['verify'], params['via']))
 
     req.md.fetch_metadata(remote, **opts)
-    req.state['stats']['Metadata URLs'] = stats
 
 
 def _select_args(req):
@@ -514,7 +512,10 @@ alias invisible for anything except the corresponding mime type.
         raise PipeException("empty select - stop")
 
     if alias:
-        req.md.import_metadata(ot, name)
+        nfo = dict(Status='default', Description="Synthetic collection")
+        n = req.md.store.update(ot, name)
+        nfo['Size'] = str(n)
+        set_metadata_info(name, nfo)
 
     return ot
 

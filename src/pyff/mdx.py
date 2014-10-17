@@ -167,7 +167,7 @@ class EncodingDispatcher(object):
                 plen = len(prefix)
                 vpath = vpath[plen + 1:]
                 npath = "%s/%s" % (prefix, self.enc(vpath))
-                #log.debug("EncodingDispatcher %s" % npath)
+                # log.debug("EncodingDispatcher %s" % npath)
                 return self.next_dispatcher(npath)
         return self.next_dispatcher(vpath)
 
@@ -184,8 +184,17 @@ class MDStats(StatsPage):
         tree = etree.parse(StringIO(h), parser)
         body = tree.getroot().find("body")
         body.tag = 'div'
+        body.set('class', 'cpstats')
+        for h in body.findall("h1"):
+            h.tag = 'h3'
+        for h in body.findall("h2"):
+            h.tag = 'h4'
+        for t in body.findall('table'):
+            t.set('class', 'table table-striped table-bordered table-condensed')
+        for b in body.findall('button'):
+            b.set('class', 'btn btn-small')
         hstr = etree.tostring(body, pretty_print=True, method="html")
-        return render_template("basic.html", content=hstr)
+        return render_template("ui.html", content=hstr, headline="Statistics")
 
 
 class WellKnown(object):
@@ -420,6 +429,7 @@ class MDServer(object):
             observers = []
         if not pipes:
             pipes = []
+        self._pipes = pipes
         self.cache_enabled = cache_enabled
         self.lock = ReadWriteLock()
         self.plumbings = [plumbing(v) for v in pipes]
@@ -436,6 +446,10 @@ class MDServer(object):
     @property
     def ready(self):
         return self.md.store.ready()
+
+    def reload_pipeline(self):
+        new_plumbings = [plumbing(v) for v in self._pipes]
+        self.plumbings = new_plumbings
 
     class MediaAccept(object):
 
@@ -478,7 +492,7 @@ class MDServer(object):
 
             if do_split and '.' in x:
                 (pth, dot, extn) = x.rpartition('.')
-                assert(dot == '.')
+                assert (dot == '.')
                 if extn in _ctypes:
                     return pth, extn
 
@@ -602,12 +616,17 @@ class MDServer(object):
                     if len(entities) > 1:
                         return render_template("metadata.html",
                                                md=self.md,
+                                               subheading=q,
                                                entities=entities)
                     else:
                         entity = entities[0]
                         t = html.fragment_fromstring(unicode(xslt_transform(entity, "entity2html.xsl")))
                         for c_elt in t.findall(".//code[@role='entity']"):
-                            c_txt = dumptree(entity, pretty_print=True, xml_declaration=False).decode("utf-8")
+                            c_txt = dumptree(entity)
+                            parser = etree.XMLParser(remove_blank_text=True)
+                            src = StringIO(c_txt)
+                            tree = etree.parse(src, parser)
+                            c_txt = dumptree(tree, pretty_print=True, xml_declaration=False).decode("utf-8")
                             p = c_elt.getparent()
                             p.remove(c_elt)
                             if p.text is not None:
@@ -615,7 +634,11 @@ class MDServer(object):
                             else:
                                 p.text = c_txt
                         xml = dumptree(t, xml_declaration=False).decode('utf-8')
-                        return render_template("basic.html", content=xml)
+                        return render_template("entity.html",
+                                               headline=self.md.display(entity).strip(),
+                                               subheading=entity.get('entityID'),
+                                               entity_id=entity.get('entityID'),
+                                               content=xml)
             else:
                 for p in self.plumbings:
                     state = {'request': True,
@@ -705,7 +728,7 @@ def main():
                 frequency = int(a)
             elif o in ('-A', '--alias'):
                 (a, colon, uri) = a.lpartition(':')
-                assert(colon == ':')
+                assert (colon == ':')
                 if a and uri:
                     aliases[a] = uri
             elif o in '--dir':
