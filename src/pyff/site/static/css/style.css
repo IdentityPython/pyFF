@@ -177,3 +177,7 @@ pre.prettyprint {
 .fallback {
     display: none;
 }
+
+span.select:hover, span.proceed:hover {
+    background-color: lightgrey !important;
+}
