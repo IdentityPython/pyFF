@@ -198,6 +198,12 @@ $(document).ready(function() {
                 });
             });
         },
+        reset: function() {
+            $(this).filter('input').each(function () {
+                $(this).typeahead('val','');
+                $(this).focus();
+            });
+        },
         refresh: function() {
             this.filter('select').each(function() {
                 var seldiv = $(this);
