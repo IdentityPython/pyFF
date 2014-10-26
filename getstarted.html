@@ -1,0 +1,32 @@
+---
+layout: layout
+title: "pyFF News"
+---
+        
+<div class="content">
+   <div class="row"><div class="span12">
+
+<h2>Get started with pyFF</h2>
+
+<p>The simplest way to get started with pyFF is to run a <a href="docker.html">docker image</a>. After you've got the basic example up and running you may wish to modify it to include remote metadata feeds. Simply modify your mdx.fd file (it doesn't have to be called this - any filename will do) to have the following <code>load</code> section:
+
+<pre>
+- when update:
+    - load:
+       - http://mds.edugain.org
+    - break
+</pre>
+
+<p>This would cause the pyFF instance to load eduGAIN metadata. You can combine any number of local and remote metadata sources - a local source is anything that looks like a local directory. You can (and are encouraged to) verify and post-process metadata using the following syntax:</p>
+
+<pre>
+- fixer
+   ... 
+- load
+   - <URL> verify <fingerprint> via fixer
+</pre>
+
+<p>The 'fixer' pipeline (which can be named anything of course) can be used to post-process metadata, eg to remove known broken metadata components. The <fingerprint> is the SHA1 fingerprint of the certificate used to sign the remote metadata. There are many more options and possibilities and if that isn't enough you can write plugins in python.</p>
+
+   </div></div>
+</div>
