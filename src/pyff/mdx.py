@@ -352,6 +352,10 @@ Disallow: /
                                plumbings=["%s" % p for p in self.server.plumbings])
 
     @cherrypy.expose
+    def status(self):
+        return self.about()
+
+    @cherrypy.expose
     def reset(self):
         """The /reset page clears all local browser settings for the device. After visiting
         this page users of the discovery service will see a "new device" page.
@@ -549,14 +553,10 @@ class MDServer(object):
                     raise HTTPError(400, "400 Bad Request - multiple matches for %s" % entity_id)
 
                 pdict['entity'] = self.md.simple_summary(e[0])
-                pdict['ret'] = kwargs.get('return', None)
                 if not path:
                     pdict['search'] = "/search/"
                 else:
                     pdict['search'] = "%s.s" % path
-                if pdict['ret'] is None:
-                    raise HTTPError(400, "400 Bad Request - Missing 'return' parameter")
-                pdict['returnIDParam'] = kwargs.get('returnIDParam', 'entityID')
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return render_template("ds.html", **pdict)
             elif ext == 's':
