@@ -5,3 +5,10 @@ build/
 dist/
 docs/
 src/
+.coverage*
+.cache
+cover
+*.egg
+sign.key
+sign.crt
+.coveralls.yml
