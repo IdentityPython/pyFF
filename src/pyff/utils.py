@@ -8,6 +8,7 @@ from datetime import timedelta, datetime
 import tempfile
 import cherrypy
 import os
+import io
 import pkg_resources
 import re
 from lxml import etree
@@ -69,10 +70,10 @@ This includes certain XSLT and XSD files.
     """
     name = os.path.expanduser(name)
     if os.path.exists(name):
-        with open(name) as fd:
+        with io.open(name) as fd:
             return fd.read()
     elif pfx and os.path.exists(os.path.join(pfx, name)):
-        with open(os.path.join(pfx, name)) as fd:
+        with io.open(os.path.join(pfx, name)) as fd:
             return fd.read()
     elif pkg_resources.resource_exists(__name__, name):
         return pkg_resources.resource_string(__name__, name)
@@ -276,7 +277,7 @@ def load_url(url, enable_cache=True, timeout=60):
         if not os.path.exists(path):
             raise IOError("file not found: %s" % path)
 
-        with open(path, 'r') as fd:
+        with io.open(path, 'r+b') as fd:
             return _Resource(result=fd.read(),
                              cached=False,
                              date=datetime.now(),
@@ -480,6 +481,7 @@ def find_entity(t, e_id, attr='entityID'):
         if e.get(attr) == e_id:
             return e
     return None
+
 
 def has_tag(t, tag):
     tags = t.iter(tag)
