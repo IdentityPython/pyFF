@@ -145,7 +145,7 @@ contains the following:
             </Link>
         </XRD>
         <XRD>
-            <Subject>InCommon</Subject>
+            <Subject>https://incommon.org</Subject>
             <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.incommon.org/InCommon/InCommon-metadata.xml">
                 <Title>InCommon Metadata (main aggregate)</Title>
                 <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
