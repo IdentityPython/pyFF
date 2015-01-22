@@ -1,13 +1,24 @@
 .nav-pills > .active > a,
-.nav-pills > .active > a:hover, .nav-pills > li > a:hover {
+.nav-pills > .active > a:hover,
+.nav-pills > li > a:focus,
+.nav-pills > li > a:hover {
     text-decoration: none;
     font-weight: bold;
     border-radius: 0px;
-    border-right: 4px solid #e97d20;
     color: #000 !important;
     background-color: transparent !important;
+    border-bottom: 4px solid #e97d20;
 }
-.nav-pills > li > a{
+
+.nav-stacked > .active > a,
+.nav-stacked > .active > a:hover,
+.nav-stacked > li > a:focus,
+.nav-stacked > li > a:hover {
+    border-bottom: 0px;
+    border-right: 4px solid #e97d20;
+}
+
+.nav-pills > li > a {
     border-radius: 0px;
 }
 

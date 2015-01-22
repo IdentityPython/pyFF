@@ -377,10 +377,10 @@ def etag(s):
     return hex_digest('sha1', s)
 
 
-def hash_id(entity, hn='sha1', prefix=True):
+def hash_id(entity, hn='sha1', prefix=True, attr='entityID'):
     entity_id = entity
     if hasattr(entity, 'get'):
-        entity_id = entity.get('entityID')
+        entity_id = entity.get(attr)
 
     hstr = hex_digest(entity_id, hn)
     if prefix:
@@ -401,8 +401,8 @@ def hex_digest(data, hn='sha1'):
     return m.hexdigest()
 
 
-def parse_xml(io, base_url=None):
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
+def parse_xml(ioh, base_url=None):
+    return etree.parse(ioh, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
 
 
 class EntitySet(object):
@@ -413,10 +413,10 @@ class EntitySet(object):
                 self.add(e)
 
     def add(self, value):
-        self._e[value.get('entityID')] = value
+        self._e[value.get('ID')] = value
 
     def discard(self, value):
-        entity_id = value.get('entityID')
+        entity_id = value.get('ID')
         if entity_id in self._e:
             del self._e[entity_id]
 
@@ -428,8 +428,7 @@ class EntitySet(object):
         return len(self._e.keys())
 
     def __contains__(self, item):
-        return item.get('entityID') in self._e.keys()
-
+        return item.get('ID') in self._e.keys()
 
 class MetadataException(Exception):
     pass

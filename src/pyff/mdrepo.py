@@ -3,7 +3,10 @@
 This is the implementation of the active repository of SAML metadata. The 'local' and 'remote' pipes operate on this.
 
 """
+import traceback
 from pyff.stats import set_metadata_info, get_metadata_info
+from collections import Counter
+from pyff.store import entity_attribute_dict
 
 try:
     from cStringIO import StringIO
@@ -23,12 +26,13 @@ from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
 import xmlsec
 import ipaddr
+from math import sqrt
 
 from . import merge_strategies
 from .logs import log
 from .utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
-    iter_entities, validate_document, load_url, iso2datetime, xml_error
+    iter_entities, validate_document, load_url, iso2datetime, xml_error, hex_digest, dumptree
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 
@@ -58,9 +62,15 @@ class MDRepository(Observable):
     the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
     """
 
-    def __init__(self, metadata_cache_enabled=False, min_cache_ttl="PT5M", store=None):
+    def __init__(self,
+                 metadata_cache_enabled=False,
+                 min_cache_ttl="PT5M",
+                 id_includes_source=False,
+                 store=None):
+
         self.metadata_cache_enabled = metadata_cache_enabled
         self.min_cache_ttl = min_cache_ttl
+        self.id_includes_source = id_includes_source
 
         if not isinstance(self.min_cache_ttl, int):
             try:
@@ -87,6 +97,7 @@ class MDRepository(Observable):
     def clone(self):
         return MDRepository(metadata_cache_enabled=self.metadata_cache_enabled,
                             min_cache_ttl=self.min_cache_ttl,
+                            id_includes_source=self.id_includes_source,
                             store=self.store.clone())
 
     def sha1_id(self, e):
@@ -143,6 +154,14 @@ class MDRepository(Observable):
 
         return display, info
 
+    def publishers(self, entity):
+        return [e.get('publisher')
+                for e in entity.iterfind(".//{%s}PublicationPath/{%s}Publication" % (NS['mdrpi'], NS['mdrpi']))]
+
+    def registrars(self, entity):
+        return [e.get('registrationAuthority')
+                for e in entity.iterfind(".//{%s}RegistrationInfo" % NS['mdrpi'])]
+
     def display(self, entity, langs=None):
         """Utility-method for computing a displayable string for a given entity.
 
@@ -162,6 +181,117 @@ class MDRepository(Observable):
 
         return entity.get('entityID')
 
+    def report_publisher_weights(self):
+        nodes = dict()
+        for entity_id, entities in self.store.entity_ids().iteritems():
+            for e in entities:
+                pub = self.publishers(e)
+                for i in range(0, len(pub)):
+                    nodes.setdefault(pub[i], 0)
+                    nodes[pub[i]] += 1
+
+        n_nodes = list()
+        for node, count in nodes.iteritems():
+            n_nodes.append(dict(count=count, name=node, radius=sqrt(count+1)))
+
+        nodes = n_nodes
+
+        return dict(nodes=nodes)
+
+    def report_attribute_graph(self, a, b, n=0):
+        values = dict()
+        for entity_id, entities in self.store.entity_ids().iteritems():
+            for entity in entities:
+                for attr, vals in entity_attribute_dict(entity).iteritems():
+                    values.setdefault(attr, dict())
+                    for v in vals:
+                        if v is not None and len(v) > 0:
+                            values[attr].setdefault(v, set())
+                            values[attr][v].add(entity_id)
+
+        links = list()
+        a_names = set()
+        b_names = set()
+        values.setdefault(a, [])
+        values.setdefault(b, [])
+
+        for v_a in values[a]:
+            ids_a = values[a][v_a]
+            for v_b in values[b]:
+                ids_b = values[b][v_b]
+                count = len(ids_a.intersection(ids_b))
+                if count > n:
+                    links.append(dict(source=v_a, target=v_b, value=count))
+                    a_names.add(v_a)
+                    b_names.add(v_b)
+
+        a_names = list(a_names)
+        b_names = list(b_names)
+        nodes = [dict(name=n) for n in a_names]
+        nodes.extend([dict(name=n) for n in b_names])
+        offset = len(a_names)
+        for link in links:
+            link['source'] = a_names.index(link['source'])
+            link['target'] = offset + b_names.index(link['target'])
+
+        return dict(nodes=nodes, links=links)
+
+    def report_attribute_graph2(self, a, b):
+
+        def _pad(l, n):
+            ll = len(l)
+            if ll < n:
+                l.extend([0]*(n-ll))
+            return l
+
+        matrix = []
+        values = dict()
+        for entity_id, entities in self.store.entity_ids().iteritems():
+            for entity in entities:
+                for attr, vals in entity_attribute_dict(entity).iteritems():
+                    values.setdefault(attr, dict())
+                    for v in vals:
+                        values[attr].setdefault(v, set())
+                        values[attr][v].add(entity_id)
+
+        down = values[a].keys()
+        across = values[b].keys()
+        padlen = max(len(down), len(across))
+        i = 0
+        for v_a in down:
+            ids_a = values[a][v_a]
+            row = list()
+            for v_b in across:
+                ids_b = values[b][v_b]
+                row.append(len(ids_a.intersection(ids_b)))
+            matrix.append(_pad(row, padlen))
+        if len(matrix) < padlen:
+            for i in range(0,len(matrix)-padlen):
+                matrix.append(_pad([], padlen))
+
+        return dict(matrix=matrix, down=down, across=across)
+
+    def report_publisher_overlaps(self):
+        er = []
+        for entity_id, entities in self.store.entity_ids().iteritems():
+            ne = len(entities) - 1  # 1 isn't an overlap
+            publishers = set()
+            for e in entities:
+                for p in self.publishers(e):
+                    publishers.add(p)
+            np = len(publishers)
+            er.append(dict(
+                _id=e.get('ID'),
+                entity_id=entity_id,
+                dup_size=ne,
+                publishers=list(publishers),
+                pub_size=np
+            ))
+        return sorted(er, reverse=True, key=lambda o: o['dup_size'])
+
+    def report_repository_dashboard(self):
+        return sorted([self.summary(uri) for uri in self.store.collections()], key=lambda o: o['Size'], reverse=True)
+
     def sub_domains(self, e):
         lst = []
         domains = self.domains(e)
@@ -178,6 +308,7 @@ class MDRepository(Observable):
         title, descr = self.ext_display(e)
         entity_id = e.get('entityID')
         d = dict(title=title,
+                 _id=e.get('ID'),
                  value=entity_id,
                  descr=descr,
                  icon=self.icon(e),
@@ -193,7 +324,7 @@ class MDRepository(Observable):
     def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None, related=None):
         """
 :param query: A string to search for.
-:param path: The repository collection (@Name) to search in - None for search in all collections
+:param path: The repository collection (@Name) to pidsearch in - None for search in all collections
 :param page:  When using paged search, the page index
 :param page_limit: When using paged search, the maximum entry per page
 :param entity_filter: An optional lookup expression used to filter the entries before search is done.
@@ -379,7 +510,7 @@ The dict in the list contains three items:
 
     def set_pubinfo(self, e, publisher=None, creation_instant=None):
         if e.tag != "{%s}EntitiesDescriptor" % NS['md']:
-            raise MetadataException("I can only set RegistrationAuthority to EntitiesDescriptor elements")
+            raise MetadataException("I can only set PublicationPath to EntitiesDescriptor elements")
         if publisher is None:
             raise MetadataException("At least publisher must be provided")
 
@@ -388,7 +519,7 @@ The dict in the list contains three items:
             creation_instant = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         ext = self.extensions(e)
-        pi = ext.find(".//{%s}PublicationInfo" % NS['mdrpi'])
+        pi = ext.find(".//{%s}PublicationPath" % NS['mdrpi'])
         if pi is not None:
             raise MetadataException("A PublicationInfo element is already present")
         pi = etree.Element("{%s}PublicationInfo" % NS['mdrpi'])
@@ -396,6 +527,24 @@ The dict in the list contains three items:
         if creation_instant:
             pi.set('creationInstant', creation_instant)
         ext.append(pi)
+
+    def add_pubpath(self, e, publisher=None, creation_instant=None):
+        if publisher is not None:
+            if e.tag == "{%s}EntitiesDescriptor" % NS['md']:
+                for ee in e.iter("{%s}EntityDescriptor" % NS['md']):
+                    self.add_pubpath(ee, publisher=publisher, creation_instant=creation_instant)
+            elif e.tag == "{%s}EntityDescriptor" % NS['md']:
+                ext = self.extensions(e)
+                pp = ext.find(".//{%s}PublicationPath" % NS['mdrpi'])
+                if pp is None:
+                    pp = etree.Element("{%s}PublicationPath" % NS['mdrpi'])
+                    ext.append(pp)
+
+                p = etree.Element("{%s}Publication" % NS['mdrpi'])
+                p.set('publisher', publisher)
+                if creation_instant:
+                    p.set('creationInstant', creation_instant)
+                pp.append(p)
 
     def set_reginfo(self, e, policy=None, authority=None):
         if e.tag != "{%s}EntityDescriptor" % NS['md']:
@@ -435,6 +584,22 @@ The dict in the list contains three items:
                 return duration2timedelta(cache_duration)
 
         return None
+
+    def unique_id(self, e, src):
+        #print "unique_id: %s -> %s %s" % (self.id_includes_source, e.get('entityID'), src)
+        if self.id_includes_source:
+            return "%s%s" % (e.get('entityID'), src)
+        else:
+            return e.get('entityID')
+
+    def set_id(self, t, src=None):
+        if t.tag == '{%s}EntitiesDescriptor' % NS['md']:
+            if src is None:
+                src = t.get('Name')
+            for e in t.iter('{%s}EntityDescriptor' % NS['md']):
+                self.set_id(e, src)
+        elif t.tag == '{%s}EntityDescriptor' % NS['md']:
+            t.set('ID', "_%s" % hex_digest(self.unique_id(t, src)))
 
     def fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, max_tries=5, validate=False):
         """Fetch a series of metadata URLs and optionally verify signatures.
@@ -546,6 +711,7 @@ and verified.
                             if tries[link_href] < max_tries:
                                 retry_resources.append((link_href, fp, link_href, post, True))
                 elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
+                    self.set_id(relt, tid)
                     n = self.store.update(t, tid)
                     info['Size'] = str(n)
                 else:
@@ -565,10 +731,15 @@ and verified.
                 next_resources = []
                 for future in futures.as_completed(future_to_url):
                     url = future_to_url[future]
-                    if future.exception() is not None:
-                        log.error('%r generated an exception: %s' % (url, future.exception()))
-                    else:
+                    try:
                         next_resources.extend(future.result())
+                    except Exception, ex:
+                        log.error('%r generated an exception: %s' % (url, future.exception()))
+                        traceback.print_exc(ex)
+                    #if future.exception() is not None:
+                    #    log.error('%r generated an exception: %s' % (url, future.exception()))
+                    #else:
+                    #    next_resources.extend(future.result())
                 resources = next_resources
                 if log.isDebugEnabled():
                     log.debug("retrying %s" % resources)
@@ -622,6 +793,15 @@ and verified.
 (but after xinclude processing)
         """
 
+        def _tree_name(tr):
+            relt = root(tr)
+            if relt.tag == '{%s}EntityDescriptor' % NS['md']:
+                return relt.get('entityID')
+            elif relt.tag == '{%s}EntitiesDescriptor' % NS['md']:
+                return relt.get('Name')
+            elif relt.tag == '{%s}XRDS' % NS['xrd']:
+                return 'xrd'
+
         if validation_errors is None:
             validation_errors = dict()
 
@@ -642,7 +822,7 @@ and verified.
                     del e.attrib['ID']
 
             if post is not None:
-                t = post(t)
+                t = post(t, source=_tree_name(t), base_url=base_url, expiration=expiration)
 
             if validate:
                 if filter_invalid:
@@ -691,6 +871,7 @@ starting with '.' are excluded.
                     fn = os.path.join(top, nm)
                     try:
                         t, valid_until = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
+                        self.set_id(root(t), url)
                         entities.extend(entities_list(t))  # local metadata is assumed to be ok
                     except Exception, ex:
                         log.error(ex)
@@ -717,7 +898,7 @@ starting with '.' are excluded.
         log.debug("calling store lookup %s" % member)
         return self.store.lookup(member)
 
-    def lookup(self, member, xp=None):
+    def lookup(self, member, xp=None, deduplicate=True):
         """
 Lookup elements in the working metadata repository
 
@@ -747,25 +928,39 @@ fails an empty list is returned.
 
         """
 
+        def _dedup(entities):
+            dedup = dict()
+            for e in entities:
+                entity_id = e.get('entityID')
+                dedup.setdefault(entity_id, list())
+                dedup[entity_id].append(e)
+            return [self.merge_multiple(entity_id, dups) for entity_id, dups in dedup.iteritems()]
+
         l = self._lookup(member)
         if hasattr(l, 'tag'):
             l = [l]
         elif hasattr(l, '__iter__'):
             l = list(l)
 
-        if xp is None:
-            return l
-        else:
+        if xp is not None:
             if log.isDebugEnabled():
                 log.debug("filtering %d entities using xpath %s" % (len(l), xp))
             t = self.entity_set(l, 'dummy')
             if t is None:
-                return []
-            l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
+                l = []
+            else:
+                l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
 
-            if log.isDebugEnabled():
-                log.debug("got %d entities after filtering" % len(l))
-            return l
+        if log.isDebugEnabled():
+            log.debug("got %d entities after filtering" % len(l))
+
+        if deduplicate:
+            l = _dedup(l)
+
+        return l
+
+    def merge_multiple(self, entity_id, dups):
+        return dups[0]
 
     def entity_set(self, entities, name, cacheDuration=None, validUntil=None, validate=True):
         """
@@ -781,12 +976,12 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         #    log.debug("entities: %s" % entities)
 
         def _a(ent):
-            entity_id = ent.get('entityID', None)
+            _id = ent.get('ID', None)
             # log.debug("adding %s to set" % entity_id)
-            if (ent is not None) and (entity_id is not None) and (entity_id not in seen):
+            if (ent is not None) and (_id is not None) and (_id not in seen):
                 t.append(deepcopy(ent))
                 # log.debug("really adding %s to set" % entity_id)
-                seen[entity_id] = True
+                seen[_id] = True
 
         attrs = dict(Name=name, nsmap=NS)
         if cacheDuration is not None:
@@ -833,7 +1028,7 @@ Returns a dict object with basic information about the EntitiesDescriptor
         info['Duplicates'] = []
         sz = 0
 
-        for e in self.store.lookup(uri):
+        for e in self.lookup(uri):
             entity_id = e.get('entityID')
             if entity_id in seen:
                 info['Duplicates'].append(entity_id)
@@ -845,9 +1040,11 @@ Returns a dict object with basic information about the EntitiesDescriptor
 
         info.update(get_metadata_info(uri))
         if 'Validation Errors' in info and info['Validation Errors']:
+            info['ninvalids'] = "%d" % len(info['Validation Errors'])
             info['Status'] = 'danger'
-
+        info['_id'] = hex_digest(uri)
         info.setdefault('Status', 'default')
+
         return info
 
     def merge(self, t, nt, strategy=merge_strategies.replace_existing, strategy_name=None):

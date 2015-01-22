@@ -272,6 +272,65 @@ class NotImplementedFunction(object):
         return self.message
 
 
+class Reports(object):
+
+    def __init__(self, server=None):
+        self.server = server
+
+    @cherrypy.expose
+    def index(self):
+        return render_template("reports/index.html")
+
+    @cherrypy.expose
+    def top_n(self, n):
+        return render_template("reports/top_n.html", n=n)
+
+    @cherrypy.expose
+    def top_n_api(self):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return dumps(self.server.md.report_repository_dashboard())
+
+    @cherrypy.expose
+    def publisher_weights(self):
+        return render_template("reports/publisher_weights.html")
+
+    @cherrypy.expose
+    def publisher_weights_api(self):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return dumps(self.server.md.report_publisher_weights())
+
+    @cherrypy.expose
+    def attribute_graph(self, left, right, n):
+        if left not in ATTRS or right not in ATTRS:
+            raise NotFound()
+        return render_template("reports/attribute_graph.html",
+                               attributes=ATTRS,
+                               left=ATTRS[left],
+                               right=ATTRS[right],
+                               n=n)
+
+    @cherrypy.expose
+    def attribute_graph_api(self, left='publisher', right='role', n=0):
+        if left not in ATTRS or right not in ATTRS:
+            raise NotFound()
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return dumps(self.server.md.report_attribute_graph(ATTRS[left], ATTRS[right]))
+
+    @cherrypy.expose
+    def publisher_overlaps(self, start=0, results_per_page=20):
+        report = self.server.md.report_publisher_overlaps()
+        return render_template("reports/publisher_overlaps.html",
+                               start=int(start),
+                               total=len(report),
+                               results_per_page=int(results_per_page),
+                               report=report)
+
+    @cherrypy.expose
+    def publisher_overlaps_api(self):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return dumps(self.server.md.report_publisher_overlaps())
+
+
 class MDRoot(object):
     """The root application of pyFF. The root application assembles the MDStats and WellKnown classes with an
     MDServer instance.
@@ -280,8 +339,10 @@ class MDRoot(object):
     def __init__(self, server):
         self.server = server
         self._well_known.server = server
+        self.reports.server = server
 
     stats = MDStats()
+    reports = Reports()
 
     try:  # pragma: nocover
         import dowser
@@ -425,6 +486,7 @@ class MDServer(object):
                  aliases=None,
                  cache_enabled=True,
                  observers=None,
+                 tracking=False,
                  store=None):
 
         if aliases is None:
@@ -441,7 +503,7 @@ class MDServer(object):
         self.refresh.subscribe()
         self.aliases = aliases
         self.psl = PublicSuffixList()
-        self.md = MDRepository(metadata_cache_enabled=self.cache_enabled, store=store)
+        self.md = MDRepository(metadata_cache_enabled=self.cache_enabled, store=store, id_includes_source=tracking)
 
         if autoreload:
             for f in pipes:
@@ -545,10 +607,10 @@ class MDServer(object):
                 if entity_id is None:
                     raise HTTPError(400, "400 Bad Request - missing entityID")
                 pdict['sp'] = self.md.sha1_id(entity_id)
-                e = self.md.store.lookup(entity_id)
+                e = self.md.lookup(entity_id)
                 if e is None or len(e) == 0:
                     raise HTTPError(404)
-
+                log.debug(e)
                 if len(e) > 1:
                     raise HTTPError(400, "400 Bad Request - multiple matches for %s" % entity_id)
 
@@ -610,13 +672,13 @@ class MDServer(object):
                                            aliases=self.aliases,
                                            title=title)
                 else:
-                    entities = self.md.lookup(q)
+                    entities = self.md.lookup(q, deduplicate=False)
                     if not entities:
                         raise NotFound()
                     if len(entities) > 1:
                         return render_template("metadata.html",
                                                md=self.md,
-                                               subheading=q,
+                                               subheading="<a href=\"/metadata/%s.html\">%s</a>" % (q, q),
                                                entities=entities)
                     else:
                         entity = entities[0]
@@ -636,7 +698,8 @@ class MDServer(object):
                         xml = dumptree(t, xml_declaration=False).decode('utf-8')
                         return render_template("entity.html",
                                                headline=self.md.display(entity).strip(),
-                                               subheading=entity.get('entityID'),
+                                               subheading="<a href=\"/metadata/%s.html\">%s</a>" %
+                                                          (self.md.sha1_id(entity), entity.get('entityID')),
                                                entity_id=entity.get('entityID'),
                                                content=xml)
             else:
@@ -668,7 +731,7 @@ def main():
                                    'hP:p:H:CfaA:l:Rm:',
                                    ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
                                     'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
-                                    'alias=', 'dir=', 'version', 'proxy', 'terminator'])
+                                    'alias=', 'dir=', 'version', 'proxy', 'terminator', 'tracking'])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -690,6 +753,7 @@ def main():
     proxy = False
     store = MemoryStore()
     terminator = False
+    tracking = False
     modules = []
 
     try:  # pragma: nocover
@@ -724,6 +788,8 @@ def main():
                 daemonize = False
             elif o in ('--autoreload', '-a'):
                 autoreload = True
+            elif o in ('--tracking'):
+                tracking = True
             elif o in '--frequency':
                 frequency = int(a)
             elif o in ('-A', '--alias'):
@@ -792,6 +858,7 @@ def main():
                       aliases=aliases,
                       cache_enabled=caching,
                       observers=observers,
+                      tracking=tracking,
                       store=store)
 
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]

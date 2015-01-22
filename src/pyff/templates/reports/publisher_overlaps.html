@@ -1,0 +1,45 @@
+<nav>
+  <ul class="pager">
+    {% if start > 0 %}
+    <li class="previous"><a role="link" href="/reports/publisher_overlaps?start={{start - results_per_page + 1}}"><span aria-hidden="true">&larr;</span> Previous</a></li>
+    {% endif %}
+    {% if start+results_per_page < total %}
+    <li class="next"><a role="link" href="/reports/publisher_overlaps?start={{start + results_per_page - 1}}">Next <span aria-hidden="true">&rarr;</span></a></li>
+    {% endif %}
+  </ul>
+</nav>
+<table class="table table-bordered small">
+{% for e_info in report[start:start+results_per_page] %}
+    <tr>
+        <td><a href="/metadata/{{e_info.entity_id|u}}.html">{{e_info.entity_id}}</a></td>
+        <td>
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-xs-10">
+                        <ul class="list-unstyled">
+                        {% for p in e_info.publishers|sort %}
+                            <li><a href="/publisher/{{p|u}}.html">{{p}}</a></li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-xs-2">
+                        <div style="margin-top: 5px">
+                            <span class="badge">{{e_info.dup_size}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+{% endfor %}
+</table>
+<nav>
+  <ul class="pager">
+    {% if start > 0 %}
+    <li class="previous"><a role="link" href="/reports/publisher_overlaps?start={{start - results_per_page + 1}}"><span aria-hidden="true">&larr;</span> Previous</a></li>
+    {% endif %}
+    {% if start+results_per_page < total %}
+    <li class="next"><a role="link" href="/reports/publisher_overlaps?start={{start + results_per_page - 1}}">Next <span aria-hidden="true">&rarr;</span></a></li>
+    {% endif %}
+  </ul>
+</nav>

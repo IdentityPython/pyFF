@@ -1,0 +1,127 @@
+<div>
+    <style>
+
+        .node {
+          stroke: #fff;
+          stroke-width: 1px;
+        }
+
+        .link {
+          stroke: #999;
+          stroke-opacity: .6;
+        }
+
+    </style>
+    <script type="text/javascript">
+
+    var opts = {
+        lines: 13, // The number of lines to draw
+        length: 20, // The length of each line
+        width: 10, // The line thickness
+        radius: 30, // The radius of the inner circle
+        corners: 1, // Corner roundness (0..1)
+        rotate: 0, // The rotation offset
+        direction: 1, // 1: clockwise, -1: counterclockwise
+        color: '#000', // #rgb or #rrggbb or array of colors
+        speed: 1, // Rounds per second
+        trail: 60, // Afterglow percentage
+        shadow: false, // Whether to render a shadow
+        hwaccel: false, // Whether to use hardware acceleration
+        className: 'jsspinner', // The CSS class to assign to the spinner
+        zIndex: 2e9, // The z-index (defaults to 2000000000)
+        top: '70%', // Top position relative to parent
+        left: '50%' // Left position relative to parent
+    };
+    var spinner = new Spinner(opts);
+    $(document).ready(function() {
+        var spinto = document.getElementById('graph');
+        spinner.spin(spinto);
+
+        var width = 730;
+        var height = 500;
+        var padding = 0.1;
+
+        var color = d3.scale.category20();
+
+
+        var force = d3.layout.force()
+                .gravity(0.7)
+                .charge(-120)
+                .size([width, height]);
+
+        var svg = d3.select("#graph")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+        d3.json("/reports/publisher_weights_api", function (error, graph) {
+            spinner.stop();
+            var maxRadius = d3.max(graph.nodes, function(o) { return o.radius });
+            var minRadius = d3.min(graph.nodes, function(o) { return o.radius });
+            console.log(maxRadius);
+            console.log(minRadius);
+            force.nodes(graph.nodes).start();
+
+            var node = svg.selectAll(".node")
+                    .data(graph.nodes)
+                    .enter().append("circle")
+                    .attr("class", "node")
+                    .attr('x',300)
+                    .attr('y',300)
+                    .attr("r", function (d) {
+                        return d.radius
+                    })
+                    .on('click', function (d) {
+                        document.location.href = "/publisher/"+ encodeURIComponent(d.name);
+                        return true;
+                    })
+                    .style("fill", function (d) {
+                        return color(d.count+1);
+                    })
+                    .call(force.drag);
+
+            node.append("title").text(function (d) {
+                return d.name;
+            });
+
+            function collide(node) {
+              var r = Math.sqrt(node.count+1),
+                  nx1 = node.x - r,
+                  nx2 = node.x + r,
+                  ny1 = node.y - r,
+                  ny2 = node.y + r;
+              return function(quad, x1, y1, x2, y2) {
+                if (quad.point && (quad.point !== node)) {
+                  var x = node.x - quad.point.x,
+                      y = node.y - quad.point.y,
+                      l = Math.sqrt(x * x + y * y),
+                      r = node.radius + quad.point.radius;
+                  if (l < r) {
+                    l = (l - r) / l * .5;
+                    node.x -= x *= l;
+                    node.y -= y *= l;
+                    quad.point.x += x;
+                    quad.point.y += y;
+                  }
+                }
+                return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+              };
+            }
+
+            force.on("tick", function (e) {
+
+                var q = d3.geom.quadtree(graph.nodes),
+                  i = 0,
+                  n = graph.nodes.length;
+
+                while (++i < n) q.visit(collide(graph.nodes[i]));
+
+                node
+                  .attr("cx", function(d) { return d.x = Math.max(maxRadius, Math.min(width - maxRadius, d.x)); })
+                  .attr("cy", function(d) { return d.y = Math.max(maxRadius, Math.min(height - maxRadius, d.y)); });
+            });
+        });
+    });
+    </script>
+    <div class="d3" id="graph"></div>
+</div>

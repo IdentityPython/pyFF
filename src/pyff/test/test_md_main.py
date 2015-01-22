@@ -183,6 +183,11 @@ class PyFFTest(PipeLineTest):
 
     def test_run_bad(self):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", self.bad)
+        print out
+        print "---"
+        print err
+        print "---"
+        print self.bad
         assert (not out)
         assert 'Traceback' in err
         assert 'No pipe named snartibartifast is installed' in err

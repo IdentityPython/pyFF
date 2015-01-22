@@ -15,7 +15,9 @@ from pyff.decorators import cached
 from pyff.utils import root, dumptree, duration2timedelta, totimestamp, parse_xml, hex_digest, hash_id, EntitySet, \
     entities_list, url2host, subdomains, has_tag, iter_entities
 from pyff.logs import log
+from publicsuffix import PublicSuffixList
 
+_psl = PublicSuffixList()
 
 def is_idp(entity):
     return has_tag(entity, "{%s}IDPSSODescriptor" % NS['md'])
@@ -43,6 +45,12 @@ def entity_attribute_dict(entity):
                 values = [v.text.strip() for v in a.iter("{%s}AttributeValue" % NS['saml'])]
                 d[an] = values
 
+    d[ATTRS['registration-authority']] = [e.get('registrationAuthority')
+                                          for e in entity.iter("{%s}RegistrationInfo" % NS['mdrpi'])]
+
+    d[ATTRS['publisher']] = [e.get('publisher')
+                             for e in entity.iterfind(".//{%s}PublicationPath/{%s}Publication" % (NS['mdrpi'], NS['mdrpi']))]
+
     d[ATTRS['role']] = []
 
     try:
@@ -55,6 +63,17 @@ def entity_attribute_dict(entity):
     except ValueError:
         pass
 
+    if ATTRS['domain'] in d:
+        suf = set()
+        for domain in d[ATTRS['domain']]:
+            ps = _psl.get_public_suffix(domain)
+            if '.' in ps:
+                (lp, _sep, s) = ps.partition('.')
+            else:
+                s = ps
+            suf.add(s)
+        d[ATTRS['public-suffix']] = list(suf)
+
     if is_idp(entity):
         d[ATTRS['role']].append('idp')
     if is_sp(entity):
@@ -66,10 +85,11 @@ def entity_attribute_dict(entity):
 def _now():
     return int(time.time())
 
-DINDEX = ('sha1', 'sha256', 'null')
+DINDEX = {'sha1', 'sha256', 'null', 'ID'}
 
 
 class StoreBase(object):
+    
     def lookup(self, key):
         raise NotImplementedError()
 
@@ -105,12 +125,20 @@ class StoreBase(object):
     def get(self, key):
         raise NotImplementedError()
 
+    def attributes(self):
+        raise NotImplementedError()
+
+    def attribute(self, a):
+        raise NotImplementedError()
+
+    def entity_ids(self):
+        raise NotImplementedError()
+
 
 class MemoryStore(StoreBase):
     def __init__(self):
         self.md = dict()
         self.index = dict()
-        self.entities = dict()
         self._ready = False
 
         for hn in DINDEX:
@@ -122,6 +150,13 @@ class MemoryStore(StoreBase):
 
     def clone(self):
         return deepcopy(self)
+
+    @property
+    def entities(self):
+        return [next(x.__iter__()) for x in self.index['ID'].values()]
+
+    def entity_ids(self):
+        return self.index['null']
 
     def size(self):
         return len(self.entities)
@@ -138,18 +173,25 @@ class MemoryStore(StoreBase):
     def periodic(self, stats):
         self._ready = True
 
-    def _index(self, entity):
+    def _index(self, entity, cid):
         attr_idx = self.index.setdefault('attr', {})
         nd = 0
-        for hn in DINDEX:
-            hid = hash_id(entity, hn, False)
+        for idxn in DINDEX:
+            if idxn == 'ID':
+                hid = entity.get('ID')
+            else:
+                hid = hex_digest(entity.get('entityID'), hn=idxn)
+
             # log.debug("computing index %s(%s) = %s" % (hn, entity.get('entityID'), hid))
-            self.index[hn].setdefault(hid, EntitySet())
-            self.index[hn][hid].add(entity)
+            self.index[idxn].setdefault(hid, EntitySet())
+            self.index[idxn][hid].add(entity)
             nd += 1
 
         na = 0
-        for attr, values in entity_attribute_dict(entity).iteritems():
+        ed = entity_attribute_dict(entity)
+        if cid is not None:
+            ed[ATTRS['collection']] = [cid]
+        for attr, values in ed.iteritems():
             for v in values:
                 vidx = attr_idx.setdefault(attr, {})
                 vidx.setdefault(v, EntitySet())
@@ -169,18 +211,24 @@ class MemoryStore(StoreBase):
 
         # log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'), na, nd))
 
-    def _unindex(self, entity):
+    def _unindex(self, entity, cid):
         attr_idx = self.index.setdefault('attr', {})
         nd = 0
-        for hn in DINDEX:
-            # log.debug("computing %s" % hn)
-            hid = hash_id(entity, hn, False)
-            self.index[hn].setdefault(hid, EntitySet())
-            self.index[hn][hid].discard(entity)
+        for idxn in DINDEX:
+            if idxn == 'ID':
+                hid = entity.get('ID')
+            else:
+                hid = hex_digest(entity.get('entityID'), hn=idxn)
+
+            self.index[idxn].setdefault(hid, EntitySet())
+            self.index[idxn][hid].discard(entity)
             nd += 1
 
         na = 0
-        for attr, values in entity_attribute_dict(entity).iteritems():
+        ed = entity_attribute_dict(entity)
+        if cid is not None:
+            ed[ATTRS['collection']] = [cid]
+        for attr, values in ed.iteritems():
             # log.debug("indexing %s on %s" % (attr,entity.get('entityID')))
             for v in values:
                 vidx = attr_idx.setdefault(attr, {})
@@ -223,16 +271,14 @@ class MemoryStore(StoreBase):
     def collections(self):
         return self.md.keys()
 
-    def update(self, t, tid=None, ts=None, merge_strategy=None):
+    def update(self, t, tid=None, ts=None, merge_strategy=None, cid=None):
         # log.debug("memory store update: %s: %s" % (repr(t), tid))
         relt = root(t)
         assert(relt is not None)
         ne = 0
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
-            # log.debug("memory store setting entity descriptor")
-            self._unindex(relt)
-            self._index(relt)
-            self.entities[relt.get('entityID')] = relt  # TODO: merge?
+            self._unindex(relt, cid)
+            self._index(relt, cid)
             if tid is not None:
                 self.md[tid] = relt
             ne += 1
@@ -241,19 +287,19 @@ class MemoryStore(StoreBase):
             if tid is None:
                 tid = relt.get('Name')
             for e in iter_entities(t):
-                self.update(e)
+                self.update(e, cid=tid)
                 ne += 1
             self.md[tid] = relt
 
         return ne
 
     def lookup(self, key):
-        # log.debug("memory store lookup: %s" % key)
+        #log.debug("memory store lookup: %s" % key)
         return self._lookup(key)
 
     def _lookup(self, key):
         if key == 'entities' or key is None:
-            return self.entities.values()
+            return self.entities
         if '+' in key:
             key = key.strip('+')
             # log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))

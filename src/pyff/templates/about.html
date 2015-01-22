@@ -63,11 +63,13 @@
                     {% for uri in repo.store.collections() %}
                     {% set info = repo.summary(uri) %}
                     <div class="panel panel-{{info['Status']}}">
-                        <div class="panel-heading" title="{{uri|trim}}">{{ uri|trim|truncate(60) }}</div>
+                        <div class="panel-heading" title="{{uri|trim}}">
+                            <div class="panel-title">{{ uri|trim|truncate(60) }}</div>
+                        </div>
                         {% if info['Description'] %}
                         <div class="panel-body small">{{ info['Description'] }}</div>
                         {% endif %}
-                        <table class="table table-condensed">
+                        <table class="table table-condensed small">
                             {% for k,v in info.iteritems() %}
                             {% if k and v and not k in ('URL','Description','Validation Errors','Status') %}
                             <tr>
@@ -93,18 +95,17 @@
                             </tr>
                             {% endif %}
                             {% endfor %}
-                        </table>
                         {% if info['Validation Errors'] %}
-                        <table class="table">
+                            <tr><th colspan="2">Validation Errors</th></tr>
                             {% for ei,ee in info['Validation Errors'].iteritems() %}
                             <tr>
                                 <th>{{ei|trim|truncate(30)}}</th>
                                 <td>{{ee|trim}}</td>
                             </tr>
                             {% endfor %}
-                        </table>
-                        {% endif %}
 
+                        {% endif %}
+                        </table>
                     </div>
                     {% endfor %}
                 </div>

@@ -19,7 +19,10 @@ NS = {"md": "urn:oasis:names:tc:SAML:2.0:metadata",
 ATTRS = {'collection': 'http://pyff-project.org/collection',
          'entity-category': 'http://macedir.org/entity-category',
          'role': 'http://pyff-project.org/role',
-         'domain': 'http://pyff-project.org/domain'}
+         'registration-authority': 'urn:oasis:names:tc:SAML:metadata:rpi-registration-authority',
+         'publisher': 'urn:oasis:names:tc:SAML:metadata:rpi-publisher',
+         'domain': 'http://pyff-project.org/domain',
+         'public-suffix': 'http://pyff-project.org/public-suffix'}
 
 DIGESTS = ['sha1', 'md5', 'null']
 

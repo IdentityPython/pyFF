@@ -1,0 +1,50 @@
+{% extends "ui.html" %}
+{% block headline %}{{ gettext('Reports & Graphs') }}{% endblock %}
+{% block script %}
+    <script src="/static/js/d3.v3.min.js" charset="utf-8"></script>
+    <script src="/static/js/d3-tip.js" charset="utf-8"></script>
+    <script src="/static/js/spin.min.js"></script>
+    <script src="/static/js/sankey.js"></script>
+    <link rel="stylesheet" href="/static/css/spinner.css">
+    <link rel="stylesheet" href="/static/css/d3-tip.css">
+    <link rel="stylesheet" href="/static/css/ispinner.css">
+{% endblock %}
+{% block content %}
+        <style>
+            .tab-pane {
+                margin-top: 20px;
+            }
+        </style>
+        <script>
+            $(document).ready(function () {
+                $(window).bind('hashchange',function(e) {
+                    var url = $.bbq.getState('href');
+                    if (url) {
+                        $("#pageContent").load(url);
+                    }
+                });
+                $('body').on('click', "a[role='link']", function (e) {
+                    e.preventDefault();
+                    var state = {};
+                    state['href'] = $(this).attr('href');
+                    $.bbq.pushState(state);
+
+                    return true;
+                });
+                $(window).trigger( 'hashchange' );
+                console.log($.param.fragment().length);
+                if ($.param.fragment().length == 0) {
+                    $("#top_n").trigger("click");
+                }
+            });
+        </script>
+        <ul class="nav nav-pills">
+            <li><a role="link" id="top_n" href="/reports/top_n/10">{{ gettext('Top N') }}</a></li>
+            <li><a role="link" id="publisher_overlaps" href="/reports/publisher_overlaps">{{ gettext('Overlaps') }}</a></li>
+            <li><a role="link" id="publisher_weights" href="/reports/publisher_weights">{{ gettext('Publisher Weights') }}</a></li>
+            <li><a role="link" id="attribute_graph" href="/reports/attribute_graph/publisher/registration-authority/20">{{ gettext('Attribute Graph') }}</a></li>
+        </ul>
+        <div class="tab-pane">
+            <div id="pageContent"></div>
+        </div>
+{% endblock %}

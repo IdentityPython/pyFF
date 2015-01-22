@@ -1034,10 +1034,11 @@ elements of the active document.
 
     return req.t
 
-@pipe(name='pubinfo')
-def _pubinfo(req, *opts):
+@pipe(name='pubpath')
+def _add_pubpath(req, *opts):
     """
-Sets publication info extension on EntityDescription element
+Adds a publicationpath element. If <publisher URL> (cf example below) is missing then the source URL
+(if the pipe is used in a 'via' statement) is used.
 
 :param req: The request
 :param opts: Options (not used)
@@ -1051,12 +1052,16 @@ elements of the active document.
 .. code-block:: yaml
 
     - pubinfo:
-       publisher: <publisher URL>
+       [publisher: <publisher URL>]
     """
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    req.md.set_pubinfo(root(req.t), **req.args)
+    req.args = req.args or dict()
+    if not 'publisher' in req.args:
+        req.args['publisher'] = req.state['source']
+
+    req.md.add_pubpath(root(req.t), **req.args)
 
     return req.t
 

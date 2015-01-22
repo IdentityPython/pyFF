@@ -1,0 +1,148 @@
+<script type="text/javascript">
+
+    $(document).ready(function() {
+        $('div.donut-diagram').each(function() {
+
+            var diagram = $(this);
+            var width = $(this).attr('data-width');
+            var height = $(this).attr('data-height');
+            var prop = $(this).attr('data-property');
+            var info = $(this).attr('data-info');
+            var label = $(this).attr('data-label');
+            var label_template = Hogan.compile($(this).attr('data-label-template'));
+            var radius = Math.min(width, height)/2;
+            var count = parseInt("{{n}}");
+
+            var color = d3.scale.category20c();
+            var arc = d3.svg.arc().outerRadius(radius - 10).innerRadius(radius - 70);
+            var arcOver = d3.svg.arc().outerRadius(radius).innerRadius(radius - 60);
+            var pcmp = function (a, b) {
+                if (a[prop] < b[prop]) {
+                    return 1;
+                }
+                if (a[prop] > b[prop]) {
+                    return -1;
+                }
+                return 0;
+            };
+            var pie = d3.layout.pie().sort(null).padAngle(0.02).value(function(d) { return d[prop]; });
+
+            var svg = d3.select("#"+$(this).attr('id'))
+                    .append("svg")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .append("g")
+                    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+            svg.append("circle")
+               .attr("cx", 0)
+               .attr("cy", 0)
+               .attr("r", radius-10)
+               .attr("fill", "#f1f1f1");
+
+            d3.json($(this).attr('data-url'), function(error, data) {
+                if (data) {
+                    data = data.filter(function (d) {
+                        return prop in d
+                    }).map(function (d, idx) {
+                        d[prop] = parseInt(d[prop]);
+                        return d;
+                    }).filter(function (d) {
+                        return !isNaN(d[prop])
+                    });
+
+                    data.sort(pcmp);
+
+                    data = data.slice(0,count);
+
+                    var tip = d3.tip().attr('class', 'd3-tip').html(function (d) {
+                        return label_template.render(d.data);
+                    });
+                    var g = svg.selectAll(".arc")
+                            .data(pie(data))
+                            .enter()
+                            .append("g")
+                            .attr("class", "arc");
+
+                    g.call(tip);
+                    g.append("path")
+                            .attr("d", arc)
+                            .attr('data-id',function (d,idx) {
+                                return d.data['_id'];
+                            })
+                            .style("fill", function (d) { return color(d.data[prop]) })
+                            .on("mouseover", function(d) {
+                                d3.selectAll("[data-id='"+d.data['_id']+"']")
+                                   .attr("stroke","f1f1f1")
+                                   .transition()
+                                   .duration(300)
+                                   .attr("d", arcOver)
+                                   .attr("stroke-width",6);
+                                tip.show(d);
+                            })
+                            .on("mouseout", function(d) {
+                                d3.selectAll("[data-id='"+d.data['_id']+"']")
+                                   .transition()
+                                   .attr("d", arc)
+                                   .attr("stroke","none");
+                                tip.hide(d);
+                            });
+
+                    svg.append("text")
+                      .attr("dy", ".35em")
+                      .style("text-anchor", "middle")
+                      .attr("class", "inside")
+                      .text(function(d) { return label; });
+
+                } else {
+                    $(this).html("<p>No data from backend...</p>");
+                }
+            });
+        })
+    });
+</script>
+
+<div class="row">
+    <div class="col-xs-6">
+        <div id="reposize"
+             class="donut-diagram"
+             data-width="300"
+             data-height="300"
+             data-url="/reports/top_n_api"
+             data-label="Entity Count"
+             data-label-template='{% raw %}{{URL}}: {{Size}} entities{% endraw %}'
+             data-property="Size"></div>
+    </div>
+    <div class="col-xs-6">
+        <div id="repobytes"
+             class="donut-diagram"
+             data-width="300"
+             data-height="300"
+             data-label="Size in Bytes"
+             data-url="/reports/top_n_api"
+             data-label-template='{% raw %}{{URL}}: {{Bytes}} bytes{% endraw %}'
+             data-property="Bytes"></div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-xs-6">
+        <div id="repoerrors"
+             class="donut-diagram"
+             data-width="300"
+             data-height="300"
+             data-label="Dropped Entities"
+             data-url="/reports/top_n_api"
+             data-label-template='{% raw %}{{URL}}: {{ninvalids}} droped entities{% endraw %}'
+             data-property="ninvalids"></div>
+    </div>
+    <div class="col-xs-6">
+        <div id="publisheroverlap"
+             class="donut-diagram"
+             data-width="300"
+             data-height="300"
+             data-label="Overlaps"
+             data-url="/reports/publisher_overlaps_api"
+             data-label-template='{% raw %}{{entity_id}}: {{dup_size}} publisher overlaps{% endraw %}'
+             data-property="dup_size"></div>
+    </div>
+</div>

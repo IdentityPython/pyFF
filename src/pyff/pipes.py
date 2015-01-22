@@ -123,7 +123,9 @@ A delayed pipeline callback used as a post for parse_metadata
         if t is None:
             raise ValueError("PipelineCallback must be called with a parse-tree argument")
         try:
-            return self.plumbing.process(self.req.md, state={self.entry_point: True}, t=t)
+            state = {self.entry_point: True}
+            state.update(**kwargs)
+            return self.plumbing.process(self.req.md, state=state, t=t)
         except Exception, ex:
             traceback.print_exc(ex)
             raise ex

@@ -181,3 +181,15 @@ pre.prettyprint {
 span.select:hover, span.proceed:hover {
     background-color: lightgrey !important;
 }
+
+.inside {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 18px;
+}
+
+div.d3 > svg {
+    padding-top: 20px;
+    display: block;
+    margin: auto;
+    overflow: scroll;
+}

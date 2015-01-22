@@ -1,22 +1,26 @@
 {% extends "ui.html" %}
 
 {% block headline %}{%trans%}Search Result{%endtrans%}{% endblock %}
-
+{% block minitools %}<span class="badge">{{entities|length}}</span>{% endblock %}
 {% block content %}
 <div class="container">
 <ul class="list-unstyled">
 {% for entity in entities %}
     <li>
-        <a href="/metadata/{{ md.sha1_id(entity) }}.html">
+        <a href="/metadata/{ID}{{ entity.get('ID') }}.html">
         {% if md.is_idp(entity) %}
-        <span class="glyphicon glyphicon-home"></span>
+        <span class="fa fa-institution"></span>
         {% elif md.is_sp(entity) %}
-        <span class="glyphicon glyphicon-cloud"></span>
+        <span class="fa fa-cloud"></span>
         {% else %}
-        <span class="glyphicon glyphicon-question-sign"></span>
+        <span class="fa fa-question"></span>
         {% endif %}
         {{ md.display(entity) }}
         </a>
+        <div class="small">via {% for publisher in md.publishers(entity) %}
+            <a href="/publisher/{{publisher|u}}.html">{{publisher}}</a>
+            {% endfor %}
+        </div>
     </li>
 {% endfor %}
 </ul>
