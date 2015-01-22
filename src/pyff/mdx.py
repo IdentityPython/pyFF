@@ -336,6 +336,10 @@ Disallow: /
         return self.server.request(path=path)
 
     @cherrypy.expose
+    def discovery(self, path=None):
+        
+
+    @cherrypy.expose
     def about(self):
         """The 'about' page. Contains links to statistics etc.
         """
@@ -827,6 +831,9 @@ def main():
             'tools.caching.on': caching,
             'tools.caching.delay': 3600,
             'tools.proxy.on': proxy
+        },
+        '/shutdown': {
+            'allow_shutdown': terminator
         }
     }
     cherrypy.config.update(cfg)

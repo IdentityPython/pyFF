@@ -157,6 +157,38 @@ class PyFFDTest(PipeLineTest):
         cls.pyffd_thread.join()
 
 
+class PyFFDTest(PipeLineTest):
+    """
+    Runs twill tests using the pyffd cmdline - only mocks exit
+    """
+    def setUp(self):
+        super(PyFFDTest, self).setUp()
+        self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'mdx')])
+        self.mdx = tempfile.NamedTemporaryFile('w').name
+        self.mdx_template = self.templates.get_template('mdx.fd')
+        self.pidfile = tempfile.NamedTemporaryFile('w').name
+        with open(self.mdx, "w") as fd:
+            fd.write(self.mdx_template.render(ctx=self))
+        self.pyffd = Thread(target=self.run_pyffd,
+                            name="pyffd-test",
+                            args=["--loglevel=INFO", '-f', '-C', '-p', self.pidfile, self.mdx])
+        self.pyffd.start()
+        sleep(10)
+
+    def test_is_running(self):
+        assert (os.path.exists(self.pidfile))
+        with open(self.pidfile) as pidf:
+            pid = int(pidf.read().strip())
+            assert pid
+        assert (self.pyffd.isAlive())
+
+    def tear_down(self):
+        super(PyFFDTest, self).tearDown()
+        os.unlink(self.mdx)
+        self.pyffd.join()
+
+
+
 class PyFFTest(PipeLineTest):
     """
     Runs tests through the pyff cmdline - only mocks exit

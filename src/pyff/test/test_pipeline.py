@@ -1,3 +1,4 @@
+from traceback import print_exc
 import os
 import shutil
 import mock
@@ -8,9 +9,15 @@ from nose.plugins.skip import Skip
 import yaml
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing, Plumbing, PipeException
-from pyff.test import SignerTestCase, ExitException
+from pyff.test import ExitException
 from StringIO import StringIO
 from pyff.utils import hash_id, parse_xml, resource_filename, root
+from pyff.test import SignerTestCase
+import pkg_resources
+from pyff import mdx
+from mock import patch
+
+__author__ = 'leifj'
 
 
 class PipeLineTest(SignerTestCase):
@@ -37,6 +44,25 @@ class PipeLineTest(SignerTestCase):
     @classmethod
     def setUpClass(cls):
         SignerTestCase.setUpClass()
+
+    def run_pyffd(self, *args):
+        def _mock_exit(n):
+            if n != 0:
+                raise ExitException(n)
+
+        filename = pkg_resources.resource_filename(__name__, '../mdx.py')
+        opts = list(args)
+        opts.insert(0, filename)
+        sys.argv = opts
+        orig_exit = sys.exit
+        sys.exit = _mock_exit
+        try:
+            exit_code = 0
+            mdx.main()
+        except ExitException, ex:
+            exit_code = ex.code
+        finally:
+            sys.exit = orig_exit
 
     def setUp(self):
         SignerTestCase.setUpClass()
@@ -93,7 +119,7 @@ class SigningTest(PipeLineTest):
             print fd.read()
 
     def test_info_and_dump(self):
-        with mock.patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
+        with patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
             try:
                 self.exec_pipeline("""
 - load:
@@ -107,7 +133,7 @@ class SigningTest(PipeLineTest):
                 raise Skip
 
     def test_end_exit(self):
-        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
                 self.exec_pipeline("""
 - end:
@@ -122,7 +148,7 @@ class SigningTest(PipeLineTest):
                 assert "slartibartifast" in "".join(sys.stdout.captured)
 
     def test_single_dump(self):
-        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
                 self.exec_pipeline("""
 - dump
@@ -135,7 +161,7 @@ class SigningTest(PipeLineTest):
     def test_missing_select(self):
         for stmt in ('publish', 'signcerts', 'info', 'sign', 'store', 'finalize',
                      'xslt', 'certreport', 'emit', 'finalize', 'first', 'setattr', 'stats'):
-            with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
                 try:
                     self.exec_pipeline("""
 - %s
@@ -147,7 +173,7 @@ class SigningTest(PipeLineTest):
                     raise Skip
 
     def test_first_select_as(self):
-        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             tmpfile = tempfile.NamedTemporaryFile('w').name
             try:
                 self.exec_pipeline("""
@@ -175,7 +201,7 @@ class SigningTest(PipeLineTest):
                     pass
 
     def test_empty_store(self):
-        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
                 self.exec_pipeline("""
 - store
@@ -187,7 +213,7 @@ class SigningTest(PipeLineTest):
                 raise Skip
 
     def test_empty_store(self):
-        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
                 self.exec_pipeline("""
 - store:
@@ -200,7 +226,7 @@ class SigningTest(PipeLineTest):
                 raise Skip
 
     def test_store_and_retrieve(self):
-        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             tmpdir = tempfile.mkdtemp()
             os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
             try:
@@ -227,7 +253,7 @@ class SigningTest(PipeLineTest):
                 shutil.rmtree(tmpdir)
 
     def test_empty_certreport(self):
-        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
                 self.exec_pipeline("""
 - certreport
@@ -239,7 +265,7 @@ class SigningTest(PipeLineTest):
                 raise Skip
 
     def test_pick_invalid(self):
-        with mock.patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             tmpfile = tempfile.NamedTemporaryFile('w').name
             try:
                 self.exec_pipeline("""

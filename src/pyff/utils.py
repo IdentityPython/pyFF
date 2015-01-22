@@ -233,7 +233,6 @@ def urlencode_filter(s):
     s = urllib.quote_plus(s)
     return Markup(s)
 
-
 def truncate_filter(s,max_len=10):
     if len(s) > max_len:
         return s[0:max_len]+"..."
@@ -245,7 +244,6 @@ env.filters['truncate'] = truncate_filter
 
 def template(name):
     return env.get_template(name)
-
 
 def render_template(name, **kwargs):
     kwargs.setdefault('http', cherrypy.request)
