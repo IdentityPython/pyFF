@@ -230,7 +230,7 @@ Depending on which version of pyFF your're running and the configuration you may
 listed using the 'role' attribute to the link elements.
         """
         if resource is None:
-            raise cherrypy.HTTPError(400, "Bad Request - missing resource parameter")
+            raise cherrypy.HTTPError(400, _("Bad Request - missing resource parameter"))
 
         jrd = dict()
         dt = datetime.now() + duration2timedelta("PT1H")
@@ -272,6 +272,38 @@ class NotImplementedFunction(object):
         return self.message
 
 
+class SHIBDiscovery(object):
+    """
+    An endpoint designed to provide backwards compatibility with standard shibboleth-based discovery services.
+    """
+
+    def __init__(self, server=None):
+        self.server = server
+
+    @cherrypy.expose
+    def DS(self, *args, **kwargs):
+        kwargs['path'] = "/role/idp.ds"
+        return self.server.request(**kwargs)
+
+    @cherrypy.expose
+    def WAYF(self, *args, **kwargs):
+        raise HTTPError(400, _("400 Bad Request - shibboleth WAYF protocol not supported anymore"))
+
+    @cherrypy.expose
+    def default(self, *args, **kwargs):
+        print args
+        print kwargs
+        if len(args) > 0 and args[0] in self.server.aliases:
+            kwargs['pfx'] = args[0]
+            if len(args) > 1:
+                kwargs['path'] = args[1]
+            return self.server.request(**kwargs)
+        else:
+            kwargs['pfx'] = None
+            kwargs['path'] = "/" + "/".join(args)
+            return self.server.request(**kwargs)
+
+
 class MDRoot(object):
     """The root application of pyFF. The root application assembles the MDStats and WellKnown classes with an
     MDServer instance.
@@ -280,8 +312,10 @@ class MDRoot(object):
     def __init__(self, server):
         self.server = server
         self._well_known.server = server
+        self.discovery.server = server
 
     stats = MDStats()
+    discovery = SHIBDiscovery()
 
     try:  # pragma: nocover
         import dowser
@@ -300,7 +334,7 @@ class MDRoot(object):
             cherrypy.engine.exit()
             return "bye ..."
         else:  # pragma: nocover
-            raise cherrypy.HTTPError(403, "disabled")
+            raise cherrypy.HTTPError(403, _("Endpoint disabled in configuration"))
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600, debug=True)
@@ -334,10 +368,6 @@ Disallow: /
         interface based on the IdPs found in 'foo'. Here 'foo' is any supported lookup expression.
         """
         return self.server.request(path=path)
-
-    @cherrypy.expose
-    def discovery(self, path=None):
-        
 
     @cherrypy.expose
     def about(self):
@@ -406,6 +436,8 @@ Search the active set for matching entities.
         """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
         handler.
         """
+        print args
+        print kwargs
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
             if len(args) > 1:
@@ -482,7 +514,7 @@ class MDServer(object):
         stats['MD Requests'] += 1
 
         if not self.ready:
-            raise HTTPError(503, "Service Unavailable (repository loading)")
+            raise HTTPError(503, _("Service Unavailable (repository loading)"))
 
         pfx = kwargs.get('pfx', None)
         path = kwargs.get('path', None)
@@ -547,14 +579,14 @@ class MDServer(object):
                 pdict = dict()
                 entity_id = kwargs.get('entityID', None)
                 if entity_id is None:
-                    raise HTTPError(400, "400 Bad Request - missing entityID")
+                    raise HTTPError(400, _("400 Bad Request - missing entityID"))
                 pdict['sp'] = self.md.sha1_id(entity_id)
                 e = self.md.store.lookup(entity_id)
                 if e is None or len(e) == 0:
                     raise HTTPError(404)
 
                 if len(e) > 1:
-                    raise HTTPError(400, "400 Bad Request - multiple matches for %s" % entity_id)
+                    raise HTTPError(400, _("400 Bad Request - multiple matches for") + " %s" % entity_id)
 
                 pdict['entity'] = self.md.simple_summary(e[0])
                 if not path:
@@ -731,7 +763,7 @@ def main():
             elif o in '--frequency':
                 frequency = int(a)
             elif o in ('-A', '--alias'):
-                (a, colon, uri) = a.lpartition(':')
+                (a, colon, uri) = a.partition(':')
                 assert (colon == ':')
                 if a and uri:
                     aliases[a] = uri
