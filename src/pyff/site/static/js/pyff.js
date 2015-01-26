@@ -76,12 +76,14 @@ $(document).ready(function() {
         params = $.deparam.querystring();
         var qs;
         //console.log(entityID);
-        qs = params['return'].indexOf('?') === -1 ? '?' : '&';
-        var returnIDParam = params['returnIDParam'];
-        if (!returnIDParam) {
-            returnIDParam = "entityID";
+        if (params['return']) {
+            qs = params['return'].indexOf('?') === -1 ? '?' : '&';
+            var returnIDParam = params['returnIDParam'];
+            if (!returnIDParam) {
+                returnIDParam = "entityID";
+            }
+            window.location = params['return'] + qs + returnIDParam + '=' + entityID;
         }
-        window.location = params['return'] + qs + returnIDParam + '=' + entityID;
         return false;
     }
 
