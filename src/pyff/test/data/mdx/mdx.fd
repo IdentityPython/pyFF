@@ -8,7 +8,7 @@
     - break
 - when update:
     - load:
-       - http://mds.edugain.org via edugain
+       - http://mds.edugain.org/ via edugain
     - select
     - fork and merge:
        - select: "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
