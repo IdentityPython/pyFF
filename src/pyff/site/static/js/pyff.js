@@ -144,7 +144,7 @@ $(document).ready(function() {
                 var uri = seldiv.attr('data-target');
                 var related = seldiv.attr('data-related');
                 //console.log(related);
-                var remote = uri+"?query=%QUERY&entity_filter={http://pyff-project.org/role}idp";
+                var remote = uri+"?query=%QUERY&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
                 if (related) {
                     remote = remote + "&related="+related
                 }

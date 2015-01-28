@@ -287,7 +287,7 @@ class SHIBDiscovery(object):
 
     @cherrypy.expose
     def WAYF(self, *args, **kwargs):
-        raise HTTPError(400, _("400 Bad Request - shibboleth WAYF protocol not supported anymore"))
+        raise HTTPError(400, _("400 Bad Request - shibboleth WAYF protocol not supported"))
 
     @cherrypy.expose
     def default(self, *args, **kwargs):

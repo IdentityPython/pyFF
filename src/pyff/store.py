@@ -24,6 +24,8 @@ def is_idp(entity):
 def is_sp(entity):
     return has_tag(entity, "{%s}SPSSODescriptor" % NS['md'])
 
+def is_aa(entity):
+    return has_tag(entity, "{%s}AttributeAuthorityDescriptor" % NS['md'])
 
 def _domains(entity):
     domains = [url2host(entity.get('entityID'))]
@@ -43,7 +45,8 @@ def entity_attribute_dict(entity):
                 values = [v.text.strip() for v in a.iter("{%s}AttributeValue" % NS['saml'])]
                 d[an] = values
 
-    d[ATTRS['role']] = []
+    role_a = ATTRS['role']
+    d[role_a] = []
 
     try:
         dlist = []
@@ -56,9 +59,16 @@ def entity_attribute_dict(entity):
         pass
 
     if is_idp(entity):
-        d[ATTRS['role']].append('idp')
+        d[role_a].append('idp')
+        eca = ATTRS['entity-category']
+        d.setdefault(eca, [])
+        ec = d[eca]
+        if 'http://refeds.org/category/hide-from-discovery' not in ec:
+            d[eca].append('http://pyff.io/category/discoverable')
     if is_sp(entity):
-        d[ATTRS['role']].append('sp')
+        d[role_a].append('sp')
+    if is_aa(entity):
+        d[role_a].append('aa')
 
     return d
 
