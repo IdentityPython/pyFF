@@ -971,9 +971,15 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
 
     now = datetime.utcnow()
 
-    idprefix = req.args.get('ID', '_')
+    mdid = req.args.get('ID', 'prefix _')
+    if re.match('(\s)*prefix(\s)*', mdid):
+        prefix = re.sub('^(\s)*prefix(\s)*', '', mdid)
+        ID = now.strftime(prefix + "%Y%m%dT%H%M%SZ")
+    else:
+        ID = mdid
+
     if not e.get('ID'):
-        e.set('ID', now.strftime(idprefix + "%Y%m%dT%H%M%SZ"))
+        e.set('ID', ID)
 
     valid_until = str(req.args.get('validUntil', e.get('validUntil', None)))
     if valid_until is not None and len(valid_until) > 0:
