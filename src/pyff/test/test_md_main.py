@@ -33,7 +33,6 @@ def find_unbound_port(i=0):
     if i > MAX_PORT_TRIES:
         raise ValueError("Unable to find an unused port after %d tries" % i)
     port = random.randint(*PORT_RANGE)
-    print port
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.bind(("127.0.0.1", port))
@@ -65,6 +64,7 @@ class PyFFDTest(PipeLineTest):
             fd.write(cls.mdx_template.render(ctx=cls))
         cls.curdir = os.getcwd()
         cls.port = find_unbound_port()
+        print "Using port %d" % cls.port
         cls.pyffd_thread = Thread(target=run_pyffd,
                                   name="pyffd-test",
                                   args=["--loglevel=DEBUG",
@@ -78,7 +78,7 @@ class PyFFDTest(PipeLineTest):
                                         cls.mdx])
         cls.pyffd_thread.start()
         sleep(1)
-        for i in range(0,10):
+        for i in range(0,120):
             try:
                 r = requests.get("http://127.0.0.1:%s/status" % cls.port)
                 if r.json() and 'running' in r.json()['status']:
