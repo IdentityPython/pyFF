@@ -14,6 +14,7 @@ import requests
 from pyff.test import SignerTestCase, run_pyffd, run_pyff
 from pyff.test.test_pipeline import PipeLineTest
 import os
+import random
 from pyff.md import __doc__ as pyffdoc
 from pyff import __version__ as pyffversion
 from pyff.utils import parse_xml, root, validate_document
@@ -30,6 +31,7 @@ class PyFFDTest(PipeLineTest):
     pidfile = None
     tmpdir = None
     curdir = None
+    port = None
 
     @classmethod
     def setUpClass(cls):
@@ -41,12 +43,31 @@ class PyFFDTest(PipeLineTest):
         with open(cls.mdx, "w") as fd:
             fd.write(cls.mdx_template.render(ctx=cls))
         cls.curdir = os.getcwd()
+        cls.port = random.randrange(50000, 60000)
         cls.pyffd_thread = Thread(target=run_pyffd,
                                   name="pyffd-test",
-                                  args=["--loglevel=INFO", "--dir=%s" % cls.curdir, '-f', '-a',
-                                        '-C', '-p', cls.pidfile, "--terminator", cls.mdx])
+                                  args=["--loglevel=DEBUG",
+                                        "--dir=%s" % cls.curdir,
+                                        '-f',
+                                        '-a',
+                                        '-P', "%s" % cls.port,
+                                        '-C',
+                                        '-p', cls.pidfile,
+                                        "--terminator",
+                                        cls.mdx])
+        print cls.pyffd_thread
         cls.pyffd_thread.start()
-        sleep(20)
+        sleep(1)
+        for i in range(0,10):
+            try:
+                r = requests.get("http://127.0.0.1:%s/status" % cls.port)
+                if r.json() and 'running' in r.json()['status']:
+                    return
+            except Exception:
+                pass
+            sleep(1)
+        raise ValueError("unable to start test pyffd server on port %d" % cls.port)
+
 
     def test_is_running(self):
         assert (os.path.exists(self.pidfile))
@@ -56,19 +77,20 @@ class PyFFDTest(PipeLineTest):
         assert (PyFFDTest.pyffd_thread.isAlive())
 
     def test_frontpage(self):
-        r = requests.get("http://127.0.0.1:8080/")
+        r = requests.get("http://127.0.0.1:%s/" % self.port)
         assert ("text/html" in r.headers['content-type'])
         assert ("Metadata By Attributes" in r.text)
         assert (r.status_code == 200)
 
     def test_stats(self):
-        r = requests.get("http://127.0.0.1:8080/stats/")
+        r = requests.get("http://127.0.0.1:%s/stats/" % self.port)
         assert ("text/html" in r.headers['content-type'])
         assert ("pyFF Statistics" in r.text)
         assert (r.status_code == 200)
 
     def test_alias_ndn(self):
-        r = requests.get("http://127.0.0.1:8080/ndn.xml")
+        r = requests.get("http://127.0.0.1:%s/ndn.xml" % self.port)
+        print r
         assert (r.status_code == 200)
         #assert (r.encoding == 'utf8')
         t = parse_xml(StringIO(r.content))
@@ -77,17 +99,17 @@ class PyFFDTest(PipeLineTest):
         validate_document(t)
 
     def test_metadata_html(self):
-        r = requests.get('http://localhost:8080/metadata/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.html')
+        r = requests.get("http://localhost:%s/metadata/%%7Bsha1%%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.html" % self.port)
         assert (r.status_code == 200)
         assert ('text/html' in r.headers['Content-Type'])
 
     def test_metadata_xml(self):
-        r = requests.get('http://localhost:8080/metadata/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.xml')
+        r = requests.get("http://localhost:%s/metadata/%%7Bsha1%%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.xml" % self.port)
         assert (r.status_code == 200)
         assert ('application/xml' in r.headers['Content-Type'])
 
     def test_metadata_json(self):
-        r = requests.get('http://localhost:8080/metadata/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.json')
+        r = requests.get("http://localhost:%s/metadata/%%7Bsha1%%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.json" % self.port)
         assert (r.status_code == 200)
         info = r.json()[0]
         assert(type(info) == dict)
@@ -95,7 +117,7 @@ class PyFFDTest(PipeLineTest):
         assert ('nordu.net' in info['scope'])
 
     def test_all_entities_parses(self):
-        r = requests.get("http://127.0.0.1:8080/entities")
+        r = requests.get("http://127.0.0.1:%s/entities" % self.port)
         assert (r.status_code == 200)
         #assert (r.encoding == 'utf8')
         t = parse_xml(StringIO(r.content))
@@ -103,17 +125,17 @@ class PyFFDTest(PipeLineTest):
         validate_document(t)
 
     def test_webfinger_bad_protocol(self):
-        r = requests.get("http://127.0.0.1:8080/.well-known/webfinger")
+        r = requests.get("http://127.0.0.1:%s/.well-known/webfinger" % self.port)
         assert (r.status_code == 400)
 
     def test_webfinger(self):
-        r = requests.get("http://127.0.0.1:8080/.well-known/webfinger?resource=http://127.0.0.1:8080")
+        r = requests.get("http://127.0.0.1:%s/.well-known/webfinger?resource=http://127.0.0.1:%s" % (self.port, self.port))
         assert (r.status_code == 200)
         assert r.json()
 
     def test_some_pages(self):
         for p in ('robots.txt', 'settings', 'about', 'reset'):
-            r = requests.get("http://127.0.0.1:8080/%s" % p)
+            r = requests.get("http://127.0.0.1:%s/%s" % (self.port, p))
             assert (r.status_code == 200)
 
     def test_parse_robots(self):
@@ -123,25 +145,25 @@ class PyFFDTest(PipeLineTest):
             raise unittest.SkipTest()
 
         rp = robotparser.RobotFileParser()
-        rp.set_url("http://127.0.0.1:8080/robots.txt")
+        rp.set_url("http://127.0.0.1:%s/robots.txt" % self.port)
         rp.read()
-        assert not rp.can_fetch("*", "http://127.0.0.1:8080/")
+        assert not rp.can_fetch("*", "http://127.0.0.1:%s/" % self.port)
 
     def test_favicon(self):
-        r = requests.get("http://127.0.0.1:8080/favicon.ico")
+        r = requests.get("http://127.0.0.1:%s/favicon.ico" % self.port)
         assert (r.status_code == 200)
         assert (r.headers['Content-Type'] == 'image/x-icon')
 
     def test_ds_bad_request(self):
-        r = requests.get("http://127.0.0.1:8080/role/idp.ds")
+        r = requests.get("http://127.0.0.1:%s/role/idp.ds" % self.port)
         assert (r.status_code == 400)
 
     def test_ds_request(self):
-        r = requests.get("http://127.0.0.1:8080/role/idp.ds?entityID=https://idp.nordu.net/idp/shibboleth&return=#")
+        r = requests.get("http://127.0.0.1:%s/role/idp.ds?entityID=https://idp.nordu.net/idp/shibboleth&return=#" % self.port)
         assert (r.status_code == 200)
 
     def test_ds_search(self):
-        r = requests.get("http://127.0.0.1:8080/role/idp.s")
+        r = requests.get("http://127.0.0.1:%s/role/idp.s" % self.port)
         assert (r.status_code == 200)
         assert len(r.json()) == 0
 
@@ -149,44 +171,17 @@ class PyFFDTest(PipeLineTest):
     @classmethod
     def tearDownClass(cls):
         SignerTestCase.tearDownClass()
-        requests.get("http://127.0.0.1:8080/shutdown")
-        if os.path.exists(cls.mdx):
-            os.unlink(cls.mdx)
-        if os.path.exists(cls.pidfile):
-            os.unlink(cls.pidfile)
+        try:
+            requests.get("http://127.0.0.1:%s/shutdown" % cls.port)
+        except Exception, ex:
+            from traceback import print_exc
+            print_exc(ex)
+        finally:
+            if os.path.exists(cls.mdx):
+                os.unlink(cls.mdx)
+            if os.path.exists(cls.pidfile):
+                os.unlink(cls.pidfile)
         cls.pyffd_thread.join()
-
-
-class PyFFDTest(PipeLineTest):
-    """
-    Runs twill tests using the pyffd cmdline - only mocks exit
-    """
-    def setUp(self):
-        super(PyFFDTest, self).setUp()
-        self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'mdx')])
-        self.mdx = tempfile.NamedTemporaryFile('w').name
-        self.mdx_template = self.templates.get_template('mdx.fd')
-        self.pidfile = tempfile.NamedTemporaryFile('w').name
-        with open(self.mdx, "w") as fd:
-            fd.write(self.mdx_template.render(ctx=self))
-        self.pyffd = Thread(target=self.run_pyffd,
-                            name="pyffd-test",
-                            args=["--loglevel=INFO", '-f', '-C', '-p', self.pidfile, self.mdx])
-        self.pyffd.start()
-        sleep(10)
-
-    def test_is_running(self):
-        assert (os.path.exists(self.pidfile))
-        with open(self.pidfile) as pidf:
-            pid = int(pidf.read().strip())
-            assert pid
-        assert (self.pyffd.isAlive())
-
-    def tear_down(self):
-        super(PyFFDTest, self).tearDown()
-        os.unlink(self.mdx)
-        self.pyffd.join()
-
 
 
 class PyFFTest(PipeLineTest):

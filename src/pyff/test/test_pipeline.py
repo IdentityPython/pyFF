@@ -37,7 +37,7 @@ class PipeLineTest(SignerTestCase):
     def exec_pipeline(self, pstr):
         md = MDRepository()
         p = yaml.load(StringIO(pstr))
-        print p
+        #print p
         res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}})
         return res, md
 

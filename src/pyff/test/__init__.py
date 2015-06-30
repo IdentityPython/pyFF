@@ -68,8 +68,8 @@ if __name__ == '__main__':
 
 def _pstart(args, outf=None, ignore_exit=False):
     env = {}
-    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     logging.debug(" ".join(args))
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     return proc
 
 

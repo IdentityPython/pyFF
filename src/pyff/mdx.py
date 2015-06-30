@@ -45,6 +45,7 @@ An implementation of draft-lajoie-md-query
 
 """
 import importlib
+import pkg_resources
 
 try:
     from cStringIO import StringIO
@@ -328,10 +329,20 @@ class MDRoot(object):
     static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
 
     @cherrypy.expose
+    def status(self):
+        status = "loading"
+        if self.server.ready:
+            status = "running"
+        version = pkg_resources.require("pyFF")[0].version
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return dumps({'status': status, 'version': version})
+
+    @cherrypy.expose
     def shutdown(self):
         cfg = cherrypy.request.app.config['global']
         if 'allow_shutdown' in cfg and bool(cfg.get('allow_shutdown')):
-            cherrypy.engine.exit()
+            from threading import Timer
+            Timer(3, cherrypy.engine.exit, ()).start()
             return "bye ..."
         else:  # pragma: nocover
             raise cherrypy.HTTPError(403, _("Endpoint disabled in configuration"))
@@ -384,10 +395,6 @@ Disallow: /
                                stats=stats,
                                repo=self.server.md,
                                plumbings=["%s" % p for p in self.server.plumbings])
-
-    @cherrypy.expose
-    def status(self):
-        return self.about()
 
     @cherrypy.expose
     def reset(self):

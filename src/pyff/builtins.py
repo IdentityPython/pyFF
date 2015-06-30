@@ -5,17 +5,17 @@ from distutils.util import strtobool
 import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-from .decorators import deprecated
+from pyff.decorators import deprecated
 from pyff.stats import set_metadata_info
-from .utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
+from pyff.utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
     iter_entities, validate_document
-from .constants import NS
-from .pipes import Plumbing, PipeException, PipelineCallback, pipe
+from pyff.constants import NS
+from pyff.pipes import Plumbing, PipeException, PipelineCallback, pipe
 from copy import deepcopy
 import sys
 import os
 import re
-from .logs import log
+from pyff.logs import log
 import hashlib
 import xmlsec
 import base64
