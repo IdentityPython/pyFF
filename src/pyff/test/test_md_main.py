@@ -19,6 +19,27 @@ from pyff.md import __doc__ as pyffdoc
 from pyff import __version__ as pyffversion
 from pyff.utils import parse_xml, root, validate_document
 
+import random
+import socket
+
+# range of ports where available ports can be found
+PORT_RANGE = [33000,60000]
+MAX_PORT_TRIES = 100
+
+def find_unbound_port(i=0):
+    """
+    Returns an unbound port number on 127.0.0.1.
+    """
+    if i > MAX_PORT_TRIES:
+        raise ValueError("Unable to find an unused port after %d tries" % i)
+    port = random.randint(*PORT_RANGE)
+    print port
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(("127.0.0.1", port))
+    except socket.error:
+        port = find_unbound_port(i+1)
+    return port
 
 class PyFFDTest(PipeLineTest):
     """
@@ -43,7 +64,7 @@ class PyFFDTest(PipeLineTest):
         with open(cls.mdx, "w") as fd:
             fd.write(cls.mdx_template.render(ctx=cls))
         cls.curdir = os.getcwd()
-        cls.port = random.randrange(50000, 60000)
+        cls.port = find_unbound_port()
         cls.pyffd_thread = Thread(target=run_pyffd,
                                   name="pyffd-test",
                                   args=["--loglevel=DEBUG",
@@ -55,7 +76,6 @@ class PyFFDTest(PipeLineTest):
                                         '-p', cls.pidfile,
                                         "--terminator",
                                         cls.mdx])
-        print cls.pyffd_thread
         cls.pyffd_thread.start()
         sleep(1)
         for i in range(0,10):
@@ -90,7 +110,6 @@ class PyFFDTest(PipeLineTest):
 
     def test_alias_ndn(self):
         r = requests.get("http://127.0.0.1:%s/ndn.xml" % self.port)
-        print r
         assert (r.status_code == 200)
         #assert (r.encoding == 'utf8')
         t = parse_xml(StringIO(r.content))

@@ -55,7 +55,6 @@ if __name__ == '__main__':
     sys.exit(rv)
 
 """ % (sys.executable, pyffversion, script))
-    print starter
     os.chmod(starter, 0700)
 
     argv.insert(0, starter)
