@@ -1,4 +1,3 @@
-from traceback import print_exc
 import os
 import shutil
 import mock
@@ -13,8 +12,6 @@ from pyff.test import ExitException
 from StringIO import StringIO
 from pyff.utils import hash_id, parse_xml, resource_filename, root
 from pyff.test import SignerTestCase
-import pkg_resources
-from pyff import mdx
 from mock import patch
 
 __author__ = 'leifj'
@@ -45,25 +42,6 @@ class PipeLineTest(SignerTestCase):
     def setUpClass(cls):
         SignerTestCase.setUpClass()
 
-    def run_pyffd(self, *args):
-        def _mock_exit(n):
-            if n != 0:
-                raise ExitException(n)
-
-        filename = pkg_resources.resource_filename(__name__, '../mdx.py')
-        opts = list(args)
-        opts.insert(0, filename)
-        sys.argv = opts
-        orig_exit = sys.exit
-        sys.exit = _mock_exit
-        try:
-            exit_code = 0
-            mdx.main()
-        except ExitException, ex:
-            exit_code = ex.code
-        finally:
-            sys.exit = orig_exit
-
     def setUp(self):
         SignerTestCase.setUpClass()
         print "setup called for PipeLineTest"
@@ -82,7 +60,27 @@ class StreamCapturing(object):
         self.captured.append(data)
         self.stream.write(data)
 
+class ParseTest(PipeLineTest):
+    def parse_test(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                res, md = self.exec_pipeline("""
+- load:
+    - %s/metadata
+- select
+- stats
+""" % self.datadir)
+                print sys.stdout.captured
+                print sys.stderr.captured
+                eIDs = [e.get('entityID') for e in md.store]
+                assert('https://idp.example.com/saml2/idp/metadata.php1' not in eIDs)
+                assert('https://idp.example.com/saml2/idp/metadata.php' in eIDs)
+                assert("removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed" in str(l))
 
+
+# noinspection PyUnresolvedReferences
 class SigningTest(PipeLineTest):
     def test_signing(self):
         self.output = tempfile.NamedTemporaryFile('w').name

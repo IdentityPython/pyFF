@@ -3,6 +3,7 @@
 This is the implementation of the active repository of SAML metadata. The 'local' and 'remote' pipes operate on this.
 
 """
+import traceback
 from pyff.stats import set_metadata_info, get_metadata_info
 
 try:
@@ -690,8 +691,15 @@ starting with '.' are excluded.
                         log.debug("parsing from file %s" % nm)
                     fn = os.path.join(top, nm)
                     try:
-                        t, valid_until = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
+                        validation_errors = dict()
+                        t, valid_until = self.parse_metadata(fn,
+                                                             fail_on_error=True,
+                                                             validate=validate,
+                                                             validation_errors=validation_errors,
+                                                             post=post)
                         entities.extend(entities_list(t))  # local metadata is assumed to be ok
+                        for (eid, error) in validation_errors.iteritems():
+                            log.error(error)
                     except Exception, ex:
                         log.error(ex)
 

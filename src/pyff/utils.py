@@ -471,6 +471,8 @@ def entities_list(t=None):
 
 
 def iter_entities(t):
+    if t is None:
+        return []
     return t.iter('{%s}EntityDescriptor' % NS['md'])
 
 
