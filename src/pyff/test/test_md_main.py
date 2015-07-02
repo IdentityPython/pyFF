@@ -1,4 +1,5 @@
 import unittest
+import urllib
 
 try:
     from cStringIO import StringIO
@@ -134,6 +135,16 @@ class PyFFDTest(PipeLineTest):
         assert(type(info) == dict)
         assert (info['title'] == 'NORDUnet')
         assert ('nordu.net' in info['scope'])
+
+    def test_md_query_single(self):
+        q = urllib.quote_plus('https://idp.nordu.net/idp/shibboleth')
+        r = requests.get("http://127.0.0.1:%s/entities/%s" % (self.port, q))
+        assert (r.status_code == 200)
+        assert ('application/xml' in r.headers['Content-Type'])
+        t = parse_xml(StringIO(r.content))
+        assert (t is not None)
+        e = root(t)
+        assert (e.get('entityID') == 'https://idp.nordu.net/idp/shibboleth')
 
     def test_all_entities_parses(self):
         r = requests.get("http://127.0.0.1:%s/entities" % self.port)
