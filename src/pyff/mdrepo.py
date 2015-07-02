@@ -437,12 +437,11 @@ The dict in the list contains three items:
 
         return None
 
-    def fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, max_tries=5, validate=False):
+    def fetch_metadata(self, resources, max_workers=5, timeout=120, max_tries=5, validate=False):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id, post-callback)
 :param max_workers: The maximum number of parallell downloads to run
-:param stats: A dictionary used for storing statistics. Useful for cherrypy cpstats
 :param validate: Turn on or off schema validation
 
 The list of triples is processed by first downloading the URL. If a cert-or-fingerprint
