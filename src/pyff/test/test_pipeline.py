@@ -223,6 +223,19 @@ class SigningTest(PipeLineTest):
             except IOError:
                 raise Skip
 
+    def test_empty_dir_error(self):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                try:
+                    self.exec_pipeline("""
+- load:
+   - %s/empty
+""" % self.datadir)
+                except IOError:
+                    raise Skip
+                assert "no entities found in" in str(l)
+
     def test_store_and_retrieve(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             tmpdir = tempfile.mkdtemp()
