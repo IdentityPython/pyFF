@@ -392,8 +392,10 @@ Supports both remote and local resources. Fetching remote resources is done in p
             else:
                 params['verify'] = elt
 
-        for elt in ("as", "verify", "via"):
+        for elt in ("verify", "via"):
             params.setdefault(elt, None)
+
+        params.setdefault('as', url)
 
         post = None
         if params['via'] is not None:
