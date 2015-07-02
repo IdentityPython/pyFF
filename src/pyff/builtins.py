@@ -2,9 +2,11 @@
 for pyFF.
 """
 from distutils.util import strtobool
+import json
 import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
+import yaml
 from pyff.decorators import deprecated
 from pyff.stats import set_metadata_info
 from pyff.utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
@@ -20,6 +22,12 @@ import hashlib
 import xmlsec
 import base64
 from datetime import datetime
+
+try:
+    from cStringIO import StringIO
+except ImportError:  # pragma: no cover
+    print(" *** install cStringIO for better performance")
+    from StringIO import StringIO
 
 __author__ = 'leifj'
 
@@ -333,6 +341,28 @@ Publish the working document in XML form.
         safe_write(out, dumptree(req.t))
         req.md.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
+
+@pipe
+def loadstats(req, *opts):
+    """
+    Log (INFO) information about the result of the last call to load
+    :param req: The request
+    :param opts: Options: (none)
+    :return: None
+    """
+    from stats import metadata
+    _stats = None
+    try:
+        if 'json' in opts:
+            _stats = json.dumps(metadata)
+        else:
+            buf = StringIO()
+            yaml.dump(metadata, buf)
+            _stats = buf.getvalue()
+    except Exception, ex:
+        log.error(ex)
+
+    log.info("pyff loadstats: %s" % _stats)
 
 @pipe
 @deprecated

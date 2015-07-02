@@ -8,8 +8,9 @@
     - break
 - when update:
     - load:
-       - examples/links.xrd via normalize
+       - examples/links.xrd as links via normalize
        - http://mds.edugain.org via edugain
+    - loadstats
     - select
     - fork and merge:
        - select: "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
