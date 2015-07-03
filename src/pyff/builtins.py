@@ -552,6 +552,59 @@ alias invisible for anything except the corresponding mime type.
 
     return ot
 
+@pipe(name="filter")
+def _filter(req, *opts):
+    """
+    Refines the working document by applying a filter. The filter expression is a subset of the
+    select semantics and syntax:
+
+.. code-block:: yaml
+
+    - filter:
+        - "!//md:EntityDescriptor[md:SPSSODescriptor]"
+        - "https://idp.example.com/shibboleth"
+
+    This would select all SPs and any entity with entityID "https://idp.example.com/shibboleth"
+    from the current working document and return as the new working document. Filter also supports
+    the "as <alias>" construction from select allowing new synthetic collections to be created
+    from filtered documents.
+    """
+
+    if req.t is None:
+        raise PipeException("Unable to filter on an empty document - use select first")
+
+    alias = False
+    if len(opts) > 0:
+        if opts[0] != 'as' and len(opts) == 1:
+            name = opts[0]
+            alias = True
+        if opts[0] == 'as' and len(opts) == 2:
+            name = opts[1]
+            alias = True
+
+    name = req.plumbing.id
+    args = req.args
+    if args is None or not args:
+        args = []
+
+    def _find(member):
+        return req.md.find(req.t, member)
+
+    ot = req.md.entity_set(args, name, lookup_fn=_find, copy=False)
+    if alias:
+        nfo = dict(Status='default', Description="Synthetic collection")
+        n = req.md.store.update(ot, name)
+        nfo['Size'] = str(n)
+        set_metadata_info(name, nfo)
+
+    req.t = None
+
+    if ot is None:
+        raise PipeException("empty filter - stop")
+
+    #print "filter returns %s" % [e for e in iter_entities(ot)]
+    return ot
+
 @pipe
 def pick(req, *opts):
     """

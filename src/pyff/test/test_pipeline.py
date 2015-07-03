@@ -298,3 +298,22 @@ class SigningTest(PipeLineTest):
                     os.unlink(tmpfile)
                 except:
                     pass
+
+    def test_blacklist(self):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            tmpfile = tempfile.NamedTemporaryFile('w').name
+            try:
+                res,md = self.exec_pipeline("""
+- when batch:
+    - load:
+        - %s/metadata via blacklist_example
+    - loadstats
+- when blacklist_example:
+    - fork merge remove:
+        - filter:
+            - https://idp.example.com/saml2/idp/metadata.php
+""" % self.datadir)
+            except IOError:
+                raise Skip
+            print md.lookup('https://idp.example.com/saml2/idp/metadata.php')
+            assert(not md.lookup('https://idp.example.com/saml2/idp/metadata.php'))

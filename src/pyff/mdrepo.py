@@ -29,7 +29,7 @@ from . import merge_strategies
 from .logs import log
 from .utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
-    iter_entities, validate_document, load_url, iso2datetime, xml_error
+    iter_entities, validate_document, load_url, iso2datetime, xml_error, dumptree, find_entity
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 
@@ -508,11 +508,12 @@ and verified.
                                             expiration=self.expiration,
                                             post=post)
 
-            relt = root(t)
 
             if t is None:
                 self.fire(type=EVENT_IMPORT_FAIL, url=rurl)
                 raise MetadataException("no valid metadata found at '%s'" % rurl)
+
+            relt = root(t)
 
             expired = False
             if offset is not None:
@@ -566,7 +567,7 @@ and verified.
                 for future in futures.as_completed(future_to_url):
                     url = future_to_url[future]
                     if future.exception() is not None:
-                        log.error('%r generated an exception: %s' % (url, future.exception()))
+                        log.error('fetching %r generated an exception: %s' % (url, future.exception()))
                     else:
                         next_resources.extend(future.result())
                 resources = next_resources
@@ -609,8 +610,7 @@ and verified.
                        validation_errors=None,
                        expiration=None,
                        post=None):
-        """Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
-        is stored in the MDRepository instance.
+        """Parse a piece of XML and return an EntitiesDescriptor element after validation.
 
 :param source: a file-like object containing SAML metadata
 :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
@@ -618,8 +618,8 @@ and verified.
 :param fail_on_error: (default: False)
 :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
 :param validate: (default: True) set to False to turn off all XML schema validation
-:param post: A callable that will be called to modify the parse-tree before any validation
-(but after xinclude processing)
+:param post: A callable that will be called to modify the parse-tree after schema validation
+(but after xinclude processing and signature validation)
         """
 
         if validation_errors is None:
@@ -641,8 +641,7 @@ and verified.
                 if e.get('ID') is not None:
                     del e.attrib['ID']
 
-            if post is not None:
-                t = post(t)
+            t = root(t)
 
             if validate:
                 if filter_invalid:
@@ -654,7 +653,15 @@ and verified.
                         raise MetadataException("schema validation failed: '%s': %s" %
                                                 (base_url, xml_error(ex.error_log, m=base_url)))
 
+            if t is not None:
+                if t.tag == "{%s}EntityDescriptor" % NS['md']:
+                    t = self.entity_set([t], base_url, copy=False)
+
+                if post is not None:
+                    t = post(t)
+
         except Exception, ex:
+            traceback.print_exc(ex)
             log.error(ex)
             if fail_on_error:
                 raise ex
@@ -692,6 +699,7 @@ starting with '.' are excluded.
                     try:
                         validation_errors = dict()
                         t, valid_until = self.parse_metadata(fn,
+                                                             base_url=url,
                                                              fail_on_error=True,
                                                              validate=validate,
                                                              validation_errors=validation_errors,
@@ -704,11 +712,25 @@ starting with '.' are excluded.
 
         if entities:
             info = dict(Description=description)
-            n = self.store.update(self.entity_set(entities, url, validate=validate), url)
+            n = self.store.update(self.entity_set(entities, url, validate=validate, copy=False), url)
             info['Size'] = str(n)
             set_metadata_info(url, info)
         else:
             log.info("no entities found in %s" % directory)
+
+    def find(self, t, member):
+        relt = root(t)
+        if type(member) is str or type(member) is unicode:
+            if '!' in member:
+                (src, xp) = member.split("!")
+                return relt.xpath(xp, namespaces=NS, smart_strings=False)
+            else:
+                lst = []
+                for e in iter_entities(relt):
+                    if e.get('entityID') == member:
+                        lst.append(e)
+                return lst
+        raise MetadataException("unknown format for filtr member: %s" % member)
 
     def _lookup(self, member):
         if member is None:
@@ -723,6 +745,7 @@ starting with '.' are excluded.
 
         log.debug("calling store lookup %s" % member)
         return self.store.lookup(member)
+
 
     def lookup(self, member, xp=None):
         """
@@ -741,8 +764,7 @@ Lookup elements in the working metadata repository
     - [sourceID] "!" xpath
     - attribute=value or {attribute}value
     - entityID
-    - sourceID (@Name)
-    - <URL containing one selector per line>
+    - source (typically @Name from an EntitiesDescriptor set but could also be an alias)
 
 The first form results in the intersection of the results of doing a lookup on the selectors. The second form
 results in the EntityDescriptor elements from the source (defaults to all EntityDescriptors) that match the
@@ -774,7 +796,7 @@ fails an empty list is returned.
                 log.debug("got %d entities after filtering" % len(l))
             return l
 
-    def entity_set(self, entities, name, cacheDuration=None, validUntil=None, validate=True):
+    def entity_set(self, entities, name, lookup_fn=None, cacheDuration=None, validUntil=None, validate=True, copy=True):
         """
 :param entities: a set of entities specifiers (lookup is used to find entities from this set)
 :param name: the @Name attribute
@@ -787,11 +809,17 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         # if log.isDebugEnabled():
         #    log.debug("entities: %s" % entities)
 
-        def _a(ent):
+        if lookup_fn is None:
+            lookup_fn = self.lookup
+
+        def _insert(ent):
             entity_id = ent.get('entityID', None)
             # log.debug("adding %s to set" % entity_id)
             if (ent is not None) and (entity_id is not None) and (entity_id not in seen):
-                t.append(deepcopy(ent))
+                ent_insert = ent
+                if copy:
+                    ent_insert = deepcopy(ent_insert)
+                t.append(ent_insert)
                 # log.debug("really adding %s to set" % entity_id)
                 seen[entity_id] = True
 
@@ -805,11 +833,11 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         seen = {}  # TODO make better de-duplication
         for member in entities:
             if hasattr(member, 'tag'):
-                _a(member)
+                _insert(member)
                 nent += 1
             else:
-                for entity in self.lookup(member):
-                    _a(entity)
+                for entity in lookup_fn(member):
+                    _insert(entity)
                     nent += 1
 
         if log.isDebugEnabled():
@@ -826,6 +854,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                     log.debug(xml_error(ex.error_log))
                 raise MetadataException("XML schema validation failed: %s" % name)
         return t
+
 
     def summary(self, uri):
         """
@@ -857,6 +886,15 @@ Returns a dict object with basic information about the EntitiesDescriptor
         info.setdefault('Status', 'default')
         return info
 
+    def delete(self, t):
+        """
+        :param t: The set of entities to remove from the store
+
+        Completely remove all entities in t from the store.
+        """
+        for e in iter_entities(t):
+            self.store.delete(e)
+
     def merge(self, t, nt, strategy=merge_strategies.replace_existing, strategy_name=None):
         """
 :param t: The EntitiesDescriptor element to merge *into*
@@ -884,6 +922,7 @@ replace old_e in t.
         for e in iter_entities(nt):
             entity_id = e.get("entityID")
             # we assume ddup:ed tree
-            old_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entity_id))
-            strategy(old_e, e)
-            self.store.update(e)
+            old_e = find_entity(t, entity_id)
+            new = strategy(old_e, e)
+            if new is not None:
+                self.store.update(new)
