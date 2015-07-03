@@ -148,11 +148,12 @@ active document. To avoid this do a select before your fork, thus:
     ireq = Plumbing.Request(ip, req.md, nt)
     ip._process(ireq)
 
-    if 'merge' in opts and ireq.t is not None and len(ireq.t) > 0:
-        sn = "pyff.merge_strategies.replace_existing"
-        if opts[-1] != 'merge':
-            sn = opts[-1]
-        req.md.merge(req.t, ireq.t, strategy_name=sn)
+    if req.t is not None and ireq.t is not None and len(root(ireq.t)) > 0:
+        if 'merge' in opts:
+            sn = "pyff.merge_strategies.replace_existing"
+            if opts[-1] != 'merge':
+                sn = opts[-1]
+            req.md.merge(req.t, ireq.t, strategy_name=sn)
 
 
 @pipe(name='any')
