@@ -244,16 +244,18 @@ class MemoryStore(StoreBase):
             self._index(relt)
             self.entities[relt.get('entityID')] = relt  # TODO: merge?
             if tid is not None:
-                self.md[tid] = relt
+                self.md[tid] = [relt.get('entityID')]
             ne += 1
             # log.debug("keys %s" % self.md.keys())
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('Name')
+            lst = []
             for e in iter_entities(t):
                 self.update(e)
+                lst.append(e.get('entityID'))
                 ne += 1
-            self.md[tid] = relt
+            self.md[tid] = lst
 
         return ne
 
@@ -305,7 +307,10 @@ class MemoryStore(StoreBase):
         # log.debug("trying main index lookup %s: " % key)
         if key in self.md:
             # log.debug("entities list %s: %s" % (key, self.md[key]))
-            return entities_list(self.md[key])
+            lst = []
+            for entityID in self.md[key]:
+                lst.extend(self.lookup(entityID))
+            return lst
 
         return []
 
