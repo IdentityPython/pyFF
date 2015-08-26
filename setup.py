@@ -32,7 +32,7 @@ install_requires = [
 
 python_implementation_str = python_implementation()
 
-if (python_implementation_str == 'CPython' and version_info.major == 2 and (version_info.minor == 6 or version_info.minor == 7)):
+if not (python_implementation_str == 'CPython' and version_info.major == 2 and (version_info.minor == 6 or version_info.minor == 7)):
     raise RuntimeError('ERROR: running under unsupported {python_implementation_str:s} version '
                        '{major_version:d}.{minor_version:d}. Please consult the documentation for supported platforms. '
                        .format(python_implementation_str=python_implementation_str,
