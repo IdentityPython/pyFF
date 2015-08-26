@@ -104,9 +104,13 @@ class MDRepository(Observable):
             return icon.text
 
     def domains(self, entity):
-        domains = [url2host(entity.get('entityID'))]
+        domains = []
         for d in entity.iter("{%s}DomainHint" % NS['mdui']):
+            if d.text == '.':
+                return []
             domains.append(d.text)
+        if not domains:
+            domains.append(url2host(entity.get('entityID')))
         return domains
 
     def ext_display(self, entity, langs=None):
