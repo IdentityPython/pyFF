@@ -300,11 +300,9 @@ $(document).ready(function() {
                 $.getJSON(uri, function (data) {
                     $.each(data,function(pos,elt) {
                         //console.log(elt);
-                        if (elt.entityID in seen) {
-                            // nothing
-                        } else {
+                        if (!(elt.entityID in seen)) {
                             elt.sticky = true;
-                            seen[elt.entityID] = true
+                            seen[elt.entityID] = true;
                             div.append(idp_template.render(elt));
                         }
                     });
@@ -323,7 +321,7 @@ $(document).ready(function() {
         }
     };
 
-    $.fn.dsRelyingParty = function(id) {
+    $.fn.dsRelyingParty = function(id, cb) {
         var o = $(this);
         $.ajax({
             url: '/metadata/'+ id +'.json',
@@ -353,6 +351,9 @@ $(document).ready(function() {
                             $(this).attr('href',entity.psu).append($('<em>').append($(this).attr('title')));
                         }
                     });
+                    if (cb) {
+                        cb(entity, i);
+                    }
                 }
             }
         });
