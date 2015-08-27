@@ -7,8 +7,16 @@
         $(document).ready(function() {
             $("*[data-toggle='popover']").popover({trigger: 'hover', container: 'body'});
             $("*[data-toggle='tooltip']").tooltip({trigger: 'hover', container: 'body'});
-            $('#quickLinks').dsQuickLinks('{{sp}}');
-            $('.sp').dsRelyingParty('{{sp}}');
+
+            var suggestions = false;
+            $('.sp').dsRelyingParty('{{sp}}', function (entity, i) {
+                if (entity.domains) {
+                    suggestions = true;
+                }
+            });
+            if (suggestions) {
+                $('#quickLinks').dsQuickLinks('{{sp}}');
+            }
             $('.idselect').dsSelect({});
             jQuery.fn.sort = function() {
                 return this.pushStack( [].sort.apply( this, arguments ), []);
