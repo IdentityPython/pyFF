@@ -53,7 +53,7 @@ class TestRepo(TestCase):
         domains = self.md.domains(e)
         assert ('example.com' in domains)
         assert ('example.net' in domains)
-        assert ('idp.example.com' in domains)
+        assert ('idp.example.com' not in domains)
         assert ('foo.com' not in domains)
 
         edup = deepcopy(e)
