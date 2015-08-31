@@ -8,7 +8,7 @@
             $("*[data-toggle='popover']").popover({trigger: 'hover', container: 'body'});
             $("*[data-toggle='tooltip']").tooltip({trigger: 'hover', container: 'body'});
 
-            var suggestions = false;
+            var suggestions = ($.jStorage.get('pyff.discovery.idps',[]).length > 0);
             $('.sp').dsRelyingParty('{{sp}}', function (entity, i) {
                 if (entity.domains) {
                     suggestions = true;
