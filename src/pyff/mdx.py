@@ -598,8 +598,10 @@ class MDServer(object):
                 pdict['entity'] = self.md.simple_summary(e[0])
                 if not path:
                     pdict['search'] = "/search/"
+                    pdict['list'] = "/role/idp.json"
                 else:
-                    pdict['search'] = "%s.s" % path
+                    pdict['search'] = "%s.s" % q
+                    pdict['list'] = "%s.json" % q
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return render_template("ds.html", **pdict)
             elif ext == 's':

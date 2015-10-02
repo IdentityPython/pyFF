@@ -87,15 +87,22 @@ $(document).ready(function() {
         return false;
     }
 
-    function with_entity_id(entityID, func) {
+    function with_entity_id(entityID, func, fail_func) {
         //console.log("with entity id "+entityID);
-        with_id(sha1_id(entityID), func);
+        with_id(sha1_id(entityID), func, fail_func);
     }
 
-    function with_id(id, func) {
+    var cache_time = 60 * 10 * 1000; /* 10 minutes in milliseconds */
+
+    function with_id(id, func, fail_func) {
         //console.log("with_id "+id);
         var cached = $.jStorage.get(id);
         if (cached) {
+            console.log($.jStorage.getTTL(id));
+            if ($.jStorage.getTTL(id) <= 0 || $.jStorage.getTTL(id) > cache_time) {
+                $.jStorage.setTTL(id, cache_time);
+            }
+            //console.log($.jStorage.getTTL(id));
             //console.log("cached...");
             //console.log(cached);
             func(_clone(cached));
@@ -109,14 +116,22 @@ $(document).ready(function() {
                     for (var i = 0; i < data.length; i++) {
                         //console.log("fetched: ");
                         //console.log(data[i]);
-                        $.jStorage.set(id,_clone(data[i]),{TTL: 300000});
+                        $.jStorage.set(id,_clone(data[i]));
+                        $.jStorage.setTTL(id, cache_time);
+                        //console.log($.jStorage.getTTL(id));
                         func(data[i]);
                     }
                 } else {
                     //console.log("got: ");
                     //console.log(data);
-                    $.jStorage.set(id,_clone(data),{TTL: 300000});
+                    $.jStorage.set(id,_clone(data));
+                    $.jStorage.setTTL(id, cache_time);
                     func(data);
+                }
+            }).fail(function () {
+                $.jStorage.deleteKey(id);
+                if (typeof fail_func !== 'undefined') {
+                    fail_func(id);
                 }
             });
         }
@@ -132,6 +147,7 @@ $(document).ready(function() {
         }
         return a.title > b.title ? 1 : -1;
     }
+
     var match_template = Hogan.compile('<div><p>{{title}}</br><small>{{descr}}</small></p></div>');
     var match_template_icon = Hogan.compile('<div><ul class="list-inline"><li>{{title}}<br/><small>{{descr}}</small></li>' +
         '{{#icon}}<li class="pull-right xs-hidden">' +
@@ -209,8 +225,9 @@ $(document).ready(function() {
         refresh: function() {
             this.filter('select').each(function() {
                 var seldiv = $(this);
+                var uri = seldiv.attr('data-target');
                 seldiv.html($('<option>').attr('value','').append($('<em>').append(seldiv.attr('title'))))
-                $.getJSON('/role/idp.json',function (data) {
+                $.getJSON(uri, function (data) {
                     $.each($(data).sort(cmp_title),function(pos,elt) {
                         //console.log(elt);
                         seldiv.append($('<option>').attr('value',elt.entityID).append(elt.title));
@@ -281,18 +298,21 @@ $(document).ready(function() {
             var div = $('<div>').addClass("list-group");
             outer.html(div);
 
+            var miss = [];
             var seen = {};
             var lst = $.jStorage.get('pyff.discovery.idps',[]);
             if (lst.length > 0) {
                 //console.log("adding previously used");
                 for (var i = 0; i < lst.length; i++) {
-                    //console.log("adding ... " + lst[i]);
-                    with_entity_id(lst[i], function (elt) {
-                        //console.log("blaha");
+                    console.log("adding ... " + lst[i]);
+                    with_entity_id(lst[i], function (elt) { /* success */
                         //console.log(elt);
                         elt.sticky = false;
                         div.append(idp_template.render(elt));
                         seen[elt.entityID] = true
+                    }, function (id) {  /* fail */
+                        console.log("failing ... "+id);
+                        miss.push(id);
                     });
                 }
             } else {
@@ -300,7 +320,8 @@ $(document).ready(function() {
                 $.getJSON(uri, function (data) {
                     $.each(data,function(pos,elt) {
                         //console.log(elt);
-                        if (!(elt.entityID in seen)) {
+                        if (elt.entityID in seen) {
+                        } else {
                             elt.sticky = true;
                             seen[elt.entityID] = true;
                             div.append(idp_template.render(elt));
