@@ -649,6 +649,22 @@ then the outer EntitiesDescriptor is stripped. This method does exactly that:
 
     return req.t
 
+
+@pipe
+def discojson(req, *opts):
+    """
+Return a discojuice-compatible json representation of the tree
+
+:param req: The request
+:param opts: Options (unusued)
+:return: returns a JSON array
+    """
+
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    return json.dumps([req.md.discojson(e) for e in iter_entities(req.t)])
+
 @pipe
 def sign(req, *opts):
     """

@@ -60,7 +60,6 @@
              - emit application/xml
              - break
         - when accept application/json:
-             - xslt:
-                 stylesheet: discojson.xsl
+             - discojson
              - emit application/json
              - break

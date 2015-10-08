@@ -103,6 +103,16 @@ class MDRepository(Observable):
         for icon in filter_lang(entity.iter("{%s}Logo" % NS['mdui'])):
             return icon.text
 
+    def psu(self, entity, langs):
+        for url in filter_lang(entity.iter("{%s}PrivacyStatementURL" % NS['mdui']), langs=langs):
+            return url.text
+
+    def geoloc(self, entity):
+        for loc in entity.iter("{%s}GeolocationHint" % NS['mdui']):
+            pos = loc.text[5:].split(",")
+            return dict(lat=pos[0],long=pos[1])
+
+
     def domains(self, entity):
         domains = []
         for d in entity.iter("{%s}DomainHint" % NS['mdui']):
@@ -175,6 +185,47 @@ class MDRepository(Observable):
                 if not sub in lst:
                     lst.append(sub)
         return lst
+
+    def scopes(self, e):
+        print list(e.find(".//{%s}IDPSSODescriptor/{%s}Extensions/{%s}Scope" % (NS['md'], NS['md'], NS['shibmd'])))
+        return [s.text for s in e.find(".//{%s}IDPSSODescriptor/{%s}Extensions/{%s}Scope" % (NS['md'], NS['md'], NS['shibmd']))]
+
+    def discojson(self, e, langs=None):
+        if e is None:
+            return dict()
+
+        title, descr = self.ext_display(e)
+        entity_id = e.get('entityID')
+
+        d = dict(title=title,
+                 descr=descr,
+                 auth='saml',
+                 entityID=entity_id)
+
+        if self.is_idp(e):
+            d['type'] = 'idp'
+        elif self.is_sp(e):
+            d['type'] = 'sp'
+
+        icon_url = self.icon(e)
+        if icon_url is not None:
+            d['icon'] = icon_url
+
+        scopes = self.scopes(e)
+        if scopes is not None and len(scopes) > 0:
+            d['scope'] = ",".join(scopes)
+
+        keywords = filter_lang(e.iter("{%s}KeyWords" % NS['mdui']), langs=langs)
+        if keywords is not None:
+            d['keywords'] = ",".join([elt.text for elt in keywords])
+        psu = self.psu(e, langs)
+        if psu:
+            d['psu'] = psu
+        geo = self.geoloc(e)
+        if geo:
+            d['geo'] = geo
+
+        return d
 
     def simple_summary(self, e):
         if e is None:
