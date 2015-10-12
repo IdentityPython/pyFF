@@ -474,6 +474,8 @@ and verified.
             tries.setdefault(rurl, 0)
 
             resource = load_url(rurl, timeout=timeout, enable_cache=enable_cache)
+            if (not resource.result):
+                raise MetadataException("error fetching '%s'" % rurl)
             xml = resource.result.strip()
             retry_resources = []
             info = {
