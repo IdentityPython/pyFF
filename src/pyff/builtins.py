@@ -389,18 +389,46 @@ def load(req, *opts):
     """
 General-purpose resource fetcher.
 
-    :param opts:
     :param req: The request
-    :param opts: Options: [qsize <5>] [timeout <30>] [validate <True*|False>]
+    :param opts: Options: See "Options" below
     :return: None
 
-Supports both remote and local resources. Fetching remote resources is done in parallell using threads.
+Supports both remote and local resources. Fetching remote resources is done in parallel using threads.
+
+Note: When downloading remote files over HTTPS the TLS server certificate is not validated.
+Note: Default behaviour is to ignore metadata files or entities in MD files that cannot be loaded
+
+Options are put directly after "load". E.g:
+
+.. code-block:: yaml
+
+    - load fail_on_error True filter_invalid False:
+      - http://example.com/some_remote_metadata.xml
+      - local_file.xml
+      - /opt/directory_containing_md_files/
+
+**Options**
+Defaults are marked with (*)
+- max_workers <5> : Number of parallel threads to use for loading MD files
+- timeout <120> : Socket timeout when downloading files
+- validate <True*|False> : When true downloaded metadata files are validated (schema validation)
+- fail_on_error <True|False*> : Control whether an error during download, parsing or (optional)validatation of a MD file
+                                does not abort processing of the pipeline. When true a failure aborts and causes pyff
+                                to exit with a non zero exit code. Otherwise errors are logged but ignored.
+- filter_invalid <True*|False> : Controls validation behaviour. When true Entities that fail validation are filtered
+                                 I.e. are not loaded. When false the entire metadata file is either loaded, or not.
+                                 fail_on_error controls whether failure to validating the entire MD file will abort
+                                 processing of the pipeline.
     """
     opts = dict(zip(opts[::2], opts[1::2]))
     opts.setdefault('timeout', 120)
     opts.setdefault('max_workers', 5)
     opts.setdefault('validate', "True")
+    opts.setdefault('fail_on_error', "False")
+    opts.setdefault('filter_invalid', "True")
     opts['validate'] = bool(strtobool(opts['validate']))
+    opts['fail_on_error'] = bool(strtobool(opts['fail_on_error']))
+    opts['filter_invalid'] = bool(strtobool(opts['filter_invalid']))
 
     remote = []
     for x in req.args:
@@ -438,15 +466,20 @@ Supports both remote and local resources. Fetching remote resources is done in p
         elif os.path.exists(url):
             if os.path.isdir(url):
                 log.debug("directory %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
-                req.md.load_dir(url, url=params['as'], validate=opts['validate'], post=post)
+                req.md.load_dir(url, url=params['as'], validate=opts['validate'], post=post, fail_on_error=opts['fail_on_error'], filter_invalid=opts['filter_invalid'])
             elif os.path.isfile(url):
                 log.debug("file %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
                 remote.append(("file://%s" % url, params['verify'], params['as'], post))
             else:
-                log.error("Unknown file type for load: '%s'" % url)
+                error="Unknown file type for load: '%s'" % url
+                if opts['fail_on_error']:
+                    raise PipeException(error)
+                log.error(error)
         else:
-            log.error("Don't know how to load '%s' as %s verify %s via %s" %
-                      (url, params['as'], params['verify'], params['via']))
+            error="Don't know how to load '%s' as %s verify %s via %s (file does not exist?)" % (url, params['as'], params['verify'], params['via'])
+            if opts['fail_on_error']:
+                raise PipeException(error)
+            log.error(error)
 
     req.md.fetch_metadata(remote, **opts)
 

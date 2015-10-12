@@ -441,7 +441,7 @@ The dict in the list contains three items:
 
         return None
 
-    def fetch_metadata(self, resources, max_workers=5, timeout=120, max_tries=5, validate=False):
+    def fetch_metadata(self, resources, max_workers=5, timeout=120, max_tries=5, validate=False, fail_on_error=False, filter_invalid=True):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id, post-callback)
@@ -465,15 +465,20 @@ and verified.
                                     max_workers=max_workers,
                                     timeout=timeout,
                                     max_tries=max_tries,
-                                    validate=validate)
+                                    validate=validate,
+                                    fail_on_error=fail_on_error,
+                                    filter_invalid=filter_invalid )
 
-    def _fetch_metadata(self, resources, max_workers=5, timeout=120, max_tries=5, validate=False):
+    def _fetch_metadata(self, resources, max_workers=5, timeout=120, max_tries=5, validate=False, fail_on_error=False, filter_invalid=True):
         tries = dict()
 
         def _process_url(rurl, verifier, tid, post, enable_cache=True):
             tries.setdefault(rurl, 0)
 
-            resource = load_url(rurl, timeout=timeout, enable_cache=enable_cache)
+            try:
+                resource = load_url(rurl, timeout=timeout, enable_cache=enable_cache)
+            except Exception, ex:
+                raise MetadataException(ex, "Exception fetching '%s': %s" % (rurl, str(ex)) )
             if (not resource.result):
                 raise MetadataException("error fetching '%s'" % rurl)
             xml = resource.result.strip()
@@ -509,6 +514,8 @@ and verified.
             t, offset = self.parse_metadata(StringIO(xml),
                                             key=verifier,
                                             base_url=rurl,
+                                            fail_on_error=fail_on_error,
+                                            filter_invalid=filter_invalid,
                                             validate=validate,
                                             validation_errors=info['Validation Errors'],
                                             expiration=self.expiration,
@@ -573,7 +580,11 @@ and verified.
                 for future in futures.as_completed(future_to_url):
                     url = future_to_url[future]
                     if future.exception() is not None:
-                        log.error('fetching %r generated an exception: %s' % (url, future.exception()))
+                        if fail_on_error:
+                            log.error('fetching %r generated an exception' % url)
+                            raise future.exception()
+                        else:
+                            log.error('fetching %r generated an exception: %s' % (url, future.exception()))
                     else:
                         next_resources.extend(future.result())
                 resources = next_resources
@@ -656,8 +667,8 @@ and verified.
                     try:
                         validate_document(t)
                     except DocumentInvalid, ex:
-                        raise MetadataException("schema validation failed: '%s': %s" %
-                                                (base_url, xml_error(ex.error_log, m=base_url)))
+                        raise MetadataException("schema validation failed: [%s] '%s': %s" %
+                                                (base_url, source, xml_error(ex.error_log, m=base_url)))
 
             if t is not None:
                 if t.tag == "{%s}EntityDescriptor" % NS['md']:
@@ -667,10 +678,10 @@ and verified.
                     t = post(t)
 
         except Exception, ex:
-            traceback.print_exc(ex)
-            log.error(ex)
             if fail_on_error:
                 raise ex
+            traceback.print_exc(ex)
+            log.error(ex)
             return None, None
 
         if log.isDebugEnabled():
@@ -678,7 +689,7 @@ and verified.
 
         return t, valid_until
 
-    def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None, description=None):
+    def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None, description=None, fail_on_error=True, filter_invalid=True):
         """
 :param directory: A directory to walk.
 :param ext: Include files with this extension (default .xml)
@@ -706,7 +717,8 @@ starting with '.' are excluded.
                         validation_errors = dict()
                         t, valid_until = self.parse_metadata(fn,
                                                              base_url=url,
-                                                             fail_on_error=True,
+                                                             fail_on_error=fail_on_error,
+                                                             filter_invalid=filter_invalid,
                                                              validate=validate,
                                                              validation_errors=validation_errors,
                                                              post=post)
@@ -714,6 +726,8 @@ starting with '.' are excluded.
                         for (eid, error) in validation_errors.iteritems():
                             log.error(error)
                     except Exception, ex:
+                        if fail_on_error:
+                            raise MetadataException('Error parsing "%s": %s' % (fn, str(ex)))
                         log.error(ex)
 
         if entities:
