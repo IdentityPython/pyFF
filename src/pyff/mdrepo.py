@@ -647,7 +647,7 @@ and verified.
         if key is not None:
             if log.isDebugEnabled():
                 log.debug("verifying signature using %s" % key)
-            refs = xmlsec.verified(t, key)
+            refs = xmlsec.verified(t, key, drop_signature=True)
             if len(refs) != 1:
                 raise MetadataException(
                     "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
