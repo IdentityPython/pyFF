@@ -99,9 +99,9 @@ class MDRepository(Observable):
     def is_sp(self, e):
         return bool(e.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
 
-    def icon(self, entity):
-        for icon in filter_lang(entity.iter("{%s}Logo" % NS['mdui'])):
-            return icon.text
+    def icon(self, e, langs=None):
+        for icon in filter_lang(e.iter("{%s}Logo" % NS['mdui']), langs=langs):
+            return dict(url=icon.text,width=icon.get('width'),height=icon.get('height'))
 
     def psu(self, entity, langs):
         for url in filter_lang(entity.iter("{%s}PrivacyStatementURL" % NS['mdui']), langs=langs):
@@ -111,7 +111,6 @@ class MDRepository(Observable):
         for loc in entity.iter("{%s}GeolocationHint" % NS['mdui']):
             pos = loc.text[5:].split(",")
             return dict(lat=pos[0],long=pos[1])
-
 
     def domains(self, entity):
         domains = []
@@ -187,8 +186,10 @@ class MDRepository(Observable):
         return lst
 
     def scopes(self, e):
-        print list(e.find(".//{%s}IDPSSODescriptor/{%s}Extensions/{%s}Scope" % (NS['md'], NS['md'], NS['shibmd'])))
-        return [s.text for s in e.find(".//{%s}IDPSSODescriptor/{%s}Extensions/{%s}Scope" % (NS['md'], NS['md'], NS['shibmd']))]
+        elt = e.findall(".//{%s}IDPSSODescriptor/{%s}Extensions/{%s}Scope" % (NS['md'], NS['md'], NS['shibmd']))
+        if elt is None or len(elt) == 0:
+            return None
+        return [s.text for s in elt]
 
     def discojson(self, e, langs=None):
         if e is None:
@@ -207,17 +208,21 @@ class MDRepository(Observable):
         elif self.is_sp(e):
             d['type'] = 'sp'
 
-        icon_url = self.icon(e)
-        if icon_url is not None:
-            d['icon'] = icon_url
+        icon_info = self.icon(e)
+        if icon_info is not None:
+            d['icon'] = icon_info.get('url', 'data:image/gif;base64,R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==')
+            d['icon_height'] = icon_info.get('height', 64)
+            d['icon_width'] = icon_info.get('width', 64)
 
         scopes = self.scopes(e)
         if scopes is not None and len(scopes) > 0:
             d['scope'] = ",".join(scopes)
 
-        keywords = filter_lang(e.iter("{%s}KeyWords" % NS['mdui']), langs=langs)
+        keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
         if keywords is not None:
-            d['keywords'] = ",".join([elt.text for elt in keywords])
+            lst = [elt.text for elt in keywords]
+            if len(lst) > 0:
+                d['keywords'] = ",".join(lst)
         psu = self.psu(e, langs)
         if psu:
             d['psu'] = psu
@@ -236,13 +241,14 @@ class MDRepository(Observable):
         d = dict(title=title,
                  value=entity_id,
                  descr=descr,
-                 icon=self.icon(e),
                  entity_id=entity_id,
                  domains=";".join(self.sub_domains(e)),
                  id=hash_id(e, 'sha1'))
-        icon_url = self.icon(e)
-        if icon_url is not None:
-            d['icon_url'] = icon_url
+        icon_info = self.icon(e)
+        if icon_info is not None:
+            url = icon_info.get('url', 'data:image/gif;base64,R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==')
+            d['icon_url'] = url
+            d['icon'] = url
 
         return d
 
