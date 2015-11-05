@@ -48,8 +48,15 @@ class TestRepo(TestCase):
         e = self.md.lookup(entity_id)[0]
         assert (self.md.is_idp(e))
         assert (not self.md.is_sp(e))
-        assert (self.md.icon(e) in ['https://www.example.com/static/images/logo.jpg',
-                                    'https://www.example.com/static/images/logo_eng.jpg'] )
+        icon = self.md.icon(e)
+        assert ('url' in icon)
+        assert ('https://www.example.com/static/images/umu_logo.jpg' in icon['url'])
+        assert ('width' in icon)
+        assert ('358' == icon['width'])
+        assert ('height' in icon)
+        assert ('63' == icon['height'])
+        assert ('62' != icon['height'])
+
         domains = self.md.domains(e)
         assert ('example.com' in domains)
         assert ('example.net' in domains)
