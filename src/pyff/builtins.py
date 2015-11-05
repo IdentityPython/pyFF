@@ -912,13 +912,13 @@ HTML.
                 m.update(cert_der)
                 fp = m.hexdigest()
                 if not seen.get(fp, False):
+                    entity_elt = cd.getparent().getparent().getparent().getparent().getparent()
                     seen[fp] = True
                     cdict = xmlsec.utils.b642cert(cert_pem)
                     keysize = cdict['modulus'].bit_length()
                     cert = cdict['cert']
                     if keysize < error_bits:
-                        e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e,
+                        req.md.annotate(entity_elt,
                                         "certificate-error",
                                         "keysize too small",
                                         "%s has keysize of %s bits (less than %s)" % (cert.getSubject(),
@@ -926,31 +926,43 @@ HTML.
                                                                                       error_bits))
                         log.error("%s has keysize of %s" % (eid, keysize))
                     elif keysize < warning_bits:
-                        e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e,
+                        req.md.annotate(entity_elt,
                                         "certificate-warning",
                                         "keysize small",
                                         "%s has keysize of %s bits (less than %s)" % (cert.getSubject(),
                                                                                       keysize,
                                                                                       warning_bits))
                         log.warn("%s has keysize of %s" % (eid, keysize))
-                    et = datetime.strptime("%s" % cert.getNotAfter(), "%y%m%d%H%M%SZ")
-                    now = datetime.now()
-                    dt = et - now
-                    if total_seconds(dt) < error_seconds:
-                        e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e,
+
+                    notafter = cert.getNotAfter()
+                    if notafter is None:
+                        req.md.annotate(entity_elt,
                                         "certificate-error",
-                                        "certificate has expired",
-                                        "%s expired %s ago" % (cert.getSubject(), -dt))
-                        log.error("%s expired %s ago" % (eid, -dt))
-                    elif total_seconds(dt) < warning_seconds:
-                        e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e,
-                                        "certificate-warning",
-                                        "certificate about to expire",
-                                        "%s expires in %s" % (cert.getSubject(), dt))
-                        log.warn("%s expires in %s" % (eid, dt))
+                                        "certificate has no expiration time",
+                                        "%s has no expiration time" % cert.getSubject())
+                    else:
+                        try:
+                            et = datetime.strptime("%s" % notafter, "%y%m%d%H%M%SZ")
+                            now = datetime.now()
+                            dt = et - now
+                            if total_seconds(dt) < error_seconds:
+                                req.md.annotate(entity_elt,
+                                                "certificate-error",
+                                                "certificate has expired",
+                                                "%s expired %s ago" % (cert.getSubject(), -dt))
+                                log.error("%s expired %s ago" % (eid, -dt))
+                            elif total_seconds(dt) < warning_seconds:
+                                req.md.annotate(entity_elt,
+                                                "certificate-warning",
+                                                "certificate about to expire",
+                                                "%s expires in %s" % (cert.getSubject(), dt))
+                                log.warn("%s expires in %s" % (eid, dt))
+                        except ValueError, ex:
+                            req.md.annotate(entity_elt,
+                                            "certificate-error",
+                                            "certificate has unknown expiration time",
+                                            "%s unknown expiration time %s" % (cert.getSubject(), notafter))
+
             except Exception, ex:
                 log.error(ex)
 
