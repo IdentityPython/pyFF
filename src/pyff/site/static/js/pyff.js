@@ -13,7 +13,11 @@ $(document).ready(function() {
         var use_idp;
         use_idp = $.jStorage.get('pyff.discovery.idp');
         if (use_idp) {
-            discovery_response(use_idp);
+            with_entity_id(use_idp, function (elt) { // found entity - autoselect
+                discovery_response(elt.entityID);
+            }, function () { // failing - lets remove the selection and have the user re-select
+                $.jStorage.remove('pyff.discovery.idp');
+            });
         }
     }
 
@@ -32,7 +36,7 @@ $(document).ready(function() {
         $.jStorage.set('pyff.discovery.idps',lst);
     }
 
-    _convert_local_store_fmt();
+    //_convert_local_store_fmt();
     _autoselect();
 
     function _clone(o) {
@@ -88,23 +92,17 @@ $(document).ready(function() {
     }
 
     function with_entity_id(entityID, func, fail_func) {
-        //console.log("with entity id "+entityID);
         with_id(sha1_id(entityID), func, fail_func);
     }
 
     var cache_time = 60 * 10 * 1000; /* 10 minutes in milliseconds */
 
     function with_id(id, func, fail_func) {
-        //console.log("with_id "+id);
         var cached = $.jStorage.get(id);
         if (cached) {
-            console.log($.jStorage.getTTL(id));
             if ($.jStorage.getTTL(id) <= 0 || $.jStorage.getTTL(id) > cache_time) {
                 $.jStorage.setTTL(id, cache_time);
             }
-            //console.log($.jStorage.getTTL(id));
-            //console.log("cached...");
-            //console.log(cached);
             func(_clone(cached));
         } else {
             //console.log('GET /metadata/' + id + ".json");
@@ -128,7 +126,7 @@ $(document).ready(function() {
                     $.jStorage.setTTL(id, cache_time);
                     func(data);
                 }
-            }).fail(function () {
+            }).fail(function (status) {
                 $.jStorage.deleteKey(id);
                 if (typeof fail_func !== 'undefined') {
                     fail_func(id);
@@ -227,11 +225,12 @@ $(document).ready(function() {
                 var seldiv = $(this);
                 var uri = seldiv.attr('data-target');
                 seldiv.html($('<option>').attr('value','').append($('<em>').append(seldiv.attr('title'))))
-                $.getJSON(uri, function (data) {
-                    $.each($(data).sort(cmp_title),function(pos,elt) {
-                        //console.log(elt);
-                        seldiv.append($('<option>').attr('value',elt.entityID).append(elt.title));
-                    })
+                oboe(uri).start(function () {
+                    $("#thelist").addClass("disabled").addClass("loading");
+                }).node('!.*',function (elt) {
+                    seldiv.append($('<option>').attr('value',elt.entityID).append(elt.title));
+                }).done(function () {
+                    $("#thelist").removeClass("loading").removeClass("disabled");
                 });
             });
         },
@@ -298,35 +297,29 @@ $(document).ready(function() {
             var div = $('<div>').addClass("list-group");
             outer.html(div);
 
-            var miss = [];
             var seen = {};
             var lst = $.jStorage.get('pyff.discovery.idps',[]);
             if (lst.length > 0) {
-                //console.log("adding previously used");
-                for (var i = 0; i < lst.length; i++) {
-                    console.log("adding ... " + lst[i]);
+                var i = lst.length;
+                while (i--) {
                     with_entity_id(lst[i], function (elt) { /* success */
-                        //console.log(elt);
                         elt.sticky = false;
-                        div.append(idp_template.render(elt));
+                        div.prepend(idp_template.render(elt));
                         seen[elt.entityID] = true
                     }, function (id) {  /* fail */
-                        console.log("failing ... "+id);
-                        miss.push(id);
+                        lst.splice(i, 1);
+                        $.jStorage.set('pyff.discovery.idps',lst);
                     });
                 }
             } else {
                 //console.log("adding suggestions...")
-                $.getJSON(uri, function (data) {
-                    $.each(data,function(pos,elt) {
-                        //console.log(elt);
-                        if (elt.entityID in seen) {
-                        } else {
-                            elt.sticky = true;
-                            seen[elt.entityID] = true;
-                            div.append(idp_template.render(elt));
-                        }
-                    });
+                oboe(uri).node('!.*', function (elt) {
+                    if (elt.entityID in seen) {
+                    } else {
+                        elt.sticky = true;
+                        seen[elt.entityID] = true;
+                        div.append(idp_template.render(elt));
+                    }
                 });
             }
         });
@@ -352,9 +345,12 @@ $(document).ready(function() {
                     var entity = data[i];
                     $(o).filter("img.sp-icon").each(function() {
                         if (entity.icon) {
-                            $(this).attr('src',entity.icon).addClass("img-responsive img-thumbnail")
+                            $(this).attr('src',entity.icon).attr('width',entity.icon_width).attr('height',entity.icon_height).addClass("img-responsive img-thumbnail")
                         } else {
+                            console.log(this);
+                            console.log($(this).closest('.hideout'))
                             $(this).hide();
+                            $(this).closest(".hideout").hide();
                         }
                     });
                     $(o).filter(".sp-name").each(function() {

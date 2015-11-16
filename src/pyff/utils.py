@@ -6,6 +6,7 @@ This module contains various utilities.
 from collections import namedtuple
 from datetime import timedelta, datetime
 import tempfile
+from traceback import print_exc
 import cherrypy
 import os
 import io
@@ -286,8 +287,16 @@ def load_url(url, enable_cache=True, timeout=60):
         h = httplib2.Http(cache=cache,
                           timeout=timeout,
                           disable_ssl_certificate_validation=True)  # trust is done using signatures over here
-        resp, content = h.request(url, headers=headers)
+        log.debug("about to request %s" % url)
+        print repr(cache.__dict__)
+        try:
+            resp, content = h.request(url, headers=headers)
+        except Exception, ex:
+            print_exc(ex)
+            raise ex
+        log.debug("got status: %d" % resp.status)
         if resp.status != 200:
+            log.debug("got resp code %d (%d bytes)" % (resp.status, len(content)))
             raise IOError(resp.reason)
         log.debug("last-modified header: %s" % resp.get('last-modified'))
         log.debug("date header: %s" % resp.get('date'))
@@ -336,7 +345,7 @@ def filter_lang(elts, langs=None):
         langs = ['en']
 
     def _l(elt):
-        return elt.get("{http://www.w3.org/XML/1998/namespace}lang", None) in langs
+        return elt.get("{http://www.w3.org/XML/1998/namespace}lang", "en") in langs
 
     if elts is None:
         return []

@@ -60,19 +60,24 @@
 {% endblock %}
 
 {% block header %}
-    <div class="row">
-        <div class="col-sm-10">
-            <small>{{ gettext('Select a login provider for ...') }}</small>
-            <small><i data-toggle="popover"
-                      data-placement="bottom"
-                      title="{{ gettext('About this step...') }}"
-                      data-content="{{ gettext('The service you are visiting wants you to sign in. Below you are given a choice of several login (aka identity) providers. Pick one and you will be sent on to the login screen for that login provider.') }}"
-                      class="glyphicon glyphicon-question-sign text-info"></i></small>
-            <h3><span class="sp sp-name"></span></h3>
+    <div class="row vertical-align">
+        <div class="col-md-12">
+            <ul class="list-inline">
+                <li id="sp-icon-container hideout">
+                    <img class="sp sp-icon sp-thumbnail fallback-icon"/>
+                </li>
+                <li id="sp-title-container">
+                    <h5>{{ gettext('You are connecting to...') }}</h5>
+                    <h3><span class="sp sp-name"></span></h3>
+                </li>
+            </ul>
         </div>
-        <div class="col-sm-2 pull-right hidden-xs"><img class="sp sp-icon sp-thumbnail fallback-icon"/></div>
     </div>
-    <small class="pull-right"><a class="sp sp-privacy-statement-url" title="Privacy Statement"></a></small>
+    <div class="row">
+        <div class="col-sm-12">
+            <small>{{ gettext('This service requests that you to <strong>identify yourself</strong>. Select your preferred identity service below... ')}} <a class="sp sp-privacy-statement-url" title="Privacy Statement"></a></small>
+        </div>
+    </div>
 {% endblock %}
 
 {% block content %}
@@ -86,21 +91,25 @@
                            id="thesearchfield"
                            data-target="{{search}}"
                            data-related="{{entity['domains']}}"
-                           placeholder="{{ gettext('Start typing to search for your login provider...') }}"/></div>
+                           placeholder="{{ gettext('Start typing to search for your identity service...') }}"/></div>
                     <select title="{{ gettext('Select your login provider ...') }}"
                             id="thelist"
                             data-target="{{list}}"
                             class="form-control idselect hidden">
                     </select>
-                    <small class="pull-right">
+                    <div class="btn-block">
+                        <a href="#" id="to_list" class="btn wide btn-large btn-info"><strong>{{ gettext('Let me choose from a list') }}</strong></a>
+                        <small><a href="#" class="hidden pull-right" id="to_search">{{ gettext('Take me back to the search') }}</a></small>
+                    </div>
+                    <!-- small class="pull-right">
                         <a href="#" id="to_list">... {{ gettext('let me choose from a list instead') }}</a>
                         <a href="#" class="hidden" id="to_search">... {{ gettext('let me search instead') }}</a>
                         <i data-toggle="popover"
                            data-placement="bottom"
                            title="{{ gettext('Choosing a login provider...') }}"
-                           data-content="{{ gettext('This service knows about a lot of login providers. The best way to find the one for you is to start typing the name of the organization/entity you belong to into the search box. If you don\'t want to search you can list all known login providers but beware that this may take time.') }}"
+                           data-content="{{ gettext('This page knows about a lot of identity services. The best way to find the one for you is to start typing the name of the organization/entity you belong to into the search box. If you don\'t want to search you can list all known identity services but beware that this may take time.') }}"
                            class="glyphicon glyphicon-question-sign text-info"></i>
-                    </small>
+                    </small -->
                 </div>
             </form>
         </div>

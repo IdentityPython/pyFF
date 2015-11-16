@@ -181,3 +181,28 @@ pre.prettyprint {
 span.select:hover, span.proceed:hover {
     background-color: lightgrey !important;
 }
+
+.wide { width: 100%; display: block; }
+
+.vertical-align {
+    display: flex;
+    align-items: center;
+}
+
+#thelist.loading {
+  cursor:progress;
+}
+
+#to_list {
+    margin-top: 10px;
+}
+
+#sp-icon-container {
+    max-width: 20% !important;
+    min-width: 0px;
+}
+
+#sp-title-container {
+    max-width: 80%;
+    vertical-align: middle;
+}
