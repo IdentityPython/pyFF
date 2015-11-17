@@ -6,7 +6,7 @@ import tempfile
 from mako.lookup import TemplateLookup
 from nose.plugins.skip import Skip
 import yaml
-from pyff.mdrepo import MDRepository
+from pyff.mdrepo import MDRepository, MetadataException
 from pyff.pipes import plumbing, Plumbing, PipeException
 from pyff.test import ExitException
 from StringIO import StringIO
@@ -79,6 +79,241 @@ class ParseTest(PipeLineTest):
                 assert('https://idp.example.com/saml2/idp/metadata.php' in eIDs)
                 assert("removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed" in str(l))
 
+
+# To run all LoadErrorTests: ./setup.py test -s pyff.test.test_pipeline.LoadErrorTest
+# To run individual test: ./setup.py test -s pyff.test.test_pipeline.LoadErrorTest.test_fail_on_error_no_file
+class LoadErrorTest(PipeLineTest):
+
+    # A File that does not exist must throw an error with fail_on_error=True
+    def test_fail_on_error_no_file(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                try:
+                    res, md = self.exec_pipeline("""
+    - load fail_on_error True:
+        - %s/metadata/test01.xml
+        - %s/file_that_does_not_exist.xml
+    - select
+    - stats
+    """ % (self.datadir, self.datadir) )
+                except PipeException, ex:
+                    print ex
+                    assert ("Don't know how to load" in str(ex))
+                    assert ("file_that_does_not_exist.xml" in str(ex))
+                    return True
+                finally:
+                    if os.path.isfile(self.output):
+                        os.unlink(self.output)
+                    print sys.stdout.captured
+                    print sys.stderr.captured
+
+        assert "Expected PipeException" == False
+
+    # A File that does not exist must throw an error with fail_on_error=True
+    def test_fail_on_error_no_file_url(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                try:
+                    res, md = self.exec_pipeline("""
+    - load fail_on_error True:
+        - %s/metadata/test01.xml
+        - file://%s/file_that_does_not_exist.xml
+    - select
+    - stats
+    """ % (self.datadir, self.datadir) )
+                except MetadataException, ex:
+                    print ex
+                    assert ("error fetching" in str(ex))
+                    assert ("file_that_does_not_exist.xml" in str(ex))
+                    return True
+                finally:
+                    if os.path.isfile(self.output):
+                        os.unlink(self.output)
+                    print sys.stdout.captured
+                    print sys.stderr.captured
+
+        assert "Expected PipeException" == False
+
+
+    # An URL that cannot be downloaded must throw an error with fail_on_error=True
+    # Note: Due to load_url retries it takes 20s to complete this test
+    def test_fail_on_error_no_url(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                try:
+                    res, md = self.exec_pipeline("""
+    - load fail_on_error True:
+        - %s/metadata/test01.xml
+        - http://127.0.0.1/does_not_exists.xml
+    - select
+    - stats
+    """ % (self.datadir) )
+                except MetadataException, ex:
+                    print ex
+                    assert ("Exception fetching" in str(ex))
+                    assert ("http://127.0.0.1/does_not_exists.xml" in str(ex))
+                    return True
+                finally:
+                    if os.path.isfile(self.output):
+                        os.unlink(self.output)
+                    print sys.stdout.captured
+                    print sys.stderr.captured
+
+        assert "Expected PipeException" == False
+
+    # A file with invalid XML must throw an exception with fail_on_error True:
+    def test_fail_on_error_invalid_file(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                try:
+                    res, md = self.exec_pipeline("""
+    - load fail_on_error True:
+        - %s/metadata/test01.xml
+        - %s/metadata/test02-invalid.xml
+    - select
+    - stats
+    """ % (self.datadir, self.datadir) )
+                except MetadataException, ex:
+                    print ex
+                    assert ("no valid metadata found" in str(ex))
+                    assert ("/metadata/test02-invalid.xml" in str(ex))
+                    return True
+                finally:
+                    if os.path.isfile(self.output):
+                        os.unlink(self.output)
+                    print sys.stdout.captured
+                    print sys.stderr.captured
+
+        assert "Expected MetadataException" == False
+
+    # A directory with a file with invalid metadata must throw an exception with fail_on_error True and filter_invalid False:
+    def test_fail_on_error_invalid_dir(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                try:
+                    res, md = self.exec_pipeline("""
+    - load fail_on_error True filter_invalid False:
+        - %s/metadata/
+    - select
+    - stats
+    """ % (self.datadir) )
+                except MetadataException, ex:
+                    print ex
+                    return True
+                finally:
+                    if os.path.isfile(self.output):
+                        os.unlink(self.output)
+                    print sys.stdout.captured
+                    print sys.stderr.captured
+
+        assert "Expected MetadataException" == False
+
+    # A file with invalid XML must not throw an exception by default (fail_on_error False):
+    def test_no_fail_on_error_invalid_file(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                res, md = self.exec_pipeline("""
+    - load:
+        - %s/metadata/test01.xml
+        - %s/metadata/test02-invalid.xml
+    - select
+    - stats
+    """ % (self.datadir, self.datadir) )
+                print sys.stdout.captured
+                print sys.stderr.captured
+                if os.path.isfile(self.output):
+                    os.unlink(self.output)
+
+    # Loading an xml file with an invalid entity must throw when filter_invalid False and fail_on_error True
+    def test_fail_on_error_invalid_entity(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                try:
+                    res, md = self.exec_pipeline("""
+    - load fail_on_error True filter_invalid False:
+        - %s/metadata/test01.xml
+        - %s/metadata/test03-invalid.xml
+    - select
+    - stats
+    """ % (self.datadir, self.datadir) )
+                except MetadataException, ex:
+                    print ex
+                    assert ("schema validation failed" in str(ex))
+                    assert ("/metadata/test03-invalid.xml" in str(ex))
+                    return True
+                finally:
+                    if os.path.isfile(self.output):
+                        os.unlink(self.output)
+                    print sys.stdout.captured
+                    print sys.stderr.captured
+
+    # Test default behaviour. Loading a file with an invalid entity must not raise an exception
+    def test_no_fail_on_error_invalid_entity(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                res, md = self.exec_pipeline("""
+    - load:
+        - %s/metadata/test01.xml
+        - %s/metadata/test03-invalid.xml
+    - select
+    - stats
+    """ % (self.datadir, self.datadir) )
+                print sys.stdout.captured
+                print sys.stderr.captured
+                if os.path.isfile(self.output):
+                    os.unlink(self.output)
+
+    # When an invalid entity is filtered (filter_invalid True) it must not cause an exception, even if fail_on_error True
+    def test_no_fail_on_error_filtered_entity(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                res, md = self.exec_pipeline("""
+    - load fail_on_error True filter_invalid True:
+        - %s/metadata/test01.xml
+        - %s/metadata/test03-invalid.xml
+    - select
+    - stats
+    """ % (self.datadir, self.datadir) )
+                print sys.stdout.captured
+                print sys.stderr.captured
+                if os.path.isfile(self.output):
+                    os.unlink(self.output)
+
+    # A directory with a file with invalid metadata must not throw by default:
+    def test_no_fail_on_error_invalid_dir(self):
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+
+                res, md = self.exec_pipeline("""
+    - load:
+        - %s/metadata/
+    - select
+    - stats
+    """ % (self.datadir) )
+                if os.path.isfile(self.output):
+                    os.unlink(self.output)
+                print sys.stdout.captured
+                print sys.stderr.captured
 
 # noinspection PyUnresolvedReferences
 class SigningTest(PipeLineTest):

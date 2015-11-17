@@ -274,7 +274,13 @@ def load_url(url, enable_cache=True, timeout=60):
     if url.startswith('file://'):
         path = url[7:]
         if not os.path.exists(path):
-            raise IOError("file not found: %s" % path)
+            log.error("file not found: %s" % path)
+            return _Resource(result=None,
+                             cached=False,
+                             date=None,
+                             resp=None,
+                             time=None,
+                             last_modified=None)
 
         with io.open(path, 'r+b') as fd:
             return _Resource(result=fd.read(),
