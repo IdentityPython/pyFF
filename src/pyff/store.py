@@ -24,6 +24,8 @@ def is_idp(entity):
 def is_sp(entity):
     return has_tag(entity, "{%s}SPSSODescriptor" % NS['md'])
 
+def is_aa(entity):
+    return has_tag(entity, "{%s}AttributeAuthorityDescriptor" % NS['md'])
 
 def _domains(entity):
     domains = [url2host(entity.get('entityID'))]
@@ -43,19 +45,30 @@ def entity_attribute_dict(entity):
                 values = [v.text.strip() for v in a.iter("{%s}AttributeValue" % NS['saml'])]
                 d[an] = values
 
-    d[ATTRS['role']] = []
+    role_a = ATTRS['role']
+    d[role_a] = []
 
-    dlist = []
-    for dn in _domains(entity):
-        for sub in subdomains(dn):
-            dlist.append(sub)
+    try:
+        dlist = []
+        for dn in _domains(entity):
+            for sub in subdomains(dn):
+                dlist.append(sub)
 
-    d[ATTRS['domain']] = dlist
+        d[ATTRS['domain']] = dlist
+    except ValueError:
+        pass
 
     if is_idp(entity):
-        d[ATTRS['role']].append('idp')
+        d[role_a].append('idp')
+        eca = ATTRS['entity-category']
+        d.setdefault(eca, [])
+        ec = d[eca]
+        if 'http://refeds.org/category/hide-from-discovery' not in ec:
+            d[eca].append('http://pyff.io/category/discoverable')
     if is_sp(entity):
-        d[ATTRS['role']].append('sp')
+        d[role_a].append('sp')
+    if is_aa(entity):
+        d[role_a].append('aa')
 
     return d
 
@@ -70,6 +83,9 @@ class StoreBase(object):
     def lookup(self, key):
         raise NotImplementedError()
 
+    def ready(self):
+        raise NotImplementedError()
+
     def clone(self):
         return self
 
@@ -77,6 +93,9 @@ class StoreBase(object):
         for e in self.lookup("entities"):
             log.debug("**** yield entityID=%s" % e.get('entityID'))
             yield e
+
+    def periodic(self, stats):
+        pass
 
     def size(self):
         raise NotImplementedError()
@@ -102,6 +121,7 @@ class MemoryStore(StoreBase):
         self.md = dict()
         self.index = dict()
         self.entities = dict()
+        self._ready = False
 
         for hn in DINDEX:
             self.index.setdefault(hn, {})
@@ -121,6 +141,12 @@ class MemoryStore(StoreBase):
 
     def attribute(self, a):
         return self.index.setdefault('attr', {}).setdefault(a, {}).keys()
+
+    def ready(self):
+        return self._ready
+
+    def periodic(self, stats):
+        self._ready = True
 
     def _index(self, entity):
         attr_idx = self.index.setdefault('attr', {})
@@ -218,16 +244,18 @@ class MemoryStore(StoreBase):
             self._index(relt)
             self.entities[relt.get('entityID')] = relt  # TODO: merge?
             if tid is not None:
-                self.md[tid] = relt
+                self.md[tid] = [relt.get('entityID')]
             ne += 1
             # log.debug("keys %s" % self.md.keys())
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('Name')
+            lst = []
             for e in iter_entities(t):
                 self.update(e)
+                lst.append(e.get('entityID'))
                 ne += 1
-            self.md[tid] = relt
+            self.md[tid] = lst
 
         return ne
 
@@ -279,7 +307,10 @@ class MemoryStore(StoreBase):
         # log.debug("trying main index lookup %s: " % key)
         if key in self.md:
             # log.debug("entities list %s: %s" % (key, self.md[key]))
-            return entities_list(self.md[key])
+            lst = []
+            for entityID in self.md[key]:
+                lst.extend(self.lookup(entityID))
+            return lst
 
         return []
 
@@ -307,6 +338,9 @@ class RedisStore(StoreBase):
                     ts = totimestamp(dt)
 
         return ts
+
+    def ready(self):
+        return True
 
     def reset(self):
         self.rc.flushdb()
@@ -420,7 +454,7 @@ class RedisStore(StoreBase):
         return root(parse_xml(StringIO(self.rc.get("%s#metadata" % key))))
 
     def lookup(self, key):
-        log.debug("redis store lookup: %s" % key)
+        #log.debug("redis store lookup: %s" % key)
         if '+' in key:
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):

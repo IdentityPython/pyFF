@@ -7,6 +7,7 @@ Usage: [-h|--help]
        [--logfile=<file>]
        [--version]
 """
+import importlib
 import sys
 import getopt
 import traceback
@@ -26,7 +27,7 @@ def main():
     opts = None
     args = None
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hR', ['help', 'loglevel=', 'logfile=', 'version'])
+        opts, args = getopt.getopt(sys.argv[1:], 'hRm', ['help', 'loglevel=', 'logfile=', 'version', 'module'])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -35,6 +36,7 @@ def main():
     store = MemoryStore()
     loglevel = logging.WARN
     logfile = None
+    modules = []
     for o, a in opts:
         if o in ('-h', '--help'):
             print __doc__
@@ -48,6 +50,8 @@ def main():
         elif o in '-R':
             from pyff.store import RedisStore
             store = RedisStore()
+        elif o in ('-m', '--module'):
+            modules.append(a)
         elif o in '--version':
             print "pyff version %s" % __version__
             sys.exit(0)
@@ -56,6 +60,10 @@ def main():
     if logfile is not None:
         log_args['filename'] = logfile
     logging.basicConfig(**log_args)
+
+    modules.append('pyff.builtins')
+    for mn in modules:
+        importlib.import_module(mn)
 
     try:
         md = MDRepository(store=store)

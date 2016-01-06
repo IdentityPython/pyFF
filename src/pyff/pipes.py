@@ -10,12 +10,34 @@ except ImportError:  # pragma: no cover
     print(" *** install cStringIO for better performance")
     from StringIO import StringIO
 import os
-from pkg_resources import iter_entry_points
 import yaml
-from pyff.utils import resource_string, PyffException
-from pyff.logs import log
+from .utils import resource_string, PyffException
+from .logs import log
 
 __author__ = 'leifj'
+
+registry = dict()
+
+
+def pipe(*args, **kwargs):
+    """
+    Register the decorated function in the pyff pipe registry
+    :param name: optional name - if None, use function name
+    """
+    def deco_none(f):
+        return f
+
+    def deco_pipe(f):
+        f_name = kwargs.get('name', f.__name__)
+        registry[f_name] = f
+        return f
+
+    if 1 == len(args):
+        f = args[0]
+        registry[f.__name__] = f
+        return deco_none
+    else:
+        return deco_pipe
 
 
 class PipeException(PyffException):
@@ -33,103 +55,75 @@ class PluginsRegistry(dict):
     Referencing this function as an entry_point using something = module:the_somethig_func in setup.py allows the
     function to be referenced as 'something' in a pipeline.
     """
-    def __init__(self):
-        for entry_point in iter_entry_points('pyff.pipe'):
-            if entry_point.name in self:
-                log.warn("Duplicate entry point: %s" % entry_point.name)
-            else:
-                log.debug("Registering entry point: %s" % entry_point.name)
-                self[entry_point.name] = entry_point.load()
+    #def __init__(self):
+        #for entry_point in iter_entry_points('pyff.pipe'):
+        #    if entry_point.name in self:
+        #        log.warn("Duplicate entry point: %s" % entry_point.name)
+        #    else:
+        #        log.debug("Registering entry point: %s" % entry_point.name)
+        #        self[entry_point.name] = entry_point.load()
 
 
-class PipeLoader(object):
-    """
-A utility class for dynamically loading the parts of a plumbing instance.
+def load_pipe(d):
+    """Return a triple callable,name,args of the pipe specified by the object d.
 
-Each part (aka pipe) is a callable with the following signature:
+    :param d: The following alternatives for d are allowed:
 
-.. function:: pipe(req,*opts)
-
-    :param req: request.
-    :type req: Plumbing.Request
-    :param opts: options
-    :type opts: iterable
-
-The pipe may return a transformed copy of or replacement for t. The return value must be an
-instance of ElementTree. The pipe may also through a PipeException which will cause the rest
-of the pipeline to get cancelled. The pipe may also replace req.t instead of returning a
-transformed copy in which case it should return None
+    - d is a string (or unicode) in which case the pipe is named d called with None as args.
+    - d is a dict of the form {name: args} (i.e one key) in which case the pipe named *name* is called with args
+    - d is an iterable (eg tuple or list) in which case d[0] is treated as the pipe name and d[1:] becomes the args
     """
 
-    def __init__(self):
-        self.registry = PluginsRegistry()
-        self.builtins = __import__("pyff.pipes.builtins", fromlist=["pyff.pipes"])
+    def _n(_d):
+        lst = _d.split()
+        _name = lst[0]
+        _opts = lst[1:]
+        return _name, _opts
 
-    def load_pipe(self, d):
-        """Return a triple callable,name,args of the pipe specified by the object d.
-
-        :param d: The following alternatives for d are allowed:
-
- - d is a string (or unicode) in which case the pipe is named d called with None as args.
- - d is a dict of the form {name: args} (i.e one key) in which case the pipe named *name* is called with args
- - d is an iterable (eg tuple or list) in which case d[0] is treated as the pipe name and d[1:] becomes the args
-        """
-
-        def _n(_d):
-            lst = _d.split()
-            _name = lst[0]
-            _opts = lst[1:]
-            return _name, _opts
-
-        name = None
-        args = None
-        opts = []
-        if type(d) is str or type(d) is unicode:
-            name, opts = _n(d)
-        elif hasattr(d, '__iter__') and not type(d) is dict:
-            if not len(d):
-                raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
-            name, opts = _n(d[0])
-        elif type(d) is dict:
-            k = d.keys()[0]
-            name, opts = _n(k)
-            args = d[k]
-        else:
+    name = None
+    args = None
+    opts = []
+    if type(d) is str or type(d) is unicode:
+        name, opts = _n(d)
+    elif hasattr(d, '__iter__') and not type(d) is dict:
+        if not len(d):
             raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
+        name, opts = _n(d[0])
+    elif type(d) is dict:
+        k = d.keys()[0]
+        name, opts = _n(k)
+        args = d[k]
+    else:
+        raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
 
-        if name is None:
-            raise PipeException("Anonymous length of pipe... \n%s" % repr(d))
+    if name is None:
+        raise PipeException("Anonymous length of pipe... \n%s" % repr(d))
 
-        func = None
-        if hasattr(self.builtins, name) and hasattr(getattr(self.builtins, name), '__call__'):
-            func = getattr(self.builtins, name)
-        elif hasattr(self.builtins, "_%s" % name) and hasattr(getattr(self.builtins, "_%s" % name), '__call__'):
-            func = getattr(self.builtins, "_%s" % name)
-        elif name in self.registry:
-            func = self.registry[name]
+    func = None
+    if name in registry:
+        func = registry[name]
 
-        if func is None or not hasattr(func, '__call__'):
-            raise PipeException('No pipe named %s is installed' % name)
+    if func is None or not hasattr(func, '__call__'):
+        raise PipeException('No pipe named %s is installed' % name)
 
-        return func, opts, name, args
+    return func, opts, name, args
 
 
 class PipelineCallback(object):
     """
 A delayed pipeline callback used as a post for parse_metadata
     """
-    def __init__(self, entry_point, req, stats):
+    def __init__(self, entry_point, req):
         self.entry_point = entry_point
         self.plumbing = Plumbing(req.plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
         self.req = req
-        self.stats = stats
 
     def __call__(self, *args, **kwargs):
         t = args[0]
         if t is None:
             raise ValueError("PipelineCallback must be called with a parse-tree argument")
         try:
-            return self.plumbing.process(self.req.md, state={self.entry_point: True, 'stats': self.stats}, t=t)
+            return self.plumbing.process(self.req.md, state={self.entry_point: True}, t=t)
         except Exception, ex:
             traceback.print_exc(ex)
             raise ex
@@ -210,7 +204,7 @@ may modify any of the fields.
             """
             log.debug('Processing \n%s' % pl)
             for p in pl.pipeline:
-                cb, opts, name, args = loader.load_pipe(p)
+                cb, opts, name, args = load_pipe(p)
                 # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
                 if type(args) is str or type(args) is unicode:
                     args = [args]
@@ -249,7 +243,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
         log.debug('Processing \n%s' % self)
         for p in self.pipeline:
             try:
-                pipe, opts, name, args = loader.load_pipe(p)
+                pipe, opts, name, args = load_pipe(p)
                 # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
                 if type(args) is str or type(args) is unicode:
                     args = [args]
@@ -286,4 +280,4 @@ This uses the resource framework to locate the yaml file which means that pipeli
     return Plumbing(pipeline=pipeline, pid=pid)
 
 
-loader = PipeLoader()
+

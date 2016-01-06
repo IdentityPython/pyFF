@@ -6,9 +6,10 @@ This module contains various utilities.
 from collections import namedtuple
 from datetime import timedelta, datetime
 import tempfile
+from traceback import print_exc
 import cherrypy
-from mako.lookup import TemplateLookup
 import os
+import io
 import pkg_resources
 import re
 from lxml import etree
@@ -22,12 +23,11 @@ from email.utils import parsedate
 from urlparse import urlparse
 from threading import local
 import iso8601
+from jinja2 import Environment, PackageLoader
 
 __author__ = 'leifj'
 
 import i18n
-
-_ = i18n.language.ugettext
 
 sentinel = object()
 thread_data = local()
@@ -37,7 +37,7 @@ class PyffException(Exception):
     pass
 
 
-def _e(error_log, m=None):
+def xml_error(error_log, m=None):
     def _f(x):
         if ":WARNING:" in x:
             return False
@@ -71,10 +71,10 @@ This includes certain XSLT and XSD files.
     """
     name = os.path.expanduser(name)
     if os.path.exists(name):
-        with open(name) as fd:
+        with io.open(name) as fd:
             return fd.read()
     elif pfx and os.path.exists(os.path.join(pfx, name)):
-        with open(os.path.join(pfx, name)) as fd:
+        with io.open(os.path.join(pfx, name)) as fd:
             return fd.read()
     elif pkg_resources.resource_exists(__name__, name):
         return pkg_resources.resource_string(__name__, name)
@@ -111,20 +111,6 @@ This includes certain XSLT and XSD files.
         return pkg_resources.resource_filename(__name__, "%s/%s" % (pfx, name))
 
     return None
-
-
-def tdelta(td):
-    """
-Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours and/or seconds.
-
-:param td: A human-friendly string representation of a timedelta
-    """
-    keys = ["weeks", "days", "hours", "minutes"]
-    regex = "".join(["((?P<%s>\d+)%s ?)?" % (k, k[0]) for k in keys])
-    kwargs = {}
-    for k, v in re.match(regex, td).groupdict(default="0").items():
-        kwargs[k] = int(v)
-    return timedelta(**kwargs)
 
 
 def totimestamp(dt, epoch=datetime(1970, 1, 1)):
@@ -192,7 +178,7 @@ def schema():
             st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
             thread_data.schema = etree.XMLSchema(st)
         except etree.XMLSchemaParseError, ex:
-            log.error(_e(ex.error_log))
+            log.error(xml_error(ex.error_log))
             raise ex
     return thread_data.schema
 
@@ -234,12 +220,31 @@ def safe_write(fn, data):
 
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
-templates = TemplateLookup(directories=[os.path.join(site_dir, 'templates')])
+env = Environment(loader=PackageLoader(__package__, 'templates'), extensions=['jinja2.ext.i18n'])
+env.install_gettext_callables(i18n.language.gettext, i18n.language.ngettext, newstyle=True)
 
+import urllib
+from markupsafe import Markup
+
+
+def urlencode_filter(s):
+    if type(s) == 'Markup':
+        s = s.unescape()
+    s = s.encode('utf8')
+    s = urllib.quote_plus(s)
+    return Markup(s)
+
+def truncate_filter(s,max_len=10):
+    if len(s) > max_len:
+        return s[0:max_len]+"..."
+    else:
+        return s
+
+env.filters['u'] = urlencode_filter
+env.filters['truncate'] = truncate_filter
 
 def template(name):
-    return templates.get_template(name)
-
+    return env.get_template(name)
 
 def render_template(name, **kwargs):
     kwargs.setdefault('http', cherrypy.request)
@@ -269,9 +274,15 @@ def load_url(url, enable_cache=True, timeout=60):
     if url.startswith('file://'):
         path = url[7:]
         if not os.path.exists(path):
-            raise IOError("file not found: %s" % path)
+            log.error("file not found: %s" % path)
+            return _Resource(result=None,
+                             cached=False,
+                             date=None,
+                             resp=None,
+                             time=None,
+                             last_modified=None)
 
-        with open(path, 'r') as fd:
+        with io.open(path, 'r+b') as fd:
             return _Resource(result=fd.read(),
                              cached=False,
                              date=datetime.now(),
@@ -282,8 +293,16 @@ def load_url(url, enable_cache=True, timeout=60):
         h = httplib2.Http(cache=cache,
                           timeout=timeout,
                           disable_ssl_certificate_validation=True)  # trust is done using signatures over here
-        resp, content = h.request(url, headers=headers)
+        log.debug("about to request %s" % url)
+        print repr(cache.__dict__)
+        try:
+            resp, content = h.request(url, headers=headers)
+        except Exception, ex:
+            print_exc(ex)
+            raise ex
+        log.debug("got status: %d" % resp.status)
         if resp.status != 200:
+            log.debug("got resp code %d (%d bytes)" % (resp.status, len(content)))
             raise IOError(resp.reason)
         log.debug("last-modified header: %s" % resp.get('last-modified'))
         log.debug("date header: %s" % resp.get('date'))
@@ -332,7 +351,7 @@ def filter_lang(elts, langs=None):
         langs = ['en']
 
     def _l(elt):
-        return elt.get("{http://www.w3.org/XML/1998/namespace}lang", None) in langs
+        return elt.get("{http://www.w3.org/XML/1998/namespace}lang", "en") in langs
 
     if elts is None:
         return []
@@ -368,18 +387,7 @@ def total_seconds(dt):
 
 
 def etag(s):
-    return hash_str('sha1', s)
-
-
-def hash_str(hn, s):
-    if hn == 'null':
-        return s
-    if not hasattr(hashlib, hn):
-        raise ValueError("Unknown digest mechanism: '%s'" % hn)
-    hash_m = getattr(hashlib, hn)
-    h = hash_m()
-    h.update(s)
-    return h.hexdigest()
+    return hex_digest('sha1', s)
 
 
 def hash_id(entity, hn='sha1', prefix=True):
@@ -478,7 +486,16 @@ def entities_list(t=None):
 
 
 def iter_entities(t):
+    if t is None:
+        return []
     return t.iter('{%s}EntityDescriptor' % NS['md'])
+
+
+def find_entity(t, e_id, attr='entityID'):
+    for e in iter_entities(t):
+        if e.get(attr) == e_id:
+            return e
+    return None
 
 
 def has_tag(t, tag):
@@ -487,11 +504,9 @@ def has_tag(t, tag):
 
 
 def url2host(url):
-    try:
-        (host, sep, port) = urlparse(url).netloc.partition(':')
-        return host
-    except ValueError:
-        return None
+    (host, sep, port) = urlparse(url).netloc.partition(':')
+    return host
+
 
 
 def subdomains(domain):

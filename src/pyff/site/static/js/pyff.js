@@ -6,14 +6,18 @@
  * To change this template use File | Settings | File Templates.
  */
 
-(function( $ ) {
+$(document).ready(function() {
     // send the user directly to the pre-selected idp if that setting exists
 
     function _autoselect() {
         var use_idp;
         use_idp = $.jStorage.get('pyff.discovery.idp');
         if (use_idp) {
-            discovery_response(use_idp);
+            with_entity_id(use_idp, function (elt) { // found entity - autoselect
+                discovery_response(elt.entityID);
+            }, function () { // failing - lets remove the selection and have the user re-select
+                $.jStorage.remove('pyff.discovery.idp');
+            });
         }
     }
 
@@ -32,7 +36,7 @@
         $.jStorage.set('pyff.discovery.idps',lst);
     }
 
-    _convert_local_store_fmt();
+    //_convert_local_store_fmt();
     _autoselect();
 
     function _clone(o) {
@@ -76,26 +80,29 @@
         params = $.deparam.querystring();
         var qs;
         //console.log(entityID);
-        qs = params['return'].indexOf('?') === -1 ? '?' : '&';
-        var returnIDParam = params['returnIDParam'];
-        if (!returnIDParam) {
-            returnIDParam = "entityID";
+        if (params['return']) {
+            qs = params['return'].indexOf('?') === -1 ? '?' : '&';
+            var returnIDParam = params['returnIDParam'];
+            if (!returnIDParam) {
+                returnIDParam = "entityID";
+            }
+            window.location = params['return'] + qs + returnIDParam + '=' + entityID;
         }
-        window.location = params['return'] + qs + returnIDParam + '=' + entityID;
         return false;
     }
 
-    function with_entity_id(entityID, func) {
-        //console.log("with entity id "+entityID);
-        with_id(sha1_id(entityID), func);
+    function with_entity_id(entityID, func, fail_func) {
+        with_id(sha1_id(entityID), func, fail_func);
     }
 
-    function with_id(id, func) {
-        //console.log("with_id "+id);
+    var cache_time = 60 * 10 * 1000; /* 10 minutes in milliseconds */
+
+    function with_id(id, func, fail_func) {
         var cached = $.jStorage.get(id);
         if (cached) {
-            //console.log("cached...");
-            //console.log(cached);
+            if ($.jStorage.getTTL(id) <= 0 || $.jStorage.getTTL(id) > cache_time) {
+                $.jStorage.setTTL(id, cache_time);
+            }
             func(_clone(cached));
         } else {
             //console.log('GET /metadata/' + id + ".json");
@@ -107,14 +114,22 @@
                     for (var i = 0; i < data.length; i++) {
                         //console.log("fetched: ");
                         //console.log(data[i]);
-                        $.jStorage.set(id,_clone(data[i]),{TTL: 300000});
+                        $.jStorage.set(id,_clone(data[i]));
+                        $.jStorage.setTTL(id, cache_time);
+                        //console.log($.jStorage.getTTL(id));
                         func(data[i]);
                     }
                 } else {
                     //console.log("got: ");
                     //console.log(data);
-                    $.jStorage.set(id,_clone(data),{TTL: 300000});
+                    $.jStorage.set(id,_clone(data));
+                    $.jStorage.setTTL(id, cache_time);
                     func(data);
+                }
+            }).fail(function (status) {
+                $.jStorage.deleteKey(id);
+                if (typeof fail_func !== 'undefined') {
+                    fail_func(id);
                 }
             });
         }
@@ -130,6 +145,7 @@
         }
         return a.title > b.title ? 1 : -1;
     }
+
     var match_template = Hogan.compile('<div><p>{{title}}</br><small>{{descr}}</small></p></div>');
     var match_template_icon = Hogan.compile('<div><ul class="list-inline"><li>{{title}}<br/><small>{{descr}}</small></li>' +
         '{{#icon}}<li class="pull-right xs-hidden">' +
@@ -142,7 +158,7 @@
                 var uri = seldiv.attr('data-target');
                 var related = seldiv.attr('data-related');
                 //console.log(related);
-                var remote = uri+"?query=%QUERY&entity_filter={http://pyff-project.org/role}idp";
+                var remote = uri+"?query=%QUERY&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
                 if (related) {
                     remote = remote + "&related="+related
                 }
@@ -180,12 +196,13 @@
                 $.each(options,function(key,val) {
                     seldiv.dsSelect(key,val);
                 });
-                $('body').on('click.ds', 'button.unselect', methods.unselect);
-                $('body').on('click.ds', 'a.select', methods.select);
-                $('body').on('click.ds', 'a.proceed', methods.proceed);
-                $('body').on('click.ds', 'a.remember', methods.remember);
-                $('body').on('click.ds', 'a.proceed_and_remember', methods.proceed_and_remember);
-                $('body').on('click.ds', 'a.cancel', cancel_confirm)
+                $('body').on('vclick.ds', 'button.unselect', methods.unselect);
+                $('body').on('vclick.ds', '.select', methods.select);
+                $('body').on('vclick.ds', '.proceed', methods.proceed);
+                $('body').on('vclick.ds', '.proceed', methods.proceed);
+                $('body').on('vclick.ds', '.remember', methods.remember);
+                $('body').on('vclick.ds', '.proceed_and_remember', methods.proceed_and_remember);
+                $('body').on('vclick.ds', '.cancel', cancel_confirm);
             });
             this.filter('select').each(function (opts) {
                 var seldiv = $(this);
@@ -197,15 +214,23 @@
                 });
             });
         },
+        reset: function() {
+            $(this).filter('input').each(function () {
+                $(this).typeahead('val','');
+                $(this).focus();
+            });
+        },
         refresh: function() {
             this.filter('select').each(function() {
                 var seldiv = $(this);
+                var uri = seldiv.attr('data-target');
                 seldiv.html($('<option>').attr('value','').append($('<em>').append(seldiv.attr('title'))))
-                $.getJSON('/role/idp.json',function (data) {
-                    $.each($(data).sort(cmp_title),function(pos,elt) {
-                        //console.log(elt);
-                        seldiv.append($('<option>').attr('value',elt.entityID).append(elt.title));
-                    })
+                oboe(uri).start(function () {
+                    $("#thelist").addClass("disabled").addClass("loading");
+                }).node('!.*',function (elt) {
+                    seldiv.append($('<option>').attr('value',elt.entityID).append(elt.title));
+                }).done(function () {
+                    $("#thelist").removeClass("loading").removeClass("disabled");
                 });
             });
         },
@@ -215,9 +240,10 @@
             $('#proceed').text("Use this time only");
             $('#proceed_and_remember').removeClass('hidden').show();
             $('#reset_info').removeClass('hidden').show();
+            return false;
         },
         unselect: function (e) {
-            e.preventDefault();
+            //e.preventDefault();
             e.stopPropagation();
             var id = $(this).attr('rel');
             var idps = $.jStorage.get('pyff.discovery.idps', []);
@@ -227,40 +253,42 @@
                 $.jStorage.set('pyff.discovery.idps', idps);
                 $(this).parent().remove();
             }
+            return false;
         },
         select: function(e) {
-            e.preventDefault();
+            //e.preventDefault();
             var lst = $.jStorage.get('pyff.discovery.idps', []);
             if (lst.length < 2) {
                 return select_idp($(this).attr('data-href'));
             } else {
                 return discovery_response($(this).attr('data-href'));
             }
+            return false;
         },
         proceed: function(e) {
-            e.preventDefault();
+            //e.preventDefault();
             return discovery_response($(this).attr('data-href'));
         },
         proceed_and_remember: function(e) {
-            e.preventDefault();
-            var entityID = $(this).attr('data-href')
+            //e.preventDefault();
+            var entityID = $(this).attr('data-href');
             $.jStorage.set('pyff.discovery.idp',entityID);
             return discovery_response(entityID);
         }
     };
 
     $("img.fallback-icon").error(function(e) {
-        $(this).attr('src','1x1t.png').removeClass("img-thumbnail").hide();
+        $(this).attr('src','/static/img/1x1t.png').removeClass("img-thumbnail").hide();
     });
 
-    var idp_template = Hogan.compile('<a class="{{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
+    var idp_template = Hogan.compile('<span class="cursor {{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
         '{{^sticky}}<button type="button" data-toggle="tooltip" data-placement="left" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
         '{{#icon}}<img src="{{icon}}" class="fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"/>{{/icon}}' +
         '{{#descr}}<div class="pull-left idp-description hidden-xs">{{descr}}</div>{{/descr}}</p>' +
         '<div class="clearfix"></div>' +
-        '</a>');
+        '</span>');
 
     $.fn.dsQuickLinks = function(id) {
         this.each(function() {
@@ -272,30 +300,26 @@
             var seen = {};
             var lst = $.jStorage.get('pyff.discovery.idps',[]);
             if (lst.length > 0) {
-                //console.log("adding previously used");
-                for (var i = 0; i < lst.length; i++) {
-                    //console.log("adding ... " + lst[i]);
-                    with_entity_id(lst[i], function (elt) {
-                        //console.log("blaha");
-                        //console.log(elt);
+                var i = lst.length;
+                while (i--) {
+                    with_entity_id(lst[i], function (elt) { /* success */
                         elt.sticky = false;
-                        div.append(idp_template.render(elt));
+                        div.prepend(idp_template.render(elt));
                         seen[elt.entityID] = true
+                    }, function (id) {  /* fail */
+                        lst.splice(i, 1);
+                        $.jStorage.set('pyff.discovery.idps',lst);
                     });
                 }
             } else {
                 //console.log("adding suggestions...")
-                $.getJSON(uri, function (data) {
-                    $.each(data,function(pos,elt) {
-                        //console.log(elt);
-                        if (elt.entityID in seen) {
-                            // nothing
-                        } else {
-                            elt.sticky = true;
-                            seen[elt.entityID] = true
-                            div.append(idp_template.render(elt));
-                        }
-                    });
+                oboe(uri).node('!.*', function (elt) {
+                    if (elt.entityID in seen) {
+                    } else {
+                        elt.sticky = true;
+                        seen[elt.entityID] = true;
+                        div.append(idp_template.render(elt));
+                    }
                 });
             }
         });
@@ -311,7 +335,7 @@
         }
     };
 
-    $.fn.dsRelyingParty = function(id) {
+    $.fn.dsRelyingParty = function(id, cb) {
         var o = $(this);
         $.ajax({
             url: '/metadata/'+ id +'.json',
@@ -321,9 +345,12 @@
                     var entity = data[i];
                     $(o).filter("img.sp-icon").each(function() {
                         if (entity.icon) {
-                            $(this).attr('src',entity.icon).addClass("img-responsive img-thumbnail")
+                            $(this).attr('src',entity.icon).attr('width',entity.icon_width).attr('height',entity.icon_height).addClass("img-responsive img-thumbnail")
                         } else {
+                            console.log(this);
+                            console.log($(this).closest('.hideout'))
                             $(this).hide();
+                            $(this).closest(".hideout").hide();
                         }
                     });
                     $(o).filter(".sp-name").each(function() {
@@ -341,8 +368,11 @@
                             $(this).attr('href',entity.psu).append($('<em>').append($(this).attr('title')));
                         }
                     });
+                    if (cb) {
+                        cb(entity, i);
+                    }
                 }
             }
         });
     };
-})( jQuery );
+});

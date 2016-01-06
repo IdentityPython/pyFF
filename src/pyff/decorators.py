@@ -7,7 +7,7 @@ import functools
 __author__ = 'leifj'
 
 import time
-from pyff.logs import log
+from .logs import log
 
 
 def retry(ex, tries=4, delay=3, backoff=2, logger=log):
@@ -141,11 +141,9 @@ def cached(typed=False, ttl=None, hash_key=None):
             stats['hits'] = 0
             stats['misses'] = 0
 
-        @property
         def hits():
             return stats['hits']
 
-        @property
         def misses():
             return stats['misses']
 

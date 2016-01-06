@@ -12,6 +12,11 @@
   <xsl:template match="@validUntil"/>
   <xsl:template match="@cacheDuration"/>
   <xsl:template match="@xml:base"/>
+  <xsl:template match="md:OrganizationName|md:OrganizationURL|md:OrganizationDisplayName">
+     <xsl:if test="normalize-space(text()) != ''">
+        <xsl:copy><xsl:apply-templates select="node()|@*"/></xsl:copy>
+     </xsl:if>
+  </xsl:template>
 
   <xsl:template match="text()|comment()|@*">
     <xsl:copy/>

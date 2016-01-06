@@ -1,7 +1,8 @@
 *.pyc
 *.egg
-.coverage
+.coverage*
 cover
+.coveralls.yml
 
 .installed.cfg
 bin

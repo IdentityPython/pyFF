@@ -53,6 +53,7 @@ class ReadWriteLock(object):
         self.__writer = None
         self.__upgradewritercount = 0
         self.__pendingwriters = []
+        self.__writercount = 0
 
         # Initialize with no readers.
         self.__readers = {}

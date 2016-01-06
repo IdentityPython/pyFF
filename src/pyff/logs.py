@@ -5,7 +5,7 @@ import syslog
 import logging
 
 
-class PyFFLogger():
+class PyFFLogger(object):
     def __init__(self):
         self._loggers = {logging.WARN: logging.warn,
                          logging.WARNING: logging.warn,
@@ -17,8 +17,10 @@ class PyFFLogger():
     def _l(self, severity, msg):
         if '' in cherrypy.tree.apps:
             cherrypy.tree.apps[''].log("%s" % msg, severity=severity)
-        else:
+        elif severity in self._loggers:
             self._loggers[severity]("%s" % msg)
+        else:
+            raise ValueError("unknown severity %s" % severity)
 
     def warn(self, msg):
         return self._l(logging.WARN, msg)
@@ -67,7 +69,7 @@ class SysLogLibHandler(logging.Handler):
         if type(facility) is str or type(facility) is unicode:
             nf = getattr(syslog, "LOG_%s" % facility.upper(), None)
             if not isinstance(nf, int):
-                raise ValueError('Invalid log level: %s' % nf)
+                raise ValueError('Invalid log facility: %s' % nf)
             self.facility = nf
         else:
             self.facility = facility

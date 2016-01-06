@@ -1,6 +1,6 @@
 """
 
-Cherrypy statistics module
+pyFF statistics module
 
 """
 
@@ -25,3 +25,21 @@ stats.update({
         (s['MD Requests'] / (time.time() - s['Start Time']))),
 })
 
+# we keep this separate because the standard stats formatting isn't optimal
+
+metadata = dict()
+
+
+def set_metadata_info(name, info):
+    info.setdefault('Size', "(empty)")
+    info['URL'] = name
+    metadata[name] = info
+
+
+def get_metadata_info(uri=None):
+    if uri is None:
+        return metadata
+    elif uri in metadata:
+        return metadata[uri]
+    else:
+        return dict()

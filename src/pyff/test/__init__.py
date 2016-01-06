@@ -12,6 +12,7 @@ from unittest import TestCase
 import pkg_resources
 import sys
 from pyff import __version__ as pyffversion
+import pyff.builtins  # this is so the tests don't have to import builtins
 
 
 class ExitException(Exception):
@@ -54,7 +55,6 @@ if __name__ == '__main__':
     sys.exit(rv)
 
 """ % (sys.executable, pyffversion, script))
-    print starter
     os.chmod(starter, 0700)
 
     argv.insert(0, starter)
@@ -67,8 +67,8 @@ if __name__ == '__main__':
 
 def _pstart(args, outf=None, ignore_exit=False):
     env = {}
-    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     logging.debug(" ".join(args))
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     return proc
 
 
@@ -94,9 +94,11 @@ class SignerTestCase(TestCase):
     private_keyspec = None
     public_keyspec = None
 
+    def sys_exit(self, code):
+        raise ExitException(code)
+
     @classmethod
     def setUpClass(cls):
-        print "setupclass called for SignerTestCase"
         cls.datadir = pkg_resources.resource_filename(__name__, 'data')
         cls.private_keyspec = tempfile.NamedTemporaryFile('w').name
         cls.public_keyspec = tempfile.NamedTemporaryFile('w').name
@@ -114,7 +116,6 @@ class SignerTestCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        print "teardownclass called for SignerTestCase"
         if os.path.exists(cls.private_keyspec):
             os.unlink(cls.private_keyspec)
         if os.path.exists(cls.public_keyspec):

@@ -1,0 +1,13 @@
+{% extends "ui.html" %}
+
+{% block minitools %}
+<div class="btn-group-vertical pull-right">
+        <button class="btn btn-default btn-xs"
+                data-toggle="modal"
+                data-target="#pipeline_source">{% trans %}Metadata{% endtrans %}</button>
+        <a class="btn btn-default btn-xs"
+           href="/entities/{{entity_id|u}}">{% trans %}Raw{% endtrans %}</a>
+        <a class="btn btn-default btn-xs"
+           href="/role/idp.ds?entityID={{entity_id}}&amp;return=#">{% trans %}DS Test{% endtrans %}</a>
+</div>
+{% endblock %}

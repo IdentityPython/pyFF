@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block nav %}
+<div class="topnav navbar navbar-default">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+          <span class="sr-only">{{ gettext('Toggle navigation') }}</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="#"><small>{{ brand }}</small></a>
+    </div>
+    <div class="collapse navbar-collapse navbar-ex1-collapse">
+        <ul class="nav navbar-nav pull-right">
+            <li>
+                <form class="navbar-form navbar-left pull-right" role="search">
+                    <div class="form-group">
+                        <input type="text"
+                               size="60"
+                               class="typeahead search-query form-control input-sm"
+                               placeholder="Start typing here to search"/>
+                    </div>
+                </form>
+            </li>
+            <li>
+                <a href="/metadata" class="input-sm"><i title="{{ gettext('All Entities') }}" class="glyphicon glyphicon-list"></i></a>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+<div class="footer">
+    <div class="container-fluid">
+        <div class="center-block small">
+            <div class="row">
+                <div class="col-xs-1">&#160;</div>
+                <div class="col-xs-3 col-md-3">
+                    <ul class="list-unstyled">
+                        <li><a href="/about">{{ gettext('About') }}</a></li>
+                        <li><a href="/stats">{{ gettext('Statistics') }}</a></li>
+                        <li><a href="/metadata">{{ gettext('All Entities') }}</a></li>
+                    </ul>
+                </div>
+                <div class="col-xs-1">&#160;</div>
+                <div class="col-xs-3 col-md-3">
+                    <ul class="list-unstyled">
+                        <li><a href="http://packages.python.org/pyFF">{{ gettext('Documentation') }}</a></li>
+                    </ul>
+                </div>
+                <div class="col-xs-1">&#160;</div>
+                <div class="col-xs-3 col-md-3">
+                    <ul class="list-unstyled">
+                        <li><a href="/settings">{{ gettext('Settings') }}</a></li>
+                        <li><a href="/reset">{{ gettext('Reset') }}</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block final %}
+<script type="text/javascript">
+    $(document).ready(function() {
+        prettyPrint();
+        var suggest_template = Hogan.compile('<div><small>\{\{title\}\}</small></div>');
+        var seldiv = $('.typeahead');
+        var engine = new Bloodhound({
+            name: 'idps',
+            limit: 50,
+            remote: '/search/?query=%QUERY',
+            datumTokenizer: Bloodhound.tokenizers.obj.whitespace('title'),
+            queryTokenizer: Bloodhound.tokenizers.whitespace
+        });
+        engine.initialize().done(function() {
+            seldiv.typeahead({
+                    hint: true,
+                    highlight: true,
+                    minLength: 2
+                },
+                {
+                    name: 'idps',
+                    source: engine.ttAdapter(),
+                    displayKey: 'title',
+                    templates: {
+                        suggestion: function(o) {
+                            return suggest_template.render(o);
+                        }
+                    }
+                }
+            )
+        });
+        seldiv.bind('typeahead:selected',function(event,entity) {
+            if (entity) {
+                document.location.href = "/metadata/"+entity.id+".html"
+            }
+        });
+        $('.tt-hint').addClass('form-control');
+        $('table').wrap($('<div></div>').addClass('table-wrapper')).addClass("table table-striped table-condensed table-bordered");
+        $('form[action="pause"] > input:submit').addClass("btn btn-xs btn-danger disable");
+        $('form[action="resume"] > input:submit').addClass("btn btn-xs btn-success disable");
+
+        if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
+          var msViewportStyle = document.createElement("style");
+          msViewportStyle.appendChild(
+            document.createTextNode(
+              "@-ms-viewport{width:auto!important}"
+            )
+          );
+          document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
+        }
+    });
+</script>
+{% endblock %}

@@ -1,3 +1,4 @@
+
 .tt-dropdown-menu {
   position: absolute;
   top: 100%;
@@ -30,6 +31,7 @@
   color: #333333;
   white-space: nowrap;
 }
+
 .tt-suggestion > div:hover,
 .tt-suggestion > div:focus,
 .tt-suggestion.tt-cursor div {

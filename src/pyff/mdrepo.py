@@ -3,6 +3,9 @@
 This is the implementation of the active repository of SAML metadata. The 'local' and 'remote' pipes operate on this.
 
 """
+import traceback
+from pyff.stats import set_metadata_info, get_metadata_info
+
 try:
     from cStringIO import StringIO
 except ImportError:  # pragma: no cover
@@ -13,14 +16,12 @@ from copy import deepcopy
 from datetime import datetime
 from UserDict import UserDict
 import os
-import re
-import traceback
-from concurrent import futures
+import operator
 
+from concurrent import futures
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
-import operator
 import xmlsec
 import ipaddr
 
@@ -28,21 +29,11 @@ from . import merge_strategies
 from .logs import log
 from .utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
-    iter_entities, validate_document, load_url, iso2datetime
+    iter_entities, validate_document, load_url, iso2datetime, xml_error, dumptree, find_entity
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
+
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
-
-
-def _e(error_log, m=None):
-    def _f(x):
-        if ":WARNING:" in x:
-            return False
-        if m is not None and m not in x:
-            return False
-        return True
-
-    return "\n".join(filter(_f, ["%s" % e for e in error_log]))
 
 
 class Event(UserDict):
@@ -108,17 +99,30 @@ class MDRepository(Observable):
     def is_sp(self, e):
         return bool(e.find(".//{%s}SPSSODescriptor" % NS['md']) is not None)
 
-    def icon(self, entity):
-        for icon in filter_lang(entity.iter("{%s}Logo" % NS['mdui'])):
-            return icon.text
+    def icon(self, e, langs=None):
+        for icon in filter_lang(e.iter("{%s}Logo" % NS['mdui']), langs=langs):
+            return dict(url=icon.text,width=icon.get('width'),height=icon.get('height'))
+
+    def psu(self, entity, langs):
+        for url in filter_lang(entity.iter("{%s}PrivacyStatementURL" % NS['mdui']), langs=langs):
+            return url.text
+
+    def geoloc(self, entity):
+        for loc in entity.iter("{%s}GeolocationHint" % NS['mdui']):
+            pos = loc.text[5:].split(",")
+            return dict(lat=pos[0],long=pos[1])
 
     def domains(self, entity):
-        domains = [url2host(entity.get('entityID'))]
+        domains = []
         for d in entity.iter("{%s}DomainHint" % NS['mdui']):
+            if d.text == '.':
+                return []
             domains.append(d.text)
+        if not domains:
+            domains.append(url2host(entity.get('entityID')))
         return domains
 
-    def ext_display(self, entity):
+    def ext_display(self, entity, langs=None):
         """Utility-method for computing a displayable string for a given entity.
 
         :param entity: An EntityDescriptor element
@@ -126,26 +130,26 @@ class MDRepository(Observable):
         display = entity.get('entityID')
         info = ''
 
-        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md'])):
+        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md']), langs=langs):
             info = display
             display = organizationName.text
 
-        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md'])):
+        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md']), langs=langs):
             info = display
             display = organizationDisplayName.text
 
-        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md'])):
+        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md']), langs=langs):
             info = display
             display = serviceName.text
 
-        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui'])):
+        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui']), langs=langs):
             info = display
             display = displayName.text
 
-        for organizationUrl in filter_lang(entity.iter("{%s}OrganizationURL" % NS['md'])):
+        for organizationUrl in filter_lang(entity.iter("{%s}OrganizationURL" % NS['md']), langs=langs):
             info = organizationUrl.text
 
-        for description in filter_lang(entity.iter("{%s}Description" % NS['mdui'])):
+        for description in filter_lang(entity.iter("{%s}Description" % NS['mdui']), langs=langs):
             info = description.text
 
         if info == entity.get('entityID'):
@@ -153,21 +157,21 @@ class MDRepository(Observable):
 
         return display, info
 
-    def display(self, entity):
+    def display(self, entity, langs=None):
         """Utility-method for computing a displayable string for a given entity.
 
         :param entity: An EntityDescriptor element
         """
-        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui'])):
+        for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui']), langs=langs):
             return displayName.text
 
-        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md'])):
+        for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md']), langs=langs):
             return serviceName.text
 
-        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md'])):
+        for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md']), langs=langs):
             return organizationDisplayName.text
 
-        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md'])):
+        for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md']), langs=langs):
             return organizationName.text
 
         return entity.get('entityID')
@@ -181,6 +185,53 @@ class MDRepository(Observable):
                     lst.append(sub)
         return lst
 
+    def scopes(self, e):
+        elt = e.findall(".//{%s}IDPSSODescriptor/{%s}Extensions/{%s}Scope" % (NS['md'], NS['md'], NS['shibmd']))
+        if elt is None or len(elt) == 0:
+            return None
+        return [s.text for s in elt]
+
+    def discojson(self, e, langs=None):
+        if e is None:
+            return dict()
+
+        title, descr = self.ext_display(e)
+        entity_id = e.get('entityID')
+
+        d = dict(title=title,
+                 descr=descr,
+                 auth='saml',
+                 entityID=entity_id)
+
+        if self.is_idp(e):
+            d['type'] = 'idp'
+        elif self.is_sp(e):
+            d['type'] = 'sp'
+
+        icon_info = self.icon(e)
+        if icon_info is not None:
+            d['icon'] = icon_info.get('url', 'data:image/gif;base64,R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==')
+            d['icon_height'] = icon_info.get('height', 64)
+            d['icon_width'] = icon_info.get('width', 64)
+
+        scopes = self.scopes(e)
+        if scopes is not None and len(scopes) > 0:
+            d['scope'] = ",".join(scopes)
+
+        keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
+        if keywords is not None:
+            lst = [elt.text for elt in keywords]
+            if len(lst) > 0:
+                d['keywords'] = ",".join(lst)
+        psu = self.psu(e, langs)
+        if psu:
+            d['psu'] = psu
+        geo = self.geoloc(e)
+        if geo:
+            d['geo'] = geo
+
+        return d
+
     def simple_summary(self, e):
         if e is None:
             return dict()
@@ -190,13 +241,14 @@ class MDRepository(Observable):
         d = dict(title=title,
                  value=entity_id,
                  descr=descr,
-                 icon=self.icon(e),
                  entity_id=entity_id,
                  domains=";".join(self.sub_domains(e)),
                  id=hash_id(e, 'sha1'))
-        icon_url = self.icon(e)
-        if icon_url is not None:
-            d['icon_url'] = icon_url
+        icon_info = self.icon(e)
+        if icon_info is not None:
+            url = icon_info.get('url', 'data:image/gif;base64,R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==')
+            d['icon_url'] = url
+            d['icon'] = url
 
         return d
 
@@ -315,7 +367,7 @@ The dict in the list contains three items:
 :param e: an EntityDescriptor
 :return: a list
         """
-        ext = e.find(".//{%s}Extensions" % NS['md'])
+        ext = e.find("./{%s}Extensions" % NS['md'])
         if ext is None:
             ext = etree.Element("{%s}Extensions" % NS['md'])
             e.insert(0, ext)
@@ -387,6 +439,48 @@ The dict in the list contains three items:
 
         self.store.update(e)
 
+    def set_pubinfo(self, e, publisher=None, creation_instant=None):
+        if e.tag != "{%s}EntitiesDescriptor" % NS['md']:
+            raise MetadataException("I can only set RegistrationAuthority to EntitiesDescriptor elements")
+        if publisher is None:
+            raise MetadataException("At least publisher must be provided")
+
+        if creation_instant is None:
+            now = datetime.utcnow()
+            creation_instant = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        ext = self.extensions(e)
+        pi = ext.find(".//{%s}PublicationInfo" % NS['mdrpi'])
+        if pi is not None:
+            raise MetadataException("A PublicationInfo element is already present")
+        pi = etree.Element("{%s}PublicationInfo" % NS['mdrpi'])
+        pi.set('publisher', publisher)
+        if creation_instant:
+            pi.set('creationInstant', creation_instant)
+        ext.append(pi)
+
+    def set_reginfo(self, e, policy=None, authority=None):
+        if e.tag != "{%s}EntityDescriptor" % NS['md']:
+            raise MetadataException("I can only set RegistrationAuthority to EntityDescriptor elements")
+        if authority is None:
+            raise MetadataException("At least authority must be provided")
+        if policy is None:
+            policy = dict()
+
+        ext = self.extensions(e)
+        ri = ext.find(".//{%s}RegistrationInfo" % NS['mdrpi'])
+        if ri is not None:
+            raise MetadataException("A RegistrationInfo element is already present")
+
+        ri = etree.Element("{%s}RegistrationInfo" % NS['mdrpi'])
+        ext.append(ri)
+        ri.set('registrationAuthority', authority)
+        for lang, policy_url in policy.iteritems():
+            rp = etree.Element("{%s}RegistrationPolicy" % NS['mdrpi'])
+            rp.text = policy_url
+            rp.set('{%s}lang' % NS['xml'], lang)
+            ri.append(rp)
+
     def expiration(self, t):
         relt = root(t)
         if relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
@@ -404,12 +498,11 @@ The dict in the list contains three items:
 
         return None
 
-    def fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, max_tries=5, validate=False):
+    def fetch_metadata(self, resources, max_workers=5, timeout=120, max_tries=5, validate=False, fail_on_error=False, filter_invalid=True):
         """Fetch a series of metadata URLs and optionally verify signatures.
 
 :param resources: A list of triples (url,cert-or-fingerprint,id, post-callback)
 :param max_workers: The maximum number of parallell downloads to run
-:param stats: A dictionary used for storing statistics. Useful for cherrypy cpstats
 :param validate: Turn on or off schema validation
 
 The list of triples is processed by first downloading the URL. If a cert-or-fingerprint
@@ -427,56 +520,70 @@ and verified.
         resources = [(url, verifier, tid, post, True) for url, verifier, tid, post in resources]
         return self._fetch_metadata(resources,
                                     max_workers=max_workers,
-                                    stats=stats,
                                     timeout=timeout,
                                     max_tries=max_tries,
-                                    validate=validate)
+                                    validate=validate,
+                                    fail_on_error=fail_on_error,
+                                    filter_invalid=filter_invalid )
 
-    def _fetch_metadata(self, resources, max_workers=5, stats=None, timeout=120, max_tries=5, validate=False):
-        if stats is None:
-            stats = dict()
+    def _fetch_metadata(self, resources, max_workers=5, timeout=120, max_tries=5, validate=False, fail_on_error=False, filter_invalid=True):
         tries = dict()
 
         def _process_url(rurl, verifier, tid, post, enable_cache=True):
             tries.setdefault(rurl, 0)
 
-            resource = load_url(rurl, timeout=timeout, enable_cache=enable_cache)
+            try:
+                resource = load_url(rurl, timeout=timeout, enable_cache=enable_cache)
+            except Exception, ex:
+                raise MetadataException(ex, "Exception fetching '%s': %s" % (rurl, str(ex)) )
+            if (not resource.result):
+                raise MetadataException("error fetching '%s'" % rurl)
             xml = resource.result.strip()
             retry_resources = []
             info = {
-                'Time Spent': resource.time
+                'Time Spent': "%s seconds" % resource.time
             }
 
             tries[rurl] += 1
-            info['Tries'] = tries[rurl]
+            info['Tries'] = str(tries[rurl])
 
             if resource.result is not None:
-                info['Bytes'] = len(resource.result)
+                info['Bytes'] = str(len(resource.result))
             else:
                 raise MetadataException("empty response fetching '%s'" % resource.url)
 
-            info['URL'] = rurl
-            info['Cached'] = resource.cached
+            info['URL'] = str(rurl)
+            info['Cached'] = str(resource.cached)
             info['Date'] = str(resource.date)
             info['Last-Modified'] = str(resource.last_modified)
             info['Validation Errors'] = dict()
+            info['Description'] = "Remote metadata"
+            info['Status'] = 'success'
+            if not validate:
+                info['Status'] = 'warning'
+                info['Description'] += " (un-validated)"
+            if not enable_cache:
+                info['Status'] = 'info'
 
             if resource.resp is not None:
-                info['Status'] = resource.resp.status
+                info['HTTP Response'] = resource.resp
 
             t, offset = self.parse_metadata(StringIO(xml),
                                             key=verifier,
                                             base_url=rurl,
+                                            fail_on_error=fail_on_error,
+                                            filter_invalid=filter_invalid,
                                             validate=validate,
                                             validation_errors=info['Validation Errors'],
                                             expiration=self.expiration,
                                             post=post)
 
-            relt = root(t)
 
             if t is None:
                 self.fire(type=EVENT_IMPORT_FAIL, url=rurl)
                 raise MetadataException("no valid metadata found at '%s'" % rurl)
+
+            relt = root(t)
 
             expired = False
             if offset is not None:
@@ -506,16 +613,19 @@ and verified.
                                 fp = fingerprints[0]
                             if log.isDebugEnabled():
                                 log.debug("XRD: '%s' verified by '%s'" % (link_href, fp))
+                            tries.setdefault(link_href, 0)
                             if tries[link_href] < max_tries:
                                 retry_resources.append((link_href, fp, link_href, post, True))
                 elif relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
-                    number_of_entities = self.store.update(t, tid)
-                    info['Number of Entities'] = number_of_entities
+                    n = self.store.update(t, tid)
+                    info['Size'] = str(n)
                 else:
                     raise MetadataException("unknown metadata type for '%s' (%s)" % (rurl, relt.tag))
 
-            log.debug(info)
-            stats[rurl] = info
+            set_metadata_info(tid, info)
+            if log.isDebugEnabled():
+                log.debug(info)
+
             return retry_resources
 
         while resources:
@@ -527,15 +637,42 @@ and verified.
                 for future in futures.as_completed(future_to_url):
                     url = future_to_url[future]
                     if future.exception() is not None:
-                        log.error('%r generated an exception: %s' % (url, future.exception()))
+                        if fail_on_error:
+                            log.error('fetching %r generated an exception' % url)
+                            raise future.exception()
+                        else:
+                            log.error('fetching %r generated an exception: %s' % (url, future.exception()))
                     else:
                         next_resources.extend(future.result())
                 resources = next_resources
                 if log.isDebugEnabled():
                     log.debug("retrying %s" % resources)
 
-    def import_metadata(self, t, name):
-        self.store.update(t, name)
+    def filter_invalids(self, t, base_url, validation_errors):
+        xsd = schema()
+        for e in iter_entities(t):
+            if not xsd.validate(e):
+                error = xml_error(xsd.error_log, m=base_url)
+                entity_id = e.get("entityID")
+                log.warn("removing '%s': schema validation failed (%s)" % (entity_id, error))
+                validation_errors[entity_id] = error
+                if e.getparent() is None:
+                    return None
+                e.getparent().remove(e)
+                self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=entity_id, error=error)
+        return t
+
+    def check_signature(self, t, key):
+        if key is not None:
+            if log.isDebugEnabled():
+                log.debug("verifying signature using %s" % key)
+            refs = xmlsec.verified(t, key, drop_signature=True)
+            if len(refs) != 1:
+                raise MetadataException(
+                    "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+            t = refs[0]  # prevent wrapping attacks
+
+        return t
 
     def parse_metadata(self,
                        source,
@@ -544,11 +681,10 @@ and verified.
                        fail_on_error=False,
                        filter_invalid=True,
                        validate=True,
-                       validation_errors=dict(),
+                       validation_errors=None,
                        expiration=None,
                        post=None):
-        """Parse a piece of XML and split it up into EntityDescriptor elements. Each such element
-        is stored in the MDRepository instance.
+        """Parse a piece of XML and return an EntitiesDescriptor element after validation.
 
 :param source: a file-like object containing SAML metadata
 :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
@@ -556,9 +692,13 @@ and verified.
 :param fail_on_error: (default: False)
 :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
 :param validate: (default: True) set to False to turn off all XML schema validation
-:param post: A callable that will be called to modify the parse-tree before any validation
-(but after xinclude processing)
+:param post: A callable that will be called to modify the parse-tree after schema validation
+(but after xinclude processing and signature validation)
         """
+
+        if validation_errors is None:
+            validation_errors = dict()
+
         try:
             parser = etree.XMLParser(resolve_entities=False)
             t = etree.parse(source, base_url=base_url, parser=parser)
@@ -568,51 +708,37 @@ and verified.
             if expiration is not None:
                 valid_until = expiration(t)
 
-            if key is not None:
-                try:
-                    if log.isDebugEnabled():
-                        log.debug("verifying signature using %s" % key)
-                    refs = xmlsec.verified(t, key)
-                    if len(refs) != 1:
-                        raise MetadataException(
-                            "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
-                    t = refs[0]  # prevent wrapping attacks
-                except Exception, ex:
-                    print traceback.format_exc()
-                    log.error(ex)
-                    return None, None
+            t = self.check_signature(t, key)
 
             # get rid of ID as early as possible - probably not unique
             for e in iter_entities(t):
                 if e.get('ID') is not None:
                     del e.attrib['ID']
 
-            if post is not None:
-                t = post(t)
+            t = root(t)
 
             if validate:
                 if filter_invalid:
-                    xsd = schema()
-                    for e in iter_entities(t):
-                        # log.debug("validating %s" % e.get("entityID"))
-                        if not xsd.validate(e):
-                            error = _e(xsd.error_log, m=base_url)
-                            entity_id = e.get("entityID")
-                            log.warn("removing '%s': schema validation failed (%s)" % (entity_id, error))
-                            validation_errors[entity_id] = error
-                            e.getparent().remove(e)
-                            self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=entity_id, error=error)
+                    t = self.filter_invalids(t, base_url=base_url, validation_errors=validation_errors)
                 else:  # all or nothing
-                    validate_document(t)
-        except DocumentInvalid, ex:
-            traceback.print_exc()
-            if log.isDebugEnabled():
-                log.debug("schema validation failed on '%s': %s" % (base_url, _e(ex.error_log, m=base_url)))
-            raise MetadataException("schema validation failed")
+                    try:
+                        validate_document(t)
+                    except DocumentInvalid, ex:
+                        raise MetadataException("schema validation failed: [%s] '%s': %s" %
+                                                (base_url, source, xml_error(ex.error_log, m=base_url)))
+
+            if t is not None:
+                if t.tag == "{%s}EntityDescriptor" % NS['md']:
+                    t = self.entity_set([t], base_url, copy=False)
+
+                if post is not None:
+                    t = post(t)
+
         except Exception, ex:
-            log.error(ex)
             if fail_on_error:
                 raise ex
+            traceback.print_exc(ex)
+            log.error(ex)
             return None, None
 
         if log.isDebugEnabled():
@@ -620,7 +746,7 @@ and verified.
 
         return t, valid_until
 
-    def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None):
+    def load_dir(self, directory, ext=".xml", url=None, validate=False, post=None, description=None, fail_on_error=True, filter_invalid=True):
         """
 :param directory: A directory to walk.
 :param ext: Include files with this extension (default .xml)
@@ -630,6 +756,9 @@ starting with '.' are excluded.
         """
         if url is None:
             url = directory
+
+        if description is None:
+            description = "All entities found in %s" % directory
 
         entities = []
         for top, dirs, files in os.walk(directory):
@@ -642,15 +771,43 @@ starting with '.' are excluded.
                         log.debug("parsing from file %s" % nm)
                     fn = os.path.join(top, nm)
                     try:
-                        t, valid_until = self.parse_metadata(fn, fail_on_error=True, validate=validate, post=post)
+                        validation_errors = dict()
+                        t, valid_until = self.parse_metadata(fn,
+                                                             base_url=url,
+                                                             fail_on_error=fail_on_error,
+                                                             filter_invalid=filter_invalid,
+                                                             validate=validate,
+                                                             validation_errors=validation_errors,
+                                                             post=post)
                         entities.extend(entities_list(t))  # local metadata is assumed to be ok
+                        for (eid, error) in validation_errors.iteritems():
+                            log.error(error)
                     except Exception, ex:
+                        if fail_on_error:
+                            raise MetadataException('Error parsing "%s": %s' % (fn, str(ex)))
                         log.error(ex)
 
         if entities:
-            self.store.update(self.entity_set(entities, url))
+            info = dict(Description=description)
+            n = self.store.update(self.entity_set(entities, url, validate=validate, copy=False), url)
+            info['Size'] = str(n)
+            set_metadata_info(url, info)
         else:
             log.info("no entities found in %s" % directory)
+
+    def find(self, t, member):
+        relt = root(t)
+        if type(member) is str or type(member) is unicode:
+            if '!' in member:
+                (src, xp) = member.split("!")
+                return relt.xpath(xp, namespaces=NS, smart_strings=False)
+            else:
+                lst = []
+                for e in iter_entities(relt):
+                    if e.get('entityID') == member:
+                        lst.append(e)
+                return lst
+        raise MetadataException("unknown format for filtr member: %s" % member)
 
     def _lookup(self, member):
         if member is None:
@@ -663,11 +820,9 @@ starting with '.' are excluded.
                     src = None
                 return self.lookup(src, xp)
 
-            m = re.match("^(.+)=(.+)$", member)
-            if m:
-                return self._lookup("{%s}%s" % (m.group(1), m.group(2).rstrip("/")))
         log.debug("calling store lookup %s" % member)
         return self.store.lookup(member)
+
 
     def lookup(self, member, xp=None):
         """
@@ -686,8 +841,7 @@ Lookup elements in the working metadata repository
     - [sourceID] "!" xpath
     - attribute=value or {attribute}value
     - entityID
-    - sourceID (@Name)
-    - <URL containing one selector per line>
+    - source (typically @Name from an EntitiesDescriptor set but could also be an alias)
 
 The first form results in the intersection of the results of doing a lookup on the selectors. The second form
 results in the EntityDescriptor elements from the source (defaults to all EntityDescriptors) that match the
@@ -719,7 +873,7 @@ fails an empty list is returned.
                 log.debug("got %d entities after filtering" % len(l))
             return l
 
-    def entity_set(self, entities, name, cacheDuration=None, validUntil=None, validate=True):
+    def entity_set(self, entities, name, lookup_fn=None, cacheDuration=None, validUntil=None, validate=True, copy=True):
         """
 :param entities: a set of entities specifiers (lookup is used to find entities from this set)
 :param name: the @Name attribute
@@ -732,12 +886,18 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         # if log.isDebugEnabled():
         #    log.debug("entities: %s" % entities)
 
-        def _a(ent):
+        if lookup_fn is None:
+            lookup_fn = self.lookup
+
+        def _insert(ent):
             entity_id = ent.get('entityID', None)
-            log.debug("adding %s to set" % entity_id)
+            # log.debug("adding %s to set" % entity_id)
             if (ent is not None) and (entity_id is not None) and (entity_id not in seen):
-                t.append(deepcopy(ent))
-                log.debug("really adding %s to set" % entity_id)
+                ent_insert = ent
+                if copy:
+                    ent_insert = deepcopy(ent_insert)
+                t.append(ent_insert)
+                # log.debug("really adding %s to set" % entity_id)
                 seen[entity_id] = True
 
         attrs = dict(Name=name, nsmap=NS)
@@ -750,11 +910,11 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         seen = {}  # TODO make better de-duplication
         for member in entities:
             if hasattr(member, 'tag'):
-                _a(member)
+                _insert(member)
                 nent += 1
             else:
-                for entity in self.lookup(member):
-                    _a(entity)
+                for entity in lookup_fn(member):
+                    _insert(entity)
                     nent += 1
 
         if log.isDebugEnabled():
@@ -768,16 +928,10 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                 validate_document(t)
             except DocumentInvalid, ex:
                 if log.isDebugEnabled():
-                    log.debug(_e(ex.error_log))
+                    log.debug(xml_error(ex.error_log))
                 raise MetadataException("XML schema validation failed: %s" % name)
         return t
 
-    def error_set(self, url, title, ex):
-        """
-Creates an "error" EntitiesDescriptor - empty but for an annotation about the error that occured
-        """
-        t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], Name=url, nsmap=NS)
-        self.annotate(t, "error", title, ex, source=url)
 
     def summary(self, uri):
         """
@@ -786,23 +940,37 @@ Creates an "error" EntitiesDescriptor - empty but for an annotation about the er
 
 Returns a dict object with basic information about the EntitiesDescriptor
         """
-        seen = dict()
+        seen = set()
         info = dict()
-        t = self.store.lookup(uri)
-        info['Name'] = t.get('Name', uri)
-        info['cacheDuration'] = t.get('cacheDuration', None)
-        info['validUntil'] = t.get('validUntil', None)
+
         info['Duplicates'] = []
-        info['Size'] = 0
-        for e in entities_list(t):
+        sz = 0
+
+        for e in self.store.lookup(uri):
             entity_id = e.get('entityID')
-            if seen.get(entity_id, False):
+            if entity_id in seen:
                 info['Duplicates'].append(entity_id)
             else:
-                seen[entity_id] = True
-            info['Size'] += 1
+                seen.add(entity_id)
+                sz += 1
 
+        info['Size'] = str(sz)
+
+        info.update(get_metadata_info(uri))
+        if 'Validation Errors' in info and info['Validation Errors']:
+            info['Status'] = 'danger'
+
+        info.setdefault('Status', 'default')
         return info
+
+    def delete(self, t):
+        """
+        :param t: The set of entities to remove from the store
+
+        Completely remove all entities in t from the store.
+        """
+        for e in iter_entities(t):
+            self.store.delete(e)
 
     def merge(self, t, nt, strategy=merge_strategies.replace_existing, strategy_name=None):
         """
@@ -831,6 +999,7 @@ replace old_e in t.
         for e in iter_entities(nt):
             entity_id = e.get("entityID")
             # we assume ddup:ed tree
-            old_e = t.find(".//{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entity_id))
-            strategy(old_e, e)
-            self.store.update(e)
+            old_e = find_entity(t, entity_id)
+            new = strategy(old_e, e)
+            if new is not None:
+                self.store.update(new)

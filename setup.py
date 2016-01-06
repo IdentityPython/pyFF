@@ -1,22 +1,27 @@
 #!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
 from distutils.core import setup
+from os.path import abspath, dirname, join
+from platform import python_implementation
 from setuptools import find_packages
-import sys, os
+from sys import version_info
 
-here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.rst')).read()
-NEWS = open(os.path.join(here, 'NEWS.txt')).read()
+__author__ = 'Leif Johansson'
+__version__ = '0.10.0dev'
 
-version = '0.10.0dev'
+here = abspath(dirname(__file__))
+README = open(join(here, 'README.rst')).read()
+NEWS = open(join(here, 'NEWS.txt')).read()
 
 install_requires = [
     'lxml >=3.0',
     'pyyaml >=3.10',
-    'pyXMLSecurity >=0.8',
+    'pyXMLSecurity >=0.15',
     'cherrypy >=3.2.0',
     'iso8601 >=0.1.4',
     'simplejson >=2.6.2',
-    'mako >=0.7.2',
+    'jinja2',
     'httplib2 >=0.7.7',
     'ipaddr',
     'publicsuffix',
@@ -25,20 +30,28 @@ install_requires = [
     'requests'
 ]
 
+python_implementation_str = python_implementation()
+
+if not (python_implementation_str == 'CPython' and version_info.major == 2 and (version_info.minor == 6 or version_info.minor == 7)):
+    raise RuntimeError('ERROR: running under unsupported {python_implementation_str:s} version '
+                       '{major_version:d}.{minor_version:d}. Please consult the documentation for supported platforms. '
+                       .format(python_implementation_str=python_implementation_str,
+                               major_version=version_info.major,
+                               minor_version=version_info.minor))
 setup(name='pyFF',
-      version=version,
+      version=__version__,
       description="Federation Feeder",
       long_description=README + '\n\n' + NEWS,
       classifiers=[
           # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       ],
       keywords='identity federation saml metadata',
-      author='Leif Johansson',
+      author=__author__,
       author_email='leifj@sunet.se',
       url='http://blogs.mnt.se',
       license='BSD',
       setup_requires=['nose>=1.0'],
-      tests_require=['nose>=1.0', 'mock', 'mockredispy'],
+      tests_require=['pbr==1.6', 'nose>=1.0', 'mock', 'mako', 'mockredispy', 'testfixtures'],
       test_suite="nose.collector",
       packages=find_packages('src'),
       package_dir={'': 'src'},
@@ -47,7 +60,9 @@ setup(name='pyFF',
           'pyff': ['xslt/*.xsl',
                    'site/static/js/*.js',
                    'site/static/js/select2/*',
-                   'site/static/css/*',
+                   'site/static/css/font-awesome/fonts/*',
+                   'site/static/css/font-awesome/css/*',
+                   'site/static/css/*.css',
                    'site/templates/*',
                    'site/icons/*',
                    'site/static/bootstrap/fonts/*',

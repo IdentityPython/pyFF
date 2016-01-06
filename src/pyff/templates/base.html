@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{{brand}}{% endblock %}</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=10" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=1">
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="/static/css/style.css" rel="stylesheet"/>
+    <link href="/static/css/nav.css" rel="stylesheet"/>
+    <link href="/static/css/typeaheadjs.css" rel="stylesheet"/>
+    <link href="/static/css/prettify.css" rel="stylesheet"/>
+    <script type="text/javascript" src="/static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <!-- maps -->
+    <script type="text/javascript" src="//maps.google.com/maps/api/js?sensor=true"></script>
+    <script type="text/javascript" src="/static/js/jquery.ui.map.full.min.js"></script>
+    <script type="text/javascript" src="/static/js/jquery.browser.js"></script>
+    <script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script>
+    <script type="text/javascript" src="/static/js/hogan.js"></script>
+    <script type="text/javascript" src="/static/js/typeahead.bundle.min.js"></script>
+    <script type="text/javascript" src="/static/js/json2.min.js"></script>
+    <script type="text/javascript" src="/static/js/jstorage.min.js"></script>
+    <script type="text/javascript" src="/static/js/oboe-browser.min.js"></script>
+    <script type="text/javascript" src="/static/js/tinySHA1.r4.js"></script>
+    <script type="text/javascript" src="/static/js/pyff.js"></script>
+    <script type="text/javascript" src="/static/js/prettify.js"></script>
+    <script type="text/javascript" src="/static/js/imgload.js"></script>
+    <!--[if lt IE 9]>
+    <script src="/static/js/html5shiv.js"></script>
+    <script src="/static/js/respond.min.js"></script>
+    <![endif]-->
+    <script type="text/javascript">
+        $(document).ready(function() {
+           $('img.fallback').on('error', function () {
+                $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
+           }).imgLoad(function() {
+               $(this).fadeIn(300);
+           });
+        });
+    </script>
+    {% block script %}
+    {% endblock %}
+</head>
+<body>
+    <div class="container">
+        {% block nav %}
+        {% endblock %}
+        <div class="header text-muted">
+            {% block header %}
+            <div class="row">
+                <div class="col-md-10">
+                    <h3>{% block headline %}{% trans %}{{ headline }}{% endtrans %}{% endblock %}</h3>
+                    {% block subheading %}<small>{{subheading}}</small>{% endblock %}
+                </div>
+                <div class="col-md-2">
+                    {% block minitools scoped %}{% endblock minitools %}
+                </div>
+            </div>
+            {% endblock header %}
+            <div class="clearfix"></div>
+        </div>
+        <div class="content">
+        {% block content %}
+        {{ content }}
+        {% endblock %}
+            <div class="clearfix"></div>
+        </div>
+        {% block footer %}
+        {% endblock %}
+        {% block final %}
+        {% endblock %}
+    </div>
+</body>
+</html>

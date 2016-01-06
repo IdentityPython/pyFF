@@ -2,26 +2,26 @@
     - xslt:
        stylesheet: tidy.xsl
     - break
-- when edugain:
+- when swamid:
     - xslt:
        stylesheet: tidy.xsl
     - break
 - when update:
     - load:
-       - http://mds.edugain.org via edugain
+       - http://md.swamid.se/md/swamid-2.0.xml via swamid
     - select
     - fork and merge:
        - select: "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
        - setattr:
-            http://pyff-project.org/collection: swamid-2.0
+            http://pyff.io/collection: swamid-2.0
     - fork and merge:
         - select:
-            - "http://pyff-project.org/collection=swamid-2.0+http://pyff-project.org/role=idp"
+            - "http://pyff.io/collection=swamid-2.0+http://pyff.io/role=idp"
         - setattr:
-            http://pyff-project.org/collection: swamid-idp
+            http://pyff.io/collection: swamid-idp
     - fork:
         - select as /md/foo-2.0:
-            - http://pyff-project.org/collection=swamid-2.0
+            - http://pyff.io/collection=swamid-2.0
         - break
     - fork:
         - select as /md/skolfederation-2.0:

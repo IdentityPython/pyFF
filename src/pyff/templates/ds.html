@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}{{ gettext('Please login...') }}{% endblock %}
+
+{% block script %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $("*[data-toggle='popover']").popover({trigger: 'hover', container: 'body'});
+            $("*[data-toggle='tooltip']").tooltip({trigger: 'hover', container: 'body'});
+
+            var suggestions = ($.jStorage.get('pyff.discovery.idps',[]).length > 0);
+            $('.sp').dsRelyingParty('{{sp}}', function (entity, i) {
+                if (entity.domains) {
+                    suggestions = true;
+                }
+            });
+            if (suggestions) {
+                $('#quickLinks').dsQuickLinks('{{sp}}');
+            }
+            $('.idselect').dsSelect({});
+            jQuery.fn.sort = function() {
+                return this.pushStack( [].sort.apply( this, arguments ), []);
+            };
+            $('.message > button.close').click(function(e) {
+                //console.log(e);
+                //console.log($(this));
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                var id = $(this).parentsUntil('.message').attr('id');
+                $(this).parent().each(function() {
+                    //console.log($(this).attr('id'));
+                    closed[$(this).attr('id')] = true;
+                });
+                $.jStorage.set('pyff.discovery.messages',closed);
+            });
+            $('.message').each(function () {
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                if (closed[$(this).attr('id')]) {
+                    $(this).hide();
+                }
+            });
+            $('#to_list').click(function(){
+                $('#thelist').dsSelect('refresh');
+                $('#thelist').removeClass('hidden');
+                $('#thesearch').addClass('hidden');
+                $('#to_list').addClass('hidden');
+                $('#to_search').removeClass('hidden');
+                // $('#thelist').focus(); // consider this some more - it may be better to ask the user to click...
+            });
+            $('#to_search').click(function() {
+                $('#thesearch').removeClass('hidden');
+                $('#thelist').addClass('hidden');
+                $('#to_search').addClass('hidden');
+                $('#to_list').removeClass('hidden');
+                //$('#thesearchfield').focus();
+            });
+            $('.idselect').dsSelect('reset');
+        });
+    </script>
+    <script type="text/javascript" src="/static/js/jquery.mobile.custom.min.js"></script>
+{% endblock %}
+
+{% block header %}
+    <div class="row vertical-align">
+        <div class="col-md-12">
+            <ul class="list-inline">
+                <li id="sp-icon-container hideout">
+                    <img class="sp sp-icon sp-thumbnail fallback-icon"/>
+                </li>
+                <li id="sp-title-container">
+                    <h5>{{ gettext('You are connecting to...') }}</h5>
+                    <h3><span class="sp sp-name"></span></h3>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <small>{{ gettext('This service requests that you <strong>identify yourself</strong>. Select your preferred identity service below... ')}} <a class="sp sp-privacy-statement-url" title="Privacy Statement"></a></small>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+        <div id="content" class="idpchooser">
+            <div id="quickLinks"
+                 data-target="/metadata/{http:%2F%2Fpyff.io/domain}{{entity['domains']}}+{http:%2F%2Fpyff.io/role}idp.json"></div>
+            <form role="search">
+                <div class="form-group">
+                    <div id="thesearch"><input type="text"
+                           class="form-control idselect"
+                           id="thesearchfield"
+                           data-target="{{search}}"
+                           data-related="{{entity['domains']}}"
+                           placeholder="{{ gettext('Start typing to search for your identity service...') }}"/></div>
+                    <select title="{{ gettext('Select your login provider ...') }}"
+                            id="thelist"
+                            data-target="{{list}}"
+                            class="form-control idselect hidden">
+                    </select>
+                    <div class="btn-block">
+                        <a href="#" id="to_list" class="btn wide btn-large btn-info"><strong>{{ gettext('Let me choose from a list') }}</strong></a>
+                        <small><a href="#" class="hidden pull-right" id="to_search">{{ gettext('Take me back to the search') }}</a></small>
+                    </div>
+                    <!-- small class="pull-right">
+                        <a href="#" id="to_list">... {{ gettext('let me choose from a list instead') }}</a>
+                        <a href="#" class="hidden" id="to_search">... {{ gettext('let me search instead') }}</a>
+                        <i data-toggle="popover"
+                           data-placement="bottom"
+                           title="{{ gettext('Choosing a login provider...') }}"
+                           data-content="{{ gettext('This page knows about a lot of identity services. The best way to find the one for you is to start typing the name of the organization/entity you belong to into the search box. If you don\'t want to search you can list all known identity services but beware that this may take time.') }}"
+                           class="glyphicon glyphicon-question-sign text-info"></i>
+                    </small -->
+                </div>
+            </form>
+        </div>
+        <div class="hidden" id="remember-selection-dlg">
+            <div class="list-group confirm"></div>
+            <div class="btn-block">
+                <a id="proceed" class="btn btn-large btn-primary proceed btn-responsive">{{ gettext('Proceed to Login') }}</a>
+                <a id="remember" class="btn btn-large btn-warning remember btn-responsive">{{ gettext('Login and use Forever') }}</a>
+                <a id="proceed_and_remember" class="btn btn-large btn-success hidden proceed_and_remember btn-responsive">{{ gettext('Yes I am Sure - Use Forever') }}</a>
+                <a id="cancel" class="btn btn-large btn-default cancel btn-responsive">{{ gettext('Select Again') }}</a>
+
+            <small><i data-toggle="popover"
+                           data-placement="bottom"
+                           title="{{ gettext('What should I do now?') }}"
+                           data-content="{{ gettext('If you always use one and the same login provider for everything it might be a good idea to remember your choice. Press Select Again to redo the search and pick another login provider.') }}"
+                           class="glyphicon glyphicon-question-sign top text-info"></i></small>
+            </div>
+        </div>
+{% endblock %}
+
+{% block footer %}
+        <small id="reset_info" class="hidden">
+            <i class="glyphicon glyphicon-exclamation-sign"></i> If you change your mind, visit <a href="{{http.base}}/reset">{{http.base}}/reset</a> to change your settings.
+        </small>
+{% endblock %}
+</body>
+</html>

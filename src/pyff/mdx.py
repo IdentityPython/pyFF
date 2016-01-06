@@ -37,10 +37,16 @@ An implementation of draft-lajoie-md-query
             Chdir into <dir> after the server starts up.
     --proxy
             The service is running behind a proxy - respect the X-Forwarded-Host header.
+    -m <module>|--modules=<module>
+            Load a module
+
     {pipeline-files}+
             One or more pipeline files
 
 """
+import importlib
+import pkg_resources
+
 try:
     from cStringIO import StringIO
 except ImportError:  # pragma: no cover
@@ -48,9 +54,7 @@ except ImportError:  # pragma: no cover
     from StringIO import StringIO
 
 import getopt
-import traceback
 import urlparse
-from cherrypy._cptools import HandlerTool
 from cherrypy.lib.cpstats import StatsPage
 import os
 import sys
@@ -90,6 +94,7 @@ class MDUpdate(Monitor):
         self.bus = bus
         Monitor.__init__(self, bus, lambda: self.run(server), frequency=frequency)
         self.subscribe()
+        self.nruns = 0
 
     def run(self, server):
         locked = False
@@ -110,10 +115,14 @@ class MDUpdate(Monitor):
                 stats['Repository Update Time'] = datetime.now()
                 stats['Repository Size'] = server.md.store.size()
 
+            self.nruns += 1
+
+            stats['Updates Since Server Start'] = self.nruns
+
             if hasattr(self.server.md.store, 'periodic'):
                 self.server.md.store.periodic(stats)
         except Exception, ex:
-            traceback.print_exc(ex)
+            log.error(ex.message)
         finally:
             if locked:
                 self.lock.release()
@@ -159,7 +168,7 @@ class EncodingDispatcher(object):
                 plen = len(prefix)
                 vpath = vpath[plen + 1:]
                 npath = "%s/%s" % (prefix, self.enc(vpath))
-                #log.debug("EncodingDispatcher %s" % npath)
+                # log.debug("EncodingDispatcher %s" % npath)
                 return self.next_dispatcher(npath)
         return self.next_dispatcher(vpath)
 
@@ -176,8 +185,17 @@ class MDStats(StatsPage):
         tree = etree.parse(StringIO(h), parser)
         body = tree.getroot().find("body")
         body.tag = 'div'
+        body.set('class', 'cpstats')
+        for h in body.findall("h1"):
+            h.tag = 'h3'
+        for h in body.findall("h2"):
+            h.tag = 'h4'
+        for t in body.findall('table'):
+            t.set('class', 'table table-striped table-bordered table-condensed')
+        for b in body.findall('button'):
+            b.set('class', 'btn btn-small')
         hstr = etree.tostring(body, pretty_print=True, method="html")
-        return render_template("basic.html", content=hstr)
+        return render_template("ui.html", content=hstr, headline="Statistics")
 
 
 class WellKnown(object):
@@ -213,7 +231,7 @@ Depending on which version of pyFF your're running and the configuration you may
 listed using the 'role' attribute to the link elements.
         """
         if resource is None:
-            raise cherrypy.HTTPError(400, "Bad Request - missing resource parameter")
+            raise cherrypy.HTTPError(400, _("Bad Request - missing resource parameter"))
 
         jrd = dict()
         dt = datetime.now() + duration2timedelta("PT1H")
@@ -229,7 +247,7 @@ listed using the 'role' attribute to the link elements.
                      href='%s/%s.xml' % (cherrypy.request.base, a)))
             links.append(dict(rel='disco-json', href='%s/%s.json' % (cherrypy.request.base, a)))
 
-        for a in self.server.md.keys():
+        for a in self.server.md.store.collections():
             if '://' not in a:
                 a = a.lstrip('/')
                 _links(a)
@@ -255,6 +273,38 @@ class NotImplementedFunction(object):
         return self.message
 
 
+class SHIBDiscovery(object):
+    """
+    An endpoint designed to provide backwards compatibility with standard shibboleth-based discovery services.
+    """
+
+    def __init__(self, server=None):
+        self.server = server
+
+    @cherrypy.expose
+    def DS(self, *args, **kwargs):
+        kwargs['path'] = "/role/idp.ds"
+        return self.server.request(**kwargs)
+
+    @cherrypy.expose
+    def WAYF(self, *args, **kwargs):
+        raise HTTPError(400, _("400 Bad Request - shibboleth WAYF protocol not supported"))
+
+    @cherrypy.expose
+    def default(self, *args, **kwargs):
+        print args
+        print kwargs
+        if len(args) > 0 and args[0] in self.server.aliases:
+            kwargs['pfx'] = args[0]
+            if len(args) > 1:
+                kwargs['path'] = args[1]
+            return self.server.request(**kwargs)
+        else:
+            kwargs['pfx'] = None
+            kwargs['path'] = "/" + "/".join(args)
+            return self.server.request(**kwargs)
+
+
 class MDRoot(object):
     """The root application of pyFF. The root application assembles the MDStats and WellKnown classes with an
     MDServer instance.
@@ -263,10 +313,12 @@ class MDRoot(object):
     def __init__(self, server):
         self.server = server
         self._well_known.server = server
+        self.discovery.server = server
 
     stats = MDStats()
+    discovery = SHIBDiscovery()
 
-    try:
+    try:  # pragma: nocover
         import dowser
 
         memory = dowser.Root()
@@ -277,13 +329,23 @@ class MDRoot(object):
     static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
 
     @cherrypy.expose
+    def status(self):
+        status = "loading"
+        if self.server.ready:
+            status = "running"
+        version = pkg_resources.require("pyFF")[0].version
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return dumps({'status': status, 'version': version})
+
+    @cherrypy.expose
     def shutdown(self):
         cfg = cherrypy.request.app.config['global']
         if 'allow_shutdown' in cfg and bool(cfg.get('allow_shutdown')):
-            cherrypy.engine.exit()
+            from threading import Timer
+            Timer(3, cherrypy.engine.exit, ()).start()
             return "bye ..."
-        else:
-            raise cherrypy.HTTPError(403, "disabled")
+        else:  # pragma: nocover
+            raise cherrypy.HTTPError(403, _("Endpoint disabled in configuration"))
 
     @cherrypy.expose
     @cherrypy.tools.expires(secs=3600, debug=True)
@@ -317,12 +379,6 @@ Disallow: /
         interface based on the IdPs found in 'foo'. Here 'foo' is any supported lookup expression.
         """
         return self.server.request(path=path)
-
-
-    @cherrypy.expose
-    def finger(self, domain="localhost"):
-        return render_template("finger.html", domain=domain)
-
 
     @cherrypy.expose
     def about(self):
@@ -387,6 +443,8 @@ Search the active set for matching entities.
         """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
         handler.
         """
+        print args
+        print kwargs
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
             if len(args) > 1:
@@ -407,15 +465,18 @@ class MDServer(object):
                  pipes=None,
                  autoreload=False,
                  frequency=600,
-                 aliases=ATTRS,
+                 aliases=None,
                  cache_enabled=True,
                  observers=None,
                  store=None):
 
+        if aliases is None:
+            aliases = ATTRS
         if not observers:
             observers = []
         if not pipes:
             pipes = []
+        self._pipes = pipes
         self.cache_enabled = cache_enabled
         self.lock = ReadWriteLock()
         self.plumbings = [plumbing(v) for v in pipes]
@@ -428,6 +489,14 @@ class MDServer(object):
         if autoreload:
             for f in pipes:
                 cherrypy.engine.autoreload.files.add(f)
+
+    @property
+    def ready(self):
+        return self.md.store.ready()
+
+    def reload_pipeline(self):
+        new_plumbings = [plumbing(v) for v in self._pipes]
+        self.plumbings = new_plumbings
 
     class MediaAccept(object):
 
@@ -451,17 +520,12 @@ class MDServer(object):
         """
         stats['MD Requests'] += 1
 
+        if not self.ready:
+            raise HTTPError(503, _("Service Unavailable (repository loading)"))
+
         pfx = kwargs.get('pfx', None)
         path = kwargs.get('path', None)
         content_type = kwargs.get('content_type', None)
-
-        def escape(m):
-            st = m.group(0)
-            if st == '<':
-                return '&lt;'
-            if st == '>':
-                return '&gt;'
-            return st
 
         def _d(x, do_split=True):
             if x is not None:
@@ -475,7 +539,7 @@ class MDServer(object):
 
             if do_split and '.' in x:
                 (pth, dot, extn) = x.rpartition('.')
-                assert(dot == '.')
+                assert (dot == '.')
                 if extn in _ctypes:
                     return pth, extn
 
@@ -522,24 +586,22 @@ class MDServer(object):
                 pdict = dict()
                 entity_id = kwargs.get('entityID', None)
                 if entity_id is None:
-                    raise HTTPError(400, "400 Bad Request - missing entityID")
+                    raise HTTPError(400, _("400 Bad Request - missing entityID"))
                 pdict['sp'] = self.md.sha1_id(entity_id)
                 e = self.md.store.lookup(entity_id)
                 if e is None or len(e) == 0:
                     raise HTTPError(404)
 
                 if len(e) > 1:
-                    raise HTTPError(400, "400 Bad Request - multiple matches for %s" % entity_id)
+                    raise HTTPError(400, _("400 Bad Request - multiple matches for") + " %s" % entity_id)
 
                 pdict['entity'] = self.md.simple_summary(e[0])
-                pdict['ret'] = kwargs.get('return', None)
                 if not path:
                     pdict['search'] = "/search/"
+                    pdict['list'] = "/role/idp.json"
                 else:
-                    pdict['search'] = "%s.s" % path
-                if pdict['ret'] is None:
-                    raise HTTPError(400, "400 Bad Request - Missing 'return' parameter")
-                pdict['returnIDParam'] = kwargs.get('returnIDParam', 'entityID')
+                    pdict['search'] = "%s.s" % q
+                    pdict['list'] = "%s.json" % q
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return render_template("ds.html", **pdict)
             elif ext == 's':
@@ -599,20 +661,29 @@ class MDServer(object):
                     if len(entities) > 1:
                         return render_template("metadata.html",
                                                md=self.md,
+                                               subheading=q,
                                                entities=entities)
                     else:
                         entity = entities[0]
                         t = html.fragment_fromstring(unicode(xslt_transform(entity, "entity2html.xsl")))
                         for c_elt in t.findall(".//code[@role='entity']"):
-                            c_txt = dumptree(entity, pretty_print=True, xml_declaration=False).decode("utf-8")
+                            c_txt = dumptree(entity)
+                            parser = etree.XMLParser(remove_blank_text=True)
+                            src = StringIO(c_txt)
+                            tree = etree.parse(src, parser)
+                            c_txt = dumptree(tree, pretty_print=True, xml_declaration=False).decode("utf-8")
                             p = c_elt.getparent()
                             p.remove(c_elt)
                             if p.text is not None:
-                                p.text += c_txt  # re.sub(".",escape,c_txt)
+                                p.text += c_txt
                             else:
-                                p.text = c_txt  # re.sub(".",escape,c_txt)
+                                p.text = c_txt
                         xml = dumptree(t, xml_declaration=False).decode('utf-8')
-                        return render_template("basic.html", content=xml)
+                        return render_template("entity.html",
+                                               headline=self.md.display(entity).strip(),
+                                               subheading=entity.get('entityID'),
+                                               entity_id=entity.get('entityID'),
+                                               content=xml)
             else:
                 for p in self.plumbings:
                     state = {'request': True,
@@ -639,9 +710,9 @@ def main():
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   'hP:p:H:CfaA:l:R',
-                                   ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=', 'email=',
-                                    'port=', 'host=', 'no-caching', 'autoreload', 'frequency=',
+                                   'hP:p:H:CfaA:l:Rm:',
+                                   ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
+                                    'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
                                     'alias=', 'dir=', 'version', 'proxy', 'terminator'])
     except getopt.error, msg:
         print msg
@@ -662,11 +733,11 @@ def main():
     aliases = ATTRS
     base_dir = None
     proxy = False
-    email = None
     store = MemoryStore()
     terminator = False
+    modules = []
 
-    try:
+    try:  # pragma: nocover
         for o, a in opts:
             if o in ('-h', '--help'):
                 print __doc__
@@ -700,11 +771,9 @@ def main():
                 autoreload = True
             elif o in '--frequency':
                 frequency = int(a)
-            elif o in '--email':
-                email = a
             elif o in ('-A', '--alias'):
-                (a, colon, uri) = a.lpartition(':')
-                assert(colon == ':')
+                (a, colon, uri) = a.partition(':')
+                assert (colon == ':')
                 if a and uri:
                     aliases[a] = uri
             elif o in '--dir':
@@ -713,6 +782,8 @@ def main():
                 proxy = True
             elif o in '--terminator':
                 terminator = True
+            elif o in ('-m', '--module'):
+                modules.append(a)
             elif o in '--version':
                 print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__)
                 sys.exit(0)
@@ -756,6 +827,10 @@ def main():
     if loglevel == logging.DEBUG:
         observers.append(debug_observer)
 
+    modules.append('pyff.builtins')
+    for mn in modules:
+        importlib.import_module(mn)
+
     server = MDServer(pipes=args,
                       autoreload=autoreload,
                       frequency=frequency,
@@ -767,6 +842,7 @@ def main():
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
     cfg = {
         'global': {
+            'tools.encode.encoding': 'UTF-8',
             'server.socket_port': port,
             'server.socket_host': host,
             'tools.caching.on': caching,
@@ -796,6 +872,9 @@ def main():
             'tools.caching.on': caching,
             'tools.caching.delay': 3600,
             'tools.proxy.on': proxy
+        },
+        '/shutdown': {
+            'allow_shutdown': terminator
         }
     }
     cherrypy.config.update(cfg)

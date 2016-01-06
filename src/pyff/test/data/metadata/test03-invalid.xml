@@ -1,0 +1,353 @@
+<!-- 
+Four entities from the RENATER portal MD export with validUntil removed
+Added a XML schema error in the in 2nd entity ("https://www.a-dsi.fr")
+-->
+<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:mdrpi="urn:oasis:names:tc:SAML:metadata:rpi"
+	xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+	xmlns:shibmd="urn:mace:shibboleth:metadata:1.0"
+	xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute"
+	xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" Name="https://federation.renater.fr/"
+	xsi:schemaLocation="urn:oasis:names:tc:SAML:2.0:metadata saml-schema-metadata-2.0.xsd urn:mace:shibboleth:metadata:1.0 shibboleth-metadata-1.0.xsd http://www.w3.org/2000/09/xmldsig# xmldsig-core-schema.xsd">
+
+	<!-- Source https://aa.renater.fr:8443/idp/profile/Metadata/SAML -->
+	<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
+		entityID="https://aa.renater.fr/idp/shibboleth"
+		xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+		xmlns:shibmd="urn:mace:shibboleth:metadata:1.0"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+		<AttributeAuthorityDescriptor
+			protocolSupportEnumeration="urn:oasis:names:tc:SAML:1.1:protocol urn:oasis:names:tc:SAML:2.0:protocol">
+			<Extensions>
+				<shibmd:Scope regexp="false">renater.fr</shibmd:Scope>
+			</Extensions>
+			<KeyDescriptor>
+				<ds:KeyInfo><ds:X509Data>
+						<ds:X509Certificate>MIIDHzCCAgegAwIBAgIUMAs4iqt8Q3Y62N0yGJvfaAf63aowDQYJKoZIhvcNAQEF
+							BQAwGDEWMBQGA1UEAxMNYWEucmVuYXRlci5mcjAeFw0xMzEwMzAwOTU0MDVaFw0z
+							MzEwMzAwOTU0MDVaMBgxFjAUBgNVBAMTDWFhLnJlbmF0ZXIuZnIwggEiMA0GCSqG
+							SIb3DQEBAQUAA4IBDwAwggEKAoIBAQCfrWzXms4zzJ7AlwCwqXMTk5jqlZczs/J2
+							/sbmoNiKGWTPau6gXRczcfjRbCksOoSQpm3nKs2w2vvaPWFmz7BasY3o2JUqfzwc
+							lrczPo5rjytFjyilaY4Sa40UoKpRNyRPzgTypNKIPCiWyy69Do250oW3S8ZgNOKF
+							1JwB+2wpPqYndIs6RPD7EqCu1KE71JyRqrtFtfrVhTSujPI1V6DX+abekb3pc00S
+							f0l36TJkQ6NwvsBXanM5/loHz9Onq+K7Tt0Ri1qPew/oh0I4HXz2Mp9CLAhOt5mf
+							j1tQLo/wWppupSvgKF6cAUo/Xn/quACt2SDoPNdgv/9TT7/G1vu3AgMBAAGjYTBf
+							MD4GA1UdEQQ3MDWCDWFhLnJlbmF0ZXIuZnKGJGh0dHBzOi8vYWEucmVuYXRlci5m
+							ci9pZHAvc2hpYmJvbGV0aDAdBgNVHQ4EFgQU7XooEdAeHI76c9U8XB/G4FwRaqUw
+							DQYJKoZIhvcNAQEFBQADggEBACzMPXRnXhLXqKeQIIWQsU9pL7uL60iJUV/Ii5+P
+							0Aqs/oziyyfLO7iyXz7cvSattYJm3XB7YjcfcjaJ084Bwc74tPnH4KguVzEqmC/r
+							3b8ilpFW9+OwZLKWQ2y7Ah+79RNPWredkugJFxhQZBoVk6HMXip+Wi16Cz/ZYNun
+							tjrXmoMLkYh+bbKjLpRPsx5BgxF8wx384iclFmLBhfVR3qhnB8uVVr185V57YE5s
+							JEKOK3YJzr7N8sQAOgM92tsnxcm8zhgx5z/BReCdCBlELBrF7ngamQLyUA4D9FzI
+							tglFHSkQxwqrKzmfJmZgbx0/OqJE8JAhrD+K/hyhu89/TM4=</ds:X509Certificate>
+					</ds:X509Data></ds:KeyInfo>
+			</KeyDescriptor>
+			<AttributeService Binding="urn:oasis:names:tc:SAML:1.0:bindings:SOAP-binding"
+				Location="https://aa.renater.fr:8443/idp/profile/SAML1/SOAP/AttributeQuery"/>
+			<AttributeService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP"
+				Location="https://aa.renater.fr:8443/idp/profile/SAML2/SOAP/AttributeQuery"/>
+			<NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</NameIDFormat>
+		</AttributeAuthorityDescriptor>
+	</EntityDescriptor>
+
+	<!-- Définitions d'un Fournisseur de Services-->
+	<!-- A-DSI - site institutionnel -->
+	<EntityDescriptor entityID="https://www.a-dsi.fr">
+		<Extensions>
+			<mdrpi:RegistrationInfo registrationAuthority="https://federation.renater.fr/"
+				registrationInstant="2011-12-12T14:21:48Z">
+				<mdrpi:RegistrationPolicy xml:lang="en"
+					>https://services.renater.fr/federation/en/metadata_registration_practice_statement</mdrpi:RegistrationPolicy>
+			</mdrpi:RegistrationInfo>
+			<mdattr:EntityAttributes>
+				<saml:Attribute Name="http://macedir.org/entity-category"
+					NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+					<saml:AttributeValue>https://federation.renater.fr/category/web</saml:AttributeValue>
+					<saml:AttributeValue>https://federation.renater.fr/scope/national</saml:AttributeValue>
+				</saml:Attribute>
+			</mdattr:EntityAttributes>
+		</Extensions>
+		<SPSSODescriptor
+			protocolSupportEnumeration="urn:oasis:names:tc:SAML:1.1:protocol urn:oasis:names:tc:SAML:1.0:protocol urn:oasis:names:tc:SAML:2.0:protocol">
+			<Extensions>
+				<mdui:UIInfo>
+					<mdui:DisplayName xml:lang="en">A-DSI - site institutionnel</mdui:DisplayName>
+					<mdui:InformationURL xml:lang="fr">https://www.a-dsi.fr</mdui:InformationURL>
+					<mdui:DisplayName xml:lang="fr">A-DSI - site institutionnel</mdui:DisplayName>
+					<mdui:Description xml:lang="fr">Site web de
+						l&apos;association</mdui:Description>
+				</mdui:UIInfo>
+			</Extensions>
+			<KeyDescriptor use="signing">
+				<ds:KeyInfo>
+					<ds:X509Data>
+						<ds:X509Certificate>
+							MIIDATCCAemgAwIBAgIJAKi2EWQfMqF7MA0GCSqGSIb3DQEBBQUAMBcxFTATBgNV
+							BAMTDHd3dy5hLWRzaS5mcjAeFw0xNDEwMjEwOTA1NDZaFw0xNzEwMjAwOTA1NDZa
+							MBcxFTATBgNVBAMTDHd3dy5hLWRzaS5mcjCCASIwDQYJKoZIhvcNAQEBBQADggEP
+							ADCCAQoCggEBAPftB/HSNchQWFHjFKbPZ05tkOabR/tIbwP1n4rjA9jQ1GJhA5kA
+							6sGFeR2PfGKCPdodjdV7NVlmK0ZsfYgEjHbt8A5AWZjZeIltiMce9QraXkaKIAo8
+							QAV5laD7vlGIWZmjO4U2c65dfEUj8wu3BmfNv7Y0YhBe8Jf+WkclaE5jzC8j8ljK
+							ZuHdGFC41XVzP8nhdZ2QjzbVWjHqrswSHy3GcDjq5/+7J5cRhaoFTF4gAS0qDdgf
+							7BeBVnffNMMX62FGYyIPsZ5Bvac/1y1sQ0fWi5074OFNR/7t+XERw81AqGMgNhYD
+							gw2zZ6nX7EauWF/p6HABRWK7D3iaiyKzOhECAwEAAaNQME4wLQYDVR0RBCYwJIIM
+							d3d3LmEtZHNpLmZyhhRodHRwczovL3d3dy5hLWRzaS5mcjAdBgNVHQ4EFgQUON56
+							BD54tzr97r9i/HhE6TZX+EwwDQYJKoZIhvcNAQEFBQADggEBAOKvai2kMi7uTyne
+							BxvFafXe3XeLuLG7WtCpP3dRjUGyimOS0VZqRemZYHCq+tfOGPXqd/nQE53DHWae
+							vODCRzDWcopbx3j/LJdmGs2QHDai0PhA/4MuvYxWqeA4v1jWXVabksTzlnCr6CC0
+							51O++G1waGajTWhGguX+/pVG7v+UhZ+0U9SHKkJojJzxaODt3oHTlPcEVsAuXvcV
+							2qb4z8Lkj5yRdF2NSbJuUqQ4jHSumWdI+P2084p7fJDCE86ntUzjHdrYW7kkxuno
+							9d1w7yfssBdcpGIzy4Klqrdgntlu5QFLGUmqVQbbLu9m3aBmswKpbampw3l+TwWk
+							H5WCwvM= </ds:X509Certificate>
+					</ds:X509Data>
+				</ds:KeyInfo>
+			</KeyDescriptor>
+			<KeyDescriptor use="encryption">
+				<ds:KeyInfo>
+					<ds:X509Data>
+						<ds:X509Certificate>
+							MIIDATCCAemgAwIBAgIJAKi2EWQfMqF7MA0GCSqGSIb3DQEBBQUAMBcxFTATBgNV
+							BAMTDHd3dy5hLWRzaS5mcjAeFw0xNDEwMjEwOTA1NDZaFw0xNzEwMjAwOTA1NDZa
+							MBcxFTATBgNVBAMTDHd3dy5hLWRzaS5mcjCCASIwDQYJKoZIhvcNAQEBBQADggEP
+							ADCCAQoCggEBAPftB/HSNchQWFHjFKbPZ05tkOabR/tIbwP1n4rjA9jQ1GJhA5kA
+							6sGFeR2PfGKCPdodjdV7NVlmK0ZsfYgEjHbt8A5AWZjZeIltiMce9QraXkaKIAo8
+							QAV5laD7vlGIWZmjO4U2c65dfEUj8wu3BmfNv7Y0YhBe8Jf+WkclaE5jzC8j8ljK
+							ZuHdGFC41XVzP8nhdZ2QjzbVWjHqrswSHy3GcDjq5/+7J5cRhaoFTF4gAS0qDdgf
+							7BeBVnffNMMX62FGYyIPsZ5Bvac/1y1sQ0fWi5074OFNR/7t+XERw81AqGMgNhYD
+							gw2zZ6nX7EauWF/p6HABRWK7D3iaiyKzOhECAwEAAaNQME4wLQYDVR0RBCYwJIIM
+							d3d3LmEtZHNpLmZyhhRodHRwczovL3d3dy5hLWRzaS5mcjAdBgNVHQ4EFgQUON56
+							BD54tzr97r9i/HhE6TZX+EwwDQYJKoZIhvcNAQEFBQADggEBAOKvai2kMi7uTyne
+							BxvFafXe3XeLuLG7WtCpP3dRjUGyimOS0VZqRemZYHCq+tfOGPXqd/nQE53DHWae
+							vODCRzDWcopbx3j/LJdmGs2QHDai0PhA/4MuvYxWqeA4v1jWXVabksTzlnCr6CC0
+							51O++G1waGajTWhGguX+/pVG7v+UhZ+0U9SHKkJojJzxaODt3oHTlPcEVsAuXvcV
+							2qb4z8Lkj5yRdF2NSbJuUqQ4jHSumWdI+P2084p7fJDCE86ntUzjHdrYW7kkxuno
+							9d1w7yfssBdcpGIzy4Klqrdgntlu5QFLGUmqVQbbLu9m3aBmswKpbampw3l+TwWk
+							H5WCwvM= </ds:X509Certificate>
+					</ds:X509Data>
+				</ds:KeyInfo>
+			</KeyDescriptor>
+			<AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+				Location="https://www.a-dsi.fr/Shibboleth.sso/SAML2/POST" index="1"/>
+			<AssertionConsumerService Binding="urn:oasis:names:tc:SAML:1.0:profiles:browser-post"
+				Location="https://www.a-dsi.fr/Shibboleth.sso/SAML/POST" index="5"/>
+			<AttributeConsumingService index="0">
+				<ServiceName xml:lang="fr">A-DSI - site institutionnel</ServiceName>
+				<ServiceDescription xml:lang="fr">Site web de l'association</ServiceDescription>
+				<RequestedAttribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
+					isRequired="true" Name="urn:oid:2.5.4.4" FriendlyName="sn"> </RequestedAttribute>
+				<RequestedAttribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
+					isRequired="true" Name="urn:oid:0.9.2342.19200300.100.1.3" FriendlyName="mail"> </RequestedAttribute>
+				<RequestedAttribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
+					isRequired="true" Name="urn:oid:2.16.840.1.113730.3.1.241"
+					FriendlyName="displayName"> </RequestedAttribute>
+				<RequestedAttribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
+					isRequired="true" Name="urn:oid:2.5.4.42" FriendlyName="givenName"> </RequestedAttribute>
+			</AttributeConsumingService>
+		</SPSSODescriptor>
+		<Organization>
+			<OrganizationName xml:lang="en">A-DSI</OrganizationName>
+			<OrganizationDisplayName xml:lang="en">A-DSI</OrganizationDisplayName>
+			<!-- Error: OrganizationURL is mandatory here -->
+			<!-- <OrganizationURL xml:lang="en">https://www.a-dsi.fr/</OrganizationURL> -->
+		</Organization>
+		<ContactPerson contactType="technical">
+			<SurName>Yoann Mitaine</SurName>
+			<EmailAddress>yoann.mitaine@u-grenoble3.fr</EmailAddress>
+		</ContactPerson>
+		<ContactPerson contactType="technical">
+			<SurName>Gregory Mathes</SurName>
+			<EmailAddress>gregory.mathes@upmf-grenoble.fr</EmailAddress>
+		</ContactPerson>
+	</EntityDescriptor>
+
+	<!-- Définition d'un fournisseur d'identités -->
+	<!-- ABES - Agence Bibliographique de l&apos;Enseignement Supérieur -->
+	<EntityDescriptor entityID="https://sharav.abes.fr/idp/shibboleth">
+		<Extensions>
+			<mdrpi:RegistrationInfo registrationAuthority="https://federation.renater.fr/"
+				registrationInstant="2015-07-23T10:52:40Z">
+				<mdrpi:RegistrationPolicy xml:lang="en"
+					>https://services.renater.fr/federation/en/metadata_registration_practice_statement</mdrpi:RegistrationPolicy>
+			</mdrpi:RegistrationInfo>
+		</Extensions>
+		<IDPSSODescriptor
+			protocolSupportEnumeration="urn:oasis:names:tc:SAML:1.1:protocol urn:mace:shibboleth:1.0 urn:oasis:names:tc:SAML:2.0:protocol">
+			<Extensions>
+				<shibmd:Scope regexp="false">abes.fr</shibmd:Scope>
+				<mdui:UIInfo>
+					<mdui:DisplayName xml:lang="en">ABES - French Bibliographic Agency for Higher
+						Education</mdui:DisplayName>
+					<mdui:Logo height="16" width="16"
+						>data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAABIAAAASABGyWs+AAAACXZwQWcAAAAQAAAAEABcxq3DAAABuklEQVQ4y5WTQUtUURiGn+/eM3Nv11Eaa6ZypCjMkSIKMlCCCqLAoH6AtonZ2CII2vcTaimCuGjbomhZBFEkQrQoRIMQKnKRpoNjzXg799zTYnCYmCvTPMvvfXh5z+LI3akFO1zsxZiIZkQcPD+FYNkOI2xsAVvPELTqZu794qw6N5Rl/NIhktiqVLE49PT4LVk5hMVPKVQUxS1hHMPc/ALTM8/B9ZksXeb8SPEfR0dgrUXtzGpmfaPCg+kXPHn0DNhDsM9ndKSI0+RYW3+KQwJBkObMyX7o7oNCluLRXLIIqKRjV+AzeWuMQiFPaDQ3rg5DJwUA+VyG0sRF2uG0Ndqw64LVcsjrDz9wEC6czrM/6/3/gj/a8vjlFyYevuHOzDxP3y539oQojtGuoT8TYKqape8VjOmgIPBcStcGuH19AJtyySgfkV0KbMLRYtnYDPn5K2Swby+jp3I4TrKnPLc1EYSPy2W+rf7m/s0TXDlbaHHSCkQEVdNp1moQm+YCOH7kMPfGD3DsoMdatf4/GrMF1rch1LFS7z6vzC59XcFEGkEa45QruK7CmBhtTCOzWEQESXeprVr06i+wzJYRwl1xdgAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAxNS0wNC0xNlQwOToxNTozMiswMjowMB+Ex2cAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTUtMDQtMTZUMDk6MTU6MzIrMDI6MDBu2X/bAAAAAElFTkSuQmCC</mdui:Logo>
+					<mdui:Description xml:lang="en">Agency staff</mdui:Description>
+					<mdui:DisplayName xml:lang="fr">ABES - Agence Bibliographique de
+						l&apos;Enseignement Supérieur</mdui:DisplayName>
+					<mdui:Description xml:lang="fr">Personnels de l&apos;Agence</mdui:Description>
+				</mdui:UIInfo>
+			</Extensions>
+			<KeyDescriptor use="signing">
+				<ds:KeyInfo>
+					<ds:X509Data>
+						<ds:X509Certificate>
+							MIIDJDCCAgygAwIBAgIVAMJyfTXyWtg2HoJZYvPzC5uTOkpLMA0GCSqGSIb3DQEB
+							BQUAMBkxFzAVBgNVBAMMDnNoYXJhdi5hYmVzLmZyMB4XDTE1MDMxNjA5MzYxM1oX
+							DTM1MDMxNjA5MzYxM1owGTEXMBUGA1UEAwwOc2hhcmF2LmFiZXMuZnIwggEiMA0G
+							CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDTcLz3fcz0nnGZBl8dx+gsKgz2nazH
+							qLl58rvOUGQdcZqWutb0rmSlLv14aLJcSZiCse01Xa3VTdNboftLB9TzHgsRhy6E
+							eR5ISWBs4Hdw2bdbaV4KQb5zh8Mrjt/CO6yVUE2cr0bVPZKB2dGyblpdwQkdyakA
+							Dz2GuTIW2egZ466y0FaOTHzQ4jw3cGtOm0r1v7aMOLQg0tJQ3Ao8we36p+T/YrKN
+							qrt2kQbfbWMQz9rZsWLpI6YjCwImnTHOov+Sphq1QN/f3beZUM66hHBjTWytgZoB
+							tRhPzG02XGwY5FPYp/+xxU2uBUyJTdzON+J+/jK8CXlmLh6Et8qCH2mnAgMBAAGj
+							YzBhMB0GA1UdDgQWBBTxc6ftLuPBfgE21OFh7hYWV5sVODBABgNVHREEOTA3gg5z
+							aGFyYXYuYWJlcy5mcoYlaHR0cHM6Ly9zaGFyYXYuYWJlcy5mci9pZHAvc2hpYmJv
+							bGV0aDANBgkqhkiG9w0BAQUFAAOCAQEAbxeaU+peTP/+ZEadJxgffuRWU3L+qZnc
+							l36JFO9Rn1BFiABemGGUd1WU0AxNVJ0HDu3NZjKmQz3dYIjy5DR4nF9dDS25br3R
+							yUPa2NSIAatSB4BPbf8j+EpWrcuBBRXGGWXfvOTQq/DuKU9/FPGEvrIW5Wnl/uDd
+							kCI8+2KPpfuz002xNQID4wKyUJy9jyuE/2cn2JA1iYB0MMc3uqIls8T8Wn1leWr+
+							TG5a9eJRJRp7O8KekUdkn17tzldLodiuduABA/gncseSrDLBUJntriF3yGGbCdJz
+							8Dg24giw4jehoGYeEf1DW9ACdySlZDzf6YPGNUfVY9kVNDnLi9Th2Q==
+						</ds:X509Certificate>
+					</ds:X509Data>
+				</ds:KeyInfo>
+			</KeyDescriptor>
+			<SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+				Location="https://sharav.abes.fr/idp/profile/SAML2/Redirect/SLO"/>
+			<SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+				Location="https://sharav.abes.fr/idp/profile/SAML2/POST/SLO"/>
+			<SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP"
+				Location="https://sharav.abes.fr:8443/idp/profile/SAML2/SOAP/SLO"/>
+			<NameIDFormat>urn:mace:shibboleth:1.0:nameIdentifier</NameIDFormat>
+			<NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</NameIDFormat>
+			<SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+				Location="https://sharav.abes.fr/idp/profile/SAML2/POST/SSO"/>
+			<SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+				Location="https://sharav.abes.fr/idp/profile/SAML2/Redirect/SSO"/>
+			<SingleSignOnService Binding="urn:mace:shibboleth:1.0:profiles:AuthnRequest"
+				Location="https://sharav.abes.fr/idp/profile/Shibboleth/SSO"/>
+		</IDPSSODescriptor>
+		<Organization>
+			<OrganizationName xml:lang="en">ABES - Agence Bibliographique de l&apos;Enseignement Supérieur</OrganizationName>
+			<OrganizationDisplayName xml:lang="en">ABES - Agence Bibliographique de l&apos;Enseignement Supérieur</OrganizationDisplayName>
+			<OrganizationURL xml:lang="en">http://unknown.site.com</OrganizationURL>
+		</Organization>
+		<ContactPerson contactType="technical">
+			<EmailAddress>p2i@abes.fr</EmailAddress>
+		</ContactPerson>
+	</EntityDescriptor>
+
+	<!-- Définitions d'un Fournisseur de Services-->
+	<!-- ACM Digital Library -->
+	<EntityDescriptor entityID="https://dl.acm.org/shibboleth">
+		<Extensions>
+			<mdrpi:RegistrationInfo registrationAuthority="https://federation.renater.fr/"
+				registrationInstant="2014-03-11T20:53:53Z">
+				<mdrpi:RegistrationPolicy xml:lang="en"
+					>https://services.renater.fr/federation/en/metadata_registration_practice_statement</mdrpi:RegistrationPolicy>
+			</mdrpi:RegistrationInfo>
+			<mdattr:EntityAttributes>
+				<saml:Attribute Name="http://macedir.org/entity-category"
+					NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+					<saml:AttributeValue>http://www.geant.net/uri/dataprotection-code-of-conduct/v1</saml:AttributeValue>
+					<saml:AttributeValue>https://federation.renater.fr/category/elearning</saml:AttributeValue>
+					<saml:AttributeValue>https://federation.renater.fr/scope/community</saml:AttributeValue>
+				</saml:Attribute>
+			</mdattr:EntityAttributes>
+		</Extensions>
+		<SPSSODescriptor
+			protocolSupportEnumeration="urn:oasis:names:tc:SAML:1.1:protocol urn:oasis:names:tc:SAML:1.0:protocol urn:oasis:names:tc:SAML:2.0:protocol">
+			<Extensions>
+				<mdui:UIInfo>
+					<mdui:DisplayName xml:lang="en">ACM Digital Library</mdui:DisplayName>
+					<mdui:InformationURL xml:lang="fr">http://dl.acm.org</mdui:InformationURL>
+					<mdui:Description xml:lang="en">Full text of every article ever published by ACM
+						and bibliographic citations from major publishers in
+						computing.</mdui:Description>
+					<mdui:DisplayName xml:lang="fr">ACM Digital Library</mdui:DisplayName>
+					<mdui:Description xml:lang="fr">Full text of every article ever published by ACM
+						and bibliographic citations from major publishers in
+						computing.</mdui:Description>
+					<mdui:PrivacyStatementURL xml:lang="en"
+						>http://www.acm.org/about/privacy-policy</mdui:PrivacyStatementURL>
+				</mdui:UIInfo>
+			</Extensions>
+			<KeyDescriptor use="signing">
+				<ds:KeyInfo>
+					<ds:X509Data>
+						<ds:X509Certificate>
+							MIIDBDCCAeygAwIBAgIJAMD4xoKFh5MoMA0GCSqGSIb3DQEBBQUAMBUxEzARBgNV
+							BAMTCmRsLmFjbS5vcmcwHhcNMTMwNzEwMTY0NjQ5WhcNMjMwNzA4MTY0NjQ5WjAV
+							MRMwEQYDVQQDEwpkbC5hY20ub3JnMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+							CgKCAQEA0D83ObCYMf9mChQ1RcwAIdUcWcrfRu/xEAamnUi6XtiP5zpq2XZsP6kr
+							8kDKyf1cFb61AG76LyCNpPXUjOSImtCggfO3wwjrM6cVxoLxpjNHwyekf7Qp5Xht
+							wQ76ME2mBZyyeeQGQADSpuiQU8ceEEuFVzE4odvsYjslUf5FdyB7DV3wHsaem0GI
+							NPHMgm1aWw06Rb6TJT4+q7UVldkbFGToX/MwX6BVVn36TMllUCoPI9uC6elBtSDA
+							pM5IX3xPGm+HWhzWMwNH6DbiEaWunL0mT4qz4S/8chofFCYnfBIghcIR2byi/LVq
+							JsimhFLkh5pzeaN481jUXqm4CzVMsQIDAQABo1cwVTA0BgNVHREELTArggpkbC5h
+							Y20ub3Jnhh1odHRwczovL2RsLmFjbS5vcmcvc2hpYmJvbGV0aDAdBgNVHQ4EFgQU
+							Ff2/iHzhnXS3ru+f8m3ffW6LB2YwDQYJKoZIhvcNAQEFBQADggEBAL3G7h2JsWau
+							Ug3rrbbyGlfnyj7m9c02h7liJw0ZWMSZAQADzPcaTXxjJd72e1bfVlsqoyix1yjt
+							DOOd0PzgT4OmUrAu7CLnKIA2488s1TwrJgCkSKKfKYNAiAkTxbzlsJXb13Tok+vK
+							C/sxD92ba9DO8uc/uqO8m874uHyE1o4aAn1L5AsWuDI7hdv1hMfktODq7rV1FTCT
+							WUzSvfdP6GjtLivq3zW8+NluIu9EMSIYx/OUl13pXUjDiHl5oWO7MJoc5c6lu6Tu
+							TVBr4ywIEShumuXNtgDlBgb41BHr7tqsLwbuAMbWH1ZWYFSz0AKVFkVxsmIjgWn1
+							bYwfJV8VaIg= </ds:X509Certificate>
+					</ds:X509Data>
+				</ds:KeyInfo>
+			</KeyDescriptor>
+			<KeyDescriptor use="encryption">
+				<ds:KeyInfo>
+					<ds:X509Data>
+						<ds:X509Certificate>
+							MIIDBDCCAeygAwIBAgIJAMD4xoKFh5MoMA0GCSqGSIb3DQEBBQUAMBUxEzARBgNV
+							BAMTCmRsLmFjbS5vcmcwHhcNMTMwNzEwMTY0NjQ5WhcNMjMwNzA4MTY0NjQ5WjAV
+							MRMwEQYDVQQDEwpkbC5hY20ub3JnMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+							CgKCAQEA0D83ObCYMf9mChQ1RcwAIdUcWcrfRu/xEAamnUi6XtiP5zpq2XZsP6kr
+							8kDKyf1cFb61AG76LyCNpPXUjOSImtCggfO3wwjrM6cVxoLxpjNHwyekf7Qp5Xht
+							wQ76ME2mBZyyeeQGQADSpuiQU8ceEEuFVzE4odvsYjslUf5FdyB7DV3wHsaem0GI
+							NPHMgm1aWw06Rb6TJT4+q7UVldkbFGToX/MwX6BVVn36TMllUCoPI9uC6elBtSDA
+							pM5IX3xPGm+HWhzWMwNH6DbiEaWunL0mT4qz4S/8chofFCYnfBIghcIR2byi/LVq
+							JsimhFLkh5pzeaN481jUXqm4CzVMsQIDAQABo1cwVTA0BgNVHREELTArggpkbC5h
+							Y20ub3Jnhh1odHRwczovL2RsLmFjbS5vcmcvc2hpYmJvbGV0aDAdBgNVHQ4EFgQU
+							Ff2/iHzhnXS3ru+f8m3ffW6LB2YwDQYJKoZIhvcNAQEFBQADggEBAL3G7h2JsWau
+							Ug3rrbbyGlfnyj7m9c02h7liJw0ZWMSZAQADzPcaTXxjJd72e1bfVlsqoyix1yjt
+							DOOd0PzgT4OmUrAu7CLnKIA2488s1TwrJgCkSKKfKYNAiAkTxbzlsJXb13Tok+vK
+							C/sxD92ba9DO8uc/uqO8m874uHyE1o4aAn1L5AsWuDI7hdv1hMfktODq7rV1FTCT
+							WUzSvfdP6GjtLivq3zW8+NluIu9EMSIYx/OUl13pXUjDiHl5oWO7MJoc5c6lu6Tu
+							TVBr4ywIEShumuXNtgDlBgb41BHr7tqsLwbuAMbWH1ZWYFSz0AKVFkVxsmIjgWn1
+							bYwfJV8VaIg= </ds:X509Certificate>
+					</ds:X509Data>
+				</ds:KeyInfo>
+			</KeyDescriptor>
+			<AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+				Location="https://dl.acm.org/Shibboleth.sso/SAML2/POST" index="1"/>
+			<AssertionConsumerService Binding="urn:oasis:names:tc:SAML:1.0:profiles:browser-post"
+				Location="https://dl.acm.org/Shibboleth.sso/SAML/POST" index="4"/>
+			<AttributeConsumingService index="0">
+				<ServiceName xml:lang="fr">ACM Digital Library</ServiceName>
+				<ServiceName xml:lang="en">ACM Digital Library</ServiceName>
+				<ServiceDescription xml:lang="fr">Full text of every article ever published by ACM and
+bibliographic citations from major publishers in computing.</ServiceDescription>
+				<ServiceDescription xml:lang="en">Full text of every article ever published by ACM and
+bibliographic citations from major publishers in computing.</ServiceDescription>
+				<RequestedAttribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
+					isRequired="true" Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.6"
+					FriendlyName="eduPersonPrincipalName"> </RequestedAttribute>
+				<RequestedAttribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
+					isRequired="true" Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.9"
+					FriendlyName="eduPersonScopedAffiliation"> </RequestedAttribute>
+			</AttributeConsumingService>
+		</SPSSODescriptor>
+		<Organization>
+			<OrganizationName xml:lang="en">Association for Computing Machinery</OrganizationName>
+			<OrganizationDisplayName xml:lang="en">Association for Computing Machinery</OrganizationDisplayName>
+			<OrganizationURL xml:lang="en">http://unknown.site.com</OrganizationURL>
+		</Organization>
+		<ContactPerson contactType="technical">
+			<EmailAddress>dl-info@acm.org</EmailAddress>
+		</ContactPerson>
+	</EntityDescriptor>
+
+	<!-- Many more entities removed ... -->
+
+</EntitiesDescriptor>

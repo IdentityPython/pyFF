@@ -1,14 +1,18 @@
 """Package that contains the basic set of pipes - functions that can be used to put together a processing pipeling
 for pyFF.
 """
+from distutils.util import strtobool
+import json
 import traceback
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
+import yaml
 from pyff.decorators import deprecated
+from pyff.stats import set_metadata_info
 from pyff.utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
     iter_entities, validate_document
 from pyff.constants import NS
-from pyff.pipes import Plumbing, PipeException, PipelineCallback
+from pyff.pipes import Plumbing, PipeException, PipelineCallback, pipe
 from copy import deepcopy
 import sys
 import os
@@ -19,11 +23,18 @@ import xmlsec
 import base64
 from datetime import datetime
 
+try:
+    from cStringIO import StringIO
+except ImportError:  # pragma: no cover
+    print(" *** install cStringIO for better performance")
+    from StringIO import StringIO
+
 __author__ = 'leifj'
 
 FILESPEC_REGEX = "([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)"
 
 
+@pipe
 def dump(req, *opts):
     """
 Print a representation of the entities set on stdout. Useful for testing.
@@ -37,7 +48,7 @@ Print a representation of the entities set on stdout. Useful for testing.
     else:
         print "<EntitiesDescriptor xmlns=\"%s\"/>" % NS['md']
 
-
+@pipe
 def end(req, *opts):
     """
 Exit with optional error code and message.
@@ -61,11 +72,12 @@ break out of the pipeline, use break instead.
     if req.args is not None:
         code = req.args.get('code', 0)
         msg = req.args.get('message', None)
-        if msg is None:
+        if msg is not None:
             print msg
     sys.exit(code)
 
 
+@pipe
 def fork(req, *opts):
     """
 Make a copy of the working tree and process the arguments as a pipleline. This essentially resets the working
@@ -136,13 +148,15 @@ active document. To avoid this do a select before your fork, thus:
     ireq = Plumbing.Request(ip, req.md, nt)
     ip._process(ireq)
 
-    if 'merge' in opts and ireq.t is not None and len(ireq.t) > 0:
-        sn = "pyff.merge_strategies.replace_existing"
-        if opts[-1] != 'merge':
-            sn = opts[-1]
-        req.md.merge(req.t, ireq.t, strategy_name=sn)
+    if req.t is not None and ireq.t is not None and len(root(ireq.t)) > 0:
+        if 'merge' in opts:
+            sn = "pyff.merge_strategies.replace_existing"
+            if opts[-1] != 'merge':
+                sn = opts[-1]
+            req.md.merge(req.t, ireq.t, strategy_name=sn)
 
 
+@pipe(name='any')
 def _any(lst, d):
     for x in lst:
         if x in d:
@@ -153,6 +167,7 @@ def _any(lst, d):
     return False
 
 
+@pipe(name='break')
 def _break(req, *opts):
     """
 Break out of a pipeline.
@@ -178,7 +193,8 @@ is '_break' but the keyword is 'break' to avoid conflicting with python builtin 
     return req.t
 
 
-def pipe(req, *opts):
+@pipe(name='pipe')
+def _pipe(req, *opts):
     """
 Run the argument list as a pipleine.
 
@@ -223,6 +239,7 @@ is equivalent to
     return ot
 
 
+@pipe
 def when(req, condition, *values):
     """
 Conditionally execute part of the pipeline.
@@ -257,6 +274,7 @@ followed. If 'bar' is present in the state with the value 'bill' then the other 
     return req.t
 
 
+@pipe
 def info(req, *opts):
     """
 Dumps the working document on stdout. Useful for testing.
@@ -267,13 +285,14 @@ Dumps the working document on stdout. Useful for testing.
 
     """
     if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
+        raise PipeException("Your pipeline is missing a select statement.")
 
     for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS, smart_strings=False):
         print e.get('entityID')
     return req.t
 
 
+@pipe
 def publish(req, *opts):
     """
 Publish the working document in XML form.
@@ -294,13 +313,14 @@ Publish the working document in XML form.
     if req.t is None:
         raise PipeException("Empty document submitted for publication")
 
+    if req.args is None:
+        raise PipeException("publish must specify output")
+
     try:
         validate_document(req.t)
     except DocumentInvalid, ex:
         log.error(ex.error_log)
         raise PipeException("XML schema validation failed")
-    if req.args is None:
-        raise PipeException("publish must specify output")
 
     output_file = None
     if type(req.args) is dict:
@@ -323,42 +343,92 @@ Publish the working document in XML form.
         req.md.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
 
+@pipe
+def loadstats(req, *opts):
+    """
+    Log (INFO) information about the result of the last call to load
+    :param req: The request
+    :param opts: Options: (none)
+    :return: None
+    """
+    from stats import metadata
+    _stats = None
+    try:
+        if 'json' in opts:
+            _stats = json.dumps(metadata)
+        else:
+            buf = StringIO()
+            yaml.dump(metadata, buf)
+            _stats = buf.getvalue()
+    except Exception, ex:
+        log.error(ex)
+
+    log.info("pyff loadstats: %s" % _stats)
+
+@pipe
 @deprecated
 def remote(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
     return load(req, opts)
 
-
+@pipe
 @deprecated
 def local(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
     return load(req, opts)
 
-
+@pipe
 @deprecated
 def _fetch(req, *opts):
     return load(req, *opts)
 
-
+@pipe
 def load(req, *opts):
     """
 General-purpose resource fetcher.
 
-    :param opts:
     :param req: The request
-    :param opts: Options: [qsize <5>] [timeout <30>] [validate <True*|False>] [xrd <output xrd file>]
+    :param opts: Options: See "Options" below
     :return: None
 
-Supports both remote and local resources. Fetching remote resources is done in parallell using threads.
+Supports both remote and local resources. Fetching remote resources is done in parallel using threads.
+
+Note: When downloading remote files over HTTPS the TLS server certificate is not validated.
+Note: Default behaviour is to ignore metadata files or entities in MD files that cannot be loaded
+
+Options are put directly after "load". E.g:
+
+.. code-block:: yaml
+
+    - load fail_on_error True filter_invalid False:
+      - http://example.com/some_remote_metadata.xml
+      - local_file.xml
+      - /opt/directory_containing_md_files/
+
+**Options**
+Defaults are marked with (*)
+- max_workers <5> : Number of parallel threads to use for loading MD files
+- timeout <120> : Socket timeout when downloading files
+- validate <True*|False> : When true downloaded metadata files are validated (schema validation)
+- fail_on_error <True|False*> : Control whether an error during download, parsing or (optional)validatation of a MD file
+                                does not abort processing of the pipeline. When true a failure aborts and causes pyff
+                                to exit with a non zero exit code. Otherwise errors are logged but ignored.
+- filter_invalid <True*|False> : Controls validation behaviour. When true Entities that fail validation are filtered
+                                 I.e. are not loaded. When false the entire metadata file is either loaded, or not.
+                                 fail_on_error controls whether failure to validating the entire MD file will abort
+                                 processing of the pipeline.
     """
     opts = dict(zip(opts[::2], opts[1::2]))
     opts.setdefault('timeout', 120)
     opts.setdefault('max_workers', 5)
-    opts.setdefault('validate', True)
-    stats = dict()
-    opts.setdefault('stats', stats)
+    opts.setdefault('validate', "True")
+    opts.setdefault('fail_on_error', "False")
+    opts.setdefault('filter_invalid', "True")
+    opts['validate'] = bool(strtobool(opts['validate']))
+    opts['fail_on_error'] = bool(strtobool(opts['fail_on_error']))
+    opts['filter_invalid'] = bool(strtobool(opts['filter_invalid']))
 
     remote = []
     for x in req.args:
@@ -381,12 +451,14 @@ Supports both remote and local resources. Fetching remote resources is done in p
             else:
                 params['verify'] = elt
 
-        for elt in ("as", "verify", "via"):
+        for elt in ("verify", "via"):
             params.setdefault(elt, None)
+
+        params.setdefault('as', url)
 
         post = None
         if params['via'] is not None:
-            post = PipelineCallback(params['via'], req, stats)
+            post = PipelineCallback(params['via'], req)
 
         if "://" in url:
             log.debug("load %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
@@ -394,19 +466,40 @@ Supports both remote and local resources. Fetching remote resources is done in p
         elif os.path.exists(url):
             if os.path.isdir(url):
                 log.debug("directory %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
-                req.md.load_dir(url, url=params['as'], validate=opts['validate'], post=post)
+                req.md.load_dir(url, url=params['as'], validate=opts['validate'], post=post, fail_on_error=opts['fail_on_error'], filter_invalid=opts['filter_invalid'])
             elif os.path.isfile(url):
                 log.debug("file %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
                 remote.append(("file://%s" % url, params['verify'], params['as'], post))
             else:
-                log.error("Unknown file type for load: '%s'" % url)
+                error="Unknown file type for load: '%s'" % url
+                if opts['fail_on_error']:
+                    raise PipeException(error)
+                log.error(error)
         else:
-            log.error("Don't know how to load '%s' as %s verify %s via %s" %
-                      (url, params['as'], params['verify'], params['via']))
+            error="Don't know how to load '%s' as %s verify %s via %s (file does not exist?)" % (url, params['as'], params['verify'], params['via'])
+            if opts['fail_on_error']:
+                raise PipeException(error)
+            log.error(error)
 
     req.md.fetch_metadata(remote, **opts)
-    req.state['stats']['Metadata URLs'] = stats
 
+
+def _select_args(req):
+    args = req.args
+    if log.isDebugEnabled():
+        log.debug("selecting using args: %s" % args)
+    if args is None and 'select' in req.state:
+        args = [req.state.get('select')]
+    if args is None:
+        args = req.md.store.collections()
+    if args is None or not args:
+        args = req.md.store.lookup('entities')
+    if args is None or not args:
+        args = []
+
+    return args
+
+@pipe
 def select(req, *opts):
     """
 Select a set of EntityDescriptor elements as the working document.
@@ -469,16 +562,7 @@ would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in
 Note that you should not include an extension in your "as foo-bla-something" since that would make your
 alias invisible for anything except the corresponding mime type.
     """
-    args = req.args
-    if log.isDebugEnabled():
-        log.debug("selecting using args: %s" % args)
-    if args is None and 'select' in req.state:
-        args = [req.state.get('select')]
-    if args is None:
-        args = req.md.store.collections()
-    if args is None or not args:
-        args = []
-
+    args = _select_args(req)
     name = req.plumbing.id
     alias = False
     if len(opts) > 0:
@@ -494,11 +578,67 @@ alias invisible for anything except the corresponding mime type.
         raise PipeException("empty select - stop")
 
     if alias:
-        req.md.import_metadata(ot, name)
+        nfo = dict(Status='default', Description="Synthetic collection")
+        n = req.md.store.update(ot, name)
+        nfo['Size'] = str(n)
+        set_metadata_info(name, nfo)
 
     return ot
 
+@pipe(name="filter")
+def _filter(req, *opts):
+    """
+    Refines the working document by applying a filter. The filter expression is a subset of the
+    select semantics and syntax:
 
+.. code-block:: yaml
+
+    - filter:
+        - "!//md:EntityDescriptor[md:SPSSODescriptor]"
+        - "https://idp.example.com/shibboleth"
+
+    This would select all SPs and any entity with entityID "https://idp.example.com/shibboleth"
+    from the current working document and return as the new working document. Filter also supports
+    the "as <alias>" construction from select allowing new synthetic collections to be created
+    from filtered documents.
+    """
+
+    if req.t is None:
+        raise PipeException("Unable to filter on an empty document - use select first")
+
+    alias = False
+    if len(opts) > 0:
+        if opts[0] != 'as' and len(opts) == 1:
+            name = opts[0]
+            alias = True
+        if opts[0] == 'as' and len(opts) == 2:
+            name = opts[1]
+            alias = True
+
+    name = req.plumbing.id
+    args = req.args
+    if args is None or not args:
+        args = []
+
+    def _find(member):
+        return req.md.find(req.t, member)
+
+    ot = req.md.entity_set(args, name, lookup_fn=_find, copy=False)
+    if alias:
+        nfo = dict(Status='default', Description="Synthetic collection")
+        n = req.md.store.update(ot, name)
+        nfo['Size'] = str(n)
+        set_metadata_info(name, nfo)
+
+    req.t = None
+
+    if ot is None:
+        raise PipeException("empty filter - stop")
+
+    #print "filter returns %s" % [e for e in iter_entities(ot)]
+    return ot
+
+@pipe
 def pick(req, *opts):
     """
 Select a set of EntityDescriptor elements as a working document but don't validate it.
@@ -509,15 +649,13 @@ Select a set of EntityDescriptor elements as a working document but don't valida
 
 Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information about selecting the document.
     """
-    args = req.args
-    if args is None:
-        args = req.md.store.collections()
+    args = _select_args(req)
     ot = req.md.entity_set(args, req.plumbing.id, validate=False)
     if ot is None:
         raise PipeException("empty select '%s' - stop" % ",".join(args))
     return ot
 
-
+@pipe
 def first(req, *opts):
     """
 If the working document is a single EntityDescriptor, strip the outer EntitiesDescriptor element and return it.
@@ -529,6 +667,9 @@ If the working document is a single EntityDescriptor, strip the outer EntitiesDe
 Sometimes (eg when running an MDX pipeline) it is usually expected that if a single EntityDescriptor is being returned
 then the outer EntitiesDescriptor is stripped. This method does exactly that:
     """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
     gone = object()  # sentinel
     entities = iter_entities(req.t)
     one = next(entities, gone)
@@ -542,7 +683,22 @@ then the outer EntitiesDescriptor is stripped. This method does exactly that:
     return req.t
 
 
+@pipe
+def discojson(req, *opts):
+    """
+Return a discojuice-compatible json representation of the tree
 
+:param req: The request
+:param opts: Options (unusued)
+:return: returns a JSON array
+    """
+
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    return json.dumps([req.md.discojson(e) for e in iter_entities(req.t)])
+
+@pipe
 def sign(req, *opts):
     """
 Sign the working document.
@@ -588,7 +744,7 @@ of your PKCS#11 module to find out about any other configuration you may need.
 This example signs the document using the plain key and cert found in the signer.key and signer.crt files.
     """
     if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
+        raise PipeException("Your pipeline is missing a select statement.")
 
     if not type(req.args) is dict:
         raise PipeException("Missing key and cert arguments to sign pipe")
@@ -612,6 +768,7 @@ This example signs the document using the plain key and cert found in the signer
     return req.t
 
 
+@pipe
 def stats(req, *opts):
     """
 Display statistics about the current working document.
@@ -639,7 +796,7 @@ Display statistics about the current working document.
     print "---"
     return req.t
 
-
+@pipe
 def store(req, *opts):
     """
 Save the working document as separate files
@@ -652,6 +809,8 @@ Split the working document into EntityDescriptor-parts and save in directory/sha
 this does not erase files that may already be in the directory. If you want a "clean" directory, remove it
 before you call store.
     """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
 
     if not req.args:
         raise PipeException("store requires an argument")
@@ -665,8 +824,6 @@ before you call store.
     if target_dir is not None:
         if not os.path.isdir(target_dir):
             os.makedirs(target_dir)
-        if req.t is None:
-            raise PipeException("Your plumbing is missing a select statement.")
         for e in iter_entities(req.t):
             eid = e.get('entityID')
             if eid is None or len(eid) == 0:
@@ -677,7 +834,7 @@ before you call store.
             safe_write("%s.xml" % os.path.join(target_dir, d), dumptree(e, pretty_print=True))
     return req.t
 
-
+@pipe
 def xslt(req, *opts):
     """
 Transform the working document using an XSLT file.
@@ -699,12 +856,12 @@ user-supplied file. The rest of the keyword arguments are made available as stri
         x: foo
         y: bar
     """
+    if req.t is None:
+        raise PipeException("Your plumbing is missing a select statement.")
+
     stylesheet = req.args.get('stylesheet', None)
     if stylesheet is None:
         raise PipeException("xslt requires stylesheet")
-
-    if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
 
     params = dict((k, "\'%s\'" % v) for (k, v) in req.args.items())
     del params['stylesheet']
@@ -715,7 +872,7 @@ user-supplied file. The rest of the keyword arguments are made available as stri
         traceback.print_exc(ex)
         raise ex
 
-
+@pipe
 def validate(req, *opts):
     """
 Validate the working document
@@ -732,7 +889,7 @@ loading of metadata so this call is seldom needed.
 
     return req.t
 
-
+@pipe
 def certreport(req, *opts):
     """
 Generate a report of the certificates (optionally limited by expiration time or key size) found in the selection.
@@ -761,7 +918,7 @@ HTML.
     """
 
     if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
+        raise PipeException("Your pipeline is missing a select statement.")
 
     if not req.args:
         req.args = {}
@@ -788,13 +945,13 @@ HTML.
                 m.update(cert_der)
                 fp = m.hexdigest()
                 if not seen.get(fp, False):
+                    entity_elt = cd.getparent().getparent().getparent().getparent().getparent()
                     seen[fp] = True
                     cdict = xmlsec.utils.b642cert(cert_pem)
                     keysize = cdict['modulus'].bit_length()
                     cert = cdict['cert']
                     if keysize < error_bits:
-                        e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e,
+                        req.md.annotate(entity_elt,
                                         "certificate-error",
                                         "keysize too small",
                                         "%s has keysize of %s bits (less than %s)" % (cert.getSubject(),
@@ -802,35 +959,47 @@ HTML.
                                                                                       error_bits))
                         log.error("%s has keysize of %s" % (eid, keysize))
                     elif keysize < warning_bits:
-                        e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e,
+                        req.md.annotate(entity_elt,
                                         "certificate-warning",
                                         "keysize small",
                                         "%s has keysize of %s bits (less than %s)" % (cert.getSubject(),
                                                                                       keysize,
                                                                                       warning_bits))
                         log.warn("%s has keysize of %s" % (eid, keysize))
-                    et = datetime.strptime("%s" % cert.getNotAfter(), "%y%m%d%H%M%SZ")
-                    now = datetime.now()
-                    dt = et - now
-                    if total_seconds(dt) < error_seconds:
-                        e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e,
+
+                    notafter = cert.getNotAfter()
+                    if notafter is None:
+                        req.md.annotate(entity_elt,
                                         "certificate-error",
-                                        "certificate has expired",
-                                        "%s expired %s ago" % (cert.getSubject(), -dt))
-                        log.error("%s expired %s ago" % (eid, -dt))
-                    elif total_seconds(dt) < warning_seconds:
-                        e = cd.getparent().getparent().getparent().getparent().getparent()
-                        req.md.annotate(e,
-                                        "certificate-warning",
-                                        "certificate about to expire",
-                                        "%s expires in %s" % (cert.getSubject(), dt))
-                        log.warn("%s expires in %s" % (eid, dt))
+                                        "certificate has no expiration time",
+                                        "%s has no expiration time" % cert.getSubject())
+                    else:
+                        try:
+                            et = datetime.strptime("%s" % notafter, "%y%m%d%H%M%SZ")
+                            now = datetime.now()
+                            dt = et - now
+                            if total_seconds(dt) < error_seconds:
+                                req.md.annotate(entity_elt,
+                                                "certificate-error",
+                                                "certificate has expired",
+                                                "%s expired %s ago" % (cert.getSubject(), -dt))
+                                log.error("%s expired %s ago" % (eid, -dt))
+                            elif total_seconds(dt) < warning_seconds:
+                                req.md.annotate(entity_elt,
+                                                "certificate-warning",
+                                                "certificate about to expire",
+                                                "%s expires in %s" % (cert.getSubject(), dt))
+                                log.warn("%s expires in %s" % (eid, dt))
+                        except ValueError, ex:
+                            req.md.annotate(entity_elt,
+                                            "certificate-error",
+                                            "certificate has unknown expiration time",
+                                            "%s unknown expiration time %s" % (cert.getSubject(), notafter))
+
             except Exception, ex:
                 log.error(ex)
 
-
+@pipe
 def emit(req, ctype="application/xml", *opts):
     """
 Returns a UTF-8 encoded representation of the working tree.
@@ -851,6 +1020,8 @@ Content-Type HTTP response header.
     - emit application/xml:
     - break
     """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
 
     d = req.t
     if hasattr(d, 'getroot') and hasattr(d.getroot, '__call__'):
@@ -873,7 +1044,7 @@ Content-Type HTTP response header.
     req.state['headers']['Content-Type'] = ctype
     return unicode(d.decode('utf-8')).encode("utf-8")
 
-
+@pipe
 def signcerts(req, *opts):
     """
 Logs the fingerprints of the signing certs found in the current working tree.
@@ -891,12 +1062,13 @@ Useful for testing.
     - signcerts
     """
     if req.t is None:
-        raise PipeException("Your plumbing is missing a select statement.")
+        raise PipeException("Your pipeline is missing a select statement.")
+
     for fp, pem in xmlsec.CertDict(req.t).iteritems():
         log.info("found signing cert with fingerprint %s" % fp)
     return req.t
 
-
+@pipe
 def finalize(req, *opts):
     """
 Prepares the working document for publication/rendering.
@@ -946,9 +1118,15 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
 
     now = datetime.utcnow()
 
-    idprefix = req.args.get('ID', '_')
+    mdid = req.args.get('ID', 'prefix _')
+    if re.match('(\s)*prefix(\s)*', mdid):
+        prefix = re.sub('^(\s)*prefix(\s)*', '', mdid)
+        ID = now.strftime(prefix + "%Y%m%dT%H%M%SZ")
+    else:
+        ID = mdid
+
     if not e.get('ID'):
-        e.set('ID', now.strftime(idprefix + "%Y%m%dT%H%M%SZ"))
+        e.set('ID', ID)
 
     valid_until = str(req.args.get('validUntil', e.get('validUntil', None)))
     if valid_until is not None and len(valid_until) > 0:
@@ -963,7 +1141,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
                 offset = dt - now
                 e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
             except ValueError, ex:
-                log.error("Unable to parse validUntil: %s" % valid_until)
+                log.error("Unable to parse validUntil: %s (%s)" % (valid_until, ex))
 
             # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set
@@ -980,7 +1158,62 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
 
     return req.t
 
+@pipe(name='reginfo')
+def _reginfo(req, *opts):
+    """
+Sets registration info extension on EntityDescription element
 
+:param req: The request
+:param opts: Options (not used)
+:return: A modified working document
+
+Transforms the working document by setting the specified attribute on all of the EntityDescriptor
+elements of the active document.
+
+**Examples**
+
+.. code-block:: yaml
+
+    - reginfo:
+       [policy:
+            <lang>: <registration policy URL>]
+       authority: <registrationAuthority URL>
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    for e in iter_entities(req.t):
+        req.md.set_reginfo(e, **req.args)
+
+    return req.t
+
+@pipe(name='pubinfo')
+def _pubinfo(req, *opts):
+    """
+Sets publication info extension on EntityDescription element
+
+:param req: The request
+:param opts: Options (not used)
+:return: A modified working document
+
+Transforms the working document by setting the specified attribute on all of the EntityDescriptor
+elements of the active document.
+
+**Examples**
+
+.. code-block:: yaml
+
+    - pubinfo:
+       publisher: <publisher URL>
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    req.md.set_pubinfo(root(req.t), **req.args)
+
+    return req.t
+
+@pipe(name='setattr')
 def _setattr(req, *opts):
     """
 Sets entity attributes on the working document
@@ -1004,6 +1237,11 @@ elements of the active document.
 Normally this would be combined with the 'merge' feature of fork to add attributes to the working
 document for later processing.
     """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
     for e in iter_entities(req.t):
         #log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         req.md.set_entity_attributes(e, req.args)
+
+    return req.t

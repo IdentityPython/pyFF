@@ -1,0 +1,9 @@
+{% extends "ui.html" %}
+{% block headline %}{{ gettext('No cookies served here!') }}{% endblock %}
+
+{% block content %}
+<p>
+  {{ gettext('This service uses HTML5 local store (and corresponding service in some non-HTML5 browsers) to store settings and preferences. This means that no cookies are sent to the server and no personal information is ever leaked to a 3rd party. Nevertheless it may sometimes be useful or necessary to') }}
+  <a href="/reset"> {{ gettext('clear your settings on this site') }}.</a>
+</p>
+{% endblock %}
