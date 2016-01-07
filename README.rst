@@ -9,9 +9,6 @@ python SAML metadata aggregator
 .. image:: https://requires.io/github/leifj/pyFF/requirements.svg?branch=master
    :target: https://requires.io/github/leifj/pyFF/requirements/?branch=master
    :alt: Requirements Status
-.. image:: https://pypip.in/license/pyFF/badge.svg
-    :target: https://pypi.python.org/pypi/pyFF/
-    :alt: License
 
 
 This is a SAML metadata aggregator written in python. It is based on the model 
