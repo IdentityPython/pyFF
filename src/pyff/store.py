@@ -345,21 +345,22 @@ class RedisStore(StoreBase):
     def reset(self):
         self.rc.flushdb()
 
+    def _drop_empty_av(self, attr, tag, ts):
+        an = "#%s" % attr
+        for c in self.rc.smembers(an):
+            tn = "%s#members" % c
+            self.rc.zremrangebyscore(tn, "-inf", ts)
+            if not self.rc.zcard(tn) > 0:
+                log.debug("dropping empty %s %s" % (attr, c))
+                self.rc.srem(an, c)
+
     def periodic(self, stats):
         now = _now()
         stats['Last Periodic Maintenance'] = now
         log.debug("periodic maintentance...")
         self.rc.zremrangebyscore("members", "-inf", now)
-        for c in self.rc.smembers("#collections"):
-            self.rc.zremrangebyscore("%s#members", "-inf", now)
-            if not self.rc.zcard("%s#members" % c) > 0:
-                log.debug("dropping empty collection %s" % c)
-                self.rc.srem("#collections", c)
-        for an in self.rc.smembers("#attributes"):
-            self.rc.zremrangebyscore("%s#values", "-inf", now)
-            if not self.rc.zcard("%s#members" % an) > 0:
-                log.debug("dropping empty attribute %s" % an)
-                self.rc.srem("#attributes", an)
+        self._drop_empty_av("collections", "members", now)
+        self._drop_empty_av("attributes", "values", now)
 
     def update_entity(self, relt, t, tid, ts, p=None):
         if p is None:
