@@ -28,3 +28,4 @@ ratings:
   - "**.rb"
 exclude_paths:
   - "src/pyff/site/static/bootstrap/*"
+  - "src/pyff/test/**"
