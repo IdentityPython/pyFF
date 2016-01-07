@@ -9,7 +9,7 @@ python SAML metadata aggregator
 .. image:: https://requires.io/github/leifj/pyFF/requirements.svg?branch=master
    :target: https://requires.io/github/leifj/pyFF/requirements/?branch=master
    :alt: Requirements Status
-.. image: https://img.shields.io/pypi/l/pyFF.svg
+.. image:: https://img.shields.io/pypi/l/pyFF.svg
    :target: https://github.com/leifj/pyFF/blob/master/LICENSE.txt
    :alt: License
 
