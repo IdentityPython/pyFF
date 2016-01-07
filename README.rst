@@ -1,7 +1,7 @@
 python SAML metadata aggregator
 ===============================
 
-.. image:: https://img.shields.io/leifj/pyFF.svg
+.. image:: https://img.shields.io/travis/leifj/pyFF.svg
    :target: https://travis-ci.org/leifj/pyFF
    :alt: Travis Build
 .. image:: https://img.shields.io/coveralls/leifj/pyFF.svg
