@@ -9,6 +9,9 @@ python SAML metadata aggregator
 .. image:: https://coveralls.io/repos/leifj/pyFF/badge.png?branch=master
    :target: https://coveralls.io/r/leifj/pyFF?branch=master
    :alt: Coverage
+.. image:: https://requires.io/github/leifj/pyFF/requirements.svg?branch=master
+   :target: https://requires.io/github/leifj/pyFF/requirements/?branch=master
+   :alt: Requirements Status
 .. image:: https://pypip.in/license/pyFF/badge.svg
     :target: https://pypi.python.org/pypi/pyFF/
     :alt: License
