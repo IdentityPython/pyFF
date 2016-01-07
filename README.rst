@@ -7,7 +7,7 @@ python SAML metadata aggregator
 .. image:: https://img.shields.io/coveralls/leifj/pyFF.svg
    :target: https://coveralls.io/r/leifj/pyFF?branch=master
    :alt: Coverage
-.. image:: https://requires.io/github/leifj/pyFF/requirements.svg?branch=master
+.. image:: https://img.shields.io/requires/github/leifj/pyFF.svg?branch=master
    :target: https://requires.io/github/leifj/pyFF/requirements/?branch=master
    :alt: Requirements Status
 .. image:: https://img.shields.io/codeclimate/github/leifj/pyFF.svg
