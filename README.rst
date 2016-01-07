@@ -10,7 +10,7 @@ python SAML metadata aggregator
    :target: https://requires.io/github/leifj/pyFF/requirements/?branch=master
    :alt: Requirements Status
 .. image: https://img.shields.io/pypi/l/pyFF.svg
-   :target:
+   :target: https://github.com/leifj/pyFF/blob/master/LICENSE.txt
    :alt: License
 
 This is a SAML metadata aggregator written in python. It is based on the model 
