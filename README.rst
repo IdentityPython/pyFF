@@ -1,9 +1,10 @@
 python SAML metadata aggregator
 ===============================
 
-.. image:: https://travis-ci.org/leifj/pyFF.svg?branch=master
-    :target: https://travis-ci.org/leifj/pyFF
-.. image:: https://coveralls.io/repos/leifj/pyFF/badge.png?branch=master
+.. image:: https://img.shields.io/leifj/pyFF.svg
+   :target: https://travis-ci.org/leifj/pyFF
+   :alt: Travis Build
+.. image:: https://img.shields.io/coveralls/leifj/pyFF.svg
    :target: https://coveralls.io/r/leifj/pyFF?branch=master
    :alt: Coverage
 .. image:: https://requires.io/github/leifj/pyFF/requirements.svg?branch=master
