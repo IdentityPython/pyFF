@@ -278,7 +278,7 @@ $(document).ready(function() {
     };
 
     $("img.fallback-icon").error(function(e) {
-        $(this).attr('src','/static/img/1x1t.png').removeClass("img-thumbnail").hide();
+        $(this).attr('src','/static/icons/1x1t.png').removeClass("img-thumbnail").hide();
     });
 
     var idp_template = Hogan.compile('<span class="cursor {{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
