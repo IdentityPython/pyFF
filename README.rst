@@ -9,7 +9,9 @@ python SAML metadata aggregator
 .. image:: https://requires.io/github/leifj/pyFF/requirements.svg?branch=master
    :target: https://requires.io/github/leifj/pyFF/requirements/?branch=master
    :alt: Requirements Status
-
+.. image: https://img.shields.io/pypi/l/pyFF.svg
+   :target:
+   :alt: License
 
 This is a SAML metadata aggregator written in python. It is based on the model 
 for metadata exchange by Ian Young: http://iay.org.uk/blog/2008/10/metadata_interc.html
