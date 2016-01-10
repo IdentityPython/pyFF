@@ -486,8 +486,7 @@ Defaults are marked with (*)
 
 def _select_args(req):
     args = req.args
-    if log.isDebugEnabled():
-        log.debug("selecting using args: %s" % args)
+    log.debug("selecting using args: %s" % args)
     if args is None and 'select' in req.state:
         args = [req.state.get('select')]
     if args is None:

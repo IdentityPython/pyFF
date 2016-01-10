@@ -540,8 +540,7 @@ def avg_domain_distance(d1, d2):
     for a in d1.split(';'):
         for b in d2.split(';'):
             d = ddist(a, b)
-            if log.isDebugEnabled():
-                log.debug("ddist %s %s -> %d" % (a, b, d))
+            log.debug("ddist %s %s -> %d" % (a, b, d))
             dd += d
             n += 1
     return int(dd / n)

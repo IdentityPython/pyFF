@@ -43,9 +43,6 @@ class PyFFLogger(object):
     def isEnabledFor(self, lvl):
         return logging.getLogger(__name__).isEnabledFor(lvl)
 
-    def isDebugEnabled(self):
-        return self.isEnabledFor(logging.DEBUG)
-
 
 log = PyFFLogger()
 

@@ -321,8 +321,7 @@ The dict in the list contains three items:
         if f:
             mexpr = "+".join(f)
 
-        if log.isDebugEnabled():
-            log.debug("match using '%s'" % mexpr)
+        log.debug("match using '%s'" % mexpr)
         res = []
         for e in self.lookup(mexpr):
             m = _match(query, e)
@@ -342,8 +341,7 @@ The dict in the list contains three items:
         res.sort(key=operator.itemgetter('title'))
         res.sort(key=operator.itemgetter('ddist'), reverse=True)
 
-        if log.isDebugEnabled():
-            log.debug("search returning %s" % res)
+        log.debug("search returning %s" % res)
 
         if page is not None:
             total = len(res)
@@ -601,8 +599,7 @@ and verified.
 
             if not expired:
                 if relt.tag in ('{%s}XRD' % NS['xrd'], '{%s}XRDS' % NS['xrd']):
-                    if log.isDebugEnabled():
-                        log.debug("%s looks like an xrd document" % rurl)
+                    log.debug("%s looks like an xrd document" % rurl)
                     for xrd in t.iter("{%s}XRD" % NS['xrd']):
                         for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
                             link_href = link.get("href")
@@ -611,8 +608,7 @@ and verified.
                             fp = None
                             if len(fingerprints) > 0:
                                 fp = fingerprints[0]
-                            if log.isDebugEnabled():
-                                log.debug("XRD: '%s' verified by '%s'" % (link_href, fp))
+                            log.debug("XRD: '%s' verified by '%s'" % (link_href, fp))
                             tries.setdefault(link_href, 0)
                             if tries[link_href] < max_tries:
                                 retry_resources.append((link_href, fp, link_href, post, True))
@@ -623,8 +619,7 @@ and verified.
                     raise MetadataException("unknown metadata type for '%s' (%s)" % (rurl, relt.tag))
 
             set_metadata_info(tid, info)
-            if log.isDebugEnabled():
-                log.debug(info)
+            log.debug(info)
 
             return retry_resources
 
@@ -645,8 +640,7 @@ and verified.
                     else:
                         next_resources.extend(future.result())
                 resources = next_resources
-                if log.isDebugEnabled():
-                    log.debug("retrying %s" % resources)
+                log.debug("retrying %s" % resources)
 
     def filter_invalids(self, t, base_url, validation_errors):
         xsd = schema()
@@ -664,8 +658,7 @@ and verified.
 
     def check_signature(self, t, key):
         if key is not None:
-            if log.isDebugEnabled():
-                log.debug("verifying signature using %s" % key)
+            log.debug("verifying signature using %s" % key)
             refs = xmlsec.verified(t, key, drop_signature=True)
             if len(refs) != 1:
                 raise MetadataException(
@@ -741,8 +734,7 @@ and verified.
             log.error(ex)
             return None, None
 
-        if log.isDebugEnabled():
-            log.debug("returning %d valid entities" % len(list(iter_entities(t))))
+        log.debug("returning %d valid entities" % len(list(iter_entities(t))))
 
         return t, valid_until
 
@@ -767,8 +759,7 @@ starting with '.' are excluded.
                     dirs.remove(dn)
             for nm in files:
                 if nm.endswith(ext):
-                    if log.isDebugEnabled():
-                        log.debug("parsing from file %s" % nm)
+                    log.debug("parsing from file %s" % nm)
                     fn = os.path.join(top, nm)
                     try:
                         validation_errors = dict()
@@ -862,15 +853,12 @@ fails an empty list is returned.
         if xp is None:
             return l
         else:
-            if log.isDebugEnabled():
-                log.debug("filtering %d entities using xpath %s" % (len(l), xp))
+            log.debug("filtering %d entities using xpath %s" % (len(l), xp))
             t = self.entity_set(l, 'dummy')
             if t is None:
                 return []
             l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
-
-            if log.isDebugEnabled():
-                log.debug("got %d entities after filtering" % len(l))
+            log.debug("got %d entities after filtering" % len(l))
             return l
 
     def entity_set(self, entities, name, lookup_fn=None, cacheDuration=None, validUntil=None, validate=True, copy=True):
@@ -883,8 +871,7 @@ fails an empty list is returned.
 Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
         """
 
-        # if log.isDebugEnabled():
-        #    log.debug("entities: %s" % entities)
+        #log.debug("entities: %s" % entities)
 
         if lookup_fn is None:
             lookup_fn = self.lookup
@@ -917,8 +904,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                     _insert(entity)
                     nent += 1
 
-        if log.isDebugEnabled():
-            log.debug("selecting %d entities before validation" % nent)
+        log.debug("selecting %d entities before validation" % nent)
 
         if not nent:
             return None
@@ -927,8 +913,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             try:
                 validate_document(t)
             except DocumentInvalid, ex:
-                if log.isDebugEnabled():
-                    log.debug(xml_error(ex.error_log))
+                log.debug(xml_error(ex.error_log))
                 raise MetadataException("XML schema validation failed: %s" % name)
         return t
 
