@@ -174,69 +174,6 @@ class MemoryStore(StoreBase):
     def _unindex(self, entity):
         return self._modify(entity, "discard")
 
-    def _index_o(self, entity):
-        attr_idx = self.index.setdefault('attr', {})
-        nd = 0
-        for hn in DINDEX:
-            hid = hash_id(entity, hn, False)
-            # log.debug("computing index %s(%s) = %s" % (hn, entity.get('entityID'), hid))
-            self.index[hn].setdefault(hid, EntitySet())
-            self.index[hn][hid].add(entity)
-            nd += 1
-
-        na = 0
-        for attr, values in entity_attribute_dict(entity).iteritems():
-            for v in values:
-                vidx = attr_idx.setdefault(attr, {})
-                vidx.setdefault(v, EntitySet())
-                na += 1
-                vidx[v].add(entity)
-
-        vidx = attr_idx.setdefault(ATTRS['role'], {})
-        if is_idp(entity):
-            vidx.setdefault('idp', EntitySet())
-            na += 1
-            vidx['idp'].add(entity)
-
-        if is_sp(entity):
-            vidx.setdefault('sp', EntitySet())
-            na += 1
-            vidx['sp'].add(entity)
-
-        # log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'), na, nd))
-
-    def _unindex_o(self, entity):
-        attr_idx = self.index.setdefault('attr', {})
-        nd = 0
-        for hn in DINDEX:
-            # log.debug("computing %s" % hn)
-            hid = hash_id(entity, hn, False)
-            self.index[hn].setdefault(hid, EntitySet())
-            self.index[hn][hid].discard(entity)
-            nd += 1
-
-        na = 0
-        for attr, values in entity_attribute_dict(entity).iteritems():
-            # log.debug("indexing %s on %s" % (attr,entity.get('entityID')))
-            for v in values:
-                vidx = attr_idx.setdefault(attr, {})
-                vidx.setdefault(v, EntitySet())
-                na += 1
-                vidx[v].discard(entity)
-
-        vidx = attr_idx.setdefault(ATTRS['role'], {})
-        if is_idp(entity):
-            vidx.setdefault('idp', EntitySet())
-            na += 1
-            vidx['idp'].discard(entity)
-
-        if is_sp(entity):
-            vidx.setdefault('sp', EntitySet())
-            na += 1
-            vidx['sp'].discard(entity)
-
-        # log.debug("(un)indexed %s (%d attributes, %d digests)" % (entity.get('entityID'), na, nd))
-
     def _get_index(self, a, v):
         if a in DINDEX:
             return self.index[a].get(v, [])
