@@ -148,7 +148,33 @@ class MemoryStore(StoreBase):
     def periodic(self, stats):
         self._ready = True
 
+    def _modify(self, entity, modifier):
+
+        def _m(idx, vv):
+            getattr(idx.setdefault(vv, EntitySet()), modifier)(entity)
+
+        for hn in DINDEX:
+            _m(self.index[hn], hash_id(entity, hn, False))
+
+        attr_idx = self.index.setdefault('attr', {})
+        for attr, values in entity_attribute_dict(entity).iteritems():
+            vidx = attr_idx.setdefault(attr, {})
+            for v in values:
+                _m(vidx, v)
+
+        vidx = attr_idx.setdefault(ATTRS['role'], {})
+        if is_idp(entity):
+            _m(vidx, "idp")
+        if is_sp(entity):
+            _m(vidx, "sp")
+
     def _index(self, entity):
+        return self._modify(entity, "add")
+
+    def _unindex(self, entity):
+        return self._modify(entity, "discard")
+
+    def _index_o(self, entity):
         attr_idx = self.index.setdefault('attr', {})
         nd = 0
         for hn in DINDEX:
@@ -179,7 +205,7 @@ class MemoryStore(StoreBase):
 
         # log.debug("indexed %s (%d attributes, %d digests)" % (entity.get('entityID'), na, nd))
 
-    def _unindex(self, entity):
+    def _unindex_o(self, entity):
         attr_idx = self.index.setdefault('attr', {})
         nd = 0
         for hn in DINDEX:
