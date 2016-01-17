@@ -29,3 +29,4 @@ ratings:
 exclude_paths:
   - "src/pyff/site/static/bootstrap/*"
   - "src/pyff/test/**"
+  - "src/pyff/site/static/js/prettify.js"
