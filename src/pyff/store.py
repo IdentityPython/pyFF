@@ -5,15 +5,13 @@ except ImportError:  # pragma: no cover
     from StringIO import StringIO
 
 from copy import deepcopy
-from datetime import datetime
 import re
-from iso8601 import iso8601
 from redis import Redis
 import time
 from pyff.constants import NS, ATTRS
 from pyff.decorators import cached
-from pyff.utils import root, dumptree, duration2timedelta, totimestamp, parse_xml, hex_digest, hash_id, EntitySet, \
-    entities_list, url2host, subdomains, has_tag, iter_entities
+from pyff.utils import root, dumptree, parse_xml, hex_digest, hash_id, EntitySet, \
+    url2host, subdomains, has_tag, iter_entities, valid_until_ts
 from pyff.logs import log
 
 
@@ -24,8 +22,10 @@ def is_idp(entity):
 def is_sp(entity):
     return has_tag(entity, "{%s}SPSSODescriptor" % NS['md'])
 
+
 def is_aa(entity):
     return has_tag(entity, "{%s}AttributeAuthorityDescriptor" % NS['md'])
+
 
 def _domains(entity):
     domains = [url2host(entity.get('entityID'))]
@@ -35,46 +35,54 @@ def _domains(entity):
     return domains
 
 
-def entity_attribute_dict(entity):
-    d = {}
+def with_entity_attributes(entity, cb):
     for ea in entity.iter("{%s}EntityAttributes" % NS['mdattr']):
         a = ea.find(".//{%s}Attribute" % NS['saml'])
         if a is not None:
             an = a.get('Name', None)
             if a is not None:
                 values = [v.text.strip() for v in a.iter("{%s}AttributeValue" % NS['saml'])]
-                d[an] = values
+                cb(an, values)
 
-    role_a = ATTRS['role']
-    d[role_a] = []
 
+def _all_domains_and_subdomains(entity):
+    dlist = []
     try:
-        dlist = []
         for dn in _domains(entity):
             for sub in subdomains(dn):
                 dlist.append(sub)
-
-        d[ATTRS['domain']] = dlist
     except ValueError:
         pass
+    return dlist
 
+
+def entity_attribute_dict(entity):
+    d = {}
+
+    def _u(an, values):
+        d[an] = values
+    with_entity_attributes(entity, _u)
+
+    d[ATTRS['domain']] = _all_domains_and_subdomains(entity)
+
+    roles = d.setdefault(ATTRS['role'], [])
     if is_idp(entity):
-        d[role_a].append('idp')
+        roles.append('idp')
         eca = ATTRS['entity-category']
-        d.setdefault(eca, [])
-        ec = d[eca]
+        ec = d.setdefault(eca, [])
         if 'http://refeds.org/category/hide-from-discovery' not in ec:
-            d[eca].append('http://pyff.io/category/discoverable')
+            ec.append('http://pyff.io/category/discoverable')
     if is_sp(entity):
-        d[role_a].append('sp')
+        roles.append('sp')
     if is_aa(entity):
-        d[role_a].append('aa')
+        roles.append('aa')
 
     return d
 
 
 def _now():
     return int(time.time())
+
 
 DINDEX = ('sha1', 'sha256', 'null')
 
@@ -199,7 +207,7 @@ class MemoryStore(StoreBase):
     def update(self, t, tid=None, ts=None, merge_strategy=None):
         # log.debug("memory store update: %s: %s" % (repr(t), tid))
         relt = root(t)
-        assert(relt is not None)
+        assert (relt is not None)
         ne = 0
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
             # log.debug("memory store setting entity descriptor")
@@ -279,28 +287,15 @@ class MemoryStore(StoreBase):
 
 
 class RedisStore(StoreBase):
-    def __init__(self, version=_now(), default_ttl=3600*24*4, respect_validity=True):
+    def __init__(self, version=_now(), default_ttl=3600 * 24 * 4, respect_validity=True):
         self.rc = Redis()
         self.default_ttl = default_ttl
         self.respect_validity = respect_validity
 
     def _expiration(self, relt):
-        ts = _now()+self.default_ttl
-
+        ts = _now() + self.default_ttl
         if self.respect_validity:
-            valid_until = relt.get("validUntil", None)
-            if valid_until is not None:
-                dt = iso8601.parse_date(valid_until)
-                if dt is not None:
-                    ts = totimestamp(dt)
-
-            cache_duration = relt.get("cacheDuration", None)
-            if cache_duration is not None:
-                dt = datetime.utcnow() + duration2timedelta(cache_duration)
-                if dt is not None:
-                    ts = totimestamp(dt)
-
-        return ts
+            return valid_until_ts(relt, ts)
 
     def ready(self):
         return True
@@ -342,7 +337,7 @@ class RedisStore(StoreBase):
         if p is None:
             p = self.rc
         p.zadd("%s#members" % gid, mid, ts)
-        #p.zadd("%s#groups", mid, gid, ts)
+        # p.zadd("%s#groups", mid, gid, ts)
         p.sadd("#collections", gid)
 
     def attributes(self):
@@ -365,7 +360,7 @@ class RedisStore(StoreBase):
         relt = root(t)
         ne = 0
         if ts is None:
-            ts = int(_now()+3600*24*4)    # 4 days is the arbitrary default expiration
+            ts = int(_now() + 3600 * 24 * 4)  # 4 days is the arbitrary default expiration
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('entityID')
@@ -418,7 +413,7 @@ class RedisStore(StoreBase):
         return root(parse_xml(StringIO(self.rc.get("%s#metadata" % key))))
 
     def lookup(self, key):
-        #log.debug("redis store lookup: %s" % key)
+        # log.debug("redis store lookup: %s" % key)
         if '+' in key:
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):
@@ -434,7 +429,8 @@ class RedisStore(StoreBase):
         if m and ';' in m.group(2):
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):
-                self.rc.zunionstore("%s#members" % hk, ["{%s}%s#members" % (m.group(1), v) for v in m.group(2).split(';')], 'min')
+                self.rc.zunionstore("%s#members" % hk,
+                                    ["{%s}%s#members" % (m.group(1), v) for v in m.group(2).split(';')], 'min')
                 self.rc.expire("%s#members" % hk, 30)  # XXX bad juju - only to keep clients from hammering
             return self.lookup(hk)
         elif self.rc.exists("%s#alias" % key):

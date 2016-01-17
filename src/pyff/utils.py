@@ -379,6 +379,23 @@ def xslt_transform(t, stylesheet, params=None):
     return res
 
 
+def valid_until_ts(elt, default_ts):
+    ts = default_ts
+    valid_until = elt.get("validUntil", None)
+    if valid_until is not None:
+        dt = iso8601.parse_date(valid_until)
+        if dt is not None:
+            ts = totimestamp(dt)
+
+    cache_duration = elt.get("cacheDuration", None)
+    if cache_duration is not None:
+        dt = datetime.utcnow() + duration2timedelta(cache_duration)
+        if dt is not None:
+            ts = totimestamp(dt)
+
+    return ts
+
+
 def total_seconds(dt):
     if hasattr(dt, "total_seconds"):
         return dt.total_seconds()
