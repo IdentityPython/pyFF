@@ -1,0 +1,6 @@
+pbr
+nose>=1.0
+mock
+mako
+mockredispy
+testfixtures
