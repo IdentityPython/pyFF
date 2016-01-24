@@ -150,14 +150,13 @@ class LoadErrorTest(PipeLineTest):
                     res, md = self.exec_pipeline("""
     - load fail_on_error True:
         - %s/metadata/test01.xml
-        - http://127.0.0.1/does_not_exists.xml
+        - http://127.0.0.1/does_not_exist.xml
     - select
     - stats
     """ % (self.datadir) )
                 except MetadataException, ex:
                     print ex
-                    assert ("Exception fetching" in str(ex))
-                    assert ("http://127.0.0.1/does_not_exists.xml" in str(ex))
+                    assert ("http://127.0.0.1/does_not_exist.xml" in str(ex))
                     return True
                 finally:
                     if os.path.isfile(self.output):
