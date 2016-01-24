@@ -1,3 +1,4 @@
+setuptools
 pbr
 nose>=1.0
 mock
