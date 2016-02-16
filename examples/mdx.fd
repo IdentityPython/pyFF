@@ -9,7 +9,7 @@
 - when update:
     - load:
        - examples/links.xrd as links via normalize
-       - http://mds.edugain.org via edugain
+       #- http://mds.edugain.org via edugain
     - loadstats
     - select
     - fork and merge:

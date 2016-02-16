@@ -603,12 +603,12 @@ and verified.
                     for xrd in t.iter("{%s}XRD" % NS['xrd']):
                         for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
                             link_href = link.get("href")
-                            certs = xmlsec.CertDict(link)
+                            certs = xmlsec.crypto.CertDict(link)
                             fingerprints = certs.keys()
                             fp = None
                             if len(fingerprints) > 0:
                                 fp = fingerprints[0]
-                            log.debug("XRD: '%s' verified by '%s'" % (link_href, fp))
+                            log.debug("XRD: '%s' verified by '%s'" % (link_href, link))
                             tries.setdefault(link_href, 0)
                             if tries[link_href] < max_tries:
                                 retry_resources.append((link_href, fp, link_href, post, True))

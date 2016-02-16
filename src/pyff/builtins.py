@@ -1063,7 +1063,7 @@ Useful for testing.
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    for fp, pem in xmlsec.CertDict(req.t).iteritems():
+    for fp, pem in xmlsec.crypto.CertDict(req.t).iteritems():
         log.info("found signing cert with fingerprint %s" % fp)
     return req.t
 
