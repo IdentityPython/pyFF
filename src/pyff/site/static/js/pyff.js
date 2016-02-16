@@ -22,7 +22,8 @@ $(document).ready(function() {
     }
 
     function sha1_id(entityID) {
-        return "{sha1}"+SHA1(entityID);
+        var sha1 = new Hashes.SHA1;
+        return "{sha1}"+sha1.hex(entityID);
     }
 
     function _convert_local_store_fmt() {
