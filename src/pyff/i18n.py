@@ -1,10 +1,11 @@
 __author__ = 'leifj'
 # -*- coding: utf-8 -*-
 
-import os
-import locale
 import gettext
+
 import cherrypy
+import locale
+import os
 
 # Change this variable to your app name!
 #  The translation files will be under

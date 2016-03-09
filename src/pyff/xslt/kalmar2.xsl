@@ -2,13 +2,9 @@
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:shibmeta="urn:mace:shibboleth:metadata:1.0"
-                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
                 xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
-                xmlns:xi="http://www.w3.org/2001/XInclude"
                 xmlns:idpdisco="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol"
-                xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute"
-                xmlns:shibmd="urn:mace:shibboleth:metadata:1.0">
+>
  
   <xsl:output method="xml" indent="yes" encoding="UTF-8"/>
   <xsl:param name="indent-increment" select="'  '"/>

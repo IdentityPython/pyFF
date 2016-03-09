@@ -1,27 +1,29 @@
 """Package that contains the basic set of pipes - functions that can be used to put together a processing pipeling
 for pyFF.
 """
-from distutils.util import strtobool
+import base64
+import hashlib
 import json
+import sys
 import traceback
+from copy import deepcopy
+from datetime import datetime
+from distutils.util import strtobool
+
+import os
+import re
+import xmlsec
+import yaml
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-import yaml
+
+from pyff.constants import NS
 from pyff.decorators import deprecated
+from pyff.logs import log
+from pyff.pipes import Plumbing, PipeException, PipelineCallback, pipe
 from pyff.stats import set_metadata_info
 from pyff.utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, \
     iter_entities, validate_document
-from pyff.constants import NS
-from pyff.pipes import Plumbing, PipeException, PipelineCallback, pipe
-from copy import deepcopy
-import sys
-import os
-import re
-from pyff.logs import log
-import hashlib
-import xmlsec
-import base64
-from datetime import datetime
 
 try:
     from cStringIO import StringIO
@@ -47,6 +49,7 @@ Print a representation of the entities set on stdout. Useful for testing.
         print dumptree(req.t)
     else:
         print "<EntitiesDescriptor xmlns=\"%s\"/>" % NS['md']
+
 
 @pipe
 def end(req, *opts):
@@ -144,7 +147,7 @@ active document. To avoid this do a select before your fork, thus:
         nt = deepcopy(req.t)
 
     ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
-    #ip.process(req.md,t=nt)
+    # ip.process(req.md,t=nt)
     ireq = Plumbing.Request(ip, req.md, nt)
     ip._process(ireq)
 
@@ -233,7 +236,7 @@ is equivalent to
     - two
 
     """
-    #req.process(Plumbing(pipeline=req.args, pid="%s.pipe" % req.plumbing.pid))
+    # req.process(Plumbing(pipeline=req.args, pid="%s.pipe" % req.plumbing.pid))
     ot = Plumbing(pipeline=req.args, pid="%s.pipe" % req.plumbing.id)._process(req)
     req.done = False
     return ot
@@ -265,9 +268,9 @@ the request state.
 The condition operates on the state: if 'foo' is present in the state (with any value), then the something branch is
 followed. If 'bar' is present in the state with the value 'bill' then the other branch is followed.
     """
-    #log.debug("condition key: %s" % repr(condition))
+    # log.debug("condition key: %s" % repr(condition))
     c = req.state.get(condition, None)
-    #log.debug("condition %s" % repr(c))
+    # log.debug("condition %s" % repr(c))
     if c is not None:
         if not values or _any(values, c):
             return Plumbing(pipeline=req.args, pid="%s.when" % req.plumbing.id)._process(req)
@@ -343,6 +346,7 @@ Publish the working document in XML form.
         req.md.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
 
+
 @pipe
 def loadstats(req, *opts):
     """
@@ -365,12 +369,14 @@ def loadstats(req, *opts):
 
     log.info("pyff loadstats: %s" % _stats)
 
+
 @pipe
 @deprecated
 def remote(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
     return load(req, opts)
+
 
 @pipe
 @deprecated
@@ -379,10 +385,12 @@ def local(req, *opts):
     """
     return load(req, opts)
 
+
 @pipe
 @deprecated
 def _fetch(req, *opts):
     return load(req, *opts)
+
 
 @pipe
 def load(req, *opts):
@@ -436,7 +444,8 @@ Defaults are marked with (*)
         log.debug("load parsing '%s'" % x)
         r = x.split()
 
-        assert len(r) in range(1, 7), PipeException("Usage: load resource [as url] [[verify] verification] [via pipeline]")
+        assert len(r) in range(1, 7), PipeException(
+            "Usage: load resource [as url] [[verify] verification] [via pipeline]")
 
         url = r.pop(0)
         params = dict()
@@ -466,17 +475,19 @@ Defaults are marked with (*)
         elif os.path.exists(url):
             if os.path.isdir(url):
                 log.debug("directory %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
-                req.md.load_dir(url, url=params['as'], validate=opts['validate'], post=post, fail_on_error=opts['fail_on_error'], filter_invalid=opts['filter_invalid'])
+                req.md.load_dir(url, url=params['as'], validate=opts['validate'], post=post,
+                                fail_on_error=opts['fail_on_error'], filter_invalid=opts['filter_invalid'])
             elif os.path.isfile(url):
                 log.debug("file %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
                 remote.append(("file://%s" % url, params['verify'], params['as'], post))
             else:
-                error="Unknown file type for load: '%s'" % url
+                error = "Unknown file type for load: '%s'" % url
                 if opts['fail_on_error']:
                     raise PipeException(error)
                 log.error(error)
         else:
-            error="Don't know how to load '%s' as %s verify %s via %s (file does not exist?)" % (url, params['as'], params['verify'], params['via'])
+            error = "Don't know how to load '%s' as %s verify %s via %s (file does not exist?)" % (
+            url, params['as'], params['verify'], params['via'])
             if opts['fail_on_error']:
                 raise PipeException(error)
             log.error(error)
@@ -497,6 +508,7 @@ def _select_args(req):
         args = []
 
     return args
+
 
 @pipe
 def select(req, *opts):
@@ -584,6 +596,7 @@ alias invisible for anything except the corresponding mime type.
 
     return ot
 
+
 @pipe(name="filter")
 def _filter(req, *opts):
     """
@@ -634,8 +647,9 @@ def _filter(req, *opts):
     if ot is None:
         raise PipeException("empty filter - stop")
 
-    #print "filter returns %s" % [e for e in iter_entities(ot)]
+    # print "filter returns %s" % [e for e in iter_entities(ot)]
     return ot
+
 
 @pipe
 def pick(req, *opts):
@@ -653,6 +667,7 @@ Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information a
     if ot is None:
         raise PipeException("empty select '%s' - stop" % ",".join(args))
     return ot
+
 
 @pipe
 def first(req, *opts):
@@ -696,6 +711,7 @@ Return a discojuice-compatible json representation of the tree
         raise PipeException("Your pipeline is missing a select statement.")
 
     return json.dumps([req.md.discojson(e) for e in iter_entities(req.t)])
+
 
 @pipe
 def sign(req, *opts):
@@ -795,6 +811,7 @@ Display statistics about the current working document.
     print "---"
     return req.t
 
+
 @pipe
 def store(req, *opts):
     """
@@ -833,6 +850,7 @@ before you call store.
             safe_write("%s.xml" % os.path.join(target_dir, d), dumptree(e, pretty_print=True))
     return req.t
 
+
 @pipe
 def xslt(req, *opts):
     """
@@ -866,10 +884,11 @@ user-supplied file. The rest of the keyword arguments are made available as stri
     del params['stylesheet']
     try:
         return xslt_transform(req.t, stylesheet, params)
-        #log.debug(ot)
+        # log.debug(ot)
     except Exception, ex:
         traceback.print_exc(ex)
         raise ex
+
 
 @pipe
 def validate(req, *opts):
@@ -887,6 +906,7 @@ loading of metadata so this call is seldom needed.
         validate_document(req.t)
 
     return req.t
+
 
 @pipe
 def certreport(req, *opts):
@@ -998,6 +1018,7 @@ HTML.
             except Exception, ex:
                 log.error(ex)
 
+
 @pipe
 def emit(req, ctype="application/xml", *opts):
     """
@@ -1043,6 +1064,7 @@ Content-Type HTTP response header.
     req.state['headers']['Content-Type'] = ctype
     return unicode(d.decode('utf-8')).encode("utf-8")
 
+
 @pipe
 def signcerts(req, *opts):
     """
@@ -1066,6 +1088,7 @@ Useful for testing.
     for fp, pem in xmlsec.crypto.CertDict(req.t).iteritems():
         log.info("found signing cert with fingerprint %s" % fp)
     return req.t
+
 
 @pipe
 def finalize(req, *opts):
@@ -1136,13 +1159,13 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
         elif valid_until is not None:
             try:
                 dt = iso8601.parse_date(valid_until)
-                dt = dt.replace(tzinfo=None) # make dt "naive" (tz-unaware)
+                dt = dt.replace(tzinfo=None)  # make dt "naive" (tz-unaware)
                 offset = dt - now
                 e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
             except ValueError, ex:
                 log.error("Unable to parse validUntil: %s (%s)" % (valid_until, ex))
 
-            # set a reasonable default: 50% of the validity
+                # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set
         req.state['cache'] = int(total_seconds(offset) / 50)
 
@@ -1156,6 +1179,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
         req.state['cache'] = int(total_seconds(offset))
 
     return req.t
+
 
 @pipe(name='reginfo')
 def _reginfo(req, *opts):
@@ -1186,6 +1210,7 @@ elements of the active document.
 
     return req.t
 
+
 @pipe(name='pubinfo')
 def _pubinfo(req, *opts):
     """
@@ -1211,6 +1236,7 @@ elements of the active document.
     req.md.set_pubinfo(root(req.t), **req.args)
 
     return req.t
+
 
 @pipe(name='setattr')
 def _setattr(req, *opts):
@@ -1240,7 +1266,7 @@ document for later processing.
         raise PipeException("Your pipeline is missing a select statement.")
 
     for e in iter_entities(req.t):
-        #log.debug("setting %s on %s" % (req.args,e.get('entityID')))
+        # log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         req.md.set_entity_attributes(e, req.args)
 
     return req.t

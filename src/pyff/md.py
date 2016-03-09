@@ -7,16 +7,16 @@ Usage: [-h|--help]
        [--logfile=<file>]
        [--version]
 """
-import importlib
-import sys
 import getopt
-import traceback
+import importlib
 import logging
+import sys
+import traceback
 
+from . import __version__
 from .mdrepo import MDRepository
 from .pipes import plumbing
 from .store import MemoryStore
-from . import __version__
 
 
 def main():

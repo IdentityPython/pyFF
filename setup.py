@@ -2,10 +2,11 @@
 # -*- encoding: utf-8 -*-
 
 from distutils.core import setup
-from os.path import abspath, dirname, join
 from platform import python_implementation
-from setuptools import find_packages
 from sys import version_info
+
+from os.path import abspath, dirname, join
+from setuptools import find_packages
 
 __author__ = 'Leif Johansson'
 __version__ = '0.10.0dev'

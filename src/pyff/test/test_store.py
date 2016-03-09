@@ -1,10 +1,11 @@
 from unittest import TestCase
-from mock import patch
+
 import mockredis
+import os
+
 from pyff.constants import ATTRS
 from pyff.store import MemoryStore, StoreBase, entity_attribute_dict, RedisStore
 from pyff.utils import resource_filename, parse_xml, root
-import os
 
 
 class TestRedisStore(TestCase):

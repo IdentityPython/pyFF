@@ -1,8 +1,10 @@
 import logging
-from unittest import TestCase
-from mock import patch
-from pyff.logs import log, SysLogLibHandler
 from StringIO import StringIO
+from unittest import TestCase
+
+from mock import patch
+
+from pyff.logs import log, SysLogLibHandler
 
 
 class TestLog(TestCase):

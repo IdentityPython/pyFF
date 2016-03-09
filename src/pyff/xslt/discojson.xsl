@@ -2,13 +2,10 @@
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
-                xmlns:atom="http://www.w3.org/2005/Atom"
                 xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui"
-                xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute"
-                xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
                 xmlns:shibmd="urn:mace:shibboleth:metadata:1.0"
-                xmlns:str="http://exslt.org/strings" extension-element-prefixes="str"
-                xmlns:html="http://www.w3.org/1999/xhtml">
+                extension-element-prefixes="str"
+>
 
     <xsl:output method="text" encoding="UTF-8"/>
     <xsl:template match="md:EntitiesDescriptor">

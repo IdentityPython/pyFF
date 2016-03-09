@@ -1,6 +1,7 @@
 from threading import Thread, current_thread
 from time import sleep
 from unittest import TestCase
+
 from pyff.locks import ReadWriteLock
 
 

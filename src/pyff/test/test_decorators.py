@@ -1,8 +1,10 @@
-from StringIO import StringIO
 import logging
+from StringIO import StringIO
 from time import sleep
 from unittest import TestCase, skip
+
 from mock import patch
+
 from pyff.decorators import retry, deprecated, cached
 
 

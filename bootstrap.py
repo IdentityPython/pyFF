@@ -18,12 +18,12 @@ The script accepts buildout command-line options, so you can
 use the -c option to specify an alternate configuration file.
 """
 
-import os
 import shutil
 import sys
 import tempfile
-
 from optparse import OptionParser
+
+import os
 
 __version__ = '2015-07-01'
 # See zc.buildout's changelog if this version is up to date.

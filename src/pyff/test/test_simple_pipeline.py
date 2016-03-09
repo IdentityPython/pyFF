@@ -1,6 +1,6 @@
-import os
 import tempfile
 
+import os
 from mako.lookup import TemplateLookup
 
 from pyff.constants import NS

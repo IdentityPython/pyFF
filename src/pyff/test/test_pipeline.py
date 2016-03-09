@@ -1,18 +1,19 @@
-import os
 import shutil
-import mock
 import sys
 import tempfile
-from mako.lookup import TemplateLookup
-from nose.plugins.skip import Skip
+from StringIO import StringIO
+
+import os
 import yaml
+from mako.lookup import TemplateLookup
+from mock import patch
+from nose.plugins.skip import Skip
+
 from pyff.mdrepo import MDRepository, MetadataException
 from pyff.pipes import plumbing, Plumbing, PipeException
 from pyff.test import ExitException
-from StringIO import StringIO
-from pyff.utils import hash_id, parse_xml, resource_filename, root
 from pyff.test import SignerTestCase
-from mock import patch
+from pyff.utils import hash_id, parse_xml, resource_filename, root
 
 __author__ = 'leifj'
 
@@ -34,7 +35,7 @@ class PipeLineTest(SignerTestCase):
     def exec_pipeline(self, pstr):
         md = MDRepository()
         p = yaml.load(StringIO(pstr))
-        #print p
+        # print p
         res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}})
         return res, md
 

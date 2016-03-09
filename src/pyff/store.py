@@ -4,15 +4,17 @@ except ImportError:  # pragma: no cover
     print(" *** install cStringIO for better performance")
     from StringIO import StringIO
 
+import time
 from copy import deepcopy
+
 import re
 from redis import Redis
-import time
+
 from pyff.constants import NS, ATTRS
 from pyff.decorators import cached
+from pyff.logs import log
 from pyff.utils import root, dumptree, parse_xml, hex_digest, hash_id, EntitySet, \
     url2host, subdomains, has_tag, iter_entities, valid_until_ts
-from pyff.logs import log
 
 
 def is_idp(entity):

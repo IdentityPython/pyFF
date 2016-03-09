@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import os
-import sys
 import io
+import sys
+
 from lxml import etree
 
 ns = {None: "http://docs.oasis-open.org/ns/xri/xrd-1.0"}

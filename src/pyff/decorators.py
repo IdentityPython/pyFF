@@ -1,8 +1,8 @@
 """
 Various decorators used in pyFF.
 """
-from collections import namedtuple
 import functools
+from collections import namedtuple
 
 __author__ = 'leifj'
 

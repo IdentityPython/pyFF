@@ -8,9 +8,10 @@ Copyright (C) 2007, Heiko Wundram.
 Released under the BSD-license.
 """
 
+from contextlib import contextmanager
 from threading import Condition, Lock, currentThread
 from time import time
-from contextlib import contextmanager
+
 
 # Read write lock
 # ---------------

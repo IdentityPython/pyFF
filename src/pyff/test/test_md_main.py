@@ -15,17 +15,16 @@ import requests
 from pyff.test import SignerTestCase, run_pyffd, run_pyff
 from pyff.test.test_pipeline import PipeLineTest
 import os
-import random
 from pyff.md import __doc__ as pyffdoc
 from pyff import __version__ as pyffversion
 from pyff.utils import parse_xml, root, validate_document
-
 import random
 import socket
 
 # range of ports where available ports can be found
-PORT_RANGE = [33000,60000]
+PORT_RANGE = [33000, 60000]
 MAX_PORT_TRIES = 100
+
 
 def find_unbound_port(i=0):
     """
@@ -38,8 +37,9 @@ def find_unbound_port(i=0):
     try:
         sock.bind(("127.0.0.1", port))
     except socket.error:
-        port = find_unbound_port(i+1)
+        port = find_unbound_port(i + 1)
     return port
+
 
 class PyFFDTest(PipeLineTest):
     """
@@ -79,7 +79,7 @@ class PyFFDTest(PipeLineTest):
                                         cls.mdx])
         cls.pyffd_thread.start()
         sleep(1)
-        for i in range(0,120):
+        for i in range(0, 120):
             try:
                 r = requests.get("http://127.0.0.1:%s/status" % cls.port)
                 if r.json() and 'running' in r.json()['status']:
@@ -88,7 +88,6 @@ class PyFFDTest(PipeLineTest):
                 pass
             sleep(1)
         raise ValueError("unable to start test pyffd server on port %d" % cls.port)
-
 
     def test_is_running(self):
         assert (os.path.exists(self.pidfile))
@@ -112,27 +111,30 @@ class PyFFDTest(PipeLineTest):
     def test_alias_ndn(self):
         r = requests.get("http://127.0.0.1:%s/ndn.xml" % self.port)
         assert (r.status_code == 200)
-        #assert (r.encoding == 'utf8')
+        # assert (r.encoding == 'utf8')
         t = parse_xml(StringIO(r.content))
         assert (t is not None)
         assert (root(t).get('entityID') == 'https://idp.nordu.net/idp/shibboleth')
         validate_document(t)
 
     def test_metadata_html(self):
-        r = requests.get("http://localhost:%s/metadata/%%7Bsha1%%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.html" % self.port)
+        r = requests.get(
+            "http://127.0.0.1:%s/metadata/%%7Bsha1%%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.html" % self.port)
         assert (r.status_code == 200)
         assert ('text/html' in r.headers['Content-Type'])
 
     def test_metadata_xml(self):
-        r = requests.get("http://localhost:%s/metadata/%%7Bsha1%%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.xml" % self.port)
+        r = requests.get(
+            "http://127.0.0.1:%s/metadata/%%7Bsha1%%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.xml" % self.port)
         assert (r.status_code == 200)
         assert ('application/xml' in r.headers['Content-Type'])
 
     def test_metadata_json(self):
-        r = requests.get("http://localhost:%s/metadata/%%7Bsha1%%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.json" % self.port)
+        r = requests.get(
+            "http://127.0.0.1:%s/metadata/%%7Bsha1%%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.json" % self.port)
         assert (r.status_code == 200)
         info = r.json()[0]
-        assert(type(info) == dict)
+        assert (type(info) == dict)
         assert (info['title'] == 'NORDUnet')
         assert ('nordu.net' in info['scope'])
 
@@ -149,7 +151,7 @@ class PyFFDTest(PipeLineTest):
     def test_all_entities_parses(self):
         r = requests.get("http://127.0.0.1:%s/entities" % self.port)
         assert (r.status_code == 200)
-        #assert (r.encoding == 'utf8')
+        # assert (r.encoding == 'utf8')
         t = parse_xml(StringIO(r.content))
         assert (t is not None)
         validate_document(t)
@@ -159,7 +161,8 @@ class PyFFDTest(PipeLineTest):
         assert (r.status_code == 400)
 
     def test_webfinger(self):
-        r = requests.get("http://127.0.0.1:%s/.well-known/webfinger?resource=http://127.0.0.1:%s" % (self.port, self.port))
+        r = requests.get(
+            "http://127.0.0.1:%s/.well-known/webfinger?resource=http://127.0.0.1:%s" % (self.port, self.port))
         assert (r.status_code == 200)
         assert r.json()
 
@@ -189,14 +192,14 @@ class PyFFDTest(PipeLineTest):
         assert (r.status_code == 400)
 
     def test_ds_request(self):
-        r = requests.get("http://127.0.0.1:%s/role/idp.ds?entityID=https://idp.nordu.net/idp/shibboleth&return=#" % self.port)
+        r = requests.get(
+            "http://127.0.0.1:%s/role/idp.ds?entityID=https://idp.nordu.net/idp/shibboleth&return=#" % self.port)
         assert (r.status_code == 200)
 
     def test_ds_search(self):
         r = requests.get("http://127.0.0.1:%s/role/idp.s" % self.port)
         assert (r.status_code == 200)
         assert len(r.json()) == 0
-
 
     @classmethod
     def tearDownClass(cls):
@@ -218,6 +221,7 @@ class PyFFTest(PipeLineTest):
     """
     Runs tests through the pyff cmdline - only mocks exit
     """
+
     def setUp(self):
         super(PyFFTest, self).setUp()
         self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'simple-pipeline')])

@@ -1,10 +1,12 @@
 from copy import deepcopy
 from unittest import TestCase
+
+import os
+
 from pyff.constants import NS
 from pyff.mdrepo import MDRepository
 from pyff.store import MemoryStore
 from pyff.utils import resource_filename, parse_xml, root, hash_id, MetadataException
-import os
 
 
 class TestRepo(TestCase):

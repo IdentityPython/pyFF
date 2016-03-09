@@ -4,8 +4,8 @@ pyFF statistics module
 
 """
 
-import time
 import logging
+import time
 
 __author__ = 'leifj'
 

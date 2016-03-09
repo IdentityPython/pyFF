@@ -3,27 +3,29 @@
 This module contains various utilities.
 
 """
+import hashlib
+import io
+import tempfile
 from collections import namedtuple
 from datetime import timedelta, datetime
-import tempfile
+from email.utils import parsedate
+from threading import local
+from time import gmtime, strftime, clock
 from traceback import print_exc
+from urlparse import urlparse
+
 import cherrypy
+import httplib2
+import iso8601
 import os
-import io
 import pkg_resources
 import re
+from jinja2 import Environment, PackageLoader
 from lxml import etree
-from time import gmtime, strftime, clock
+
 from .constants import NS
 from .decorators import retry
 from .logs import log
-import httplib2
-import hashlib
-from email.utils import parsedate
-from urlparse import urlparse
-from threading import local
-import iso8601
-from jinja2 import Environment, PackageLoader
 
 __author__ = 'leifj'
 
@@ -375,8 +377,16 @@ def xslt_transform(t, stylesheet, params=None):
         xsl = etree.fromstring(resource_string(stylesheet, "xslt"))
         thread_data.xslt[stylesheet] = etree.XSLT(xsl)
     transform = thread_data.xslt[stylesheet]
-    res = transform(t, **params)
-    return res
+    try:
+        return transform(t, **params)
+    except etree.XSLTApplyError, ex:
+        for entry in transform.error_log:
+            log.error('\tmessage from line %s, col %s: %s' % (entry.line, entry.column, entry.message))
+            log.error('\tdomain: %s (%d)' % (entry.domain_name, entry.domain))
+            log.error('\ttype: %s (%d)' % (entry.type_name, entry.type))
+            log.error('\tlevel: %s (%d)' % (entry.level_name, entry.level))
+            log.error('\tfilename: %s' % entry.filename)
+        raise ex
 
 
 def valid_until_ts(elt, default_ts):

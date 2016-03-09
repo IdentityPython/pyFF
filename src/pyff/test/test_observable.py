@@ -1,4 +1,5 @@
 from unittest import TestCase
+
 from pyff.mdrepo import Observable
 from pyff.utils import debug_observer
 

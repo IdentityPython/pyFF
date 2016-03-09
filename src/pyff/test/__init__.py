@@ -5,14 +5,15 @@ except ImportError:  # pragma: no cover
     from StringIO import StringIO
 
 import logging
-import os
 import subprocess
+import sys
 import tempfile
 from unittest import TestCase
+
+import os
 import pkg_resources
-import sys
+
 from pyff import __version__ as pyffversion
-import pyff.builtins  # this is so the tests don't have to import builtins
 
 
 class ExitException(Exception):

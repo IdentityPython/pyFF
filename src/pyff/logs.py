@@ -1,8 +1,9 @@
 __author__ = 'leifj'
 
-import cherrypy
-import syslog
 import logging
+import syslog
+
+import cherrypy
 
 
 class PyFFLogger(object):

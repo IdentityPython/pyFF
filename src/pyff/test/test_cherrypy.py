@@ -1,5 +1,5 @@
-from unittest import TestCase
 import logging
+from unittest import TestCase
 
 
 class TestStats(TestCase):

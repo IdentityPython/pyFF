@@ -1,6 +1,8 @@
-from unittest import TestCase
-from pyff.utils import duration2timedelta, total_seconds, iso_now, iso2datetime, iso_fmt, totimestamp
 from datetime import datetime
+from unittest import TestCase
+
+from pyff.utils import duration2timedelta, total_seconds, iso_now, iso2datetime, iso_fmt, totimestamp
+
 
 class TestDuration(TestCase):
 

@@ -45,6 +45,7 @@ An implementation of draft-lajoie-md-query
 
 """
 import importlib
+
 import pkg_resources
 
 try:

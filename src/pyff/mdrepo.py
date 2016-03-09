@@ -4,6 +4,7 @@ This is the implementation of the active repository of SAML metadata. The 'local
 
 """
 import traceback
+
 from pyff.stats import set_metadata_info, get_metadata_info
 
 try:
@@ -29,7 +30,7 @@ from . import merge_strategies
 from .logs import log
 from .utils import schema, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
-    iter_entities, validate_document, load_url, iso2datetime, xml_error, dumptree, find_entity
+    iter_entities, validate_document, load_url, iso2datetime, xml_error, find_entity
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
 
@@ -534,7 +535,7 @@ and verified.
                 resource = load_url(rurl, timeout=timeout, enable_cache=enable_cache)
             except Exception, ex:
                 raise MetadataException(ex, "Exception fetching '%s': %s" % (rurl, str(ex)) )
-            if (not resource.result):
+            if not resource.result:
                 raise MetadataException("error fetching '%s'" % rurl)
             xml = resource.result.strip()
             retry_resources = []
@@ -575,7 +576,6 @@ and verified.
                                             validation_errors=info['Validation Errors'],
                                             expiration=self.expiration,
                                             post=post)
-
 
             if t is None:
                 self.fire(type=EVENT_IMPORT_FAIL, url=rurl)
@@ -686,6 +686,7 @@ and verified.
 :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
 :param validate: (default: True) set to False to turn off all XML schema validation
 :param post: A callable that will be called to modify the parse-tree after schema validation
+:param validation_errors: A dict that will be used to return validation errors to the caller
 (but after xinclude processing and signature validation)
         """
 
