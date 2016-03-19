@@ -12,7 +12,7 @@
         - break
     - fork:
         - select as /swamid:
-           - http://md.swamid.se/md/swamid-registered.xml
+           - http://md.swamid.se/md/swamid-idp.xml
         - break
     - break:
 - when request:
