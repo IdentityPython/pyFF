@@ -225,7 +225,7 @@ $(document).ready(function() {
             this.filter('select').each(function() {
                 var seldiv = $(this);
                 var uri = seldiv.attr('data-target');
-                seldiv.html($('<option>').attr('value','').append($('<em>').append(seldiv.attr('title'))))
+                seldiv.html($('<option>').attr('value','').append($('<em>').append(seldiv.attr('title'))));
                 oboe(uri).start(function () {
                     $("#thelist").addClass("disabled").addClass("loading");
                 }).node('!.*',function (elt) {
@@ -304,7 +304,7 @@ $(document).ready(function() {
                 var i = lst.length;
                 while (i--) {
                     with_entity_id(lst[i], function (elt) { /* success */
-                        if (! elt.hidden) {
+                        if (typeof elt.hidden === 'undefined' || elt.hidden.toLowerCase() === "false") {
                             elt.sticky = false;
                             div.prepend(idp_template.render(elt));
                             seen[elt.entityID] = true
