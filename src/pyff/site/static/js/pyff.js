@@ -351,11 +351,7 @@ $(document).ready(function() {
                     $(o).filter("img.sp-icon").each(function() {
                         if (entity.icon) {
                             $(this).attr('src',entity.icon).attr('width',entity.icon_width).attr('height',entity.icon_height).addClass("img-responsive img-thumbnail")
-                        } else {
-                            // console.log(this);
-                            // console.log($(this).closest('.hideout'))
-                            $(this).hide();
-                            $(this).closest(".hideout").hide();
+                            $(this).closest(".hidden").removeClass("hidden");
                         }
                     });
                     $(o).filter(".sp-name").each(function() {
