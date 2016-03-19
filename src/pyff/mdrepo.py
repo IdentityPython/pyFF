@@ -157,7 +157,7 @@ class MDRepository(Observable):
         if info == entity.get('entityID'):
             info = ''
 
-        return display, info
+        return display.strip(), info.strip()
 
     def display(self, entity, langs=None):
         """Utility-method for computing a displayable string for a given entity.
