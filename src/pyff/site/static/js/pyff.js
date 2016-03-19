@@ -304,9 +304,11 @@ $(document).ready(function() {
                 var i = lst.length;
                 while (i--) {
                     with_entity_id(lst[i], function (elt) { /* success */
-                        elt.sticky = false;
-                        div.prepend(idp_template.render(elt));
-                        seen[elt.entityID] = true
+                        if (! elt.hidden) {
+                            elt.sticky = false;
+                            div.prepend(idp_template.render(elt));
+                            seen[elt.entityID] = true
+                        }
                     }, function (id) {  /* fail */
                         lst.splice(i, 1);
                         $.jStorage.set('pyff.discovery.idps',lst);
@@ -348,8 +350,8 @@ $(document).ready(function() {
                         if (entity.icon) {
                             $(this).attr('src',entity.icon).attr('width',entity.icon_width).attr('height',entity.icon_height).addClass("img-responsive img-thumbnail")
                         } else {
-                            console.log(this);
-                            console.log($(this).closest('.hideout'))
+                            // console.log(this);
+                            // console.log($(this).closest('.hideout'))
                             $(this).hide();
                             $(this).closest(".hideout").hide();
                         }

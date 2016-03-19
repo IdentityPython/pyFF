@@ -39,8 +39,7 @@ def _domains(entity):
 
 def with_entity_attributes(entity, cb):
     for ea in entity.iter("{%s}EntityAttributes" % NS['mdattr']):
-        a = ea.find(".//{%s}Attribute" % NS['saml'])
-        if a is not None:
+        for a in ea.iter("{%s}Attribute" % NS['saml']):
             an = a.get('Name', None)
             if a is not None:
                 values = [v.text.strip() for v in a.iter("{%s}AttributeValue" % NS['saml'])]
@@ -241,7 +240,7 @@ class MemoryStore(StoreBase):
             return self.entities.values()
         if '+' in key:
             key = key.strip('+')
-            # log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
+            #log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
             hits = None
             for f in key.split("+"):
                 f = f.strip()

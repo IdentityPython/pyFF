@@ -6,6 +6,7 @@ This is the implementation of the active repository of SAML metadata. The 'local
 import traceback
 
 from pyff.stats import set_metadata_info, get_metadata_info
+from pyff.store import entity_attribute_dict
 
 try:
     from cStringIO import StringIO
@@ -25,7 +26,7 @@ from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
 import xmlsec
 import ipaddr
-
+from .constants import ATTRS
 from . import merge_strategies
 from .logs import log
 from .utils import schema, filter_lang, root, duration2timedelta, \
@@ -204,9 +205,13 @@ class MDRepository(Observable):
                  auth='saml',
                  entityID=entity_id)
 
-        if self.is_idp(e):
+        eattr = entity_attribute_dict(e)
+        if 'idp' in eattr[ATTRS['role']]:
             d['type'] = 'idp'
-        elif self.is_sp(e):
+            d['hidden'] = 'true'
+            if 'http://pyff.io/category/discoverable' in eattr[ATTRS['entity-category']]:
+                d['hidden'] = 'false'
+        elif 'sp' in eattr[ATTRS['role']]:
             d['type'] = 'sp'
 
         icon_info = self.icon(e)
