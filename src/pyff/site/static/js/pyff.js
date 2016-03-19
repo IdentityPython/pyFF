@@ -14,7 +14,9 @@ $(document).ready(function() {
         use_idp = $.jStorage.get('pyff.discovery.idp');
         if (use_idp) {
             with_entity_id(use_idp, function (elt) { // found entity - autoselect
-                discovery_response(elt.entityID);
+                if (typeof elt.hidden === 'undefined' || elt.hidden.toLowerCase() === "false") {
+                    discovery_response(elt.entityID);
+                }
             }, function () { // failing - lets remove the selection and have the user re-select
                 $.jStorage.remove('pyff.discovery.idp');
             });
