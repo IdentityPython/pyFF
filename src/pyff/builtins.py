@@ -9,7 +9,7 @@ import traceback
 from copy import deepcopy
 from datetime import datetime
 from distutils.util import strtobool
-
+import operator
 import os
 import re
 import xmlsec
@@ -710,7 +710,10 @@ Return a discojuice-compatible json representation of the tree
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    return json.dumps([req.md.discojson(e) for e in iter_entities(req.t)])
+    res = [req.md.discojson(e) for e in iter_entities(req.t)]
+    res.sort(key=operator.itemgetter('title'))
+
+    return json.dumps(res)
 
 
 @pipe
