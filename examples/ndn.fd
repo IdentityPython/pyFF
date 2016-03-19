@@ -1,0 +1,37 @@
+- when update:
+    - load:
+       - examples/ndn-links.xrd
+    - fork:
+        - select as /md/ndn-services-1.0:
+           - https://crowd.nordu.net/shibboleth
+           - https://connect.sunet.se/shibboleth
+           - https://connect-test.sunet.se/shibboleth
+           - https://connect-beta.sunet.se/shibboleth
+           - https://connect.funet.fi/shibboleth
+           - https://connect.uninett.no/shibboleth
+        - break
+    - fork:
+        - select as /swamid:
+           - http://md.swamid.se/md/swamid-registered.xml
+        - break
+    - break:
+- when request:
+    - select
+    - pipe:
+        - when accept application/xml:
+             - xslt:
+                 stylesheet: tidy.xsl
+             - first
+             - finalize:
+                validUntil: P10D
+                cacheDuration: PT5H
+             - sign:
+                 key: sign.key
+                 cert: sign.crt
+             - emit application/xml
+             - break
+        - when accept application/json:
+             - xslt:
+                 stylesheet: discojson.xsl
+             - emit application/json:
+             - break

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XRDS xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
+    <XRD>
+        <Subject>http://mds.edugain.org</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://mds.edugain.org">
+           <Title>eduGAIN</Title>
+        </Link>
+    </XRD>
+    <XRD>
+        <Subject>https://wayf.wayf.dk/module.php/saml/sp/metadata.php/wayf.wayf.dk</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://wayf.wayf.dk/module.php/saml/sp/metadata.php/wayf.wayf.dk">
+           <Title>WAYF</Title>
+        </Link>
+    </XRD>
+    <XRD>
+        <Subject>https://wayf.wayf.dk/saml2/idp/metadata.php</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://wayf.wayf.dk/saml2/idp/metadata.php">
+           <Title>WAYF IdP</Title>
+        </Link>
+    </XRD>
+    <!-- XRD>
+        <Subject>https://metadata.wayf.dk/birk-idp.xml</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://metadata.wayf.dk//birk-idp.xml">
+           <Title>WAYF Birk Feed</Title>
+        </Link>
+    </XRD -->
+    <!-- XRD>
+        <Subject>https://idp.feide.no/simplesaml/saml2/idp/metadata.php</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://idp.feide.no/simplesaml/saml2/idp/metadata.php">
+           <Title>FEIDE</Title>
+        </Link>
+    </XRD -->
+    <XRD>
+        <Subject>https://metadata.feide.no/feide-kalmar-metadata.xml</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://metadata.feide.no/feide-kalmar-metadata.xml">
+           <Title>FEIDE Kalmar</Title>
+        </Link>
+    </XRD>
+    <XRD>
+        <Subject>https://idp.funet.fi/saml/idp-saml20-metadata.xml</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://idp.funet.fi/saml/idp-saml20-metadata.xml">
+           <Title>FUNET Guests</Title>
+        </Link>
+    </XRD>
+    <XRD>
+        <Subject>https://haka.funet.fi/metadata/haka-metadata.xml</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://haka.funet.fi/metadata/haka-metadata.xml">
+           <Title>HAKA</Title>
+           <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+                <ds:X509Data>
+                    <ds:X509Certificate>
+MIIEnzCCA4egAwIBAgIRAIftO2AWO3NG7PUgVDZNmKQwDQYJKoZIhvcNAQELBQAw
+ZDELMAkGA1UEBhMCTkwxFjAUBgNVBAgTDU5vb3JkLUhvbGxhbmQxEjAQBgNVBAcT
+CUFtc3RlcmRhbTEPMA0GA1UEChMGVEVSRU5BMRgwFgYDVQQDEw9URVJFTkEgU1NM
+IENBIDIwHhcNMTUwMTIzMDAwMDAwWhcNMTgwMTIyMjM1OTU5WjBAMSEwHwYDVQQL
+ExhEb21haW4gQ29udHJvbCBWYWxpZGF0ZWQxGzAZBgNVBAMTEmhha2Etc2lnbi5m
+dW5ldC5maTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALBlEhXdLOGN
+p2grXf/w6wryUlQ/pjnCZq54ynG1XYNewr8Hb6VeSO/hetLqu1fdECLQTjck68af
+6LWcSiB4I3RzFAQDEv1x68RW8Tellj90a/I50YNvbT8CV8IpO19SHHm0+b0uymtD
+An27xJ6RRop16pirgr3wPaesoy+YrVVkMeoqt7b2gwoNHXaxH1F9MbHi7UxoXjt3
+bHbpbs2e66l983CV5A043yeGrjreur6ymK3TU0kCQlJfqlr2tGQ8CLaMcUHtwKWU
+6PYP4wSb/ByL/PW7qrEziUEZF4uQm33s7gq+O38gT0mVSgf/i8GNnt/F7UohniBu
+JTkqz1uWHQcCAwEAAaOCAW4wggFqMB8GA1UdIwQYMBaAFFvQihyaMlvgtd2WVBvh
+hiiw/ba9MB0GA1UdDgQWBBTWp/j8x/E2RCFmmgYliV2OwY0/+jAOBgNVHQ8BAf8E
+BAMCBaAwDAYDVR0TAQH/BAIwADAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUH
+AwIwIgYDVR0gBBswGTANBgsrBgEEAbIxAQICHTAIBgZngQwBAgEwOgYDVR0fBDMw
+MTAvoC2gK4YpaHR0cDovL2NybC51c2VydHJ1c3QuY29tL1RFUkVOQVNTTENBMi5j
+cmwwbAYIKwYBBQUHAQEEYDBeMDUGCCsGAQUFBzAChilodHRwOi8vY3J0LnVzZXJ0
+cnVzdC5jb20vVEVSRU5BU1NMQ0EyLmNydDAlBggrBgEFBQcwAYYZaHR0cDovL29j
+c3AudXNlcnRydXN0LmNvbTAdBgNVHREEFjAUghJoYWthLXNpZ24uZnVuZXQuZmkw
+DQYJKoZIhvcNAQELBQADggEBACP3XBSpy4muDX7UbcRV4vED0p199uX+JC/jiE06
++16o6/ArbW8HH9boJ1iEr2sPTMPd1jxOqIYVD6unJ442kOfyCQskKV+a9vjnR0Vr
+KeTO1wqko9gPkh1DvjHhOs/hedrJiBCOpV4XPKAkcnEJSHnD6ZXJG055ss2VHzwE
+QmenDkqYdRWkcnzhRjij8bnOLiYnLl+PtD/IJ+U/8jrV9HToRmOpyHtwO1UIpHIE
+Lpp4940BYZ3t2Krd14yIUFlKRXJCMFuOf21RWeM6WZ+gM2hrtJkRWl7Y8N4ankG+
+t4VO/Uc7h6/tveL871eqrETLJKOBSiYajZxhOyJwwrpa/5M=
+                    </ds:X509Certificate>
+                </ds:X509Data>
+          </ds:KeyInfo>
+        </Link>
+    </XRD>
+    <XRD>
+        <Subject>http://md.swamid.se/md/swamid-2.0.xml</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.swamid.se/md/swamid-2.0.xml">
+            <Title>SWAMID</Title>
+            <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+                <ds:X509Data>
+                    <ds:X509Certificate>
+    MIIDdTCCAl0CBEY7EskwDQYJKoZIhvcNAQEEBQAwfzELMAkGA1UEBhMCU0UxEjAQ
+    BgNVBAgTCVN0b2NraG9sbTESMBAGA1UEBxMJU3RvY2tob2xtMREwDwYDVQQKEwhT
+    V0FNSS5zZTEPMA0GA1UECxMGU1dBTUlEMSQwIgYDVQQDExtTV0FNSUQgbWV0YWRh
+    dGEgc2lnbmVyIHYxLjEwHhcNMDcwNTA0MTEwMjMzWhcNMTcwNTAxMTEwMjMzWjB/
+    MQswCQYDVQQGEwJTRTESMBAGA1UECBMJU3RvY2tob2xtMRIwEAYDVQQHEwlTdG9j
+    a2hvbG0xETAPBgNVBAoTCFNXQU1JLnNlMQ8wDQYDVQQLEwZTV0FNSUQxJDAiBgNV
+    BAMTG1NXQU1JRCBtZXRhZGF0YSBzaWduZXIgdjEuMTCCASIwDQYJKoZIhvcNAQEB
+    BQADggEPADCCAQoCggEBAM6wXN3pVCo98SACS6JCHjSlWj83oNL/Ct+a9hmAx1NZ
+    SKg7lnEJYwWBvzJt5o/47jRQbGm94a45Yy5LVoXq4XyCKINhMxSwbRROvr8Hw6tg
+    P1Z9dk5Jjejvus3gyaH3+EuEyP4aIjTlgmHDwW6HOv/m/4bOXSHB4Pisn7aocqU7
+    kjpOn1f0cGodWOgGO4tP7KXs6ndcLhIkW+e/B80WEr0kocuc/pvx+aLuKSkttk/A
+    fP1DFs5sqX31RXQKGrB/uEEYVv1Qvneig+RXGSbqk2Tab3BcLE/Cjnfi9Q9cH/jR
+    eL/YSSafGtl+EBgXKszxjMtELhiEWsL9RrMu1HUkBusCAwEAATANBgkqhkiG9w0B
+    AQQFAAOCAQEAkXaa61gp/lkEDNRFc0bzH3ZyoUFgol64F1zdAwBS3xnsCkTnAXt3
+    p452daEyz+0UR5J/BruMOyvR57w1m7ckVnx/sAgRgaD6gQlUWehjKPEsx8o5iDfO
+    5R1V5Rn2o7+0VuIJDDObEAtMwqn2Nk6TTzsUVfz5y9nUQAxBz3EqXnnSgRwqSwRF
+    yiVkpVfwtUHIolAf6O2N9Fg1jqoqt4mQCOyRZpD0/5SRYESTY6TJjTmvoh+zOPlI
+    yEiw+Zrl/FWjXtBnRnz8AVT5NRzYiMHdbTHs0Fh6elsb5b9gTBo7j6+t36m7oo2K
+    DaWWpMWvuWHugEqvIAXDCI/HzTbbiWm9NQ==
+                    </ds:X509Certificate>
+                </ds:X509Data>
+          </ds:KeyInfo>
+        </Link>
+    </XRD>
+    <XRD>
+        <Subject>http://md.swamid.se/md/swamid-registered.xml</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.swamid.se/md/swamid-registered.xml">
+            <Title>SWAMID</Title>
+            <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+                <ds:X509Data>
+                    <ds:X509Certificate>
+    MIIDdTCCAl0CBEY7EskwDQYJKoZIhvcNAQEEBQAwfzELMAkGA1UEBhMCU0UxEjAQ
+    BgNVBAgTCVN0b2NraG9sbTESMBAGA1UEBxMJU3RvY2tob2xtMREwDwYDVQQKEwhT
+    V0FNSS5zZTEPMA0GA1UECxMGU1dBTUlEMSQwIgYDVQQDExtTV0FNSUQgbWV0YWRh
+    dGEgc2lnbmVyIHYxLjEwHhcNMDcwNTA0MTEwMjMzWhcNMTcwNTAxMTEwMjMzWjB/
+    MQswCQYDVQQGEwJTRTESMBAGA1UECBMJU3RvY2tob2xtMRIwEAYDVQQHEwlTdG9j
+    a2hvbG0xETAPBgNVBAoTCFNXQU1JLnNlMQ8wDQYDVQQLEwZTV0FNSUQxJDAiBgNV
+    BAMTG1NXQU1JRCBtZXRhZGF0YSBzaWduZXIgdjEuMTCCASIwDQYJKoZIhvcNAQEB
+    BQADggEPADCCAQoCggEBAM6wXN3pVCo98SACS6JCHjSlWj83oNL/Ct+a9hmAx1NZ
+    SKg7lnEJYwWBvzJt5o/47jRQbGm94a45Yy5LVoXq4XyCKINhMxSwbRROvr8Hw6tg
+    P1Z9dk5Jjejvus3gyaH3+EuEyP4aIjTlgmHDwW6HOv/m/4bOXSHB4Pisn7aocqU7
+    kjpOn1f0cGodWOgGO4tP7KXs6ndcLhIkW+e/B80WEr0kocuc/pvx+aLuKSkttk/A
+    fP1DFs5sqX31RXQKGrB/uEEYVv1Qvneig+RXGSbqk2Tab3BcLE/Cjnfi9Q9cH/jR
+    eL/YSSafGtl+EBgXKszxjMtELhiEWsL9RrMu1HUkBusCAwEAATANBgkqhkiG9w0B
+    AQQFAAOCAQEAkXaa61gp/lkEDNRFc0bzH3ZyoUFgol64F1zdAwBS3xnsCkTnAXt3
+    p452daEyz+0UR5J/BruMOyvR57w1m7ckVnx/sAgRgaD6gQlUWehjKPEsx8o5iDfO
+    5R1V5Rn2o7+0VuIJDDObEAtMwqn2Nk6TTzsUVfz5y9nUQAxBz3EqXnnSgRwqSwRF
+    yiVkpVfwtUHIolAf6O2N9Fg1jqoqt4mQCOyRZpD0/5SRYESTY6TJjTmvoh+zOPlI
+    yEiw+Zrl/FWjXtBnRnz8AVT5NRzYiMHdbTHs0Fh6elsb5b9gTBo7j6+t36m7oo2K
+    DaWWpMWvuWHugEqvIAXDCI/HzTbbiWm9NQ==
+                    </ds:X509Certificate>
+                </ds:X509Data>
+          </ds:KeyInfo>
+        </Link>
+    </XRD> 
+</XRDS>
