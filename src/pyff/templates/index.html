@@ -36,10 +36,13 @@
                 </div>
             </div>
         </div>
-        <script type="text/javascript">
-            $(document).ready(function() {
-               $('#metadataIndex a:first').tab('show');
-            });
-        </script>
     {% endif %}
+{% endblock %}
+
+{% block uiscript %}
+<script type="text/javascript">
+    $(document).ready(function() {
+       $('#metadataIndex a:first').tab('show');
+    });
+</script>
 {% endblock %}
