@@ -9,6 +9,16 @@
 $(document).ready(function() {
     // send the user directly to the pre-selected idp if that setting exists
 
+    var idp_template;
+    idp_template = Hogan.compile('<div class="cursor {{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
+        '{{^sticky}}<button type="button" data-toggle="tooltip" data-placement="left" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
+        '<h4 class="list-group-item-heading">{{title}}</h4>' +
+        '<p class="list-group-item-text">' +
+        '{{#icon}}<img src="{{icon}}" class="fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"/>{{/icon}}' +
+        '{{#descr}}<div class="pull-left idp-description hidden-xs">{{descr}}</div>{{/descr}}</p>' +
+        '<div class="clearfix"></div>' +
+        '</div>');
+
     function _autoselect() {
         var use_idp;
         use_idp = $.jStorage.get('pyff.discovery.idp');
@@ -51,11 +61,11 @@ $(document).ready(function() {
     }
 
     function ds_confirm_select(item) {
-        $('.idpchooser').hide();
+        $('#idpchooser').hide();
         item.sticky = true;
         item.save = true;
         item.proceed = true;
-        $(".confirm").html(idp_template.render(item));
+        $('.confirm').html(idp_template.render(item));
         $('#proceed').attr("data-href", item['entityID']);
         $('#proceed_and_remember').attr("data-href", item['entityID']);
         if ($('#never-remember-selection-again').is(':checked')) {
@@ -149,96 +159,66 @@ $(document).ready(function() {
         return a.title > b.title ? 1 : -1;
     }
 
-    var match_template = Hogan.compile('<div><p>{{title}}</br><small>{{descr}}</small></p></div>');
-    var match_template_icon = Hogan.compile('<div><ul class="list-inline"><li>{{title}}<br/><small>{{descr}}</small></li>' +
-        '{{#icon}}<li class="pull-right xs-hidden">' +
-        '<img class="img-responsive img-thumbnail fallback-icon img-small" src="{{icon}}"/>' +
-        '</li>{{/icon}}</ul></div>');
-    var methods = {
-        init: function (options) {
-            this.filter('input').each(function (opts) {
-                var seldiv = $(this);
-                var uri = seldiv.attr('data-target');
-                var related = seldiv.attr('data-related');
-                //console.log(related);
-                var remote = uri+"?query=%QUERY&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
-                if (related) {
-                    remote = remote + "&related="+related
-                }
-                var engine = new Bloodhound({
-                    name: 'idps',
-                    limit: 50,
-                    remote: remote,
-                    datumTokenizer: Bloodhound.tokenizers.obj.whitespace('title'),
-                    queryTokenizer: Bloodhound.tokenizers.whitespace
+    var methods;
+    methods = {
+        fetch: function(uri, cb, async) {
+            $('#searchindicator').removeClass('fa-search').addClass("fa-spinner fa-spin");
+            $('#searchinput').addClass('disabled');
+            if (async) {
+                return oboe(uri).node({ '!.*': cb }).done(function () {
+                    $('#searchindicator').removeClass("fa-spinner").removeClass("fa-spin").addClass('fa-search');
+                    $('#searchinput').removeClass('disabled');
+                }).fail(function() {
+                    $('#searchindicator').removeClass("fa-spinner").removeClass("fa-spin").addClass('fa-search');
+                    $('#searchinput').removeClass('disabled');
                 });
-                engine.initialize().done(function() {
-                    seldiv.typeahead({
-                            hint: true,
-                            highlight: true,
-                            minLength: 2
-                        },
-                        {
-                            name: 'idps',
-                            source: engine.ttAdapter(),
-                            displayKey: 'title',
-                            templates: {
-                                suggestion: function(o) {
-                                    return match_template.render(o)
-                                }
-                            }
-                        }
-                    )
-                });
-                seldiv.bind('typeahead:selected',function(event,entity) {
-                    if (entity) {
-                        //console.log("selected "+entity.entity_id);
-                        select_idp(entity.entity_id);
-                    }
-                });
-                $.each(options,function(key,val) {
-                    seldiv.dsSelect(key,val);
-                });
-                $('body').on('vclick.ds', 'button.unselect', methods.unselect);
-                $('body').on('vclick.ds', '.select', methods.select);
-                $('body').on('vclick.ds', '.proceed', methods.proceed);
-                $('body').on('vclick.ds', '.proceed', methods.proceed);
-                $('body').on('vclick.ds', '.remember', methods.remember);
-                $('body').on('vclick.ds', '.proceed_and_remember', methods.proceed_and_remember);
-                $('body').on('vclick.ds', '.cancel', cancel_confirm);
-            });
-            this.filter('select').each(function (opts) {
-                var seldiv = $(this);
-                seldiv.change(function(opt) {
-                    select_idp(seldiv.find('option:selected').attr('value')); // TODO - fix id in xsltjson xslt
-                });
-                $.each(options,function(key,val) {
-                    seldiv.dsSelect(key,val);
-                });
-            });
-        },
-        reset: function() {
-            $(this).filter('input').each(function () {
-                $(this).typeahead('val','');
-                $(this).focus();
-            });
-        },
-        refresh: function() {
-            this.filter('select').each(function() {
-                var seldiv = $(this);
-                var uri = seldiv.attr('data-target');
-                seldiv.html($('<option>').attr('value','').append($('<em>').append(seldiv.attr('title'))));
-                oboe(uri).start(function () {
-                    $("#thelist").addClass("disabled").addClass("loading");
-                }).node('!.*',function (elt) {
-                    seldiv.append($('<option>').attr('value',elt.entityID).append(elt.title));
+            } else {
+                return $.getJSON(uri, function (json) {
+                    cb(json);
                 }).done(function () {
-                    $("#thelist").removeClass("loading").removeClass("disabled");
+                    $('#searchindicator').removeClass("fa-spinner").removeClass("fa-spin").addClass('fa-search');
+                    $('#searchinput').removeClass('disabled');
+                }).fail(function () {
+                    $('#searchindicator').removeClass("fa-spinner").removeClass("fa-spin").addClass('fa-search');
+                    $('#searchinput').removeClass('disabled');
                 });
+            }
+        },
+        init: function (options) {
+            var search_base, search_related, list_uri;
+            search_base = $('#searchinput').attr('data-target');
+            search_related = $('#searchinput').attr('data-related');
+            $('#searchinput').focus();
+
+            var list = $('#searchlist').btsListFilter('#searchinput', {
+                resetOnBlur: false,
+                sourceData: function (text, callback) {
+                    var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable"
+
+                    if (search_related) {
+                        remote = remote + "&related=" + search_related;
+                    }
+
+                    return methods.fetch(remote, callback, false);
+                },
+                sourceNode: function (data) {
+                    data.sticky = true;
+                    return idp_template.render(data);
+                },
+                cancelNode: null
             });
+        },
+        show: function (e) {
+            var list_uri = $('#searchlist').attr('data-target');
+            $('#idpchooser > form[role="form"]').removeClass('hidden');
+            methods.fetch(list_uri, function (elt) {
+                elt.sticky = true;
+                elt.icon = null; // XXX test - make it load quicker on long lists...
+                $('#searchlist').append(idp_template.render(elt));
+            }, true);
         },
         remember: function (e) {
-            e.preventDefault();
+            e.defaultPrevented();
             $('#remember').hide();
             $('#proceed').text("Use this time only");
             $('#proceed_and_remember').removeClass('hidden').show();
@@ -246,7 +226,6 @@ $(document).ready(function() {
             return false;
         },
         unselect: function (e) {
-            //e.preventDefault();
             e.stopPropagation();
             var id = $(this).attr('rel');
             var idps = $.jStorage.get('pyff.discovery.idps', []);
@@ -256,51 +235,50 @@ $(document).ready(function() {
                 $.jStorage.set('pyff.discovery.idps', idps);
                 $(this).parent().remove();
             }
-            return false;
-        },
-        select: function(e) {
-            //e.preventDefault();
-            var lst = $.jStorage.get('pyff.discovery.idps', []);
-            if (lst.length < 2) {
-                return select_idp($(this).attr('data-href'));
-            } else {
-                return discovery_response($(this).attr('data-href'));
+            if ($.jStorage.get('pyff.discovery.idps',[]).length == 0) {
+                methods.show();
             }
             return false;
         },
-        proceed: function(e) {
-            //e.preventDefault();
+        select: function (e) {
+            var elt = $(this).closest('.select');
+            var lst = $.jStorage.get('pyff.discovery.idps', []);
+            if (lst.length < 2) {
+                return select_idp(elt.attr('data-href'));
+            } else {
+                return discovery_response(elt.attr('data-href'));
+            }
+            return false;
+        },
+        proceed: function (e) {
             return discovery_response($(this).attr('data-href'));
         },
-        proceed_and_remember: function(e) {
-            //e.preventDefault();
+        proceed_and_remember: function (e) {
             var entityID = $(this).attr('data-href');
-            $.jStorage.set('pyff.discovery.idp',entityID);
+            $.jStorage.set('pyff.discovery.idp', entityID);
             return discovery_response(entityID);
         }
     };
+
+    $('body').on('vclick.ds', 'button.unselect', methods.unselect);
+    $('body').on('vclick.ds', '.select', methods.select);
+    $('body').on('vclick.ds', '.proceed', methods.proceed);
+    $('body').on('vclick.ds', '.proceed', methods.proceed);
+    $('body').on('vclick.ds', '.remember', methods.remember);
+    $('body').on('vclick.ds', '.proceed_and_remember', methods.proceed_and_remember);
+    $('body').on('vclick.ds', '.cancel', cancel_confirm);
 
     $("img.fallback-icon").error(function(e) {
         $(this).attr('src','/static/icons/1x1t.png').removeClass("img-thumbnail").hide();
     });
 
-    var idp_template = Hogan.compile('<span class="cursor {{#proceed}}proceed{{/proceed}}{{^proceed}}select{{/proceed}} list-group-item" alt="{{title}}" data-href="{{entityID}}">' +
-        '{{^sticky}}<button type="button" data-toggle="tooltip" data-placement="left" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
-        '<h4 class="list-group-item-heading">{{title}}</h4>' +
-        '<p class="list-group-item-text">' +
-        '{{#icon}}<img src="{{icon}}" class="fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"/>{{/icon}}' +
-        '{{#descr}}<div class="pull-left idp-description hidden-xs">{{descr}}</div>{{/descr}}</p>' +
-        '<div class="clearfix"></div>' +
-        '</span>');
-
-    $.fn.dsQuickLinks = function(id) {
+    $.fn.dsQuickLinks = function(id, done_cb) {
         this.each(function() {
             var outer = $(this);
             var uri = outer.attr('data-target');
             var div = $('<div>').addClass("list-group");
             outer.html(div);
 
-            var seen = {};
             var lst = $.jStorage.get('pyff.discovery.idps',[]);
             if (lst.length > 0) {
                 var i = lst.length;
@@ -309,22 +287,29 @@ $(document).ready(function() {
                         if (typeof elt.hidden === 'undefined' || elt.hidden.toLowerCase() === "false") {
                             elt.sticky = false;
                             div.prepend(idp_template.render(elt));
-                            seen[elt.entityID] = true
                         }
                     }, function (id) {  /* fail */
                         lst.splice(i, 1);
                         $.jStorage.set('pyff.discovery.idps',lst);
                     });
                 }
+                done_cb(lst.length,"foo");
             } else {
-                //console.log("adding suggestions...")
+                var seen_count = 0;
+                var seen = {};
+                console.log(uri);
                 oboe(uri).node('!.*', function (elt) {
                     if (elt.entityID in seen) {
                     } else {
                         elt.sticky = true;
                         seen[elt.entityID] = true;
+                        seen_count++;
                         div.append(idp_template.render(elt));
                     }
+                }).done(function () {
+                    done_cb(seen_count,"bar");
+                }).fail(function () {
+                    done_cb(seen_count,"baz");
                 });
             }
         });
@@ -340,40 +325,4 @@ $(document).ready(function() {
         }
     };
 
-    $.fn.dsRelyingParty = function(id, cb) {
-        var o = $(this);
-        $.ajax({
-            url: '/metadata/'+ id +'.json',
-            dataType: 'json',
-            success: function(data) {
-                for (var i = 0; i < data.length; i++) {
-                    var entity = data[i];
-                    $(o).filter("img.sp-icon").each(function() {
-                        if (entity.icon) {
-                            $(this).attr('src',entity.icon).attr('width',entity.icon_width).attr('height',entity.icon_height).addClass("img-responsive img-thumbnail")
-                            $(this).closest(".hidden").removeClass("hidden");
-                        }
-                    });
-                    $(o).filter(".sp-name").each(function() {
-                        if (entity.title) {
-                            $(this).append(entity.title)
-                        }
-                    });
-                    $(o).filter(".sp-description").each(function() {
-                        if (entity.descr) {
-                            $(this).append(entity.descr);
-                        }
-                    });
-                    $(o).filter("a.sp-privacy-statement-url").each(function() {
-                        if (entity.psu) {
-                            $(this).attr('href',entity.psu).append($('<em>').append($(this).attr('title')));
-                        }
-                    });
-                    if (cb) {
-                        cb(entity, i);
-                    }
-                }
-            }
-        });
-    };
 });

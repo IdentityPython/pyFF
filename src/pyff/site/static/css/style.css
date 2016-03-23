@@ -2,6 +2,7 @@
 body {
   padding-top: 20px;
   padding-bottom: 20px;
+    overflow-y: scroll;
 }
 
 /* Everything but the jumbotron gets side spacing for mobile first views */
@@ -134,8 +135,6 @@ body {
 @-o-viewport        { width: device-width; }
 @viewport           { width: device-width; }
 
-.idpchooser { margin-top: 20px; padding-bottom: 20px;}
-
 #map_canvas { width: 100%; height: 350px; }
 #map_canvas img { max-width: none; }
 
@@ -189,14 +188,6 @@ span.select:hover, span.proceed:hover {
     align-items: center;
 }
 
-#thelist.loading {
-  cursor:progress;
-}
-
-#to_list {
-    margin-top: 10px;
-}
-
 #sp-icon-container {
     max-width: 20% !important;
     min-width: 0px;
@@ -205,4 +196,16 @@ span.select:hover, span.proceed:hover {
 #sp-title-container {
     max-width: 80%;
     vertical-align: middle;
+}
+
+.fa-spin { -webkit-filter: blur(0); }
+
+h5.sp {
+    margin-bottom: 1px;
+    padding-bottom: 0px;
+}
+
+h3.sp {
+    margin-bottom: 1px;
+    padding-bottom: 0px;
 }

@@ -35,3 +35,25 @@
         <button id="cancel" class="btn">{{ gettext('No, get me out of here!') }}</button>
     </div>
 {% endblock %}
+
+{% block final %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('.message > button.close').click(function(e) {
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                var id = $(this).parentsUntil('.message').attr('id');
+                $(this).parent().each(function() {
+                    closed[$(this).attr('id')] = true;
+                });
+                $.jStorage.set('pyff.discovery.messages',closed);
+            });
+            $('.message').each(function () {
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                if (closed[$(this).attr('id')]) {
+                    $(this).hide();
+                }
+            });
+        });
+    </script>
+    <script type="text/javascript" src="/static/js/jquery.mobile.custom.min.js"></script>
+{% endblock %}

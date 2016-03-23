@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
+{% block script %}
+    <link href="/static/css/typeaheadjs.css" rel="stylesheet"/>
+    <link href="/static/css/prettify.css" rel="stylesheet"/>
+{% endblock %}
+
 {% block nav %}
 <div class="topnav navbar navbar-default">
     <div class="navbar-header">
@@ -64,6 +69,10 @@
 {% endblock %}
 
 {% block final %}
+<script type="text/javascript" src="//maps.google.com/maps/api/js"></script>
+<script type="text/javascript" src="/static/js/jquery.ui.map.full.min.js"></script>
+<script type="text/javascript" src="/static/js/prettify.js"></script>
+<script type="text/javascript" src="/static/js/typeahead.bundle.min.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
         prettyPrint();

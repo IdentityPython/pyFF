@@ -7,37 +7,7 @@
     <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
     <link href="/static/css/style.css" rel="stylesheet"/>
     <link href="/static/css/nav.css" rel="stylesheet"/>
-    <link href="/static/css/typeaheadjs.css" rel="stylesheet"/>
-    <link href="/static/css/prettify.css" rel="stylesheet"/>
-    <script type="text/javascript" src="/static/js/jquery.min.js"></script>
-    <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
-    <!-- maps -->
-    <script type="text/javascript" src="//maps.google.com/maps/api/js?sensor=true"></script>
-    <script type="text/javascript" src="/static/js/jquery.ui.map.full.min.js"></script>
-    <script type="text/javascript" src="/static/js/jquery.browser.js"></script>
-    <script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script>
-    <script type="text/javascript" src="/static/js/hogan.min.js"></script>
-    <script type="text/javascript" src="/static/js/typeahead.bundle.min.js"></script>
-    <script type="text/javascript" src="/static/js/json2.min.js"></script>
-    <script type="text/javascript" src="/static/js/jstorage.min.js"></script>
-    <script type="text/javascript" src="/static/js/oboe-browser.min.js"></script>
-    <script type="text/javascript" src="/static/js/hashes.min.js"></script>
-    <script type="text/javascript" src="/static/js/pyff.js"></script>
-    <script type="text/javascript" src="/static/js/prettify.js"></script>
-    <script type="text/javascript" src="/static/js/imgload.js"></script>
-    <!--[if lt IE 9]>
-    <script src="/static/js/html5shiv.js"></script>
-    <script src="/static/js/respond.min.js"></script>
-    <![endif]-->
-    <script type="text/javascript">
-        $(document).ready(function() {
-           $('img.fallback').on('error', function () {
-                $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
-           }).imgLoad(function() {
-               $(this).fadeIn(300);
-           });
-        });
-    </script>
+    <link rel="stylesheet" href="/static/css/font-awesome.min.css">
     {% block script %}
     {% endblock %}
 </head>
@@ -67,8 +37,38 @@
         </div>
         {% block footer %}
         {% endblock %}
+
+        <script type="text/javascript" src="/static/js/jquery-1.12.2.min.js"></script>
+        <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="/static/js/hashes.min.js"></script>
+        <!-- script type="text/javascript" src="/static/js/jquery.browser.js"></script -->
+        <script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script>
+        <script type="text/javascript" src="/static/js/hogan.min.js"></script>
+        <script type="text/javascript" src="/static/js/json2.min.js"></script>
+        <script type="text/javascript" src="/static/js/jstorage.min.js"></script>
+        <script type="text/javascript" src="/static/js/oboe-browser.min.js"></script>
+
+        <script type="text/javascript" src="/static/js/pyff.js"></script>
+        <script type="text/javascript" src="/static/js/imgload.js"></script>
+        <script type="text/javascript" src="/static/js/bootstrap-list-filter.src.js"></script>
+
+        <!--[if lt IE 9]>
+        <script src="/static/js/html5shiv.js"></script>
+        <script src="/static/js/respond.min.js"></script>
+        <![endif]-->
+        <script type="text/javascript">
+            $(document).ready(function() {
+               $('img.fallback').on('error', function () {
+                    $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
+               }).imgLoad(function() {
+                   $(this).fadeIn(300);
+               });
+            });
+        </script>
+
         {% block final %}
         {% endblock %}
+
     </div>
 </body>
 </html>

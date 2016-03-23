@@ -56,6 +56,10 @@ class Observable(object):
             fn(e)
 
 
+def _trunc(x, l):
+    return (x[:l] + '..') if len(x) > l else x
+
+
 class MDRepository(Observable):
     """A class representing a set of SAML Metadata. Instances present as dict-like objects where
     the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
@@ -157,7 +161,7 @@ class MDRepository(Observable):
         if info == entity.get('entityID'):
             info = ''
 
-        return display.strip(), info.strip()
+        return _trunc(display.strip(), 40), _trunc(info.strip(), 256)
 
     def display(self, entity, langs=None):
         """Utility-method for computing a displayable string for a given entity.
@@ -245,9 +249,8 @@ class MDRepository(Observable):
         title, descr = self.ext_display(e)
         entity_id = e.get('entityID')
         d = dict(title=title,
-                 value=entity_id,
                  descr=descr,
-                 entity_id=entity_id,
+                 entityID=entity_id,
                  domains=";".join(self.sub_domains(e)),
                  id=hash_id(e, 'sha1'))
         icon_info = self.icon(e)
@@ -255,6 +258,10 @@ class MDRepository(Observable):
             url = icon_info.get('url', 'data:image/gif;base64,R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==')
             d['icon_url'] = url
             d['icon'] = url
+
+        psu = self.psu(e, None)
+        if psu:
+            d['psu'] = psu
 
         return d
 
