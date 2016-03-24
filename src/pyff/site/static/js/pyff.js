@@ -267,6 +267,12 @@ $(document).ready(function() {
     $('body').on('vclick.ds', '.remember', methods.remember);
     $('body').on('vclick.ds', '.proceed_and_remember', methods.proceed_and_remember);
     $('body').on('vclick.ds', '.cancel', cancel_confirm);
+    $('body').on('mouseenter', 'div.list-group-item', function (e) {
+       $(this).addClass("active");
+    });
+    $('body').on('mouseleave', 'div.list-group-item', function (e) {
+       $(this).removeClass("active");
+    });
 
     $("img.fallback-icon").error(function(e) {
         $(this).attr('src','/static/icons/1x1t.png').removeClass("img-thumbnail").hide();
