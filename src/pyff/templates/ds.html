@@ -51,9 +51,7 @@
                                placeholder="{{ gettext('Start typing to search for your identity service...') }}" />
                     </div>
                 </div>
-                <div id="searchlist" data-target="{{list}}" class="list-group">
-
-                </div>
+                <div id="searchlist" data-target="{{search}}" data-related="{{entity['domains']}}" class="list-group"></div>
             </form>
             <a id="show" class="btn btn-info btn-block hidden">{{ gettext('Show me more choices') }}</a>
         </div>

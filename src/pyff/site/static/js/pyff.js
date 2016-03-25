@@ -193,7 +193,7 @@ $(document).ready(function() {
             var list = $('#searchlist').btsListFilter('#searchinput', {
                 resetOnBlur: false,
                 sourceData: function (text, callback) {
-                    var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable"
+                    var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
 
                     if (search_related) {
                         remote = remote + "&related=" + search_related;
@@ -209,9 +209,15 @@ $(document).ready(function() {
             });
         },
         show: function (e) {
-            var list_uri = $('#searchlist').attr('data-target');
+            var search_base, search_related, list_uri;
+            search_base = $('#searchinput').attr('data-target');
+            search_related = $('#searchinput').attr('data-related');
+            var remote = search_base + "?query=&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
+            if (search_related) {
+                remote = remote + "&related=" + search_related;
+            }
             $('#idpchooser > form[role="form"]').removeClass('hidden');
-            methods.fetch(list_uri, function (elt) {
+            methods.fetch(remote, function (elt) {
                 elt.sticky = true;
                 elt.icon = null; // XXX test - make it load quicker on long lists...
                 $('#searchlist').append(idp_template.render(elt));

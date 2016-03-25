@@ -285,6 +285,8 @@ The dict in the list contains three items:
 :param id: A sha1-ID of the entityID - on the form {sha1}<sha1-hash-of-entityID>
         """
 
+        match_query = bool(len(query) > 0)
+
         if isinstance(query, basestring):
             query = [query.lower()]
 
@@ -337,13 +339,20 @@ The dict in the list contains three items:
         log.debug("match using '%s'" % mexpr)
         res = []
         for e in self.lookup(mexpr):
-            m = _match(query, e)
-            if m is not None:
-                d = self.simple_summary(e)
-                ll = d['title'].lower()
-                if m != ll and not query[0] in ll:
-                    d['title'] = "%s - %s" % (d['title'], m)
+            d = None
+            log.debug("query: %s" % query)
+            if match_query:
+                m = _match(query, e)
+                if m is not None:
+                    d = self.simple_summary(e)
+                    ll = d['title'].lower()
+                    if m != ll and not query[0] in ll:
+                        d['title'] = "%s - %s" % (d['title'], m)
+            else:
 
+                d = self.simple_summary(e)
+
+            if d is not None:
                 if related is not None:
                     d['ddist'] = avg_domain_distance(related, d['domains'])
                 else:
