@@ -98,7 +98,7 @@ class TestRepo(TestCase):
         summary = self.md.simple_summary(e)
         assert (summary['title'] == 'Example University')
         assert (summary['descr'] == 'Identity Provider for Example University')
-        assert (summary['value'] == entity_id)
+        assert (summary['entityID'] == entity_id)
         assert ('icon' in summary)
         assert ('icon_url' in summary and summary['icon'] == summary['icon_url'])
         assert ('domains' in summary)
