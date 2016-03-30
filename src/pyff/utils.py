@@ -14,6 +14,7 @@ from time import gmtime, strftime, clock
 from traceback import print_exc
 from urlparse import urlparse
 
+import xmlsec
 import cherrypy
 import httplib2
 import iso8601
@@ -184,6 +185,17 @@ def schema():
             raise ex
     return thread_data.schema
 
+
+def check_signature(t, key):
+    if key is not None:
+        log.debug("verifying signature using %s" % key)
+        refs = xmlsec.verified(t, key, drop_signature=True)
+        if len(refs) != 1:
+            raise MetadataException(
+                "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+        t = refs[0]  # prevent wrapping attacks
+
+    return t
 
 # @cached(hash_key=lambda *args, **kwargs: hash(args[0]))
 def validate_document(t):

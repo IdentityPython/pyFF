@@ -29,7 +29,7 @@ import ipaddr
 from .constants import ATTRS
 from . import merge_strategies
 from .logs import log
-from .utils import schema, filter_lang, root, duration2timedelta, \
+from .utils import schema, check_signature, filter_lang, root, duration2timedelta, \
     hash_id, MetadataException, find_merge_strategy, entities_list, url2host, subdomains, avg_domain_distance, \
     iter_entities, validate_document, load_url, iso2datetime, xml_error, find_entity
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
@@ -677,17 +677,6 @@ and verified.
                 self.fire(type=EVENT_DROP_ENTITY, url=base_url, entityID=entity_id, error=error)
         return t
 
-    def check_signature(self, t, key):
-        if key is not None:
-            log.debug("verifying signature using %s" % key)
-            refs = xmlsec.verified(t, key, drop_signature=True)
-            if len(refs) != 1:
-                raise MetadataException(
-                    "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
-            t = refs[0]  # prevent wrapping attacks
-
-        return t
-
     def parse_metadata(self,
                        source,
                        key=None,
@@ -723,7 +712,7 @@ and verified.
             if expiration is not None:
                 valid_until = expiration(t)
 
-            t = self.check_signature(t, key)
+            t = check_signature(t, key)
 
             # get rid of ID as early as possible - probably not unique
             for e in iter_entities(t):
