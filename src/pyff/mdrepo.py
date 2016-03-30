@@ -697,6 +697,7 @@ and verified.
 :param validate: (default: True) set to False to turn off all XML schema validation
 :param post: A callable that will be called to modify the parse-tree after schema validation
 :param validation_errors: A dict that will be used to return validation errors to the caller
+:param expiration: A callable that returns the valid_until datetime of the prsed metadata
 (but after xinclude processing and signature validation)
         """
 
