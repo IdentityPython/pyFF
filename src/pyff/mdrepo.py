@@ -657,7 +657,7 @@ and verified.
                             log.error('fetching %r generated an exception' % url)
                             raise future.exception()
                         else:
-                            log.error('fetching %r generated an exception: %s' % (url, future.exception()))
+                            log.error('fetching %s generated an exception: %s' % (url, future.exception()))
                     else:
                         next_resources.extend(future.result())
                 resources = next_resources
