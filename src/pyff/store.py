@@ -38,11 +38,16 @@ def _domains(entity):
 
 
 def with_entity_attributes(entity, cb):
+
+    def _stext(e):
+        if e.text is not None:
+            return e.text.strip()
+
     for ea in entity.iter("{%s}EntityAttributes" % NS['mdattr']):
         for a in ea.iter("{%s}Attribute" % NS['saml']):
             an = a.get('Name', None)
             if a is not None:
-                values = [v.text.strip() for v in a.iter("{%s}AttributeValue" % NS['saml'])]
+                values = filter(lambda x: x is not None, [_stext(v) for v in a.iter("{%s}AttributeValue" % NS['saml'])])
                 cb(an, values)
 
 
