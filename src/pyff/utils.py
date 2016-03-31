@@ -296,7 +296,7 @@ def load_url(url, enable_cache=True, timeout=60):
                              time=None,
                              last_modified=None)
 
-        with io.open(path, 'r+b') as fd:
+        with io.open(path, 'rb') as fd:
             return _Resource(result=fd.read(),
                              cached=False,
                              date=datetime.now(),
