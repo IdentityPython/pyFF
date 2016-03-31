@@ -9,11 +9,11 @@
     <li>
         <a href="/metadata/{{ md.sha1_id(entity) }}.html">
         {% if md.is_idp(entity) %}
-        <span class="glyphicon glyphicon-home"></span>
+        <span class="fa fa-users"></span>
         {% elif md.is_sp(entity) %}
-        <span class="glyphicon glyphicon-cloud"></span>
+        <span class="fa fa-cloud"></span>
         {% else %}
-        <span class="glyphicon glyphicon-question-sign"></span>
+        <span class="fa fa-question"></span>
         {% endif %}
         {{ md.display(entity) }}
         </a>
