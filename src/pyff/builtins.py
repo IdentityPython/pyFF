@@ -910,6 +910,46 @@ loading of metadata so this call is seldom needed.
 
     return req.t
 
+@pipe
+def prune(req, *opts):
+    """
+Prune the active tree, removing all elements matching
+
+:param req: The request
+:param opts: Not used
+:return: The tree with all specified elements removed
+
+
+** Examples**
+.. code-block:: yaml
+
+    - prune:
+        - .//{http://www.w3.org/2000/09/xmldsig#}Signature
+
+This example would drop all Signature elements. Note the use of namespaces.
+
+.. code-block:: yaml
+
+    - prune:
+        - .//{http://www.w3.org/2000/09/xmldsig#}Signature[1]
+
+This example would drop the first Signature element only.
+
+    """
+
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    for path in req.args:
+        for part in req.t.iterfind(path):
+            parent = part.getparent()
+            if parent is not None:
+                parent.remove(part)
+            else:  # we just removed the top-level element - return empty tree
+                return None
+
+    return req.t
+
 
 @pipe
 def certreport(req, *opts):
