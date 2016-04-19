@@ -444,6 +444,35 @@ class SigningTest(PipeLineTest):
                 except:
                     pass
 
+    def test_prune(self):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            tmpfile = tempfile.NamedTemporaryFile('w').name
+            try:
+                self.exec_pipeline("""
+- load:
+   - file://%s/metadata/test01.xml
+- select
+- prune:
+    - .//{urn:oasis:names:tc:SAML:metadata:ui}UIInfo
+- publish: %s
+""" % (self.datadir, tmpfile))
+                t1 = parse_xml(resource_filename("metadata/test01.xml", self.datadir))
+                uiinfo = t1.find(".//{urn:oasis:names:tc:SAML:metadata:ui}UIInfo")
+                assert uiinfo is not None
+                t2 = parse_xml(tmpfile)
+                assert t2 is not None
+                gone = t2.find(".//{urn:oasis:names:tc:SAML:metadata:ui}UIInfo")
+                assert gone is None
+            except PipeException:
+                pass
+            except IOError:
+                raise Skip
+            finally:
+                try:
+                    os.unlink(tmpfile)
+                except:
+                    pass
+
     def test_empty_store(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
