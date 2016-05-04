@@ -1,11 +1,12 @@
 __author__ = 'leifj'
 
-import cherrypy
-import syslog
 import logging
+import syslog
 
-class PyFFLogger():
+import cherrypy
 
+
+class PyFFLogger(object):
     def __init__(self):
         self._loggers = {logging.WARN: logging.warn,
                          logging.WARNING: logging.warn,
@@ -14,31 +15,41 @@ class PyFFLogger():
                          logging.DEBUG: logging.debug,
                          logging.ERROR: logging.error}
 
-    def _l(self,severity,msg):
-        if cherrypy.tree.apps.has_key(''):
-            cherrypy.tree.apps[''].log("%s" % msg,severity=severity)
-        else:
+    def _l(self, severity, msg):
+        if '' in cherrypy.tree.apps:
+            cherrypy.tree.apps[''].log("%s" % msg, severity=severity)
+        elif severity in self._loggers:
             self._loggers[severity]("%s" % msg)
+        else:
+            raise ValueError("unknown severity %s" % severity)
 
-    def warn(self,msg):
-        return self._l(logging.WARN,msg)
+    def warn(self, msg):
+        return self._l(logging.WARN, msg)
 
-    def info(self,msg):
-        return self._l(logging.INFO,msg)
+    def warning(self, msg):
+        return self._l(logging.WARN, msg)
 
-    def error(self,msg):
-        return self._l(logging.ERROR,msg)
+    def info(self, msg):
+        return self._l(logging.INFO, msg)
 
-    def critical(self,msg):
-        return self._l(logging.CRITICAL,msg)
+    def error(self, msg):
+        return self._l(logging.ERROR, msg)
 
-    def debug(self,msg):
-        return self._l(logging.DEBUG,msg)
+    def critical(self, msg):
+        return self._l(logging.CRITICAL, msg)
+
+    def debug(self, msg):
+        return self._l(logging.DEBUG, msg)
+
+    def isEnabledFor(self, lvl):
+        return logging.getLogger(__name__).isEnabledFor(lvl)
+
 
 log = PyFFLogger()
 
 # http://www.aminus.org/blogs/index.php/2008/07/03/writing-high-efficiency-large-python-sys-1?blog=2
 # blog post explicitly gives permission for use
+
 
 class SysLogLibHandler(logging.Handler):
     """A logging handler that emits messages to syslog.syslog."""
@@ -49,18 +60,18 @@ class SysLogLibHandler(logging.Handler):
         40: syslog.LOG_ERR,
         50: syslog.LOG_CRIT,
         0: syslog.LOG_NOTICE,
-        }
+    }
 
     def __init__(self, facility):
 
         if type(facility) is str or type(facility) is unicode:
             nf = getattr(syslog, "LOG_%s" % facility.upper(), None)
             if not isinstance(nf, int):
-                raise ValueError('Invalid log level: %s' % nf)
+                raise ValueError('Invalid log facility: %s' % nf)
             self.facility = nf
         else:
             self.facility = facility
         logging.Handler.__init__(self)
 
     def emit(self, record):
-        syslog.syslog(self.facility | self.priority_map[record.levelno],self.format(record))
+        syslog.syslog(self.facility | self.priority_map[record.levelno], self.format(record))

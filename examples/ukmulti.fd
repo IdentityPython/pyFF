@@ -1,0 +1,41 @@
+- load:
+     -  http://www.home.umk.pl/~twoln/uk0.xml as UK0
+     -  http://www.home.umk.pl/~twoln/uk1.xml as UK1
+     -  http://www.home.umk.pl/~twoln/uk2.xml as UK2
+     -  http://www.home.umk.pl/~twoln/uk3.xml as UK3
+     #-  http://www.home.umk.pl/~twoln/uk4.xml as UK4
+     #-  http://www.home.umk.pl/~twoln/uk5.xml as UK5
+     #-  http://www.home.umk.pl/~twoln/uk6.xml as UK6
+     #-  http://www.home.umk.pl/~twoln/uk7.xml as UK7
+     #-  http://www.home.umk.pl/~twoln/uk8.xml as UK8
+     #-  http://www.home.umk.pl/~twoln/uk9.xml as UK9
+     #-  http://www.home.umk.pl/~twoln/uk10.xml as UK10
+- select:
+     - UK0!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     - UK1!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     - UK2!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     - UK3!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     #- UK4!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     #- UK5!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     #- UK6!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     #- UK7!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     #- UK8!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     #- UK9!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+     #- UK10!.//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://ukfederation.org.uk']]]
+#- xslt:
+#     stylesheet: tidy.xsl
+#- xslt:
+#     stylesheet: pubinfo.xsl
+#     publisher: http://mds.edugain.org/
+- finalize:
+     Name: http://edugain.org/
+     ID: eduGAIN
+     cacheDuration: PT6H
+     validUntil: P4D
+#- xslt:
+#     stylesheet: pp.xsl
+- sign:
+     key: sign.key
+     cert: sign.crt
+- publish: edugain-test.xml
+- stats 

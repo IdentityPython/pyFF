@@ -1,0 +1,114 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<md:EntityDescriptor xmlns:shibmd="urn:mace:shibboleth:metadata:1.0"
+                     xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
+                     xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui"
+                     xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+                     entityID="https://idp.aco.net/idp/shibboleth">
+    <md:IDPSSODescriptor protocolSupportEnumeration="urn:mace:shibboleth:1.0 urn:oasis:names:tc:SAML:1.1:protocol urn:oasis:names:tc:SAML:2.0:protocol">
+        <md:Extensions>
+            <shibmd:Scope regexp="false">aco.net</shibmd:Scope>
+            <mdui:UIInfo>
+                <mdui:DisplayName xml:lang="en">ACOnet Team</mdui:DisplayName>
+                <mdui:DisplayName xml:lang="de">ACOnet Team</mdui:DisplayName>
+                <mdui:Description xml:lang="en">Identity Provider for the ACOnet team</mdui:Description>
+                <mdui:Description xml:lang="de">Identity Provider des ACOnet-Teams</mdui:Description>
+                <mdui:Logo height="60" width="137">https://wayf.aco.net/images/aconet_small.gif</mdui:Logo>
+                <mdui:Logo height="16" width="16">https://www.aco.net/fileadmin/site/aconet/favicon.ico</mdui:Logo>
+                <mdui:InformationURL xml:lang="en">http://www.aco.net/organisation.html?L=1</mdui:InformationURL>
+                <mdui:InformationURL xml:lang="de">http://www.aco.net/organisation.html</mdui:InformationURL>
+            </mdui:UIInfo>
+            <mdui:DiscoHints>
+                <mdui:IPHint>192.153.174.0/24</mdui:IPHint>
+                <mdui:DomainHint>aco.net</mdui:DomainHint>
+                <mdui:GeolocationHint>geo:48.2132234,16.3581464</mdui:GeolocationHint>
+            </mdui:DiscoHints>
+        </md:Extensions>
+        <md:KeyDescriptor>
+            <ds:KeyInfo>
+                <ds:X509Data>
+                    <ds:X509Certificate>
+MIIDGDCCAgCgAwIBAgIVAOmKQ6SgpmK/8vtQmiMBkQ1+yZ1XMA0GCSqGSIb3DQEB
+BQUAMBYxFDASBgNVBAMTC2lkcC5hY28ubmV0MB4XDTA5MTEwMzA5MjIzOFoXDTI5
+MTEwMzA5MjIzOFowFjEUMBIGA1UEAxMLaWRwLmFjby5uZXQwggEiMA0GCSqGSIb3
+DQEBAQUAA4IBDwAwggEKAoIBAQDtABRog8uPB0h8aNilZFdYFII8iLgBkDQoAXH1
+AIMLVP8dDaK6dRnwyBfrq4dfEH/BqQxxpmASXK1s6O1YbZcx5X9M48yzzpdKFkGU
+3SIdu4lLNYtR1nfePX0120NTBk9tzCR0R9mmV6YMajFQ8YQkyDzwboTTyILx1E70
+RsFIvmx59QDtdPjP8fi2X5ZsRb1kOFDKeJlI15/SQkWAJGBIjtb7Dhs5K6jlp2lh
+T3R5G+faRrC761qR0ddcmh6qkq6fBGRRydxn85N5L6XkoxfD2evTSEkTB2sKn8UG
+cDNupxjPSD6PIPQhDuQlDyg6sFcMj1N6/PvH6FDhca/WZ72hAgMBAAGjXTBbMDoG
+A1UdEQQzMDGCC2lkcC5hY28ubmV0hiJodHRwczovL2lkcC5hY28ubmV0L2lkcC9z
+aGliYm9sZXRoMB0GA1UdDgQWBBStGKLf2/BAuxR9PAnCFKg1lXw+azANBgkqhkiG
+9w0BAQUFAAOCAQEAcYbfERAghPNJSFLnx4SYwmh19ln2j67IdFaEzGnZ10oNtMF5
+MXbJXqLN/JCEj7QLjRQ7PkhCpIUnKJ14ELCt/7ChnxfUHqwiYDyB3Vtm+FIlaNnJ
+Bhet+AJpiVyb6xce6tLQnQ/UwNmPozPjOwEbuKhz5dO1uftI38FT4hBYzsdo76Hm
+rS4WKwBzWV43OcNVhv2sgDbsxGIi5CGnQm6POICQhXAgvG2BGH+77jwM0PVFNP1b
+CQX+4Ig0MV2Y4WCgu3y2IxpSjGtnHxRxLMyNFblaP0MTo8BROcC74n0jKvnSVXyj
+nWGBQ+FiDBdPEO2Ny3SNjJ3B67hbmXBJSEJw9g==
+                    </ds:X509Certificate>
+                </ds:X509Data>
+            </ds:KeyInfo>
+        </md:KeyDescriptor>
+        <md:ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:1.0:bindings:SOAP-binding" Location="https://idp.aco.net:8443/idp/profile/SAML1/SOAP/ArtifactResolution" index="1"/>
+        <md:ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://idp.aco.net:8443/idp/profile/SAML2/SOAP/ArtifactResolution" index="2"/>
+        <md:NameIDFormat>urn:mace:shibboleth:1.0:nameIdentifier</md:NameIDFormat>
+        <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat>
+        <md:SingleSignOnService Binding="urn:mace:shibboleth:1.0:profiles:AuthnRequest" Location="https://idp.aco.net/idp/profile/Shibboleth/SSO"/>
+        <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp.aco.net/idp/profile/SAML2/POST/SSO"/>
+        <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://idp.aco.net/idp/profile/SAML2/POST-SimpleSign/SSO"/>
+        <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp.aco.net/idp/profile/SAML2/Redirect/SSO"/>
+    </md:IDPSSODescriptor>
+    <md:AttributeAuthorityDescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:1.1:protocol urn:oasis:names:tc:SAML:2.0:protocol">
+        <md:Extensions>
+            <shibmd:Scope regexp="false">aco.net</shibmd:Scope>
+        </md:Extensions>
+        <md:KeyDescriptor>
+            <ds:KeyInfo>
+                <ds:X509Data>
+                    <ds:X509Certificate>
+MIIDGDCCAgCgAwIBAgIVAOmKQ6SgpmK/8vtQmiMBkQ1+yZ1XMA0GCSqGSIb3DQEB
+BQUAMBYxFDASBgNVBAMTC2lkcC5hY28ubmV0MB4XDTA5MTEwMzA5MjIzOFoXDTI5
+MTEwMzA5MjIzOFowFjEUMBIGA1UEAxMLaWRwLmFjby5uZXQwggEiMA0GCSqGSIb3
+DQEBAQUAA4IBDwAwggEKAoIBAQDtABRog8uPB0h8aNilZFdYFII8iLgBkDQoAXH1
+AIMLVP8dDaK6dRnwyBfrq4dfEH/BqQxxpmASXK1s6O1YbZcx5X9M48yzzpdKFkGU
+3SIdu4lLNYtR1nfePX0120NTBk9tzCR0R9mmV6YMajFQ8YQkyDzwboTTyILx1E70
+RsFIvmx59QDtdPjP8fi2X5ZsRb1kOFDKeJlI15/SQkWAJGBIjtb7Dhs5K6jlp2lh
+T3R5G+faRrC761qR0ddcmh6qkq6fBGRRydxn85N5L6XkoxfD2evTSEkTB2sKn8UG
+cDNupxjPSD6PIPQhDuQlDyg6sFcMj1N6/PvH6FDhca/WZ72hAgMBAAGjXTBbMDoG
+A1UdEQQzMDGCC2lkcC5hY28ubmV0hiJodHRwczovL2lkcC5hY28ubmV0L2lkcC9z
+aGliYm9sZXRoMB0GA1UdDgQWBBStGKLf2/BAuxR9PAnCFKg1lXw+azANBgkqhkiG
+9w0BAQUFAAOCAQEAcYbfERAghPNJSFLnx4SYwmh19ln2j67IdFaEzGnZ10oNtMF5
+MXbJXqLN/JCEj7QLjRQ7PkhCpIUnKJ14ELCt/7ChnxfUHqwiYDyB3Vtm+FIlaNnJ
+Bhet+AJpiVyb6xce6tLQnQ/UwNmPozPjOwEbuKhz5dO1uftI38FT4hBYzsdo76Hm
+rS4WKwBzWV43OcNVhv2sgDbsxGIi5CGnQm6POICQhXAgvG2BGH+77jwM0PVFNP1b
+CQX+4Ig0MV2Y4WCgu3y2IxpSjGtnHxRxLMyNFblaP0MTo8BROcC74n0jKvnSVXyj
+nWGBQ+FiDBdPEO2Ny3SNjJ3B67hbmXBJSEJw9g==
+                    </ds:X509Certificate>
+                </ds:X509Data>
+            </ds:KeyInfo>
+        </md:KeyDescriptor>
+        <md:AttributeService Binding="urn:oasis:names:tc:SAML:1.0:bindings:SOAP-binding" Location="https://idp.aco.net:8443/idp/profile/SAML1/SOAP/AttributeQuery"/>
+        <md:AttributeService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://idp.aco.net:8443/idp/profile/SAML2/SOAP/AttributeQuery"/>
+        <md:NameIDFormat>urn:mace:shibboleth:1.0:nameIdentifier</md:NameIDFormat>
+        <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat>
+    </md:AttributeAuthorityDescriptor>
+    <md:Organization>
+        <md:OrganizationName xml:lang="de">ACOnet</md:OrganizationName>
+        <md:OrganizationName xml:lang="en">ACOnet</md:OrganizationName>
+        <md:OrganizationDisplayName xml:lang="de">ACOnet</md:OrganizationDisplayName>
+        <md:OrganizationDisplayName xml:lang="en">ACOnet</md:OrganizationDisplayName>
+        <md:OrganizationURL xml:lang="de">http://www.aco.net/</md:OrganizationURL>
+        <md:OrganizationURL xml:lang="en">http://www.aco.net/?L=1</md:OrganizationURL>
+    </md:Organization>
+    <md:ContactPerson contactType="administrative">
+        <md:GivenName>ACOnet</md:GivenName>
+        <md:SurName>Admin</md:SurName>
+        <md:EmailAddress>mailto:admin@aco.net</md:EmailAddress>
+    </md:ContactPerson>
+    <md:ContactPerson contactType="technical">
+        <md:GivenName>ACOnet</md:GivenName>
+        <md:SurName>NOC</md:SurName>
+        <md:EmailAddress>mailto:noc@aco.net</md:EmailAddress>
+    </md:ContactPerson>
+</md:EntityDescriptor>
+
+

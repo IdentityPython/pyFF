@@ -1,0 +1,27 @@
+.nav-pills > .active > a,
+.nav-pills > .active > a:hover, .nav-pills > li > a:hover {
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 0px;
+    border-right: 4px solid #e97d20;
+    color: #000 !important;
+    background-color: transparent !important;
+}
+.nav-pills > li > a{
+    border-radius: 0px;
+}
+
+div.navbar {
+    background: none;
+    border-radius: 0px;
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    margin-bottom: 40px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    color: #000 !important;
+    background-color: transparent !important;
+    border-bottom: 2px solid #e97d20;
+
+}

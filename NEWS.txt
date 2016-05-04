@@ -57,12 +57,40 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 ---
 
 *Release date: Fri Nov 30 09:37:59 CET 2012*
+
 * HTTP-based pyffd with MDX support
 * several bugfixes
 * indexing in MDRepository
 * completely rewritten URL fetcher with monitoring
 
-0.9
----
+0.9 and 0.9.1
+-------------
 
-*Release date: UNRELEASED*
+*Release date: Tue Apr  9 18:03:13 CEST 2013*
+
+* Lots of bugfixes
+* pep8 cleanup
+* stability & testcases
+
+0.9.2
+-----
+
+* Release date: Mon Apr 15 13:19:14 CEST 2013*
+
+* caching in pyffd now works
+* version information on cmdline
+* 'remove' merge strategy from Peter S
+* cleanup & bugfixes
+
+0.9.3
+-----
+
+* Release date: Wed May 15 12:09:57 CEST 2013*
+* better discovery UI
+
+0.9.4
+-----
+* Release date: Mon Sep 23 14:11:16 CEST 2013*
+* bugfixes, minor UI improvements
+* documentation imporovements
+

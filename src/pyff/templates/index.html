@@ -1,0 +1,48 @@
+{% extends "ui.html" %}
+{% block headline %}{{ title }}{% endblock %}
+{% block content %}
+    {% if alias %}
+        <ul>
+            {% for v in md.store.attribute(aliases[alias]) %}
+            <li><a href="/{{ alias }}/{{ v|u }}.html">{{ v }}</a>
+                <a href="/{{ alias }}/{{ v|u }}.xml" title="XML Metadata"><i class="icon-cog"></i></a></li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="row" id="metadataIndex">
+            <div class="col-xs-4 col-md-4">
+                <ul class="nav nav-pills nav-stacked">
+                {% for a in aliases %}
+                    {% if md.store.attribute(aliases[a]) %}
+                        <li><a href="#{{a}}" role="tab" data-toggle="tab">{{a}}</a></li>
+                    {% endif %}
+                {% endfor %}
+                </ul>
+            </div>
+            <div class="col-xs-8 col-md-8">
+                <div class="tab-content">
+                {% for a in aliases %}
+                    {% if md.store.attribute(aliases[a]) %}
+                    <div class="tab-pane" id="{{a}}">
+                        <ul class="list-unstyled">
+                            {% for v in md.store.attribute(aliases[a]) %}
+                            <li><a href="/{{ a }}/{{ v|u }}.html">{{ v }}</a>
+                                <a href="/{{ a }}/{{ v|u }}.xml" title="XML Metadata"><i class="icon-cog"></i></a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block uiscript %}
+<script type="text/javascript">
+    $(document).ready(function() {
+       $('#metadataIndex a:first').tab('show');
+    });
+</script>
+{% endblock %}

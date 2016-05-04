@@ -43,7 +43,7 @@ clean:
 	-rm -rf $(BUILDDIR)/* api
 
 apidoc:
-	$(SPHINXAPIDOC) -o api -H "pyFF" -A "Leif Johansson" ../src
+	$(SPHINXAPIDOC) -o api -H "API Documentation" -A "Leif Johansson" ../src
 
 html: apidoc
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html

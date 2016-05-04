@@ -1,0 +1,5 @@
+- load:
+    ${ctx.output} ${ctx.public_keyspec}
+- select:
+    - https://idp.aco.net/idp/shibboleth
+- stats

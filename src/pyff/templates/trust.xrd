@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<XRDS xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
+{% for link in links %}
+    <XRD>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="{{ link[0] }}">
+            <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+                <ds:X509Data>
+                    <ds:X509Certificate>
+                        {{ link[1] }}
+                    </ds:X509Certificate>
+                </ds:X509Data>
+            </ds:KeyInfo>
+        </Link>
+    </XRD>
+{% endfor %}
+</XRDS>

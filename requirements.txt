@@ -1,0 +1,15 @@
+redis
+ipaddr
+publicsuffix
+lxml
+cherrypy
+sphinx-pypi-upload
+sphinx
+nose
+babel
+httplib2
+futures
+iso8601
+requests
+simplejson
+jinja2

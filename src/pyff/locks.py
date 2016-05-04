@@ -1,4 +1,4 @@
-## {{{ http://code.activestate.com/recipes/502283/ (r1)
+# source http://code.activestate.com/recipes/502283/ (r1)
 # -*- coding: iso-8859-15 -*-
 """locks.py - Read-Write lock thread lock implementation
 
@@ -8,15 +8,14 @@ Copyright (C) 2007, Heiko Wundram.
 Released under the BSD-license.
 """
 
-# Imports
-# -------
-
+from contextlib import contextmanager
 from threading import Condition, Lock, currentThread
 from time import time
 
 
 # Read write lock
 # ---------------
+
 
 class ReadWriteLock(object):
     """Read-Write lock class. A read-write lock differs from a standard
@@ -55,19 +54,17 @@ class ReadWriteLock(object):
         self.__writer = None
         self.__upgradewritercount = 0
         self.__pendingwriters = []
+        self.__writercount = 0
 
         # Initialize with no readers.
         self.__readers = {}
 
-    def acquireRead(self,blocking=True, timeout=None):
-        """Acquire a read lock for the current thread, waiting at most
-        timeout seconds or doing a non-blocking check in case timeout is <= 0.
+    def acquireRead(self, blocking=True, timeout=None):
+        """Acquire a read lock for the current thread, waiting at most timeout seconds or doing a
+        non-blocking check in case timeout is <= 0.
 
-        In case timeout is None, the call to acquireRead blocks until the
-        lock request can be serviced.
-
-        In case the timeout expires before the lock could be serviced, a
-        RuntimeError is thrown."""
+    * In case timeout is None, the call to acquireRead blocks until the lock request can be serviced.
+    * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
 
         if not blocking:
             endtime = -1
@@ -97,7 +94,7 @@ class ReadWriteLock(object):
                     else:
                         # Grant a new read lock, always, in case there are
                         # no pending writers (and no writer).
-                        self.__readers[me] = self.__readers.get(me,0) + 1
+                        self.__readers[me] = self.__readers.get(me, 0) + 1
                         return
                 if endtime is not None:
                     remaining = endtime - time()
@@ -110,10 +107,11 @@ class ReadWriteLock(object):
         finally:
             self.__condition.release()
 
-    from contextlib import contextmanager
     @property
     @contextmanager
     def readlock(self):
+        """Yields a read lock
+        """
         self.acquireRead()
         try:
             yield
@@ -123,24 +121,21 @@ class ReadWriteLock(object):
     @property
     @contextmanager
     def writelock(self):
+        """Yields a write lock
+        """
         self.acquireWrite()
         try:
             yield
         finally:
             self.release()
 
-    def acquireWrite(self,timeout=None):
-        """Acquire a write lock for the current thread, waiting at most
-        timeout seconds or doing a non-blocking check in case timeout is <= 0.
+    def acquireWrite(self, timeout=None):
+        """Acquire a write lock for the current thread, waiting at most timeout seconds or doing a non-blocking
+        check in case timeout is <= 0.
 
-        In case the write lock cannot be serviced due to the deadlock
-        condition mentioned above, a ValueError is raised.
-
-        In case timeout is None, the call to acquireWrite blocks until the
-        lock request can be serviced.
-
-        In case the timeout expires before the lock could be serviced, a
-        RuntimeError is thrown."""
+    * In case the write lock cannot be serviced due to the deadlock condition mentioned above, a ValueError is raised.
+    * In case timeout is None, the call to acquireWrite blocks until the lock request can be serviced.
+    * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
 
         if timeout is not None:
             endtime = time() + timeout
@@ -219,7 +214,7 @@ class ReadWriteLock(object):
     def release(self):
         """Release the currently held lock.
 
-        In case the current thread holds no lock, a ValueError is thrown."""
+    * In case the current thread holds no lock, a ValueError is thrown."""
 
         me = currentThread()
         self.__condition.acquire()
@@ -246,4 +241,3 @@ class ReadWriteLock(object):
                 raise ValueError("Trying to release unheld lock")
         finally:
             self.__condition.release()
-## end of http://code.activestate.com/recipes/502283/ }}}

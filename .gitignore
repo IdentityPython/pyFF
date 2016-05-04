@@ -1,4 +1,8 @@
 *.pyc
+*.egg
+.coverage*
+cover
+.coveralls.yml
 
 .installed.cfg
 bin
@@ -15,3 +19,4 @@ sign.crt
 sign.key
 .cache
 _site
+profile.out*

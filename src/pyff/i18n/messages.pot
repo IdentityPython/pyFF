@@ -1,0 +1,178 @@
+# Translations template for pyFF.
+# Copyright (C) 2013 SUNET
+# This file is distributed under the same license as the pyFF project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+##, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pyFF 0.9.4dev\n"
+"Report-Msgid-Bugs-To: leifj@mnt.se\n"
+"POT-Creation-Date: 2013-06-18 14:30+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 0.9.6\n"
+
+#: src/pyff/mdx.py:528
+msgid "Metadata By Attributes"
+msgstr ""
+
+#: src/pyff/site/templates/400.html:2
+msgid "Bad Request"
+msgstr ""
+
+#: src/pyff/site/templates/400.html:4
+msgid "Can't help you there..."
+msgstr ""
+
+#: src/pyff/site/templates/404.html:2
+msgid "Not Found"
+msgstr ""
+
+#: src/pyff/site/templates/404.html:4
+msgid "Whatever you were looking for, it sure ain't here..."
+msgstr ""
+
+#: src/pyff/site/templates/500.html:2
+msgid "Server Error"
+msgstr ""
+
+#: src/pyff/site/templates/500.html:4
+msgid "Ouch"
+msgstr ""
+
+#: src/pyff/site/templates/503.html:2
+msgid "Service Temporarily Unavailable"
+msgstr ""
+
+#: src/pyff/site/templates/503.html:4
+msgid "Repository loading. Please come back later..."
+msgstr ""
+
+#: src/pyff/site/templates/about.html:2
+msgid "About this server"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:5
+msgid "Server Info"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:6
+msgid "Pipeline"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:7
+msgid "Repository"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:17 src/pyff/site/templates/about.html:19
+msgid "version"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:21
+msgid "startup arguments"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:23
+msgid "System information"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:25
+msgid "Repository size"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:27
+msgid "Last update"
+msgstr ""
+
+#: src/pyff/site/templates/ds.html:86
+msgid "How do you want to sign in?"
+msgstr ""
+
+#: src/pyff/site/templates/ds.html:89
+msgid "Suggested"
+msgstr ""
+
+#: src/pyff/site/templates/ds.html:90
+msgid "All Login Providers"
+msgstr ""
+
+#: src/pyff/site/templates/ds.html:102
+msgid "Start typing to search for your home institution or login provider..."
+msgstr ""
+
+#: src/pyff/site/templates/ds.html:108
+msgid "Remember choice"
+msgstr ""
+
+#: src/pyff/site/templates/ds.html:110
+msgid "Remember my choice and never show me this page again!"
+msgstr ""
+
+#: src/pyff/site/templates/ds.html:120
+msgid "What is this?"
+msgstr ""
+
+#: src/pyff/site/templates/ds.html:122
+msgid "You are accessing a service that requires you to sign in. You need to choose an identity provider - typically your home organization."
+msgstr ""
+
+#: src/pyff/site/templates/ds.html:124
+msgid "We will do our best to remember your choice for the next time you visit this service!"
+msgstr ""
+
+#: src/pyff/site/templates/finger.html:3
+msgid "Routes"
+msgstr ""
+
+#: src/pyff/site/templates/header.html:59
+msgid "All Entities"
+msgstr ""
+
+#: src/pyff/site/templates/header.html:65
+msgid "About"
+msgstr ""
+
+#: src/pyff/site/templates/header.html:66
+msgid "Statistics"
+msgstr ""
+
+#: src/pyff/site/templates/header.html:67
+msgid "Documentation"
+msgstr ""
+
+#: src/pyff/site/templates/reset.html:48
+msgid "Ready to Clear your Settings?"
+msgstr ""
+
+#: src/pyff/site/templates/reset.html:51
+msgid "The identity provider chooser allows you to save certain settings, such as your last visited identity providers. This is done to make your login experience as seemless as possible. However you may need to reset these settings, perhaps to disable your pre-selected identity provider(s)."
+msgstr ""
+
+#: src/pyff/site/templates/reset.html:54
+msgid "Read more about how"
+msgstr ""
+
+#: src/pyff/site/templates/reset.html:54
+msgid "these settings are stored"
+msgstr ""
+
+#: src/pyff/site/templates/reset.html:58
+msgid "Yes, Clear my Settings"
+msgstr ""
+
+#: src/pyff/site/templates/reset.html:59
+msgid "No, get me out of here!"
+msgstr ""
+
+#: src/pyff/site/templates/settings.html:31
+msgid "No cookies served here!"
+msgstr ""
+
+#: src/pyff/site/templates/settings.html:34
+msgid "This service uses HTML5 local store (and corresponding service in some non-HTML5 browsers) to store settings and preferences. This means that no cookies are sent to the server and no personal information is ever leaked to a 3rd party."
+msgstr ""
+

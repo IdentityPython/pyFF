@@ -1,0 +1,59 @@
+{% extends "ui.html" %}
+{% block script %}
+    <script type="text/javascript">
+    $(function(){
+        $('#reset').click(function(ev) {
+            $.jStorage.set('pyff.discovery.idps',[]);
+            $.jStorage.set('pyff.discovery.idp',undefined);
+            $.jStorage.set('pyff.discovery.allow_confirm',true);
+            $.jStorage.set('pyff.discovery.messages',{});
+            $("#messages").append($("<div></div>").addClass("alert").append("Settings cleared!"));
+            $("#reset").hide();
+            $("#reset").click(function(ev) { ev.preventDefault(); })
+            $("#cancel").html("Done").addClass("btn-success");
+        });
+        $('#cancel').click(function(ev) {
+            window.location.href = 'http://google.com'
+            return true;
+        });
+    });
+    </script>
+{% endblock %}
+
+{% block headline %}{{ gettext('Ready to Clear your Settings?') }}{% endblock %}
+
+{% block content %}
+    <p>
+        {{ gettext('The login provider chooser allows you to save certain settings, such as your last visited login providers. This is done to make your login experience as seemless as possible. However you may need to reset these settings, perhaps to disable your pre-selected login provider(s).') }}
+    </p>
+    <p>
+        {{ gettext('Read more about how') }} <a href="/settings">{{ gettext('these settings are stored') }}</a>.
+    </p>
+    <div id="messages"></div>
+    <div class="btn-toolbar">
+        <button id="reset" class="btn btn-warning">{{ gettext('Yes, Clear my Settings') }}</button>
+        <button id="cancel" class="btn">{{ gettext('No, get me out of here!') }}</button>
+    </div>
+{% endblock %}
+
+{% block final %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('.message > button.close').click(function(e) {
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                var id = $(this).parentsUntil('.message').attr('id');
+                $(this).parent().each(function() {
+                    closed[$(this).attr('id')] = true;
+                });
+                $.jStorage.set('pyff.discovery.messages',closed);
+            });
+            $('.message').each(function () {
+                var closed = $.jStorage.get('pyff.discovery.messages',{});
+                if (closed[$(this).attr('id')]) {
+                    $(this).hide();
+                }
+            });
+        });
+    </script>
+    <script type="text/javascript" src="/static/js/jquery.mobile.custom.min.js"></script>
+{% endblock %}

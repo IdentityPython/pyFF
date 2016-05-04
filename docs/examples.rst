@@ -145,9 +145,34 @@ contains the following:
             </Link>
         </XRD>
         <XRD>
-            <Subject>InCommon</Subject>
-            <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://wayf.incommonfederation.org/InCommon/InCommon-metadata.xml">
-                <Title>InCommon Metadata</Title>
+            <Subject>https://incommon.org</Subject>
+            <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.incommon.org/InCommon/InCommon-metadata.xml">
+                <Title>InCommon Metadata (main aggregate)</Title>
+                <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+                    <ds:X509Data>
+                        <ds:X509Certificate>
+         MIIDgTCCAmmgAwIBAgIJAJRJzvdpkmNaMA0GCSqGSIb3DQEBCwUAMFcxCzAJBgNV
+         BAYTAlVTMRUwEwYDVQQKDAxJbkNvbW1vbiBMTEMxMTAvBgNVBAMMKEluQ29tbW9u
+         IEZlZGVyYXRpb24gTWV0YWRhdGEgU2lnbmluZyBLZXkwHhcNMTMxMjE2MTkzNDU1
+         WhcNMzcxMjE4MTkzNDU1WjBXMQswCQYDVQQGEwJVUzEVMBMGA1UECgwMSW5Db21t
+         b24gTExDMTEwLwYDVQQDDChJbkNvbW1vbiBGZWRlcmF0aW9uIE1ldGFkYXRhIFNp
+         Z25pbmcgS2V5MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Chdkrn+
+         dG5Zj5L3UIw+xeWgNzm8ajw7/FyqRQ1SjD4Lfg2WCdlfjOrYGNnVZMCTfItoXTSp
+         g4rXxHQsykeNiYRu2+02uMS+1pnBqWjzdPJE0od+q8EbdvE6ShimjyNn0yQfGyQK
+         CNdYuc+75MIHsaIOAEtDZUST9Sd4oeU1zRjV2sGvUd+JFHveUAhRc0b+JEZfIEuq
+         /LIU9qxm/+gFaawlmojZPyOWZ1JlswbrrJYYyn10qgnJvjh9gZWXKjmPxqvHKJcA
+         TPhAh2gWGabWTXBJCckMe1hrHCl/vbDLCmz0/oYuoaSDzP6zE9YSA/xCplaHA0mo
+         C1Vs2H5MOQGlewIDAQABo1AwTjAdBgNVHQ4EFgQU5ij9YLU5zQ6K75kPgVpyQ2N/
+         lPswHwYDVR0jBBgwFoAU5ij9YLU5zQ6K75kPgVpyQ2N/lPswDAYDVR0TBAUwAwEB
+         /zANBgkqhkiG9w0BAQsFAAOCAQEAaQkEx9xvaLUt0PNLvHMtxXQPedCPw5xQBd2V
+         WOsWPYspRAOSNbU1VloY+xUkUKorYTogKUY1q+uh2gDIEazW0uZZaQvWPp8xdxWq
+         Dh96n5US06lszEc+Lj3dqdxWkXRRqEbjhBFh/utXaeyeSOtaX65GwD5svDHnJBcl
+         AGkzeRIXqxmYG+I2zMm/JYGzEnbwToyC7yF6Q8cQxOr37hEpqz+WN/x3qM2qyBLE
+         CQFjmlJrvRLkSL15PCZiu+xFNFd/zx6btDun5DBlfDS9DG+SHCNH6Nq+NfP+ZQ8C
+         GzP/3TaZPzMlKPDCjp0XOQfyQqFIXdwjPFTWjEusDBlm4qJAlQ==
+                        </ds:X509Certificate>
+                    </ds:X509Data>
+              </ds:KeyInfo>
             </Link>
         </XRD>
     </XRDS>
@@ -200,7 +225,6 @@ this simple pipeline.
         - break
     - when request:
         - select
-        - stats
         - pipe:
             - when accept application/xml:
                  - xslt:
@@ -237,3 +261,22 @@ consistent with expected behaviour for the MDX protocol.
 The behaviour of the select command in the request pipeline is a bit different: the select operates on
 a query fed to the request pipeline from the HTTP server that runs the command. This is called implicit
 select.
+
+Now start pyffd:
+
+.. code-block:: bash
+
+  # pyffd -f --loglevel=DEBUG -p /var/run/pyffd.pid mdx.fd
+
+This should start pyffd in the foreground. If you remove the ``-f`` pyff should daemonize. For running
+pyff in production I suggest something like this:
+
+.. code-block:: bash
+
+  # pyffd --loglevel=INFO --log=syslog:auth --frequency=300 -p /var/run/pyffd.pid --dir=`pwd` -H<ip> -P80 mdx.fd
+
+This starts pyff on the interface <ip>:80 and uses the current directory as the working directory. If you leave
+out --dir then pyffd will change directory to $HOME of the current user which is probably not what you want. 
+In this case logging is done through syslog (the auth facility) and with log level INFO. The refres-rate is set
+to 300 seconds so at minimum your downstream feeds will be refreshed that often.
+

@@ -1,23 +1,53 @@
+- when normalize:
+    - xslt:
+       stylesheet: tidy.xsl
+    - break
+- when edugain:
+    - xslt:
+       stylesheet: tidy.xsl
+    - break
 - when update:
     - load:
-       - examples/links.xrd
-       - http://mds.edugain.org
+       - examples/links.xrd as links via normalize
+       #- http://mds.edugain.org via edugain
+    - loadstats
     - select
     - fork and merge:
-       - select: "!md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
+       - select: "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
        - setattr:
-            http://pyff-project.org/collection: swamid-2.0
+            http://pyff.io/collection: swamid-2.0
     - fork and merge:
         - select:
-            - "http://pyff-project.org/collection=swamid-2.0+http://pyff-project.org/role=idp"
+            - "http://pyff.io/collection=swamid-2.0+http://pyff.io/role=idp"
         - setattr:
-            http://pyff-project.org/collection: swamid-idp
+            http://pyff.io/collection: swamid-idp
+    - fork:
+        - select as /md/foo-2.0:
+            - http://pyff.io/collection=swamid-2.0
+        - break
+    - fork:
+        - select as /md/skolfederation-2.0:
+            - http://meta01.skolfederation.se/skolfederation-2_0.xml 
+        - break
+    - fork:
+        - select as /ndn:
+           - https://idp.nordu.net/idp/shibboleth
+        - break
+    - fork:
+        - select as /md/swamid-kalmar-1.0:
+            - https://connect.sunet.se/shibboleth
+            - https://www.diva-portal.org/shibboleth
     - break
 - when request:
     - select
-    - stats
     - pipe:
         - when accept application/xml:
+             - pipe:
+                 - when path /md/swamid-kalmar-1.0:
+                     - xslt:
+                        stylesheet: kalmar2.xsl
+                     - break
+
              - xslt:
                  stylesheet: tidy.xsl
              - first
@@ -30,7 +60,6 @@
              - emit application/xml
              - break
         - when accept application/json:
-             - xslt:
-                 stylesheet: discojson.xsl
-             - emit application/json:
+             - discojson
+             - emit application/json
              - break

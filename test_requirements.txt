@@ -1,0 +1,8 @@
+setuptools
+pbr
+nose>=1.0
+funcsigs
+mock
+mako
+mockredispy
+testfixtures

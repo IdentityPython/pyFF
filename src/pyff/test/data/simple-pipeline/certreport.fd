@@ -1,0 +1,7 @@
+- load:
+    ${ctx.datadir}
+- select
+- certreport
+- xslt:
+    stylesheet: atom.xsl
+- publish: ${ctx.output}

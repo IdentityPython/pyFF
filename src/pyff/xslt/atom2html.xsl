@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="1.0"
                 xmlns:atom="http://www.w3.org/2005/Atom"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                xmlns:dc="http://purl.org/dc/elements/1.1/">
+>
     <xsl:output method="html"/>
     <xsl:template match="/">
         <xsl:apply-templates select="/atom:feed/atom:head"/>

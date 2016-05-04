@@ -1,0 +1,7 @@
+- load:
+    http://md.swamid.se/md/swamid-idp.xml
+- select
+- certreport
+- xslt:
+    stylesheet: atom.xsl
+- publish: ${ctx.output}
