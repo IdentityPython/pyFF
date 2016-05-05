@@ -111,7 +111,7 @@ class StoreBase(object):
     def periodic(self, stats):
         pass
 
-    def size(self):
+    def size(self, a=None, v=None):
         raise NotImplementedError()
 
     def collections(self):
@@ -123,11 +123,11 @@ class StoreBase(object):
     def reset(self):
         raise NotImplementedError()
 
-    def set(self, key, mapping):
-        raise NotImplementedError()
+    #def set(self, key, mapping):
+    #    raise NotImplementedError()
 
-    def get(self, key):
-        raise NotImplementedError()
+    #def get(self, key):
+    #    raise NotImplementedError()
 
 
 class MemoryStore(StoreBase):
@@ -147,8 +147,13 @@ class MemoryStore(StoreBase):
     def clone(self):
         return deepcopy(self)
 
-    def size(self):
-        return len(self.entities)
+    def size(self, a=None, v=None):
+        if a is None:
+            return len(self.entities)
+        elif a is not None and v is None:
+            return len(self.index.setdefault('attr', {}).setdefault(a, {}).keys())
+        else:
+            return len(self.index.setdefault('attr', {}).setdefault(a, {}).get(v, []))
 
     def attributes(self):
         return self.index.setdefault('attr', {}).keys()
@@ -419,7 +424,7 @@ class RedisStore(StoreBase):
         return root(parse_xml(StringIO(self.rc.get("%s#metadata" % key))))
 
     def lookup(self, key):
-        # log.debug("redis store lookup: %s" % key)
+        log.debug("redis store lookup: %s" % key)
         if '+' in key:
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):

@@ -26,8 +26,12 @@
                     <div class="tab-pane" id="{{a}}">
                         <ul class="list-unstyled">
                             {% for v in md.store.attribute(aliases[a]) %}
-                            <li><a href="/{{ a }}/{{ v|u }}.html">{{ v }}</a>
-                                <a href="/{{ a }}/{{ v|u }}.xml" title="XML Metadata"><i class="icon-cog"></i></a></li>
+                            {% if v %}
+                            <li>
+                                <a href="/{{ a }}/{{ v|u }}.html">{{ v }}</a>
+                                <span class="badge pull-right">{{ md.store.size(aliases[a],v) }}</span>
+                            </li>
+                            {% endif %}
                             {% endfor %}
                         </ul>
                     </div>
