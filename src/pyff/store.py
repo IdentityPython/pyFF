@@ -123,12 +123,6 @@ class StoreBase(object):
     def reset(self):
         raise NotImplementedError()
 
-    #def set(self, key, mapping):
-    #    raise NotImplementedError()
-
-    #def get(self, key):
-    #    raise NotImplementedError()
-
 
 class MemoryStore(StoreBase):
     def __init__(self):
@@ -359,12 +353,6 @@ class RedisStore(StoreBase):
 
     def collections(self):
         return self.rc.smembers("#collections")
-
-    def set(self, key, mapping):
-        self.rc.hmset(key, mapping)
-
-    def get(self, key):
-        return self.rc.hgetall(key)
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):  # TODO: merge ?
         log.debug("redis store update: %s: %s" % (t, tid))

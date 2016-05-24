@@ -205,16 +205,4 @@ class TestStoreBase(TestCase):
         except NotImplementedError:
             pass
 
-        try:
-            base.set('x', 'y')
-            assert False
-        except NotImplementedError:
-            pass
-
-        try:
-            base.get('x')
-            assert False
-        except NotImplementedError:
-            pass
-
         assert (base.clone() == base)
