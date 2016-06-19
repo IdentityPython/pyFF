@@ -309,7 +309,7 @@ $(document).ready(function() {
             } else {
                 var seen_count = 0;
                 var seen = {};
-                console.log(uri);
+                //console.log(uri);
                 oboe(uri).node('!.*', function (elt) {
                     if (elt.entityID in seen) {
                     } else {

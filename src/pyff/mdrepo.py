@@ -340,7 +340,7 @@ The dict in the list contains three items:
         res = []
         for e in self.lookup(mexpr):
             d = None
-            log.debug("query: %s" % query)
+            #log.debug("query: %s" % query)
             if match_query:
                 m = _match(query, e)
                 if m is not None:
@@ -363,7 +363,7 @@ The dict in the list contains three items:
         res.sort(key=operator.itemgetter('title'))
         res.sort(key=operator.itemgetter('ddist'), reverse=True)
 
-        log.debug("search returning %s" % res)
+        #log.debug("search returning %s" % res)
 
         if page is not None:
             total = len(res)

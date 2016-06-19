@@ -151,7 +151,7 @@ class DirPlugin(SimplePlugin):
 
 class EncodingDispatcher(object):
     """Cherrypy ass-u-me-s a lot about how requests are processed. In particular it is diffucult to send
-    something that contains '/' and ':' (like a URL) throught the standard dispatchers. This class provides
+    something that contains '/' and ':' (like a URL) using the standard dispatchers. This class provides
     a workaround by base64-encoding the troubling stuff and sending the result through the normal displatch
     pipeline. At the other end base64-encoded data is unpacked.
     """
@@ -162,14 +162,17 @@ class EncodingDispatcher(object):
         self.next_dispatcher = next_dispatcher
 
     def dispatch(self, path_info):
-        # log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
-        vpath = path_info.replace("%2F", "/")
+        #log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
+        #vpath = path_info.replace("%2F", "/")
+        vpath = path_info
         for prefix in self.prefixes:
             if vpath.startswith(prefix):
+                log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
+                vpath = path_info.replace("%2F", "/")
                 plen = len(prefix)
                 vpath = vpath[plen + 1:]
                 npath = "%s/%s" % (prefix, self.enc(vpath))
-                # log.debug("EncodingDispatcher %s" % npath)
+                log.debug("EncodingDispatcher %s" % npath)
                 return self.next_dispatcher(npath)
         return self.next_dispatcher(vpath)
 
@@ -293,8 +296,7 @@ class SHIBDiscovery(object):
 
     @cherrypy.expose
     def default(self, *args, **kwargs):
-        print args
-        print kwargs
+        log.debug("default args: %s, kwargs: %s" % (repr(args), repr(kwargs)))
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
             if len(args) > 1:
@@ -444,8 +446,7 @@ Search the active set for matching entities.
         """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
         handler.
         """
-        print args
-        print kwargs
+        log.debug("ROOT default args: %s, kwargs: %s" % (repr(args), repr(kwargs)))
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
             if len(args) > 1:
@@ -528,6 +529,8 @@ class MDServer(object):
         path = kwargs.get('path', None)
         content_type = kwargs.get('content_type', None)
 
+        log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
+
         def _d(x, do_split=True):
             if x is not None:
                 x = x.strip()
@@ -563,6 +566,7 @@ class MDServer(object):
         path, ext = _d(path, content_type is None)
         if pfx and path:
             q = "{%s}%s" % (pfx, path)
+            path = "/%s/%s" % (alias,path)
         else:
             q = path
 
@@ -601,8 +605,8 @@ class MDServer(object):
                     pdict['search'] = "/search/"
                     pdict['list'] = "/role/idp.json"
                 else:
-                    pdict['search'] = "%s.s" % q
-                    pdict['list'] = "%s.json" % q
+                    pdict['search'] = "%s.s" % path
+                    pdict['list'] = "%s.json" % path
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return render_template("ds.html", **pdict)
             elif ext == 's':
