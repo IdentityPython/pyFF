@@ -25,6 +25,7 @@ from jinja2 import Environment, PackageLoader
 from lxml import etree
 
 from .constants import NS
+from .constants import config
 from .decorators import retry
 from .logs import log
 
@@ -257,12 +258,15 @@ def truncate_filter(s,max_len=10):
 env.filters['u'] = urlencode_filter
 env.filters['truncate'] = truncate_filter
 
+
 def template(name):
     return env.get_template(name)
+
 
 def render_template(name, **kwargs):
     kwargs.setdefault('http', cherrypy.request)
     kwargs.setdefault('brand', "pyFF @ %s" % request_vhost(cherrypy.request))
+    kwargs.setdefault('google_api_key', config.google_api_key)
     kwargs.setdefault('_', _)
     return template(name).render(**kwargs)
 
@@ -274,6 +278,7 @@ def parse_date(s):
     if s is None:
         return datetime.now()
     return datetime(*parsedate(s)[:6])
+
 
 @retry((IOError, httplib2.HttpLib2Error))
 def load_url(url, enable_cache=True, timeout=60):
