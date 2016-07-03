@@ -17,6 +17,7 @@ from . import __version__
 from .mdrepo import MDRepository
 from .pipes import plumbing
 from .store import MemoryStore
+from .constants import config
 
 
 def main():
@@ -33,10 +34,15 @@ def main():
         print __doc__
         sys.exit(2)
 
-    store = MemoryStore()
-    loglevel = logging.WARN
-    logfile = None
-    modules = []
+    if config.store is None:
+        config.store = MemoryStore()
+
+    if config.loglevel is None:
+        config.loglevel = logging.WARN
+
+    if config.modules is None:
+        config.modules = []
+
     for o, a in opts:
         if o in ('-h', '--help'):
             print __doc__
@@ -46,27 +52,27 @@ def main():
             if not isinstance(loglevel, int):
                 raise ValueError('Invalid log level: %s' % a)
         elif o in '--logfile':
-            logfile = a
+            config.logfile = a
         elif o in '-R':
             from pyff.store import RedisStore
-            store = RedisStore()
+            config.store = RedisStore()
         elif o in ('-m', '--module'):
-            modules.append(a)
+            config.modules.append(a)
         elif o in '--version':
             print "pyff version %s" % __version__
             sys.exit(0)
 
     log_args = {'level': loglevel}
-    if logfile is not None:
-        log_args['filename'] = logfile
+    if config.logfile is not None:
+        log_args['filename'] = config.logfile
     logging.basicConfig(**log_args)
 
-    modules.append('pyff.builtins')
-    for mn in modules:
+    config.modules.append('pyff.builtins')
+    for mn in config.modules:
         importlib.import_module(mn)
 
     try:
-        md = MDRepository(store=store)
+        md = MDRepository(store=config.store)
         for p in args:
             plumbing(p).process(md, state={'batch': True, 'stats': {}})
         sys.exit(0)

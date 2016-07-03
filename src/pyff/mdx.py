@@ -67,7 +67,7 @@ from cherrypy.lib import cptools
 from cherrypy.process.plugins import Monitor, SimplePlugin
 from cherrypy.lib import caching
 from simplejson import dumps
-from pyff.constants import ATTRS, EVENT_REPOSITORY_LIVE
+from pyff.constants import ATTRS, EVENT_REPOSITORY_LIVE, config
 from pyff.locks import ReadWriteLock
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
@@ -75,7 +75,7 @@ from pyff.utils import resource_string, xslt_transform, dumptree, duration2timed
 from pyff.logs import log, SysLogLibHandler
 import logging
 from pyff.stats import stats
-import lxml.html as html
+from lxml import html
 from datetime import datetime
 from lxml import etree
 from pyff import __version__ as pyff_version
@@ -162,8 +162,8 @@ class EncodingDispatcher(object):
         self.next_dispatcher = next_dispatcher
 
     def dispatch(self, path_info):
-        #log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
-        #vpath = path_info.replace("%2F", "/")
+        # log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
+        # vpath = path_info.replace("%2F", "/")
         vpath = path_info
         for prefix in self.prefixes:
             if vpath.startswith(prefix):
@@ -463,32 +463,22 @@ class MDServer(object):
     of MDRoot and from the ancilliary classes like MDStats and WellKnown.
     """
 
-    def __init__(self,
-                 pipes=None,
-                 autoreload=False,
-                 frequency=600,
-                 aliases=None,
-                 cache_enabled=True,
-                 observers=None,
-                 store=None):
+    def __init__(self, pipes=None, observers=None):
 
-        if aliases is None:
-            aliases = ATTRS
         if not observers:
             observers = []
         if not pipes:
             pipes = []
         self._pipes = pipes
-        self.cache_enabled = cache_enabled
         self.lock = ReadWriteLock()
         self.plumbings = [plumbing(v) for v in pipes]
-        self.refresh = MDUpdate(cherrypy.engine, server=self, frequency=frequency)
+        self.refresh = MDUpdate(cherrypy.engine, server=self, frequency=config.frequency)
         self.refresh.subscribe()
-        self.aliases = aliases
+        self.aliases = config.aliases
         self.psl = PublicSuffixList()
-        self.md = MDRepository(metadata_cache_enabled=self.cache_enabled, store=store)
+        self.md = MDRepository(metadata_cache_enabled=config.caching_enabled, store=config.store)
 
-        if autoreload:
+        if config.autoreload:
             for f in pipes:
                 cherrypy.engine.autoreload.files.add(f)
 
@@ -566,7 +556,7 @@ class MDServer(object):
         path, ext = _d(path, content_type is None)
         if pfx and path:
             q = "{%s}%s" % (pfx, path)
-            path = "/%s/%s" % (alias,path)
+            path = "/%s/%s" % (alias, path)
         else:
             q = path
 
@@ -718,29 +708,23 @@ def main():
                                    'hP:p:H:CfaA:l:Rm:',
                                    ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
                                     'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
-                                    'alias=', 'dir=', 'version', 'proxy', 'terminator'])
+                                    'alias=', 'dir=', 'version', 'proxy', 'allow_shutdown'])
     except getopt.error, msg:
         print msg
         print __doc__
         sys.exit(2)
 
-    loglevel = logging.INFO
-    error_log = None
-    access_log = None
-    port = 8080
-    host = "127.0.0.1"
-    pidfile = "/var/run/pyffd.pid"
-    caching = True
-    delay = 300
-    daemonize = True
-    autoreload = False
-    frequency = 600
-    aliases = ATTRS
-    base_dir = None
-    proxy = False
-    store = MemoryStore()
-    terminator = False
-    modules = []
+    if config.store is None:
+        config.store = MemoryStore()
+
+    if config.loglevel is None:
+        config.loglevel = logging.INFO
+
+    if config.aliases is None:
+        config.aliases = dict()
+
+    if config.modules is None:
+        config.modules = []
 
     try:  # pragma: nocover
         for o, a in opts:
@@ -748,47 +732,47 @@ def main():
                 print __doc__
                 sys.exit(0)
             elif o == '--loglevel':
-                loglevel = getattr(logging, a.upper(), None)
-                if not isinstance(loglevel, int):
-                    raise ValueError('Invalid log level: %s' % loglevel)
+                config.loglevel = getattr(logging, a.upper(), None)
+                if not isinstance(config.loglevel, int):
+                    raise ValueError('Invalid log level: %s' % config.loglevel)
             elif o in ('--log', '-l'):
-                error_log = a
-                access_log = a
+                config.error_log = a
+                config.access_log = a
             elif o in '--error-log':
-                error_log = a
+                config.error_log = a
             elif o in '--access-log':
-                access_log = a
+                config.access_log = a
             elif o in ('--host', '-H'):
-                host = a
+                config.bind_address = a
             elif o in ('--port', '-P'):
-                port = int(a)
+                config.port = int(a)
             elif o in ('--pidfile', '-p'):
-                pidfile = a
+                config.pid_file = a
             elif o in '-R':
-                store = RedisStore()
+                config.store = RedisStore()
             elif o in ('--no-caching', '-C'):
-                caching = False
+                config.caching_enabled = False
             elif o in ('--caching-delay', 'D'):
-                delay = int(o)
+                config.caching_delay = int(o)
             elif o in ('--foreground', '-f'):
-                daemonize = False
+                config.daemonize = False
             elif o in ('--autoreload', '-a'):
-                autoreload = True
+                config.autoreload = True
             elif o in '--frequency':
-                frequency = int(a)
+                config.frequency = int(a)
             elif o in ('-A', '--alias'):
                 (a, colon, uri) = a.partition(':')
                 assert (colon == ':')
                 if a and uri:
-                    aliases[a] = uri
+                    config.aliases[a] = uri
             elif o in '--dir':
-                base_dir = a
+                config.base_dir = a
             elif o in '--proxy':
-                proxy = True
-            elif o in '--terminator':
-                terminator = True
+                config.proxy = True
+            elif o in '--allow_shutdown':
+                config.allow_shutdown = True
             elif o in ('-m', '--module'):
-                modules.append(a)
+                config.modules.append(a)
             elif o in '--version':
                 print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__)
                 sys.exit(0)
@@ -803,20 +787,20 @@ def main():
     engine = cherrypy.engine
     plugins = cherrypy.process.plugins
 
-    if daemonize:
+    if config.daemonize:
         cherrypy.config.update({'environment': 'production'})
         cherrypy.config.update({'log.screen': False})
-        if error_log is None:
-            error_log = 'syslog:daemon'
-        if access_log is None:
-            access_log = 'syslog:daemon'
+        if config.error_log is None:
+            config.error_log = 'syslog:daemon'
+        if config.access_log is None:
+            config.access_log = 'syslog:daemon'
         plugins.Daemonizer(engine).subscribe()
 
-    if base_dir is not None:
-        DirPlugin(engine, base_dir).subscribe()
+    if config.base_dir is not None:
+        DirPlugin(engine, config.base_dir).subscribe()
 
-    if pidfile:
-        plugins.PIDFile(engine, pidfile).subscribe()
+    if config.pid_file:
+        plugins.PIDFile(engine, config.pid_file).subscribe()
 
     def _b64(p):
         if p:
@@ -829,27 +813,21 @@ def main():
 
     observers = []
 
-    if loglevel == logging.DEBUG:
+    if config.loglevel == logging.DEBUG:
         observers.append(debug_observer)
 
-    modules.append('pyff.builtins')
-    for mn in modules:
+    config.modules.append('pyff.builtins')
+    for mn in config.modules:
         importlib.import_module(mn)
 
-    server = MDServer(pipes=args,
-                      autoreload=autoreload,
-                      frequency=frequency,
-                      aliases=aliases,
-                      cache_enabled=caching,
-                      observers=observers,
-                      store=store)
+    server = MDServer(pipes=args, observers=observers)
 
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
     cfg = {
         'global': {
             'tools.encode.encoding': 'UTF-8',
-            'server.socket_port': port,
-            'server.socket_host': host,
+            'server.socket_port': config.port,
+            'server.socket_host': config.bind_address,
             'tools.caching.on': caching,
             'tools.caching.debug': caching,
             'tools.trailing_slash.on': True,
@@ -858,17 +836,17 @@ def main():
             'tools.caching.antistampede_timeout': 30,
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
-            'tools.proxy.on': proxy,
-            'allow_shutdown': terminator,
+            'tools.proxy.on': config.proxy,
+            'allow_shutdown': config.allow_shutdown,
             'error_page.404': lambda **kwargs: error_page(404, _=_, **kwargs),
             'error_page.503': lambda **kwargs: error_page(503, _=_, **kwargs),
             'error_page.500': lambda **kwargs: error_page(500, _=_, **kwargs),
             'error_page.400': lambda **kwargs: error_page(400, _=_, **kwargs)
         },
         '/': {
-            'tools.caching.delay': delay,
+            'tools.caching.delay': config.caching_delay,
             'tools.cpstats.on': True,
-            'tools.proxy.on': proxy,
+            'tools.proxy.on': config.proxy,
             'request.dispatch': EncodingDispatcher(pfx, _b64).dispatch,
             'request.dispatpch.debug': True,
         },
@@ -876,38 +854,38 @@ def main():
             'tools.cpstats.on': True,
             'tools.caching.on': caching,
             'tools.caching.delay': 3600,
-            'tools.proxy.on': proxy
+            'tools.proxy.on': config.proxy
         },
         '/shutdown': {
-            'allow_shutdown': terminator
+            'allow_shutdown': config.allow_shutdown
         }
     }
     cherrypy.config.update(cfg)
 
-    if error_log is not None:
+    if config.error_log is not None:
         cherrypy.config.update({'log.screen': False})
 
     root = MDRoot(server)
     app = cherrypy.tree.mount(root, config=cfg)
-    if error_log is not None:
-        if error_log.startswith('syslog:'):
-            facility = error_log[7:]
+    if config.error_log is not None:
+        if config.error_log.startswith('syslog:'):
+            facility = config.error_log[7:]
             h = SysLogLibHandler(facility=facility)
             app.log.error_log.addHandler(h)
             cherrypy.config.update({'log.error_file': ''})
         else:
-            cherrypy.config.update({'log.error_file': error_log})
+            cherrypy.config.update({'log.error_file': config.error_log})
 
-    if access_log is not None:
-        if access_log.startswith('syslog:'):
-            facility = error_log[7:]
+    if config.access_log is not None:
+        if config.access_log.startswith('syslog:'):
+            facility = config.error_log[7:]
             h = SysLogLibHandler(facility=facility)
             app.log.access_log.addHandler(h)
             cherrypy.config.update({'log.access_file': ''})
         else:
-            cherrypy.config.update({'log.access_file': access_log})
+            cherrypy.config.update({'log.access_file': config.access_log})
 
-    app.log.error_log.setLevel(loglevel)
+    app.log.error_log.setLevel(config.loglevel)
 
     engine.signals.subscribe()
     try:
