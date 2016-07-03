@@ -28,7 +28,8 @@ install_requires = [
     'publicsuffix',
     'redis',
     'futures',
-    'requests'
+    'requests',
+    'pyconfig'
 ]
 
 python_implementation_str = python_implementation()

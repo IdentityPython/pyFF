@@ -13,3 +13,4 @@ iso8601
 requests
 simplejson
 jinja2
+pyconfig
