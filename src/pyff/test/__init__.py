@@ -35,6 +35,7 @@ def run_pyffd(*args):
 def run_cmdline(script, *args):
     argv = list(*args)
     starter = tempfile.NamedTemporaryFile('w').name
+    print "starting %s using %s" % (script, starter)
     with open(starter, 'w') as fd:
         fd.write("""#!%s
 import sys
@@ -62,7 +63,13 @@ if __name__ == '__main__':
     proc = _pstart(argv)
     out, err = proc.communicate()
     rv = proc.wait()
-    #os.unlink(starter)
+    os.unlink(starter)
+    print "---"
+    print out
+    print err
+    print "rv=%d" % rv
+    print "---"
+
     return out, err, rv
 
 

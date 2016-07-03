@@ -53,6 +53,7 @@ class PyFFDTest(PipeLineTest):
     tmpdir = None
     curdir = None
     port = None
+    logfile = None
 
     @classmethod
     def setUpClass(cls):
@@ -61,30 +62,37 @@ class PyFFDTest(PipeLineTest):
         cls.mdx = tempfile.NamedTemporaryFile('w').name
         cls.mdx_template = cls.templates.get_template('mdx.fd')
         cls.pidfile = tempfile.NamedTemporaryFile('w').name
+        cls.logfile = tempfile.NamedTemporaryFile('w').name
         with open(cls.mdx, "w") as fd:
             fd.write(cls.mdx_template.render(ctx=cls))
         cls.curdir = os.getcwd()
         cls.port = find_unbound_port()
-        print "Using port %d" % cls.port
+        print "Using port %d, logging to %s" % (cls.port, cls.logfile)
         cls.pyffd_thread = Thread(target=run_pyffd,
                                   name="pyffd-test",
                                   args=["--loglevel=DEBUG",
+                                        "--log=%s" % cls.logfile,
                                         "--dir=%s" % cls.curdir,
                                         '-f',
                                         '-a',
                                         '-P', "%s" % cls.port,
                                         '-C',
                                         '-p', cls.pidfile,
-                                        "--terminator",
+                                        "--allow_shutdown",
                                         cls.mdx])
         cls.pyffd_thread.start()
         sleep(1)
-        for i in range(0, 120):
+        for i in range(0, 60):
             try:
                 r = requests.get("http://127.0.0.1:%s/status" % cls.port)
                 if r.json() and 'running' in r.json()['status']:
                     return
-            except Exception:
+
+                print r.json()
+                sleep(1)
+            except Exception, ex:
+                from traceback import print_exc
+                print print_exc(ex)
                 pass
             sleep(1)
         raise ValueError("unable to start test pyffd server on port %d" % cls.port)
@@ -214,6 +222,8 @@ class PyFFDTest(PipeLineTest):
                 os.unlink(cls.mdx)
             if os.path.exists(cls.pidfile):
                 os.unlink(cls.pidfile)
+            if os.path.exists(cls.logfile):
+                os.unlink(cls.logfile)
         cls.pyffd_thread.join()
 
 
