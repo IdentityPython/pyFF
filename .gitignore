@@ -20,3 +20,4 @@ sign.key
 .cache
 _site
 profile.out*
+localconfig.py
