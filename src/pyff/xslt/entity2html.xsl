@@ -11,6 +11,23 @@
     <xsl:output method="html" omit-xml-declaration="yes" encoding="UTF-8"/>
     <xsl:template match="md:EntityDescriptor">
         <html:div>
+            <html:div class="modal fade" id="entity_metadata">
+                <html:div class="modal-dialog modal-lg">
+                    <html:div class="modal-content">
+                        <html:div class="modal-header">
+                            <html:button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&#215;</span><span class="sr-only">Close</span></html:button>
+                                <html:h4 class="modal-title" id="myModalLabel"><xsl:value-of select="@entityID"></xsl:value-of></html:h4>
+                        </html:div>
+                        <html:div class="modal-body">
+                            <html:div class="tab-pane" id="fullxml">
+                                <html:pre class="pre-scrollable prettyprint linenums language-xml">
+                                    <html:code role="entity"></html:code>
+                                </html:pre>
+                            </html:div>
+                        </html:div>
+                    </html:div>
+                </html:div>
+            </html:div>
             <html:div class="row">
                 <html:div class="col-xs-3 col-md-3">
                     <html:ul id="menu" class="nav nav-pills nav-stacked">
@@ -32,24 +49,6 @@
                 <html:div class="col-xs-9 col-md-9">
                     <html:div class="tab-content">
                         <html:div class="tab-pane active" id="summary">
-                            <html:div class="modal fade" id="pipeline_source">
-                                <html:div class="modal-dialog modal-lg">
-                                    <html:div class="modal-content">
-                                        <html:div class="modal-header">
-                                            <html:button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&#215;</span><span class="sr-only">Close</span></html:button>
-                                            <html:h4 class="modal-title" id="myModalLabel"><xsl:value-of select="@entityID"></xsl:value-of></html:h4>
-                                        </html:div>
-                                        <html:div class="modal-body">
-                                            <html:div class="tab-pane" id="fullxml">
-                                                <html:pre class="pre-scrollable prettyprint linenums language-xml">
-                                                    <html:code role="entity"></html:code>
-                                                </html:pre>
-                                            </html:div>
-                                        </html:div>
-                                    </html:div>
-                                </html:div>
-                            </html:div>
-
                             <html:div class="container-fluid">
                                 <html:div class="row">
                                     <html:div class="col-xs-8 col-md-8">
