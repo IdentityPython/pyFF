@@ -828,8 +828,8 @@ def main():
             'tools.encode.encoding': 'UTF-8',
             'server.socket_port': config.port,
             'server.socket_host': config.bind_address,
-            'tools.caching.on': caching,
-            'tools.caching.debug': caching,
+            'tools.caching.on': config.caching_enabled,
+            'tools.caching.debug': config.caching_enabled,
             'tools.trailing_slash.on': True,
             'tools.caching.maxobj_size': 1000000000000,  # effectively infinite
             'tools.caching.maxsize': 1000000000000,
@@ -852,8 +852,8 @@ def main():
         },
         '/static': {
             'tools.cpstats.on': True,
-            'tools.caching.on': caching,
-            'tools.caching.delay': 3600,
+            'tools.caching.on': config.caching_enabled,
+            'tools.caching.delay': config.caching_delay,
             'tools.proxy.on': config.proxy
         },
         '/shutdown': {
