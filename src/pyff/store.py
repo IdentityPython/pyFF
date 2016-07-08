@@ -14,7 +14,7 @@ from pyff.constants import NS, ATTRS
 from pyff.decorators import cached
 from pyff.logs import log
 from pyff.utils import root, dumptree, parse_xml, hex_digest, hash_id, EntitySet, \
-    url2host, subdomains, has_tag, iter_entities, valid_until_ts
+    url2host, subdomains, has_tag, iter_entities, valid_until_ts, guess_entity_software
 
 
 def is_idp(entity):
@@ -82,6 +82,9 @@ def entity_attribute_dict(entity):
         roles.append('sp')
     if is_aa(entity):
         roles.append('aa')
+
+    if ATTRS['software'] not in d:
+        d[ATTRS['software']] = [guess_entity_software(entity)]
 
     return d
 

@@ -28,6 +28,7 @@ NS = dict(md="urn:oasis:names:tc:SAML:2.0:metadata",
 ATTRS = {'collection': 'http://pyff.io/collection',
          'entity-category': 'http://macedir.org/entity-category',
          'role': 'http://pyff.io/role',
+         'software': 'http://pyff.io/software',
          'domain': 'http://pyff.io/domain'}
 
 DIGESTS = ['sha1', 'md5', 'null']
