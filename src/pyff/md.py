@@ -48,8 +48,8 @@ def main():
             print __doc__
             sys.exit(0)
         elif o in '--loglevel':
-            loglevel = getattr(logging, a.upper(), None)
-            if not isinstance(loglevel, int):
+            config.loglevel = getattr(logging, a.upper(), None)
+            if not isinstance(config.loglevel, int):
                 raise ValueError('Invalid log level: %s' % a)
         elif o in '--logfile':
             config.logfile = a
@@ -62,7 +62,7 @@ def main():
             print "pyff version %s" % __version__
             sys.exit(0)
 
-    log_args = {'level': loglevel}
+    log_args = {'level': config.loglevel}
     if config.logfile is not None:
         log_args['filename'] = config.logfile
     logging.basicConfig(**log_args)
