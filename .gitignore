@@ -21,3 +21,5 @@ sign.key
 _site
 profile.out*
 localconfig.py
+
+**/.DS_Store
