@@ -116,7 +116,8 @@ def main():
         fn_temp = os.path.abspath(os.path.join(args.outdir_unsigned, entityid_to_filename(e.attrib['entityID'])))
         fn_out = os.path.abspath(os.path.join(args.outdir_signed, entityid_to_filename(e.attrib['entityID'])))
         logging.debug('writing unsigned EntitiyDescriptor ' + e.attrib['entityID'] + ' to ' + fn_temp)
-        os.makedirs(os.path.dirname(fn_temp), exist_ok=True)¶
+        if not os.path.exists(os.path.dirname(fn_temp)):
+            os.makedirs(os.path.dirname(fn_temp))
         with open(fn_temp, 'w') as f:
             f.write(XMLDECLARATION + etree.tostring(e))
         fn_pipeline = fn_temp + '.fd'
