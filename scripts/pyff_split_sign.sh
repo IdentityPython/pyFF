@@ -1,6 +1,10 @@
 #!/bin/sh
 # create a signed XML file per EntityDescriptor for ADFS
 
+MDSPLITUNSIGNED='/var/md_source/split/'
+MDSPLITSIGNED='/var/md_feed/split/'
+LOGFILE='/var/log/pyffsplit.log'
+# MDSIGN_CERT, MDSIGN_KEY and MDAGGREGATE must be passed via env
 if [ ! -e $MDSIGN_CERT ]; then
     echo "MDSIGN_CERT must be set and point to an existing file" && exit 1
 fi
@@ -12,17 +16,14 @@ if [ ! -e $MD_AGGREGATE ]; then
 fi
 
 # Step 1. Split aggregate and create an XML and a pipeline file per EntityDescriptor
+[ "$LOGLEVEL" == "DEBUG" ] && echo "processing "
 /usr/bin/mdsplit.py \
-    -c $MDSIGN_CERT \
-    -k $MDSIGN_KEY \
-    -l /var/log/pyffsplit.log \
-    -L DEBUG \
-    $MD_AGGREGATE \
-    /var/md_feed/split/ \
-    /var/md_source/split/
+    -c $CERTFILE -k $KEYFILE \
+    -l $LOGFILE -L DEBUG \
+    $MD_AGGREGATE $MDSPLITUNSIGNED $MDSPLITSIGNED
 
 # Step 2. Execute pyff to sign each EntityDescriptor
-cd /var/md_source/split/
+cd $MDSPLITUNSIGNED
 for fn in *.fd; do
     echo "running pyff for $fn"
     /usr/bin/pyff --loglevel=$LOGLEVEL $fn
