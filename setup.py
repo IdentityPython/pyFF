@@ -77,7 +77,7 @@ setup(name='pyFF',
       entry_points={
           'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main']
       },
-      scripts=['scripts/pyff_mdsplit.py', 'pyff_split_sign.sh'],
+      scripts=['scripts/pyff_mdsplit.py', ],
       message_extractors={'src': [
           ('**.py', 'python', None),
           ('**/templates/**.html', 'mako', None),
