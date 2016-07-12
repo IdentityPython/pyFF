@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Invoke mdsplit from the command line. See mdsplit.py for documentation on functionality.
 usage: pyff_mdsplit.py [-h] [-c CERTFILE] [-k KEYFILE] [-S] [-l LOGFILE] [-v]
