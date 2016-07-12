@@ -11,7 +11,6 @@ import os
 import re
 import sys
 
-#import pyff
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
 from pyff.store import MemoryStore
@@ -32,9 +31,8 @@ class Pipeline:
   - {0}
 - select
 - finalize:
-    Name: {4}
-    cacheDuration: {5}
-    validUntil: {6}
+    cacheDuration: {4}
+    validUntil: {5}
 - sign:
     key:  {2}
     cert: {3}
@@ -44,7 +42,6 @@ class Pipeline:
            outfile,
            self.keyfile,
            self.certfile,
-           self.idprefix,
            self.cacheDuration,
            self.validUntil)
         return pipeline
@@ -76,13 +73,13 @@ def entityid_to_filename(entityid):
     return r + '.xml'
 
 
-# def simple_md(pipeline):
-#     """ stupid copy of md:main -> replace this """
-#     modules = []
-#     modules.append('pyff.builtins')
-#     store = MemoryStore()
-#     md = MDRepository(store=store)
-#     plumbing(pipeline).process(md, state={'batch': True, 'stats': {}})
+def simple_md(pipeline):
+    """ just a copy of md:main """
+    modules = []
+    modules.append('pyff.builtins')
+    store = MemoryStore()
+    md = MDRepository(store=store)
+    plumbing(pipeline).process(md, state={'batch': True, 'stats': {}})
 
 
 def process_entity_descriptor(ed, pipeline, args):
@@ -99,11 +96,11 @@ def process_entity_descriptor(ed, pipeline, args):
         f.write(XMLDECLARATION + '\n' + etree.tostring(ed))
     if not args.nosign:
         fn_out = os.path.abspath(os.path.join(args.outdir_signed,
-                                              entityid_to_filename(e.attrib['entityID'])))
+                                              entityid_to_filename(ed.attrib['entityID'])))
         fn_pipeline = fn_temp + '.fd'
         with open(fn_pipeline, 'w') as f_pipeline:
             f_pipeline.write(pipeline.get(fn_temp, fn_out))
-        #simple_md(fn_pipeline)
+        simple_md(fn_pipeline)
 
 
 def process_md_aggregate(args):
@@ -115,8 +112,10 @@ def process_md_aggregate(args):
         args.cacheDuration = root.attrib['cacheDuration']
     if 'validUntil' in root.attrib and args.validUntil is None:
         args.validUntil = root.attrib['validUntil']
-    logging.debug('Root element: ' + root.tag + ' ' + ' @'.join(root.attrib))
-    pipeline = Pipeline(args.keyfile, args.certfile,
-                        args.cacheDuration, args.validUntil)
+    alist = ''
+    for a in root.attrib:
+        alist += ' ' + a + '="' + root.attrib[a] + '"'
+    logging.debug('Root element: ' + root.tag + alist)
+    pipeline = Pipeline(args.keyfile, args.certfile, args.cacheDuration, args.validUntil)
     for ed in root.findall('{urn:oasis:names:tc:SAML:2.0:metadata}EntityDescriptor'):
         process_entity_descriptor(ed, pipeline, args)
