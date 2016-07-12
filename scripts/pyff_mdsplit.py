@@ -59,8 +59,8 @@ class Invocation:
              help='Directory for files containing one signed EntityDescriptor each.')
         self.parser.add_argument('-C', '--cacheduration', dest='cacheDuration', default='PT5H',
              help='override value from input EntitiesDescriptor, if any')
-        self.parser.add_argument('-u', '--validuntil', dest='validUntil', default='P10D',
-             help='override value from input EntitiesDescriptor, if any')
+        self.parser.add_argument('-u', '--validuntil', dest='validUntil',
+             help='override iso date value from input EntitiesDescriptor, if any')
         self.parser.add_argument('input', type=argparse.FileType('r'), default=None,
              help='Metadata aggregate (input)')
         self.parser.add_argument('outdir_unsigned', default=None,
