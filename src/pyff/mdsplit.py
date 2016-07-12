@@ -20,10 +20,9 @@ XMLDECLARATION = '<?xml version="1.0" ?>'
 
 
 class Pipeline:
-    def __init__(self, keyfile, certfile, idprefix, cacheDuration, validUntil):
+    def __init__(self, keyfile, certfile, cacheDuration, validUntil):
         self.keyfile = keyfile
         self.certfile = certfile
-        self.idprefix = idprefix
         self.cacheDuration = cacheDuration
         self.validUntil = validUntil
 
@@ -90,10 +89,14 @@ def process_entity_descriptor(ed, pipeline, args):
     fn_temp = os.path.abspath(os.path.join(args.outdir_unsigned,
                                            entityid_to_filename(ed.attrib['entityID'])))
     logging.debug('writing unsigned EntitiyDescriptor ' + ed.attrib['entityID'] + ' to ' + fn_temp)
+    if args.cacheDuration is not None:
+        ed.attrib['cacheDuration'] = args.cacheDuration
+    if args.validUntil is not None:
+        ed.attrib['validUntil'] = args.validUntil
     if not os.path.exists(os.path.dirname(fn_temp)):
         os.makedirs(os.path.dirname(fn_temp))
     with open(fn_temp, 'w') as f:
-        f.write(XMLDECLARATION + etree.tostring(ed))
+        f.write(XMLDECLARATION + '\n' + etree.tostring(ed))
     if not args.nosign:
         fn_out = os.path.abspath(os.path.join(args.outdir_signed,
                                               entityid_to_filename(e.attrib['entityID'])))
@@ -104,12 +107,16 @@ def process_entity_descriptor(ed, pipeline, args):
 
 
 def process_md_aggregate(args):
+    """ process each ed; take validUntil and cacheDuration from root level """
     root = etree.parse(args.input).getroot()
     if root.tag != '{urn:oasis:names:tc:SAML:2.0:metadata}EntitiesDescriptor':
         raise Exception('Root element must be EntitiesDescriptor')
+    if 'cacheDuration' in root.attrib and args.cacheDuration is None:
+        args.cacheDuration = root.attrib['cacheDuration']
+    if 'validUntil' in root.attrib and args.validUntil is None:
+        args.validUntil = root.attrib['validUntil']
     logging.debug('Root element: ' + root.tag + ' ' + ' @'.join(root.attrib))
     pipeline = Pipeline(args.keyfile, args.certfile,
-                        args.idprefix, args.cacheduration,
-                        args.validuntil)
+                        args.cacheDuration, args.validUntil)
     for ed in root.findall('{urn:oasis:names:tc:SAML:2.0:metadata}EntityDescriptor'):
         process_entity_descriptor(ed, pipeline, args)

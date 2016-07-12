@@ -24,9 +24,10 @@ optional arguments:
   -o OUTDIR_SIGNED, --outdir_signed OUTDIR_SIGNED
                         Directory for files containing one signed
                         EntityDescriptor each.
-  -i IDPREFIX, --idprefix IDPREFIX
   -C CACHEDURATION, --cacheduration CACHEDURATION
+                        override value from input EntitiesDescriptor, if any
   -u VALIDUNTIL, --validuntil VALIDUNTIL
+                        override value from input EntitiesDescriptor, if any
 """
 
 import argparse
@@ -55,9 +56,10 @@ class Invocation:
              choices=LOGLEVELS.keys(), help='default is INFO if env[LOGLEVEL] is not set')
         self.parser.add_argument('-o', '--outdir_signed', default=None,
              help='Directory for files containing one signed EntityDescriptor each.')
-        self.parser.add_argument('-i', '--idprefix', dest='idprefix', default='federation.example.com_')  # TODO: take from input
-        self.parser.add_argument('-C', '--cacheduration', dest='cacheduration', default='PT5H')  # TODO: take from input
-        self.parser.add_argument('-u', '--validuntil', dest='validuntil', default='P10D') # TODO: take from input
+        self.parser.add_argument('-C', '--cacheduration', dest='cacheDuration', default='PT5H',
+             help='override value from input EntitiesDescriptor, if any')
+        self.parser.add_argument('-u', '--validuntil', dest='validUntil', default='P10D',
+             help='override value from input EntitiesDescriptor, if any')
         self.parser.add_argument('input', type=argparse.FileType('r'), default=None,
              help='Metadata aggregate (input)')
         self.parser.add_argument('outdir_unsigned', default=None,
