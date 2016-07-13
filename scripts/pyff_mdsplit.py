@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 """
-Invoke mdsplit from the command line. See mdsplit.py for documentation on functionality.
-usage: pyff_mdsplit.py [-h] [-c CERTFILE] [-k KEYFILE] [-S] [-l LOGFILE] [-v]
-                       [-L {INFO,DEBUG,CRITICAL,WARNING,ERROR}]
-                       [-o OUTDIR_SIGNED] [-i IDPREFIX] [-C CACHEDURATION]
-                       [-u VALIDUNTIL]
+usage: pyff_mdsplit.py [-h] [-c CERTFILE] [-k KEYFILE] [-n] [-S] [-v]
+                       [-l LOGFILE] [-L {INFO,DEBUG,CRITICAL,WARNING,ERROR}]
+                       [-o OUTDIR_SIGNED] [-C CACHEDURATION] [-u VALIDUNTIL]
                        input outdir_unsigned
+
 Metadata Splitter
 
 positional arguments:
@@ -17,8 +16,9 @@ optional arguments:
   -h, --help            show this help message and exit
   -c CERTFILE, --certfile CERTFILE
   -k KEYFILE, --keyfile KEYFILE
+  -n, --nocleanup       do not delete temporary files after signing
   -S, --nosign          do not sign output
-  -v, --verbose         output to console with DEBUG leve
+  -v, --verbose         output to console with DEBUG level
   -l LOGFILE, --logfile LOGFILE
   -L {INFO,DEBUG,CRITICAL,WARNING,ERROR}, --loglevel {INFO,DEBUG,CRITICAL,WARNING,ERROR}
                         default is INFO if env[LOGLEVEL] is not set
@@ -28,7 +28,8 @@ optional arguments:
   -C CACHEDURATION, --cacheduration CACHEDURATION
                         override value from input EntitiesDescriptor, if any
   -u VALIDUNTIL, --validuntil VALIDUNTIL
-                        override value from input EntitiesDescriptor, if any
+                        override iso date value from input EntitiesDescriptor,
+                        if any
 """
 
 import argparse

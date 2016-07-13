@@ -1,6 +1,6 @@
 """
-pyffsplit creates pipeline files for each EntityDescriptor in an aggregate, which are used to
-create separate signed XML documents with an EntitiyDescriptor each.
+mdsplit creates a separate signed XML file for each EntitiyDescriptor from the input md aggregate.
+
 Note: The input file is considered to be trusted, the signature is not verified.
 """
 
