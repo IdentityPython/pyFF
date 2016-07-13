@@ -101,6 +101,9 @@ def process_entity_descriptor(ed, pipeline, args):
         with open(fn_pipeline, 'w') as f_pipeline:
             f_pipeline.write(pipeline.get(fn_temp, fn_out))
         simple_md(fn_pipeline)
+        if not args.nocleanup:
+            os.remove(fn_pipeline)
+            os.remove(fn_temp)
 
 
 def process_md_aggregate(args):

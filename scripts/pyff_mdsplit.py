@@ -18,7 +18,7 @@ optional arguments:
   -c CERTFILE, --certfile CERTFILE
   -k KEYFILE, --keyfile KEYFILE
   -S, --nosign          do not sign output
-  -v, --vebose          output to console with DEBUG leve
+  -v, --verbose         output to console with DEBUG leve
   -l LOGFILE, --logfile LOGFILE
   -L {INFO,DEBUG,CRITICAL,WARNING,ERROR}, --loglevel {INFO,DEBUG,CRITICAL,WARNING,ERROR}
                         default is INFO if env[LOGLEVEL] is not set
@@ -48,23 +48,25 @@ class Invocation:
         self.parser = argparse.ArgumentParser(description='Metadata Splitter')
         self.parser.add_argument('-c', '--certfile', dest='certfile')
         self.parser.add_argument('-k', '--keyfile', dest='keyfile')
+        self.parser.add_argument('-n', '--nocleanup', dest='keyfile',
+            help='do not delete temporary files after signing')
         self.parser.add_argument('-S', '--nosign', action='store_true', help='do not sign output')
         self.parser.add_argument('-v', '--verbose', action='store_true', help='output to console with DEBUG level')
         logbasename = re.sub(r'\.py$', '.log', os.path.basename(__file__))
         self.parser.add_argument('-l', '--logfile', dest='logfile', default=logbasename)
         loglevel_env = os.environ['LOGLEVEL'] if 'LOGLEVEL' in os.environ else 'INFO'
         self.parser.add_argument('-L', '--loglevel', dest='loglevel', default=loglevel_env,
-             choices=LOGLEVELS.keys(), help='default is INFO if env[LOGLEVEL] is not set')
+            choices=LOGLEVELS.keys(), help='default is INFO if env[LOGLEVEL] is not set')
         self.parser.add_argument('-o', '--outdir_signed', default=None,
-             help='Directory for files containing one signed EntityDescriptor each.')
+            help='Directory for files containing one signed EntityDescriptor each.')
         self.parser.add_argument('-C', '--cacheduration', dest='cacheDuration', default='PT5H',
-             help='override value from input EntitiesDescriptor, if any')
+            help='override value from input EntitiesDescriptor, if any')
         self.parser.add_argument('-u', '--validuntil', dest='validUntil',
-             help='override iso date value from input EntitiesDescriptor, if any')
+            help='override iso date value from input EntitiesDescriptor, if any')
         self.parser.add_argument('input', type=argparse.FileType('r'), default=None,
-             help='Metadata aggregate (input)')
+            help='Metadata aggregate (input)')
         self.parser.add_argument('outdir_unsigned', default=None,
-             help='Directory for files containing one unsigned EntityDescriptor each.')
+            help='Directory for files containing one unsigned EntityDescriptor each.')
         self.args = self.parser.parse_args()
         # merge argv with env
         if not self.args.nosign:
