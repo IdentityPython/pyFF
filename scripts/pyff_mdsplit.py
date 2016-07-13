@@ -48,7 +48,7 @@ class Invocation:
         self.parser = argparse.ArgumentParser(description='Metadata Splitter')
         self.parser.add_argument('-c', '--certfile', dest='certfile')
         self.parser.add_argument('-k', '--keyfile', dest='keyfile')
-        self.parser.add_argument('-n', '--nocleanup', dest='keyfile',
+        self.parser.add_argument('-n', '--nocleanup', action='store_true',
             help='do not delete temporary files after signing')
         self.parser.add_argument('-S', '--nosign', action='store_true', help='do not sign output')
         self.parser.add_argument('-v', '--verbose', action='store_true', help='output to console with DEBUG level')
