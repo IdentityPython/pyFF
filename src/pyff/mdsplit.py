@@ -1,14 +1,16 @@
 """
-pyffsplit creates pipeline files for each EntityDescriptor in an aggregate, which then used to
+pyffsplit creates pipeline files for each EntityDescriptor in an aggregate, which are used to
 create separate signed XML documents with an EntitiyDescriptor each.
-The input file is considered to be trusted, the signature is not verified.
-TODO: Signing in the same process
+Note: The input file is considered to be trusted, the signature is not verified.
 """
+
+__author__ = 'r2h2'
 
 import logging
 import lxml.etree as etree
 import os
 import re
+import shutil
 import sys
 
 from pyff.mdrepo import MDRepository
@@ -47,11 +49,11 @@ class Pipeline:
         return pipeline
 
 
-def entityid_to_filename(entityid):
+def entityid_to_dirname(entityid):
     """
-    Derive a filename from an entityID, removing dots and slashes
+    Derive a directory name from an HTTP-URL-formed entityID, removing dots and slashes
     :param entityid:
-    :return: filename derived from entityID
+    :return: dirname derived from entityID
     """
     x = re.sub(r'^https?://', '', entityid)
     r = ''
@@ -70,7 +72,7 @@ def entityid_to_filename(entityid):
             in_path = True
         else:
             upper = True
-    return r + '.xml'
+    return r
 
 
 def simple_md(pipeline):
@@ -83,8 +85,19 @@ def simple_md(pipeline):
 
 
 def process_entity_descriptor(ed, pipeline, args):
-    fn_temp = os.path.abspath(os.path.join(args.outdir_unsigned,
-                                           entityid_to_filename(ed.attrib['entityID'])))
+    """
+    1. create an unsigned EntityDescriptor XML file
+    2. create a pipline file to sign it
+    3. execute pyff to create an aggregate with the EntityDescriptor
+    4. delete temp files
+    Note: for pyff pipeline processing the entityDescriptor xml file must be alone in a directory
+    TODO: remove EntitiesDecriptor and make EntityDescriptor the rool element.
+    """
+    dirname_temp = os.path.abspath(os.path.join(args.outdir_unsigned,
+                                                entityid_to_dirname(ed.attrib['entityID'])))
+    if not os.path.exists(dirname_temp):
+        os.makedirs(dirname_temp)
+    fn_temp = os.path.join(dirname_temp, 'ed.xml')
     logging.debug('writing unsigned EntitiyDescriptor ' + ed.attrib['entityID'] + ' to ' + fn_temp)
     if args.cacheDuration is not None:
         ed.attrib['cacheDuration'] = args.cacheDuration
@@ -95,15 +108,17 @@ def process_entity_descriptor(ed, pipeline, args):
     with open(fn_temp, 'w') as f:
         f.write(XMLDECLARATION + '\n' + etree.tostring(ed))
     if not args.nosign:
+        if not os.path.exists(args.outdir_signed):
+            os.makedirs(args.outdir_signed)
         fn_out = os.path.abspath(os.path.join(args.outdir_signed,
-                                              entityid_to_filename(ed.attrib['entityID'])))
-        fn_pipeline = fn_temp + '.fd'
+                                              entityid_to_dirname(ed.attrib['entityID']) + '.xml'))
+        fn_pipeline = os.path.join(dirname_temp, 'ed.fd')
         with open(fn_pipeline, 'w') as f_pipeline:
             f_pipeline.write(pipeline.get(fn_temp, fn_out))
         simple_md(fn_pipeline)
         if not args.nocleanup:
-            os.remove(fn_pipeline)
-            os.remove(fn_temp)
+            shutil.rmtree(dirname_temp)
+
 
 
 def process_md_aggregate(args):
