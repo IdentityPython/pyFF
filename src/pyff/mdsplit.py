@@ -27,7 +27,7 @@ class Pipeline:
         self.cacheDuration = cacheDuration
         self.validUntil = validUntil
 
-    def get(self, infile, outfile):
+    def get(self, loaddir, outfile):
         # sign a single entity descriptor
         pipeline = '''- load:
   - {0}
@@ -40,7 +40,7 @@ class Pipeline:
     cert: {3}
 - publish:
     {1}
-'''.format(infile,
+'''.format(loaddir,
            outfile,
            self.keyfile,
            self.certfile,
@@ -114,7 +114,7 @@ def process_entity_descriptor(ed, pipeline, args):
                                               entityid_to_dirname(ed.attrib['entityID']) + '.xml'))
         fn_pipeline = os.path.join(dirname_temp, 'ed.fd')
         with open(fn_pipeline, 'w') as f_pipeline:
-            f_pipeline.write(pipeline.get(fn_temp, fn_out))
+            f_pipeline.write(pipeline.get(dirname_temp, fn_out))
         simple_md(fn_pipeline)
         if not args.nocleanup:
             shutil.rmtree(dirname_temp)
