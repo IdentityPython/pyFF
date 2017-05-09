@@ -1,5 +1,5 @@
 - load:
-  - http://md.swamid.se/md/swamid-2.0.xml
+  - https://md.swamid.se/md/swamid-2.0.xml
 - select
 - stats
 - certreport
