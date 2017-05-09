@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <XRDS xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
     <XRD>
-        <Subject>http://md.swamid.se/md/swamid-2.0.xml</Subject>
-        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.swamid.se/md/swamid-2.0.xml">
+        <Subject>https://md.swamid.se/md/swamid-2.0.xml</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://md.swamid.se/md/swamid-2.0.xml">
             <Title>SWAMID</Title>
             <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
                 <ds:X509Data>

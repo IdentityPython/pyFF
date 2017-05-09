@@ -4,7 +4,7 @@
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://wayf.aco.net/aconet-metadata.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://manager.aaf.edu.au/metadata/metadata.aaf.signed.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://ds.aaf.edu.au/distribution/metadata/metadata.aaf.signed.complete.xml"/>
   </XRD>
   <XRD>
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://metadata.aai.switch.ch/metadata.switchaai.xml"/>
@@ -19,16 +19,10 @@
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://metadata.eduid.cz/entities/eduid"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://kalmar2.org/simplesaml/module.php/aggregator/?id=kalmarcentral2&amp;set=saml2"/>
-  </XRD>
-  <XRD>
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://www.rediris.es/sir/shib1metadata.xml"/>
   </XRD>
   <XRD>
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://www.rediris.es/sir/shibsir1metadata.xml"/>
-  </XRD>
-  <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://haka.funet.fi/fed/haka-metadata.xml"/>
   </XRD>
   <XRD>
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://haka.funet.fi/metadata/haka-metadata.xml"/>
@@ -37,10 +31,10 @@
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://services-federation.renater.fr/metadata/renater-metadata.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://aai.grnet.gr/metadata.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://md.aai.grnet.gr/aggregates/grnet-metadata.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://metadata.eduid.hu/metadata.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://metadata.eduid.hu/current/href.xml"/>
   </XRD>
   <XRD>
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://mds.edugain.org/"/>
@@ -49,7 +43,7 @@
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://edugate.heanet.ie/edugate-metadata-signed.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://www.idem.garr.it/docs/conf/signed-metadata.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://www.garr.it/idem-metadata/idem-metadata-sha256.xml"/>
   </XRD>
   <XRD>
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://metadata.gakunin.nii.ac.jp/gakunin-metadata.xml"/>
@@ -58,25 +52,22 @@
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://laife.lanet.lv/metadata/laife-metadata.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.swamid.se/md/swamid-2.0.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://md.swamid.se/md/swamid-2.0.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.swamid.se/md/swamid-1.0.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.incommon.org/InCommon/InCommon-metadata.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://wayf.incommonfederation.org/InCommon/InCommon-metadata.xml"/>
-  </XRD>
-  <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://ds.aai.arnes.si/metadata/aai.arnes.si.signed.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://ds.aai.arnes.si/metadata/aai.arnes.si.sha256.xml"/>
   </XRD>
   <XRD>
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://directory.tuakiri.ac.nz/metadata/tuakiri-metadata-signed.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://caf-shibops.ca/CoreServices/cafshib_metadata_signed.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://caf-shib2ops.ca/CoreServices/caf_metadata_signed_sha256.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://geant.edugain.org/geant_metadata.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://prod-idp.geant.org/saml2/idp/metadata.php"/>
   </XRD>
   <XRD>
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://federation.belnet.be/federation-metadata.xml"/>
@@ -91,9 +82,9 @@
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://shib.kuleuven.be/download/metadata/idp/metadata-kulassoc-sp.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://login.aaiedu.hr/sso/module.php/aggregator/?id=aaieduhr_edugain"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://login.aaiedu.hr/edugain/module.php/aggregator/?id=aaieduhr_edugain"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://metadata.feide.no/feide-edugain-metadata.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://metadata.feide.no/feide-edugain-metadata.xml"/>
   </XRD>
 </XRDS>

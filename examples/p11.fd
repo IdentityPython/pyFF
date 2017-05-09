@@ -1,5 +1,5 @@
 - load: 
-   - http://md.swamid.se/md/swamid-2.0.xml 12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB
+   - https://md.swamid.se/md/swamid-2.0.xml 12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB
 - select: "md:EntityDescriptor[md:IDPSSODescriptor]"
 - xslt:
     stylesheet: tidy.xsl
