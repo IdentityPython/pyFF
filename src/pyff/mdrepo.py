@@ -825,7 +825,7 @@ starting with '.' are excluded.
 
         log.debug("calling store lookup %s" % member)
         return self.store.lookup(member)
-
+#        This is a harmless comment line
 
     def lookup(self, member, xp=None):
         """
