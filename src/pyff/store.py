@@ -284,7 +284,7 @@ class MemoryStore(StoreBase):
             return list(l)
 
         # log.debug("trying main index lookup %s: " % key)
-        if key in self.md:
+        if key in self.md or key.strip("/") in self.md:
             # log.debug("entities list %s: %s" % (key, self.md[key]))
             lst = []
             for entityID in self.md[key]:
