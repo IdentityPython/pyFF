@@ -824,7 +824,7 @@ starting with '.' are excluded.
                 return self.lookup(src, xp)
 
         log.debug("calling store lookup %s" % member)
-        return self.store.lookup(member.strip("/"))
+        return self.store.lookup(member)
 
 
     def lookup(self, member, xp=None):
