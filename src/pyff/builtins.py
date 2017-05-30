@@ -567,7 +567,7 @@ The 'as' keyword allows a select to be stored as an alias in the local repositor
 
 .. code-block:: yaml
 
-    - select as /foo-2.0: "!//md:EntityDescriptor[md:IDPSSODescriptor]""
+    - select as /foo-2.0: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
 
 would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in the current repository.
 Note that you should not include an extension in your "as foo-bla-something" since that would make your
