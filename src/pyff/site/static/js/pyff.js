@@ -8,7 +8,7 @@ $(document).ready(function() {
         '{{^sticky}}<button type="button" data-toggle="tooltip" data-placement="left" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
-        '{{#entity_icon}}<img src="{{entity_icon}}" class="idp-icon pull-right img-responsive img-thumbnail" onerror="this.style.display=\'none\';"/>{{/entity_icon}}' +
+        '{{#icon}}<img src="{{icon}}" class="idp-icon pull-right img-responsive img-thumbnail" onerror="this.style.display=\'none\';"/>{{/icon}}' +
         '{{#descr}}<div class="pull-left idp-description hidden-xs">{{descr}}</div>{{/descr}}</p>' +
         '<div class="clearfix"></div>' +
         '</div>');
