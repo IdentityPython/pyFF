@@ -1,5 +1,6 @@
 *.pyc
 *.egg
+.coverage
 .coverage.*
 cover
 .coveralls.yml
