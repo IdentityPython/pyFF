@@ -58,8 +58,9 @@
         <![endif]-->
         <script type="text/javascript">
             $(document).ready(function() {
-               $('img.fallback').on('error', function () {
-                    $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
+               $('img.fallback').bind('error', function () {
+                   $(this).unbind('error');
+                   $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
                }).imgLoad(function() {
                    $(this).fadeIn(300);
                });
