@@ -70,7 +70,8 @@ setup(name='pyFF',
                    'site/static/bootstrap/js/*',
                    'site/static/bootstrap/css/*',
                    'site/static/bootstrap/img/*',
-                   'schema/*.xsd']
+                   'schema/*.xsd',
+                   'i18n/*/*/*.mo']
       },
       zip_safe=False,
       install_requires=install_requires,

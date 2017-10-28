@@ -46,3 +46,5 @@ Typically options are used to modify the behaviour of the pipe itself (think mac
 runtime data to operate on.
 
 Documentation for each pipe is in the :py:mod:`pyff.pipes.builtins` Module. Also take a look at the :doc:`examples`.
+
+To localize pyffd you need to set LANG=<locale>

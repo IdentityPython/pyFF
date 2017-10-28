@@ -80,6 +80,20 @@ This will install a bunch of dependencies and compile bindings for both lxml, py
 aswell as pyXMLSecurity. This may take some time to complete. If there are no errors and if
 you have the *pyff* binary in your **$PATH** you should be done.
 
+Internationalization
+--------------------
+
+* git clone pyFF from github
+* Add/update your language locale in src/pyff/i18n/<your locale>/LC_MESSAGES/messages.po
+
+.. code-block:: bash
+
+  # cd pyFF
+  # python setup.py compile_catalog
+  # python setup.py install
+
+
+
 Upgrading
 ---------
 

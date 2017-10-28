@@ -1,0 +1,242 @@
+# German translations for pyFF.
+# Copyright (C) 2013 SUNET
+# This file is distributed under the same license as the pyFF project.
+# Rainer Hoerbe <r2h2@mail.hoerbe.at>, 2017.
+# #, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pyFF 0.9.4dev\n"
+"Report-Msgid-Bugs-To: leifj@mnt.se\n"
+"POT-Creation-Date: 2013-06-18 14:30+0200\n"
+"PO-Revision-Date: 2017-09-08 14:38+0200\n"
+"Last-Translator: Rainer Hoerbe <r2h2@mail.hoerbe.at>\n"
+"Language-Team: sv <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 0.9.6\n"
+
+#: src/pyff/mdx.py:528
+msgid "Metadata By Attributes"
+msgstr "Metadaten nach Attributen"
+
+#: src/pyff/site/templates/400.html:2
+msgid "Bad Request"
+msgstr "Ungültiger HTTP Request"
+
+#: src/pyff/site/templates/400.html:4
+msgid "Can't help you there..."
+msgstr "Ungültiger HTTP Request"
+
+#: src/pyff/site/templates/404.html:2
+msgid "Not Found"
+msgstr "Die angefragte HTTP-Ressource konnte nicht gefunden werden"
+
+#: src/pyff/site/templates/404.html:4
+msgid "Whatever you were looking for, it sure ain't here..."
+msgstr "Die angefragte HTTP-Ressource konnte nicht gefunden werden"
+
+#: src/pyff/site/templates/500.html:2
+msgid "Server Error"
+msgstr "Server Fehler"
+
+#: src/pyff/site/templates/500.html:4
+msgid "Ouch"
+msgstr "Server Fehler"
+
+#: src/pyff/site/templates/503.html:2
+msgid "Service Temporarily Unavailable"
+msgstr "Server vorübergehend nicht verfügbar"
+
+#: src/pyff/site/templates/503.html:4
+msgid "Repository loading. Please come back later..."
+msgstr "Repository wird geladed. Bitte probieren Sie es später noch einmal"
+
+#: src/pyff/site/templates/about.html:2
+msgid "About this server"
+msgstr "Über diesen Server"
+
+#: src/pyff/site/templates/about.html:5
+msgid "Server Info"
+msgstr "Server Information"
+
+#: src/pyff/site/templates/about.html:6
+msgid "Pipeline"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:7
+msgid "Repository"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:17 src/pyff/site/templates/about.html:19
+msgid "version"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:21
+msgid "startup arguments"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:23
+msgid "System information"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:25
+msgid "Repository size"
+msgstr ""
+
+#: src/pyff/site/templates/about.html:27
+msgid "Last update"
+msgstr "Letzte Änderung"
+
+#: src/pyff/site/templates/ds.html:86
+msgid "How do you want to sign in?"
+msgstr "Wie wollen Sie sich anmelden"
+
+#: src/pyff/site/templates/ds.html:89
+msgid "Suggested"
+msgstr "Vorgeschlagen"
+
+#: src/pyff/site/templates/ds.html:90
+msgid "All Login Providers"
+msgstr "Alle Stammportale"
+
+#: src/pyff/site/templates/ds.html:102
+msgid "Start typing to search for your home institution or login provider..."
+msgstr "Geben Sie den die Anfangsbuchsten des Namens Ihrer Organisation ein"
+
+#: src/pyff/site/templates/ds.html:108
+msgid "Remember choice"
+msgstr "Auswahl merken"
+
+#: src/pyff/site/templates/ds.html:110
+msgid "Remember my choice and never show me this page again!"
+msgstr "Merke die Auswahl und frage mich in Zukunft nicht mehr!"
+
+#: src/pyff/site/templates/ds.html:120
+msgid "What is this?"
+msgstr "Was ist das?"
+
+#: src/pyff/site/templates/ds.html:122
+msgid ""
+"You are accessing a service that requires you to sign in. You need to "
+"choose an identity provider - typically your home organization."
+msgstr "Sie greifen auf eine Anwendung zu die eine Anmeldung benötigt. "
+"Wählen Sie ein Stammportal aus."
+
+#: src/pyff/site/templates/ds.html:124
+msgid ""
+"We will do our best to remember your choice for the next time you visit "
+"this service!"
+msgstr "Die Auswahl ist für den nächsten Besuch vorgemerkt!"
+
+#: src/pyff/site/templates/ds.html: various locations
+msgid "Please login..."
+msgstr "Bitte melden Sie sich an."
+
+msgid "You are connecting to..."
+msgstr "Sie verbinden sich mit"
+
+msgid "This service requests that you <strong>identify yourself</strong>. Select your preferred identity service below... "
+msgstr "Diese Dienst erfordert, dass Sie sich anmelden. Bitte wählen Sie Ihr bevorzugtes Identitätsservice aus."
+
+msgid "Start typing to search for your identity service..."
+msgstr "Suche beginnt mit der Eingabe ..."
+
+msgid "Show me more choices"
+msgstr "Weitere Auswahlmöglichkeiten anzeigen"
+
+msgid "If you always use one and the same login provider for everything it might be a good idea to remember your choice by pressing <em>Login and use Forever</em>. Press <em>Start Over</em> to redo the search and pick another login provider."
+msgstr "Wenn Sie immer den gleichen Identitätsprovider verwenden können Sie die Auswahl speichern."
+
+msgid "Proceed to Login"
+msgstr "Weiter zum Login"
+
+msgid "Login and use Forever"
+msgstr "Login und Auswahl merken"
+
+msgid "Yes I am Sure - Use Forever"
+msgstr "Ja, ich bin sicher - Auswahl für immer merken"
+
+msgid "Start Over"
+msgstr "Zurück"
+
+#: src/pyff/site/templates/finger.html:3
+msgid "Routes"
+msgstr ""
+
+#: src/pyff/site/templates/header.html:59
+msgid "All Entities"
+msgstr "Alle Entities"
+
+#: src/pyff/site/templates/header.html:65
+msgid "About"
+msgstr "Über"
+
+#: src/pyff/site/templates/ui.html
+msgid "Toggle navigation"
+msgstr "Naviagation ein/aus"
+
+#: src/pyff/site/templates/ui.html
+msgid "Reset"
+msgstr "Zurücksetzen"
+
+#: src/pyff/site/templates/ui.html
+msgid "Settings"
+msgstr "Einstellungen"
+
+#: src/pyff/site/templates/header.html:66
+msgid "Statistics"
+msgstr "Statisktik"
+
+#: src/pyff/site/templates/header.html:67
+msgid "Documentation"
+msgstr "Dokumentation"
+
+#: src/pyff/site/templates/reset.html:48
+msgid "Ready to Clear your Settings?"
+msgstr "Wollen Sie Ihre Einstellungen wirklich verwerfen?"
+
+#: src/pyff/site/templates/reset.html:51
+msgid ""
+"The login provider chooser allows you to save certain settings, such as "
+"your last visited login providers. This is done to make your login "
+"experience as seemless as possible. However you may need to reset these "
+"settings, perhaps to disable your pre-selected login provider(s)."
+msgstr "Die Stammportalauswahl erlaubt zu speichern welches Stammportal "
+"zuletzt besucht wurde."  "Möglicherweise müssen Sie später einmal diese "
+"Einstellungen ändern um sie über ein anderes Stammportal anzumelden."
+
+#: src/pyff/site/templates/reset.html:54
+msgid "Read more about how"
+msgstr "Mehr darüber lesen"
+
+#: src/pyff/site/templates/reset.html:54
+msgid "these settings are stored"
+msgstr "wie diese Einstellungen gespeichert werden"
+
+#: src/pyff/site/templates/reset.html:58
+msgid "Yes, Clear my Settings"
+msgstr "Ja, meine Einstellungen löschen"
+
+#: src/pyff/site/templates/reset.html:59
+msgid "No, get me out of here!"
+msgstr "Nein, lieber doch nicht"
+
+#: src/pyff/site/templates/settings.html:31
+msgid "No cookies served here!"
+msgstr "Hier werden keine Cookies verwendet!"
+
+#: src/pyff/site/templates/settings.html:34
+msgid ""
+"This service uses HTML5 local store (and corresponding service in some "
+"non-HTML5 browsers) to store settings and preferences. This means that no "
+"cookies are sent to the server and no personal information is ever leaked "
+"to a 3rd party. Nevertheless it may sometimes be useful or necessary to"
+msgstr "Dieser Dienst verwendet 'HTML5 Local Storage' um benutzerspezifische "
+"Einstellungen zu speichern. Daher werden keine Cookies an den Server gesendet. "
+"Persönliche Daten werden nicht an Dritte weitergegeben. Dennoch können Sie Ihre"
+"persönlichen Einstellung für dieses Service"
+
+msgid "clear your settings on this site"
+msgstr "hier löschen"

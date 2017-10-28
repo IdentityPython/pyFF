@@ -38,6 +38,8 @@ Features
 * Support for using PKCS#11 tokens for signing
 * Certificate expiration checking and reporting
 * Fast parallel fetching of multiple streams
+* IDP-discovery service, implementing the SAML Identity Provider Discovery Service Protocol and Profile
+* i18n support for IDP-discovery based on the server LANG locale
 
 Dependencies
 ============

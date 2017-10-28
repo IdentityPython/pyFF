@@ -238,7 +238,7 @@ def safe_write(fn, data):
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 env = Environment(loader=PackageLoader(__package__, 'templates'), extensions=['jinja2.ext.i18n'])
-env.install_gettext_callables(i18n.language.gettext, i18n.language.ngettext, newstyle=True)
+env.install_gettext_callables(i18n.language.ugettext, i18n.language.ngettext, newstyle=True)
 
 import urllib
 from markupsafe import Markup
@@ -269,7 +269,7 @@ def render_template(name, **kwargs):
     kwargs.setdefault('http', cherrypy.request)
     kwargs.setdefault('brand', "pyFF @ %s" % request_vhost(cherrypy.request))
     kwargs.setdefault('google_api_key', config.google_api_key)
-    kwargs.setdefault('_', _)
+    kwargs.setdefault('_', i18n.language.ugettext)
     return template(name).render(**kwargs)
 
 
