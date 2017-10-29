@@ -200,6 +200,7 @@ def check_signature(t, key):
 
     return t
 
+
 # @cached(hash_key=lambda *args, **kwargs: hash(args[0]))
 def validate_document(t):
     schema().assertValid(t)
@@ -286,7 +287,7 @@ def parse_date(s):
 def load_url(url, enable_cache=True, timeout=60):
     start_time = clock()
     cache = httplib2.FileCache(".cache")
-    headers = dict()
+    headers = {'Accept': 'application/samlmetadata+xml,text/xml,application/xml'}
     if not enable_cache:
         headers['cache-control'] = 'no-cache'
 
@@ -315,7 +316,6 @@ def load_url(url, enable_cache=True, timeout=60):
                           timeout=timeout,
                           disable_ssl_certificate_validation=True)  # trust is done using signatures over here
         log.debug("about to request %s" % url)
-        print repr(cache.__dict__)
         try:
             resp, content = h.request(url, headers=headers)
         except Exception, ex:
