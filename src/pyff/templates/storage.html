@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+      <title>pyFF Storage Hub @ {{vhost}}</title>
+      <meta charset="utf-8">
+      <script type="text/javascript" src="/static/js/jquery-1.12.2.min.js"></script>
+      <script type="text/javascript" src="/static/js/hub.min.js"></script>
+      <script type="text/javascript" src="/static/js/jstorage.min.js"></script>
+      <script type="text/javascript" src="/static/js/json2.min.js"></script>
+  </head>
+  <body>
+    <script>
+
+        CrossStorageHub.init([
+          {% raw %}{{% endraw %} origin: /{{vhost}}$/, allow: ['get','set','del']{% raw %}}{% endraw %},
+          {% raw %}{{% endraw %} origin: /{{origin}}$/, allow: ['get']{% raw %}}{% endraw %}
+        ],{
+            _import: function(storage) {
+                var result = [];
+                var lst = $.jStorage.get('pyff.discovery.idps',[]);
+                for (var i = 0; i < lst.length; i++) {
+                    var entity = $.jStorage.get(lst[i]);
+                    if (typeof entity != 'undefined') {
+                        result.append({entity: entity, use_count: 0, last_refresh: CrossStorageHub._now()});
+                    }
+                }
+                storage.set("pyff_discovery_choices", result);
+            }
+        });
+    </script>
+  </body>
+</html>
