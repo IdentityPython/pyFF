@@ -6,3 +6,4 @@ mock
 mako
 mockredispy
 testfixtures
+coverage
