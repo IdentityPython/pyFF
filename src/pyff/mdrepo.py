@@ -734,7 +734,7 @@ and verified.
 
             if t is not None:
                 if t.tag == "{%s}EntityDescriptor" % NS['md']:
-                    t = self.entity_set([t], base_url, copy=False)
+                    t = self.entity_set([t], base_url, copy=False, nsmap=t.nsmap)
 
                 if post is not None:
                     t = post(t)
@@ -873,7 +873,7 @@ fails an empty list is returned.
             log.debug("got %d entities after filtering" % len(l))
             return l
 
-    def entity_set(self, entities, name, lookup_fn=None, cacheDuration=None, validUntil=None, validate=True, copy=True):
+    def entity_set(self, entities, name, lookup_fn=None, cacheDuration=None, validUntil=None, validate=True, copy=True, nsmap=dict()):
         """
 :param entities: a set of entities specifiers (lookup is used to find entities from this set)
 :param name: the @Name attribute
@@ -888,38 +888,39 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         if lookup_fn is None:
             lookup_fn = self.lookup
 
-        def _insert(ent):
-            entity_id = ent.get('entityID', None)
-            # log.debug("adding %s to set" % entity_id)
-            if (ent is not None) and (entity_id is not None) and (entity_id not in seen):
-                ent_insert = ent
-                if copy:
-                    ent_insert = deepcopy(ent_insert)
-                t.append(ent_insert)
-                # log.debug("really adding %s to set" % entity_id)
-                seen[entity_id] = True
+        def _resolve(member, l_fn):
+            if hasattr(member, 'tag'):
+                return [member]
+            else:
+                return l_fn(member)
 
-        attrs = dict(Name=name, nsmap=NS)
+        nsmap.update(NS)
+        resolved_entities = set()
+        for member in entities:
+            for entity in _resolve(member, lookup_fn):
+                resolved_entities.add(entity)
+
+        if not resolved_entities:
+            return None
+
+        for entity in resolved_entities:
+            nsmap.update(entity.nsmap)
+
+        log.debug("selecting %d entities before validation" % len(resolved_entities))
+
+        attrs = dict(Name=name, nsmap=nsmap)
         if cacheDuration is not None:
             attrs['cacheDuration'] = cacheDuration
         if validUntil is not None:
             attrs['validUntil'] = validUntil
         t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], **attrs)
-        nent = 0
-        seen = {}  # TODO make better de-duplication
-        for member in entities:
-            if hasattr(member, 'tag'):
-                _insert(member)
-                nent += 1
-            else:
-                for entity in lookup_fn(member):
-                    _insert(entity)
-                    nent += 1
-
-        log.debug("selecting %d entities before validation" % nent)
-
-        if not nent:
-            return None
+        for entity in resolved_entities:
+            entity_id = entity.get('entityID', None)
+            if (entity is not None) and (entity_id is not None):
+                ent_insert = entity
+                if copy:
+                    ent_insert = deepcopy(ent_insert)
+                t.append(ent_insert)
 
         if validate:
             try:
