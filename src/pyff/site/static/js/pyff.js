@@ -320,8 +320,10 @@ $(document).ready(function() {
                     }
                 }).done(function () {
                     done_cb(seen_count,"bar");
-                }).fail(function () {
-                    done_cb(seen_count,"baz");
+                }).fail(function (errorReport) {
+                    if (!errorReport.thrown) {
+                        done_cb(seen_count, "baz");
+                    }
                 });
             }
         });
