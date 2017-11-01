@@ -83,7 +83,7 @@ from pyff.store import MemoryStore, RedisStore
 from publicsuffix import PublicSuffixList
 import i18n
 
-_ = i18n.language.ugettext
+_ = i18n.ugettext
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
