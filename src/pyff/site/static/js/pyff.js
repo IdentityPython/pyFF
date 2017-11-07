@@ -1,10 +1,4 @@
-/**
- * Created with PyCharm.
- * User: leifj
- * Date: 2/6/13
- * Time: 2:14 PM
- * To change this template use File | Settings | File Templates.
- */
+
 
 $(document).ready(function() {
     // send the user directly to the pre-selected idp if that setting exists
@@ -14,7 +8,7 @@ $(document).ready(function() {
         '{{^sticky}}<button type="button" data-toggle="tooltip" data-placement="left" class="close unselect" rel="{{entityID}}">&times;</button>{{/sticky}}' +
         '<h4 class="list-group-item-heading">{{title}}</h4>' +
         '<p class="list-group-item-text">' +
-        '{{#icon}}<img src="{{icon}}" class="fallback-icon hidden-xs idp-icon pull-right img-responsive img-thumbnail"/>{{/icon}}' +
+        '{{#icon}}<img src="{{icon}}" class="idp-icon pull-right img-responsive img-thumbnail" onerror="this.style.display=\'none\';"/>{{/icon}}' +
         '{{#descr}}<div class="pull-left idp-description hidden-xs">{{descr}}</div>{{/descr}}</p>' +
         '<div class="clearfix"></div>' +
         '</div>');
@@ -219,7 +213,7 @@ $(document).ready(function() {
             $('#idpchooser > form[role="form"]').removeClass('hidden');
             methods.fetch(remote, function (elt) {
                 elt.sticky = true;
-                elt.icon = null; // XXX test - make it load quicker on long lists...
+                //console.log(elt);
                 $('#searchlist').append(idp_template.render(elt));
             }, true);
         },
@@ -280,7 +274,7 @@ $(document).ready(function() {
        $(this).removeClass("active");
     });
 
-    $("img.fallback-icon").error(function(e) {
+    $("img.fallback").error(function(e) {
         $(this).attr('src','/static/icons/1x1t.png').removeClass("img-thumbnail").hide();
     });
 
