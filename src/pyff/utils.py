@@ -396,6 +396,12 @@ def xslt_transform(t, stylesheet, params=None):
         xsl = etree.fromstring(resource_string(stylesheet, "xslt"))
         thread_data.xslt[stylesheet] = etree.XSLT(xsl)
     transform = thread_data.xslt[stylesheet]
+
+    locales = i18n.detect_locales()
+
+    if locales:
+        params['preflang'] = "'{locale}'".format(locale=locales[0])
+
     try:
         return transform(t, **params)
     except etree.XSLTApplyError, ex:

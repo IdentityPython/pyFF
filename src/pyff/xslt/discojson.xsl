@@ -6,8 +6,10 @@
                 xmlns:shibmd="urn:mace:shibboleth:metadata:1.0"
                 extension-element-prefixes="str"
 >
-
     <xsl:output method="text" encoding="UTF-8"/>
+
+    <xsl:param name="preflang" select="'en'" />
+
     <xsl:template match="md:EntitiesDescriptor">
         <xsl:text>[</xsl:text>
         <xsl:apply-templates select="md:EntityDescriptor"/>
@@ -30,19 +32,16 @@
         <xsl:choose>
             <xsl:when test=".//mdui:DisplayName">
                 <xsl:call-template name="getString">
-                    <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//mdui:DisplayName"/>
                 </xsl:call-template>
             </xsl:when>
             <xsl:when test=".//md:ServiceName">
                 <xsl:call-template name="getString">
-                    <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//md:ServiceName"/>
                 </xsl:call-template>
             </xsl:when>
             <xsl:when test=".//md:OrganizationDisplayName">
                 <xsl:call-template name="getString">
-                    <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//md:OrganizationDisplayName"/>
                 </xsl:call-template>
             </xsl:when>
@@ -64,7 +63,6 @@
         <xsl:if test=".//mdui:Keywords">
                 <xsl:text>,"keywords": "</xsl:text>
                 <xsl:call-template name="getString">
-                    <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//mdui:Keywords/text()"/>
                 </xsl:call-template>
                 <xsl:text>"</xsl:text>
@@ -72,7 +70,6 @@
         <xsl:if test=".//mdui:Logo">
                 <xsl:text>,"icon": "</xsl:text>
                 <xsl:call-template name="getString">
-                    <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//mdui:Logo/text()"/>
                 </xsl:call-template>
                 <xsl:text>"</xsl:text>
@@ -80,7 +77,6 @@
         <xsl:if test=".//mdui:Description">
                 <xsl:text>,"descr": "</xsl:text>
                 <xsl:call-template name="getString">
-                    <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//mdui:Description"/>
                 </xsl:call-template>
                 <xsl:text>"</xsl:text>
@@ -88,7 +84,6 @@
         <xsl:if test=".//mdui:PrivacyStatementURL">
                 <xsl:text>,"psu": "</xsl:text>
                 <xsl:call-template name="getString">
-                    <xsl:with-param name="preflang">en</xsl:with-param>
                     <xsl:with-param name="path" select=".//mdui:PrivacyStatementURL"/>
                 </xsl:call-template>
                 <xsl:text>"</xsl:text>
@@ -178,7 +173,6 @@
 
     <xsl:template name="getString">
         <xsl:param name="path"/>
-        <xsl:param name="preflang"/>
         <xsl:variable name="str" select="$path"/>
         <xsl:choose>
             <xsl:when test="$str[lang($preflang)]">

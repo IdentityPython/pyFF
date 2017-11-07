@@ -675,7 +675,7 @@ class MDServer(object):
                                 p.text = c_txt
                         xml = dumptree(t, xml_declaration=False).decode('utf-8')
                         return render_template("entity.html",
-                                               headline=self.md.display(entity).strip(),
+                                               headline=self.md.display(entity, i18n.detect_locales()).strip(),
                                                subheading=entity.get('entityID'),
                                                entity_id=entity.get('entityID'),
                                                content=xml)

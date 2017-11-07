@@ -9,6 +9,9 @@
                 xmlns:html="http://www.w3.org/1999/xhtml">
 
     <xsl:output method="html" omit-xml-declaration="yes" encoding="UTF-8"/>
+
+    <xsl:param name="preflang" select="'en'" />
+
     <xsl:template match="md:EntityDescriptor">
         <html:div>
             <html:div class="modal fade" id="entity_metadata">
@@ -345,8 +348,8 @@
         <xsl:param name="path"/>
         <xsl:variable name="str" select="$path"/>
         <xsl:choose>
-            <xsl:when test="$str[lang('en')]">
-                <xsl:value-of select="$str[lang('en')]"/>
+            <xsl:when test="$str[lang($preflang)]">
+                <xsl:value-of select="$str[lang($preflang)]"/>
             </xsl:when>
             <xsl:when test="$str">
                 <xsl:value-of select="$str[1]"/>

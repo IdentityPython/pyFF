@@ -34,6 +34,7 @@ from .utils import schema, check_signature, filter_lang, root, duration2timedelt
     iter_entities, validate_document, load_url, iso2datetime, xml_error, find_entity
 from .constants import NS, NF_URI, EVENT_DROP_ENTITY, EVENT_IMPORT_FAIL
 
+import i18n
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -201,7 +202,7 @@ class MDRepository(Observable):
         if e is None:
             return dict()
 
-        title, descr = self.ext_display(e)
+        title, descr = self.ext_display(e, i18n.detect_locales())
         entity_id = e.get('entityID')
 
         d = dict(title=title,
@@ -246,7 +247,7 @@ class MDRepository(Observable):
         if e is None:
             return dict()
 
-        title, descr = self.ext_display(e)
+        title, descr = self.ext_display(e, i18n.detect_locales())
         entity_id = e.get('entityID')
         d = dict(title=title,
                  descr=descr,
