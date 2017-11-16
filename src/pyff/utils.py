@@ -282,11 +282,13 @@ def parse_date(s):
         return datetime.now()
     return datetime(*parsedate(s)[:6])
 
+def cache_filename(uri):
+    return "{}.cache.{}".format(os.getpid(), hashlib.md5(uri).hexdigest())
 
 @retry((IOError, httplib2.HttpLib2Error))
 def load_url(url, enable_cache=True, timeout=60):
     start_time = clock()
-    cache = httplib2.FileCache(".cache")
+    cache = httplib2.FileCache(config.remote_url_cache_dir, safe=cache_filename)
     headers = {'Accept': 'application/samlmetadata+xml,text/xml,application/xml'}
     if not enable_cache:
         headers['cache-control'] = 'no-cache'

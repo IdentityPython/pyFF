@@ -64,7 +64,7 @@ import cherrypy
 from cherrypy._cpdispatch import Dispatcher
 from cherrypy._cperror import NotFound, HTTPError
 from cherrypy.lib import cptools
-from cherrypy.process.plugins import Monitor, SimplePlugin
+from cherrypy.process.plugins import Daemonizer, Monitor, PIDFile, SimplePlugin
 from cherrypy.lib import caching
 from simplejson import dumps
 from pyff.constants import ATTRS, EVENT_REPOSITORY_LIVE, config
@@ -81,9 +81,14 @@ from lxml import etree
 from pyff import __version__ as pyff_version
 from pyff.store import MemoryStore, RedisStore
 from publicsuffix import PublicSuffixList
-import i18n
+import pyff.i18n
+import atexit
+import string
+import yaml
+from yaml import YAMLError
+from yaml.scanner import ScannerError
 
-_ = i18n.language.ugettext
+_ = pyff.i18n.language.ugettext
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
@@ -503,7 +508,11 @@ class MDServer(object):
 
         def __getitem__(self, item):
             try:
-                return cptools.accept(item, debug=True)
+                if config.loglevel == logging.DEBUG:
+                    debug_flag = True
+                else:
+                    debug_flag = False
+                return cptools.accept(item, debug=debug_flag)
             except HTTPError:
                 return False
 
@@ -698,22 +707,74 @@ class MDServer(object):
                         return r
         raise NotFound()
 
+SHORT_OPTS = 'hP:p:H:CfaA:l:Rm:'
+LONG_OPTS = [
+    'help',
+    'loglevel=',
+    'log=',
+    'access-log=',
+    'error-log=',
+    'port=', 
+    'host=', 
+    'no-caching', 
+    'autoreload', 
+    'frequency=', 
+    'modules=',
+    'alias=',
+    'dir=',
+    'version',
+    'proxy',
+    'allow_shutdown',
+    'remote-url-cache-dir='
+    ]
 
-def main():
+def parse_command_line(command_line=sys.argv[1:]):
     """
-    The main entrypoint for the pyffd command.
     """
     try:
-        opts, args = getopt.getopt(sys.argv[1:],
-                                   'hP:p:H:CfaA:l:Rm:',
-                                   ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
-                                    'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
-                                    'alias=', 'dir=', 'version', 'proxy', 'allow_shutdown'])
+        opts, args = getopt.getopt(command_line, SHORT_OPTS, LONG_OPTS)
     except getopt.error, msg:
         print msg
         print __doc__
         sys.exit(2)
 
+    return (opts, args)
+
+def parse_config_file():
+    """
+    """
+    config_file = "/etc/pyff/pyff_config.yaml"
+    if 'PYFF_CONIFG' in os.environ:
+        config_file = os.environ['PYFF_CONFIG']
+    
+    try:
+        with open(config_file, 'r') as f:
+            pyff_config = yaml.safe_load(f)
+    except IOError as e:
+        msg = "Unable to open pyFF YAML configuration file: {}".format(e)
+        raise RuntimeException(msg)
+    except (YAMLError,ScannerError) as e:
+        msg = "Error parsing configuration file {} : {}".format(pyff_config_file, e)
+        raise RuntimeException(msg)
+
+    command_line = []
+
+    for long_opt in LONG_OPTS:
+        opt = string.rstrip(long_opt, '=')
+        if opt in pyff_config:
+            if '=' in long_opt:
+                command_line.append('--{}={}'.format(opt, pyff_config[opt]))
+            else:
+                if pyff_config[opt]:
+                    command_line.append('--{}'.format(opt))
+
+    command_line.extend(pyff_config['pipes'])
+
+    return parse_command_line(command_line)
+
+def configure(opts):
+    """
+    """
     if config.store is None:
         config.store = MemoryStore()
 
@@ -776,6 +837,8 @@ def main():
             elif o in '--version':
                 print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__)
                 sys.exit(0)
+            elif o in '--remote-url-cache-dir':
+                config.remote_url_cache_dir=a
             else:
                 raise ValueError("Unknown option '%s'" % o)
 
@@ -784,23 +847,11 @@ def main():
         print __doc__
         sys.exit(3)
 
-    engine = cherrypy.engine
-    plugins = cherrypy.process.plugins
-
-    if config.daemonize:
-        cherrypy.config.update({'environment': 'production'})
-        cherrypy.config.update({'log.screen': False})
-        if config.error_log is None:
-            config.error_log = 'syslog:daemon'
-        if config.access_log is None:
-            config.access_log = 'syslog:daemon'
-        plugins.Daemonizer(engine).subscribe()
-
+def MDRootFactory(pipes):
+    """
+    """
     if config.base_dir is not None:
-        DirPlugin(engine, config.base_dir).subscribe()
-
-    if config.pid_file:
-        plugins.PIDFile(engine, config.pid_file).subscribe()
+        DirPlugin(cherrypy.engine, config.base_dir).subscribe()
 
     def _b64(p):
         if p:
@@ -820,7 +871,7 @@ def main():
     for mn in config.modules:
         importlib.import_module(mn)
 
-    server = MDServer(pipes=args, observers=observers)
+    server = MDServer(pipes=pipes, observers=observers)
 
     pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
     cfg = {
@@ -860,13 +911,41 @@ def main():
             'allow_shutdown': config.allow_shutdown
         }
     }
+
     cherrypy.config.update(cfg)
 
-    if config.error_log is not None:
-        cherrypy.config.update({'log.screen': False})
+    return (MDRoot(server), cfg)
 
-    root = MDRoot(server)
-    app = cherrypy.tree.mount(root, config=cfg)
+def main():
+    """
+    """
+    # Parse the command line for options and list of pipes.
+    opts, pipes = parse_command_line()
+
+    # Use options to set the config singleton.
+    configure(opts)
+
+    # Run as daemon if so configured.
+    if config.daemonize:
+        cherrypy.config.update({'environment': 'production'})
+        cherrypy.config.update({'log.screen': False})
+        if config.error_log is None:
+            config.error_log = 'syslog:daemon'
+        if config.access_log is None:
+            config.access_log = 'syslog:daemon'
+        Daemonizer(cherrypy.engine).subscribe()
+    
+    # Write PID file if so configured.
+    if config.pid_file:
+        PIDFile(cherrypy.engine, config.pid_file).subscribe()
+
+    # Create the pyFF MDX web application.
+    webapp, cfg = MDRootFactory(pipes)
+
+    # Mount the web application.
+    app = cherrypy.tree.mount(webapp, config=cfg)
+
+    # Use syslog for error logging if so configured.
     if config.error_log is not None:
         if config.error_log.startswith('syslog:'):
             facility = config.error_log[7:]
@@ -876,6 +955,10 @@ def main():
         else:
             cherrypy.config.update({'log.error_file': config.error_log})
 
+        # If an error log is configured do not log to console.
+        cherrypy.config.update({'log.screen': False})
+
+    # Use syslog for access logging if so configured.
     if config.access_log is not None:
         if config.access_log.startswith('syslog:'):
             facility = config.error_log[7:]
@@ -885,17 +968,75 @@ def main():
         else:
             cherrypy.config.update({'log.access_file': config.access_log})
 
+    # Set the logging level for the pyFF MDX application.
     app.log.error_log.setLevel(config.loglevel)
 
-    engine.signals.subscribe()
+    # Enable signal handling.
+    cherrypy.engine.signals.subscribe()
+
+    # Start the server and process requests until signalled to stop.
     try:
-        engine.start()
+        cherrypy.engine.start()
     except Exception, ex:
         logging.error(ex)
         sys.exit(1)
     else:
-        engine.block()
+        cherrypy.engine.block()
 
-
-if __name__ == "__main__":
+if __name__ == 'pyff.mdx':
+    pass
+elif __name__ == "__main__":
     main()
+else:
+    # Prepare WSGI application.
+
+    # Send anything written to stdout to stderr instead.
+    sys.stdout = sys.stderr
+
+    # Register a proper stop of the engine for when the process exits.
+    atexit.register(cherrypy.engine.stop())
+
+    # Import appropriate configurations for running CherryPy inside of
+    # another WSGI server. This sets the following:
+    # 'engine.autoreload.on': False,
+    # 'checker.on': False,
+    # 'tools.log_headers.on': False,
+    # 'request.show_tracebacks': False,
+    # 'request.show_mismatched_params': False,
+    # 'log.screen': False,
+    # 'engine.SIGHUP': None,
+    # 'engine.SIGTERM': None,
+    cherrypy.config.update({'environment' : 'embedded'})
+
+    # Parse the configuration file for options and list of pipes.
+    opts, pipes = parse_config_file()
+
+    # Use options to set the config singleton.
+    configure(opts)
+
+    # Create the pyFF MDX web application.
+    webapp, cfg = MDRootFactory(pipes)
+
+    # Since we are not using the CherryPy built-in HTTP server.
+    cherrypy.server.unsubscribe()
+
+    # Create the WSGI callable.
+    application = cherrypy.tree.mount(webapp, config=cfg)
+
+    # The CherryPy engine must be started.
+    cherrypy.engine.start()
+
+    # Set the logging level for the pyFF MDX application.
+    application.log.error_log.setLevel(config.loglevel)
+
+    # The WSGI framework is responsible for access logging.
+    application.log.access_file = None
+
+    # Disable logging to console at application level.
+    application.log.screen = False
+
+    # Enable WSGI logging to wsgi.errors.
+    application.log.wsgi = True
+
+    # Since logging to wsgi.error is enabled do not propagate.
+    application.log.access_log.propagate = False    

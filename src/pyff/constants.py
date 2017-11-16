@@ -60,6 +60,7 @@ class Config(object):
     store = pyconfig.setting("pyff.store", None)
     allow_shutdown = pyconfig.setting("pyff.allow_shutdown", False)
     modules = pyconfig.setting("pyff.modules", [])
+    remote_url_cache_dir = pyconfig.setting("pyff.remote_url_cache_dir", ".cache")
 
 
 config = Config()
