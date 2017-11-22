@@ -1,6 +1,6 @@
 - load:
   - https://wayf.aco.net/aconet-metadata.xml
-  - https://ds.aaf.edu.au/distribution/metadata/metadata.aaf.signed.complete.xml
+  - https://md.aaf.edu.au/aaf-metadata.xml
   - http://metadata.aai.switch.ch/metadata.switchaai.xml
   - http://www.carsi.edu.cn/carsimetadata/carsifed-metadata.xml
   - https://www.aai.dfn.de/fileadmin/metadata/DFN-AAI-metadata.xml
