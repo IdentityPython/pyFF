@@ -4,7 +4,7 @@
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://wayf.aco.net/aconet-metadata.xml"/>
   </XRD>
   <XRD>
-    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://ds.aaf.edu.au/distribution/metadata/metadata.aaf.signed.complete.xml"/>
+    <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://md.aaf.edu.au/aaf-metadata.xml"/>
   </XRD>
   <XRD>
     <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://metadata.aai.switch.ch/metadata.switchaai.xml"/>
