@@ -247,7 +247,7 @@ class MemoryStore(StoreBase):
             return self.entities.values()
         if '+' in key:
             key = key.strip('+')
-            #log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
+            # log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
             hits = None
             for f in key.split("+"):
                 f = f.strip()

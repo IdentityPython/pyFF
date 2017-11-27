@@ -24,6 +24,7 @@ def pipe(*args, **kwargs):
     Register the decorated function in the pyff pipe registry
     :param name: optional name - if None, use function name
     """
+
     def deco_none(f):
         return f
 
@@ -55,13 +56,13 @@ class PluginsRegistry(dict):
     Referencing this function as an entry_point using something = module:the_somethig_func in setup.py allows the
     function to be referenced as 'something' in a pipeline.
     """
-    #def __init__(self):
-        #for entry_point in iter_entry_points('pyff.pipe'):
-        #    if entry_point.name in self:
-        #        log.warn("Duplicate entry point: %s" % entry_point.name)
-        #    else:
-        #        log.debug("Registering entry point: %s" % entry_point.name)
-        #        self[entry_point.name] = entry_point.load()
+    # def __init__(self):
+    #    for entry_point in iter_entry_points('pyff.pipe'):
+    #        if entry_point.name in self:
+    #            log.warn("Duplicate entry point: %s" % entry_point.name)
+    #        else:
+    #            log.debug("Registering entry point: %s" % entry_point.name)
+    #            self[entry_point.name] = entry_point.load()
 
 
 def load_pipe(d):
@@ -113,6 +114,7 @@ class PipelineCallback(object):
     """
 A delayed pipeline callback used as a post for parse_metadata
     """
+
     def __init__(self, entry_point, req):
         self.entry_point = entry_point
         self.plumbing = Plumbing(req.plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
@@ -124,7 +126,7 @@ A delayed pipeline callback used as a post for parse_metadata
             raise ValueError("PipelineCallback must be called with a parse-tree argument")
         try:
             return self.plumbing.process(self.req.md, state={self.entry_point: True}, t=t)
-        except Exception, ex:
+        except Exception as ex:
             traceback.print_exc(ex)
             raise ex
 
@@ -223,6 +225,7 @@ may modify any of the fields.
         """
 The main entrypoint for processing a request pipeline. Calls the inner processor.
 
+
 :param md: The current metadata repository
 :param state: The active request state
 :param t: The active working document
@@ -230,9 +233,9 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
         """
         if not state:
             state = dict()
-        #req = Plumbing.Request(self, md, t, state=state)
-        #self._process(req)
-        #return req.t
+        # req = Plumbing.Request(self, md, t, state=state)
+        # self._process(req)
+        # return req.t
         return Plumbing.Request(self, md, t, state=state).process(self)
 
     def _process(self, req):
@@ -256,7 +259,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
                     req.t = ot
                 if req.done:
                     break
-            except PipeException, ex:
+            except PipeException as ex:
                 log.error(ex)
                 break
         return req.t
@@ -278,6 +281,3 @@ This uses the resource framework to locate the yaml file which means that pipeli
     pipeline = yaml.safe_load(ystr)
 
     return Plumbing(pipeline=pipeline, pid=pid)
-
-
-

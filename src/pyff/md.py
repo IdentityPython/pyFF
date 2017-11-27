@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """
 pyFF is the SAML metadata aggregator
 
@@ -29,9 +31,9 @@ def main():
     args = None
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'hRm', ['help', 'loglevel=', 'logfile=', 'version', 'module'])
-    except getopt.error, msg:
-        print msg
-        print __doc__
+    except getopt.error as msg:
+        print(msg)
+        print(__doc__)
         sys.exit(2)
 
     if config.store is None:
@@ -45,7 +47,7 @@ def main():
 
     for o, a in opts:
         if o in ('-h', '--help'):
-            print __doc__
+            print(__doc__)
             sys.exit(0)
         elif o in '--loglevel':
             config.loglevel = getattr(logging, a.upper(), None)
@@ -59,7 +61,7 @@ def main():
         elif o in ('-m', '--module'):
             config.modules.append(a)
         elif o in '--version':
-            print "pyff version %s" % __version__
+            print("pyff version {}".format(__version__))
             sys.exit(0)
 
     log_args = {'level': config.loglevel}
@@ -76,7 +78,7 @@ def main():
         for p in args:
             plumbing(p).process(md, state={'batch': True, 'stats': {}})
         sys.exit(0)
-    except Exception, ex:
+    except Exception as ex:
         if logging.getLogger().isEnabledFor(logging.DEBUG):
             traceback.print_exc()
         logging.error(ex)

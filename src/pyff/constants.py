@@ -9,7 +9,6 @@ import logging
 
 __author__ = 'leifj'
 
-
 NF_URI = "urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
 
 NS = dict(md="urn:oasis:names:tc:SAML:2.0:metadata",

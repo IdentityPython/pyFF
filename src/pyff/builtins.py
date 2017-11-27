@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """Package that contains the basic set of pipes - functions that can be used to put together a processing pipeling
 for pyFF.
 """
@@ -46,9 +48,9 @@ Print a representation of the entities set on stdout. Useful for testing.
 :return: None
     """
     if req.t is not None:
-        print dumptree(req.t)
+        print(dumptree(req.t))
     else:
-        print "<EntitiesDescriptor xmlns=\"%s\"/>" % NS['md']
+        print("<EntitiesDescriptor xmlns=\"{}\"/>".format(NS['md']))
 
 
 @pipe
@@ -76,7 +78,7 @@ break out of the pipeline, use break instead.
         code = req.args.get('code', 0)
         msg = req.args.get('message', None)
         if msg is not None:
-            print msg
+            print(msg)
     sys.exit(code)
 
 
@@ -146,7 +148,7 @@ active document. To avoid this do a select before your fork, thus:
     if req.t is not None:
         nt = deepcopy(req.t)
 
-    ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
+    ip = Plumbing(pipeline=req.args, pid="{}.fork".format(req.plumbing.pid))
     # ip.process(req.md,t=nt)
     ireq = Plumbing.Request(ip, req.md, nt)
     ip._process(ireq)
@@ -237,7 +239,7 @@ is equivalent to
 
     """
     # req.process(Plumbing(pipeline=req.args, pid="%s.pipe" % req.plumbing.pid))
-    ot = Plumbing(pipeline=req.args, pid="%s.pipe" % req.plumbing.id)._process(req)
+    ot = Plumbing(pipeline=req.args, pid="{}.pipe".format(req.plumbing.id))._process(req)
     req.done = False
     return ot
 
@@ -291,7 +293,7 @@ Dumps the working document on stdout. Useful for testing.
         raise PipeException("Your pipeline is missing a select statement.")
 
     for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS, smart_strings=False):
-        print e.get('entityID')
+        print(e.get('entityID'))
     return req.t
 
 
@@ -321,7 +323,7 @@ Publish the working document in XML form.
 
     try:
         validate_document(req.t)
-    except DocumentInvalid, ex:
+    except DocumentInvalid as ex:
         log.error(ex.error_log)
         raise PipeException("XML schema validation failed")
 
@@ -332,16 +334,16 @@ Publish the working document in XML form.
         output_file = req.args[0]
     if output_file is not None:
         output_file = output_file.strip()
-        log.debug("publish %s" % output_file)
+        log.debug("publish {}".format(output_file))
         resource_name = output_file
         m = re.match(FILESPEC_REGEX, output_file)
         if m:
             output_file = m.group(1)
             resource_name = m.group(2)
-        log.debug("output_file=%s, resource_name=%s" % (output_file, resource_name))
+        log.debug("output_file={}, resource_name={}".format(output_file, resource_name))
         out = output_file
         if os.path.isdir(output_file):
-            out = "%s.xml" % os.path.join(output_file, req.id)
+            out = "{}.xml".format(os.path.join(output_file, req.id))
         safe_write(out, dumptree(req.t))
         req.md.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
@@ -364,7 +366,7 @@ def loadstats(req, *opts):
             buf = StringIO()
             yaml.dump(metadata, buf)
             _stats = buf.getvalue()
-    except Exception, ex:
+    except Exception as ex:
         log.error(ex)
 
     log.info("pyff loadstats: %s" % _stats)
@@ -438,7 +440,7 @@ Defaults are marked with (*)
     opts['fail_on_error'] = bool(strtobool(opts['fail_on_error']))
     opts['filter_invalid'] = bool(strtobool(opts['filter_invalid']))
 
-    remote = []
+    remotes = []
     for x in req.args:
         x = x.strip()
         log.debug("load parsing '%s'" % x)
@@ -470,29 +472,31 @@ Defaults are marked with (*)
             post = PipelineCallback(params['via'], req)
 
         if "://" in url:
-            log.debug("load %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
-            remote.append((url, params['verify'], params['as'], post))
+            log.debug("load {} verify {} as {} via {}".format(url, params['verify'], params['as'], params['via']))
+            remotes.append((url, params['verify'], params['as'], post))
         elif os.path.exists(url):
             if os.path.isdir(url):
-                log.debug("directory %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
+                log.debug("directory {} verify {} as {} via {}".format(url, params['verify'], params['as'], params['via']))
                 req.md.load_dir(url, url=params['as'], validate=opts['validate'], post=post,
                                 fail_on_error=opts['fail_on_error'], filter_invalid=opts['filter_invalid'])
             elif os.path.isfile(url):
-                log.debug("file %s verify %s as %s via %s" % (url, params['verify'], params['as'], params['via']))
-                remote.append(("file://%s" % url, params['verify'], params['as'], post))
+                log.debug("file {} verify {} as {} via {}".format(url, params['verify'], params['as'], params['via']))
+                remotes.append(("file://%s" % url, params['verify'], params['as'], post))
             else:
-                error = "Unknown file type for load: '%s'" % url
+                error = "Unknown file type for load: '{}'".format(url)
                 if opts['fail_on_error']:
                     raise PipeException(error)
                 log.error(error)
         else:
-            error = "Don't know how to load '%s' as %s verify %s via %s (file does not exist?)" % (
-            url, params['as'], params['verify'], params['via'])
+            error = "Don't know how to load '{}' as {} verify {} via {} (file does not exist?)".format(url,
+                                                                                                       params['as'],
+                                                                                                       params['verify'],
+                                                                                                       params['via'])
             if opts['fail_on_error']:
                 raise PipeException(error)
             log.error(error)
 
-    req.md.fetch_metadata(remote, **opts)
+    req.md.fetch_metadata(remotes, **opts)
 
 
 def _select_args(req):
@@ -802,16 +806,16 @@ Display statistics about the current working document.
     - stats
 
     """
-    print "---"
-    print "total size:     %d" % req.md.store.size()
+    print ("---")
+    print ("total size:     {:d}".format(req.md.store.size()))
     if not hasattr(req.t, 'xpath'):
         raise PipeException("Unable to call stats on non-XML")
 
     if req.t is not None:
-        print "selected:       %d" % len(req.t.xpath("//md:EntityDescriptor", namespaces=NS))
-        print "          idps: %d" % len(req.t.xpath("//md:EntityDescriptor[md:IDPSSODescriptor]", namespaces=NS))
-        print "           sps: %d" % len(req.t.xpath("//md:EntityDescriptor[md:SPSSODescriptor]", namespaces=NS))
-    print "---"
+        print ("selected:       {:d}".format(len(req.t.xpath("//md:EntityDescriptor", namespaces=NS))))
+        print ("          idps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:IDPSSODescriptor]", namespaces=NS))))
+        print ("           sps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:SPSSODescriptor]", namespaces=NS))))
+    print ("---")
     return req.t
 
 
@@ -888,7 +892,7 @@ user-supplied file. The rest of the keyword arguments are made available as stri
     try:
         return xslt_transform(req.t, stylesheet, params)
         # log.debug(ot)
-    except Exception, ex:
+    except Exception as ex:
         traceback.print_exc(ex)
         raise ex
 
@@ -901,6 +905,7 @@ Validate the working document
 :param req: The request
 :param opts: Not used
 :return: The unmodified tree
+
 
 Generate an exception unless the working tree validates. Validation is done automatically during publication and
 loading of metadata so this call is seldom needed.
@@ -1052,13 +1057,13 @@ HTML.
                                                 "certificate about to expire",
                                                 "%s expires in %s" % (cert.getSubject(), dt))
                                 log.warn("%s expires in %s" % (eid, dt))
-                        except ValueError, ex:
+                        except ValueError as ex:
                             req.md.annotate(entity_elt,
                                             "certificate-error",
                                             "certificate has unknown expiration time",
                                             "%s unknown expiration time %s" % (cert.getSubject(), notafter))
 
-            except Exception, ex:
+            except Exception as ex:
                 log.error(ex)
 
 

@@ -15,7 +15,8 @@ from time import gmtime, strftime, clock
 from traceback import print_exc
 from urlparse import urlparse
 from itertools import chain
-
+import urllib
+from markupsafe import Markup
 import xmlsec
 import cherrypy
 import httplib2
@@ -183,7 +184,7 @@ def schema():
             parser.resolvers.add(ResourceResolver())
             st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
             thread_data.schema = etree.XMLSchema(st)
-        except etree.XMLSchemaParseError, ex:
+        except etree.XMLSchemaParseError as ex:
             log.error(xml_error(ex.error_log))
             raise ex
     return thread_data.schema
@@ -226,13 +227,13 @@ def safe_write(fn, data):
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
             os.rename(tmpn, fn)
             return True
-    except Exception, ex:
+    except Exception as ex:
         log.error(ex)
     finally:
         if tmpn is not None and os.path.exists(tmpn):
             try:
                 os.unlink(tmpn)
-            except Exception, ex:
+            except Exception as ex:
                 log.warn(ex)
     return False
 
@@ -241,10 +242,6 @@ site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 env = Environment(loader=PackageLoader(__package__, 'templates'), extensions=['jinja2.ext.i18n'])
 env.install_gettext_callables(i18n.language.gettext, i18n.language.ngettext, newstyle=True)
 
-import urllib
-from markupsafe import Markup
-
-
 def urlencode_filter(s):
     if type(s) == 'Markup':
         s = s.unescape()
@@ -252,11 +249,13 @@ def urlencode_filter(s):
     s = urllib.quote_plus(s)
     return Markup(s)
 
-def truncate_filter(s,max_len=10):
+
+def truncate_filter(s, max_len=10):
     if len(s) > max_len:
-        return s[0:max_len]+"..."
+        return s[0:max_len] + "..."
     else:
         return s
+
 
 env.filters['u'] = urlencode_filter
 env.filters['truncate'] = truncate_filter
@@ -318,7 +317,7 @@ def load_url(url, enable_cache=True, timeout=60):
         log.debug("about to request %s" % url)
         try:
             resp, content = h.request(url, headers=headers)
-        except Exception, ex:
+        except Exception as ex:
             print_exc(ex)
             raise ex
         log.debug("got status: %d" % resp.status)
@@ -367,7 +366,6 @@ def duration2timedelta(period):
 
 
 def filter_lang(elts, langs=None):
-
     if langs is None or type(langs) is not list:
         langs = ['en']
 
@@ -398,7 +396,7 @@ def xslt_transform(t, stylesheet, params=None):
     transform = thread_data.xslt[stylesheet]
     try:
         return transform(t, **params)
-    except etree.XSLTApplyError, ex:
+    except etree.XSLTApplyError as ex:
         for entry in transform.error_log:
             log.error('\tmessage from line %s, col %s: %s' % (entry.line, entry.column, entry.message))
             log.error('\tdomain: %s (%d)' % (entry.domain_name, entry.domain))
@@ -460,8 +458,8 @@ def hex_digest(data, hn='sha1'):
     return m.hexdigest()
 
 
-def parse_xml(io, base_url=None):
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
+def parse_xml(source, base_url=None):
+    return etree.parse(source, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
 
 
 class EntitySet(object):
@@ -585,16 +583,28 @@ def avg_domain_distance(d1, d2):
     for a in d1.split(';'):
         for b in d2.split(';'):
             d = ddist(a, b)
-            #log.debug("ddist %s %s -> %d" % (a, b, d))
+            # log.debug("ddist %s %s -> %d" % (a, b, d))
             dd += d
             n += 1
     return int(dd / n)
 
 
+def sync_nsmap(nsmap, elt):
+    fix = []
+    for ns in elt.nsmap:
+        if ns not in nsmap:
+            nsmap[ns] = elt.nsmap[ns]
+        elif nsmap[ns] != elt.nsmap[ns]:
+            fix.append(ns)
+        else:
+            pass
+
+
 # semantics copied from https://github.com/lordal/md-summary/blob/master/md-summary
 # many thanks to Anders Lordahl & Scotty Logan for the idea
 def guess_entity_software(e):
-    for elt in chain(e.findall(".//{%s}SingleSignOnService" % NS['md']), e.findall(".//{%s}AssertionConsumerService" % NS['md'])):
+    for elt in chain(e.findall(".//{%s}SingleSignOnService" % NS['md']),
+                     e.findall(".//{%s}AssertionConsumerService" % NS['md'])):
         location = elt.get('Location')
         if location:
             if 'Shibboleth.sso' in location \

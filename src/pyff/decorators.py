@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """
 Various decorators used in pyFF.
 """
@@ -37,12 +39,12 @@ def retry(ex, tries=4, delay=3, backoff=2, logger=log):
             while mtries > 1:
                 try:
                     return f(*args, **kwargs)
-                except ex, e:
-                    msg = "%s, Retrying in %d seconds..." % (str(e), mdelay)
+                except ex as e:
+                    msg = "{}, Retrying in {:d} seconds...".format(str(e), mdelay)
                     if logger:
                         logger.warn(msg)
                     else:
-                        print msg
+                        print(msg)
                     time.sleep(mdelay)
                     mtries -= 1
                     mdelay *= backoff
@@ -67,7 +69,7 @@ def deprecated(logger=log):
             if logger:
                 logger.warn(msg)
             else:
-                print msg
+                print(msg)
 
             return func(*args, **kwargs)
 
@@ -161,5 +163,3 @@ def cached(typed=False, ttl=None, hash_key=None):
         return functools.update_wrapper(wrapper, func)
 
     return decorating
-
-

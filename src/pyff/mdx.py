@@ -122,7 +122,7 @@ class MDUpdate(Monitor):
 
             if hasattr(self.server.md.store, 'periodic'):
                 self.server.md.store.periodic(stats)
-        except Exception, ex:
+        except Exception as ex:
             log.error(ex.message)
         finally:
             if locked:
@@ -709,9 +709,9 @@ def main():
                                    ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
                                     'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
                                     'alias=', 'dir=', 'version', 'proxy', 'allow_shutdown'])
-    except getopt.error, msg:
-        print msg
-        print __doc__
+    except getopt.error as msg:
+        print(msg)
+        print(__doc__)
         sys.exit(2)
 
     if config.store is None:
@@ -729,7 +729,7 @@ def main():
     try:  # pragma: nocover
         for o, a in opts:
             if o in ('-h', '--help'):
-                print __doc__
+                print(__doc__)
                 sys.exit(0)
             elif o == '--loglevel':
                 config.loglevel = getattr(logging, a.upper(), None)
@@ -774,14 +774,14 @@ def main():
             elif o in ('-m', '--module'):
                 config.modules.append(a)
             elif o in '--version':
-                print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__)
+                print("pyffd version {} (cherrypy version {})".format(pyff_version, cherrypy.__version__))
                 sys.exit(0)
             else:
                 raise ValueError("Unknown option '%s'" % o)
 
-    except Exception, ex:
-        print ex
-        print __doc__
+    except Exception as ex:
+        print(ex)
+        print(__doc__)
         sys.exit(3)
 
     engine = cherrypy.engine
@@ -890,7 +890,7 @@ def main():
     engine.signals.subscribe()
     try:
         engine.start()
-    except Exception, ex:
+    except Exception as ex:
         logging.error(ex)
         sys.exit(1)
     else:

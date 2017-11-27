@@ -72,7 +72,7 @@ class MDRepository(Observable):
         if not isinstance(self.min_cache_ttl, int):
             try:
                 self.min_cache_ttl = duration2timedelta(self.min_cache_ttl).total_seconds()
-            except Exception, ex:
+            except Exception as ex:
                 log.error(ex)
                 self.min_cache_ttl = 300
         self.respect_cache_duration = True
@@ -363,8 +363,6 @@ The dict in the list contains three items:
         res.sort(key=operator.itemgetter('title'))
         res.sort(key=operator.itemgetter('ddist'), reverse=True)
 
-        #log.debug("search returning %s" % res)
-
         if page is not None:
             total = len(res)
             begin = (page - 1) * page_limit
@@ -544,7 +542,7 @@ and verified.
                                     max_tries=max_tries,
                                     validate=validate,
                                     fail_on_error=fail_on_error,
-                                    filter_invalid=filter_invalid )
+                                    filter_invalid=filter_invalid)
 
     def _fetch_metadata(self, resources, max_workers=5, timeout=120, max_tries=5, validate=False, fail_on_error=False, filter_invalid=True):
         tries = dict()
@@ -554,7 +552,7 @@ and verified.
 
             try:
                 resource = load_url(rurl, timeout=timeout, enable_cache=enable_cache)
-            except Exception, ex:
+            except Exception as ex:
                 raise MetadataException(ex, "Exception fetching '%s': %s" % (rurl, str(ex)) )
             if not resource.result:
                 raise MetadataException("error fetching '%s'" % rurl)
@@ -728,7 +726,7 @@ and verified.
                 else:  # all or nothing
                     try:
                         validate_document(t)
-                    except DocumentInvalid, ex:
+                    except DocumentInvalid as ex:
                         raise MetadataException("schema validation failed: [%s] '%s': %s" %
                                                 (base_url, source, xml_error(ex.error_log, m=base_url)))
 
@@ -739,7 +737,7 @@ and verified.
                 if post is not None:
                     t = post(t)
 
-        except Exception, ex:
+        except Exception as ex:
             if fail_on_error:
                 raise ex
             traceback.print_exc(ex)
@@ -785,7 +783,7 @@ starting with '.' are excluded.
                         entities.extend(entities_list(t))  # local metadata is assumed to be ok
                         for (eid, error) in validation_errors.iteritems():
                             log.error(error)
-                    except Exception, ex:
+                    except Exception as ex:
                         if fail_on_error:
                             raise MetadataException('Error parsing "%s": %s' % (fn, str(ex)))
                         log.error(ex)
@@ -825,7 +823,6 @@ starting with '.' are excluded.
 
         log.debug("calling store lookup %s" % member)
         return self.store.lookup(member)
-
 
     def lookup(self, member, xp=None):
         """
@@ -883,8 +880,6 @@ fails an empty list is returned.
 Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
         """
 
-        #log.debug("entities: %s" % entities)
-
         if lookup_fn is None:
             lookup_fn = self.lookup
 
@@ -925,7 +920,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         if validate:
             try:
                 validate_document(t)
-            except DocumentInvalid, ex:
+            except DocumentInvalid as ex:
                 log.debug(xml_error(ex.error_log))
                 raise MetadataException("XML schema validation failed: %s" % name)
         return t
