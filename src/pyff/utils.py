@@ -517,10 +517,10 @@ def find_merge_strategy(strategy_name):
 
 def entities_list(t=None):
     """
-        :param t: An EntitiesDescriptor or EntityDescriptor element
+    :param t: An EntitiesDescriptor or EntityDescriptor element
 
-        Returns the list of contained EntityDescriptor elements
-        """
+    Returns the list of contained EntityDescriptor elements
+    """
     if t is None:
         return []
     elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
