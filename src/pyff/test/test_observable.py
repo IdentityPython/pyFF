@@ -30,5 +30,5 @@ class TestObservable(TestCase):
         o = TestObservable.Foo()
         o.subscribe(_cb)
         o.subscribe(debug_observer)
-        o.fire(a=1,myself=o)
+        o.event(a=1, myself=o)
         assert o.done
