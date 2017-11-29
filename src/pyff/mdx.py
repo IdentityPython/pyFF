@@ -507,7 +507,7 @@ class MDServer(object):
         path = kwargs.get('path', None)
         content_type = kwargs.get('content_type', None)
 
-        log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
+        #log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
 
         def _d(x, do_split=True):
             if x is not None:

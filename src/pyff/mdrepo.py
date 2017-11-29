@@ -7,15 +7,7 @@ This is the implementation of the active repository of SAML metadata. The 'local
 from __future__ import absolute_import, unicode_literals
 
 from .stats import get_metadata_info
-
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
-
 import operator
-
 from lxml import etree
 import ipaddr
 from . import merge_strategies
@@ -50,7 +42,7 @@ class MDRepository():
         self.rm.reload()
         store = self.store_class()
         for r in self.rm.walk():
-            if r.t:
+            if r.t is not None:
                 store.update(r.t, tid=r.name)
         self.store = store
 

@@ -204,7 +204,7 @@ may modify any of the fields.
 
             :param pl: The plumbing to run this request through
             """
-            log.debug("Processing pipeline {}".format(pl))
+            log.debug("Processing pipeline... \n{}".format(pl))
             for p in pl.pipeline:
                 cb, opts, name, args = load_pipe(p)
                 # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
@@ -243,7 +243,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
 
         :param req: The request to run through the pipeline
         """
-        log.debug("Processing pipeline {}".format(self.pipeline))
+        log.debug("Processing pipeline... {}".format(self.pipeline))
         for p in self.pipeline:
             try:
                 pipe, opts, name, args = load_pipe(p)
