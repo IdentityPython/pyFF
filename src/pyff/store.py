@@ -10,83 +10,11 @@ from copy import deepcopy
 import re
 from redis import Redis
 
-from pyff.constants import NS, ATTRS
-from pyff.decorators import cached
-from pyff.logs import log
-from pyff.utils import root, dumptree, parse_xml, hex_digest, hash_id, EntitySet, \
-    url2host, subdomains, has_tag, iter_entities, valid_until_ts, guess_entity_software
-
-
-def is_idp(entity):
-    return has_tag(entity, "{%s}IDPSSODescriptor" % NS['md'])
-
-
-def is_sp(entity):
-    return has_tag(entity, "{%s}SPSSODescriptor" % NS['md'])
-
-
-def is_aa(entity):
-    return has_tag(entity, "{%s}AttributeAuthorityDescriptor" % NS['md'])
-
-
-def _domains(entity):
-    domains = [url2host(entity.get('entityID'))]
-    for d in entity.iter("{%s}DomainHint" % NS['mdui']):
-        if d.text not in domains:
-            domains.append(d.text)
-    return domains
-
-
-def with_entity_attributes(entity, cb):
-
-    def _stext(e):
-        if e.text is not None:
-            return e.text.strip()
-
-    for ea in entity.iter("{%s}EntityAttributes" % NS['mdattr']):
-        for a in ea.iter("{%s}Attribute" % NS['saml']):
-            an = a.get('Name', None)
-            if a is not None:
-                values = filter(lambda x: x is not None, [_stext(v) for v in a.iter("{%s}AttributeValue" % NS['saml'])])
-                cb(an, values)
-
-
-def _all_domains_and_subdomains(entity):
-    dlist = []
-    try:
-        for dn in _domains(entity):
-            for sub in subdomains(dn):
-                dlist.append(sub)
-    except ValueError:
-        pass
-    return dlist
-
-
-def entity_attribute_dict(entity):
-    d = {}
-
-    def _u(an, values):
-        d[an] = values
-    with_entity_attributes(entity, _u)
-
-    d[ATTRS['domain']] = _all_domains_and_subdomains(entity)
-
-    roles = d.setdefault(ATTRS['role'], [])
-    if is_idp(entity):
-        roles.append('idp')
-        eca = ATTRS['entity-category']
-        ec = d.setdefault(eca, [])
-        if 'http://refeds.org/category/hide-from-discovery' not in ec:
-            ec.append('http://pyff.io/category/discoverable')
-    if is_sp(entity):
-        roles.append('sp')
-    if is_aa(entity):
-        roles.append('aa')
-
-    if ATTRS['software'] not in d:
-        d[ATTRS['software']] = [guess_entity_software(entity)]
-
-    return d
+from .constants import NS, ATTRS
+from .decorators import cached
+from .logs import log
+from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts
+from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp
 
 
 def _now():
@@ -95,12 +23,8 @@ def _now():
 
 DINDEX = ('sha1', 'sha256', 'null')
 
-
 class StoreBase(object):
     def lookup(self, key):
-        raise NotImplementedError()
-
-    def ready(self):
         raise NotImplementedError()
 
     def clone(self):
@@ -132,7 +56,6 @@ class MemoryStore(StoreBase):
         self.md = dict()
         self.index = dict()
         self.entities = dict()
-        self._ready = False
 
         for hn in DINDEX:
             self.index.setdefault(hn, {})
@@ -157,12 +80,6 @@ class MemoryStore(StoreBase):
 
     def attribute(self, a):
         return self.index.setdefault('attr', {}).setdefault(a, {}).keys()
-
-    def ready(self):
-        return self._ready
-
-    def periodic(self, stats):
-        self._ready = True
 
     def _modify(self, entity, modifier):
 
@@ -268,22 +185,20 @@ class MemoryStore(StoreBase):
 
         m = re.match("^(.+)=(.+)$", key)
         if m:
-            return self._lookup("{%s}%s" % (m.group(1), m.group(2).rstrip("/")))
+            return self._lookup("{%s}%s" % (m.group(1), str(m.group(2)).rstrip("/")))
 
         m = re.match("^{(.+)}(.+)$", key)
         if m:
             res = set()
-            for v in m.group(2).rstrip("/").split(';'):
+            for v in str(m.group(2)).rstrip("/").split(';'):
                 # log.debug("... adding %s=%s" % (m.group(1),v))
                 res.update(self._get_index(m.group(1), v))
             return list(res)
 
-        # log.debug("trying null index lookup %s" % key)
         l = self._get_index("null", key)
         if l:
             return list(l)
 
-        # log.debug("trying main index lookup %s: " % key)
         if key in self.md:
             # log.debug("entities list %s: %s" % (key, self.md[key]))
             lst = []
@@ -304,9 +219,6 @@ class RedisStore(StoreBase):
         ts = _now() + self.default_ttl
         if self.respect_validity:
             return valid_until_ts(relt, ts)
-
-    def ready(self):
-        return True
 
     def reset(self):
         self.rc.flushdb()
@@ -432,7 +344,7 @@ class RedisStore(StoreBase):
             hk = hex_digest(key)
             if not self.rc.exists("%s#members" % hk):
                 self.rc.zunionstore("%s#members" % hk,
-                                    ["{%s}%s#members" % (m.group(1), v) for v in m.group(2).split(';')], 'min')
+                                    ["{%s}%s#members" % (m.group(1), v) for v in str(m.group(2)).split(';')], 'min')
                 self.rc.expire("%s#members" % hk, 30)  # XXX bad juju - only to keep clients from hammering
             return self.lookup(hk)
         elif self.rc.exists("%s#alias" % key):

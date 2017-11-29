@@ -5,6 +5,13 @@ import syslog
 
 import cherrypy
 
+def printable(s):
+    if isinstance(s,unicode):
+        return s.encode('utf8', errors='ignore').decode('utf8')
+    elif isinstance(s,str):
+        return s.decode("utf8", errors="ignore").encode('utf8')
+    else:
+        return repr(s)
 
 class PyFFLogger(object):
     def __init__(self):
@@ -17,9 +24,9 @@ class PyFFLogger(object):
 
     def _l(self, severity, msg):
         if '' in cherrypy.tree.apps:
-            cherrypy.tree.apps[''].log("%s" % msg, severity=severity)
+            cherrypy.tree.apps[''].log(printable(msg), severity=severity)
         elif severity in self._loggers:
-            self._loggers[severity]("%s" % msg)
+            self._loggers[severity](printable(msg))
         else:
             raise ValueError("unknown severity %s" % severity)
 

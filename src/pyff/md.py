@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 """
 pyFF is the SAML metadata aggregator
 
@@ -18,7 +16,6 @@ import traceback
 from . import __version__
 from .mdrepo import MDRepository
 from .pipes import plumbing
-from .store import MemoryStore
 from .constants import config
 
 
@@ -36,9 +33,6 @@ def main():
         print(__doc__)
         sys.exit(2)
 
-    if config.store is None:
-        config.store = MemoryStore()
-
     if config.loglevel is None:
         config.loglevel = logging.WARN
 
@@ -55,9 +49,6 @@ def main():
                 raise ValueError('Invalid log level: %s' % a)
         elif o in '--logfile':
             config.logfile = a
-        elif o in '-R':
-            from pyff.store import RedisStore
-            config.store = RedisStore()
         elif o in ('-m', '--module'):
             config.modules.append(a)
         elif o in '--version':
@@ -74,7 +65,7 @@ def main():
         importlib.import_module(mn)
 
     try:
-        md = MDRepository(store=config.store)
+        md = MDRepository()
         for p in args:
             plumbing(p).process(md, state={'batch': True, 'stats': {}})
         sys.exit(0)

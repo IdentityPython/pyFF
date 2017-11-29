@@ -112,7 +112,7 @@ def load_pipe(d):
 
 class PipelineCallback(object):
     """
-A delayed pipeline callback used as a post for parse_metadata
+A delayed pipeline callback used as a post for parse_saml_metadata
     """
 
     def __init__(self, entry_point, req):
@@ -234,16 +234,16 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
         if not state:
             state = dict()
         # req = Plumbing.Request(self, md, t, state=state)
-        # self._process(req)
+        # self.iprocess(req)
         # return req.t
         return Plumbing.Request(self, md, t, state=state).process(self)
 
-    def _process(self, req):
+    def iprocess(self, req):
         """The inner request pipeline processor.
 
         :param req: The request to run through the pipeline
         """
-        log.debug('Processing \n%s' % self)
+        #log.debug('Processing \n%s' % self)
         for p in self.pipeline:
             try:
                 pipe, opts, name, args = load_pipe(p)
