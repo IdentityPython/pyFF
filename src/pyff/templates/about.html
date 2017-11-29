@@ -60,15 +60,15 @@
                     </div>
                 </div>
                 <div class="tab-pane" id="repo">
-                    {% for uri in repo.store.collections() %}
-                    {% set info = repo.summary(uri) %}
+                    {% for resource in repo.rm.walk() %}
+                    {% set info = resource.info %}
                     <div class="panel panel-{{info['Status']}}">
-                        <div class="panel-heading" title="{{uri|trim}}">{{ uri|trim|truncate(60) }}</div>
+                        <div class="panel-heading" title="{{resource.url|trim}}">{{ resource.url|trim|truncate(60) }}</div>
                         {% if info['Description'] %}
                         <div class="panel-body small">{{ info['Description'] }}</div>
                         {% endif %}
                         <table class="table table-condensed">
-                            {% for k,v in info.iteritems() %}
+                            {% for k,v in info.items() %}
                             {% if k and v and not k in ('URL','Description','Validation Errors','Status') %}
                             <tr>
                                 <th>{{ k|trim|truncate(20) }}</th>
@@ -77,7 +77,7 @@
                                     {{ v|trim|truncate(60) }}
                                     {% elif v is mapping %}
                                         <dl class="dl-horizontal">
-                                            {% for h,hv in v.iteritems() %}
+                                            {% for h,hv in v.items() %}
                                             <dt>{{h|trim}}</dt>
                                             <dd>{{hv|trim|truncate(30)}}</dd>
                                             {% endfor %}
@@ -96,7 +96,7 @@
                         </table>
                         {% if info['Validation Errors'] %}
                         <table class="table">
-                            {% for ei,ee in info['Validation Errors'].iteritems() %}
+                            {% for ei,ee in info['Validation Errors'].items() %}
                             <tr>
                                 <th>{{ei|trim|truncate(30)}}</th>
                                 <td>{{ee|trim}}</td>
