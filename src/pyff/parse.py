@@ -1,5 +1,11 @@
 
 import os
+from .utils import parse_xml, root
+from .constants import NS
+from .logs import log
+from xmlsec.crypto import CertDict
+from datetime import datetime
+from StringIO import StringIO
 
 __author__ = 'leifj'
 
@@ -48,7 +54,35 @@ class DirectoryParser():
         return dict()
 
 
-_parsers = [DirectoryParser('.xml'), NoParser()]
+class XRDParser():
+
+    def __init__(self):
+        pass
+
+    def magic(self, content):
+        return 'XRD' in content
+
+    def parse(self, resource, content):
+        info = dict()
+        info['Description'] = "XRD links from {}".format(resource.url)
+        t = parse_xml(StringIO(content.encode('utf8')))
+        relt = root(t)
+        for xrd in t.iter("{%s}XRD" % NS['xrd']):
+            for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
+                link_href = link.get("href")
+                certs = CertDict(link)
+                fingerprints = certs.keys()
+                fp = None
+                if len(fingerprints) > 0:
+                    fp = fingerprints[0]
+                log.debug("XRD: {} verified by {}".format(link_href, fp))
+                resource.add_child(link_href, verify=fp)
+        resource.last_seen = datetime.now
+        resource.expire_time = None
+
+        return info
+
+_parsers = [DirectoryParser('.xml'), XRDParser(), NoParser()]
 
 def add_parser(parser):
     _parsers.insert(0,parser)
