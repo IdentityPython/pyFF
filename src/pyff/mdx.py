@@ -161,7 +161,7 @@ class EncodingDispatcher(object):
                 vpath = vpath[plen + 1:]
                 npath = "%s/%s" % (prefix, self.enc(vpath))
                 log.debug("EncodingDispatcher %s" % npath)
-                return self.next_dispatcher(npath)
+                return self.next_dispatcher(npath.encode('ascii',errors='ignore'))
         return self.next_dispatcher(vpath)
 
 
