@@ -2,7 +2,6 @@ __author__ = 'leifj'
 
 import logging
 import syslog
-
 import cherrypy
 
 def printable(s):

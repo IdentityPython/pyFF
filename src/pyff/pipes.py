@@ -4,11 +4,7 @@ transform, sign or output SAML metadata.
 """
 import traceback
 
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
+from StringIO import StringIO
 import os
 import yaml
 from .utils import resource_string, PyffException

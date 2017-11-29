@@ -5,7 +5,6 @@ This is the implementation of the active repository of SAML metadata. The 'local
 """
 
 from __future__ import absolute_import, unicode_literals
-
 from .stats import get_metadata_info
 import operator
 from lxml import etree

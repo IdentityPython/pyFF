@@ -49,12 +49,8 @@ import importlib
 
 import pkg_resources
 
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
 
+from StringIO import StringIO
 import getopt
 import urlparse
 from cherrypy.lib.cpstats import StatsPage

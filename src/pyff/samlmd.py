@@ -13,7 +13,6 @@ from itertools import chain
 from copy import deepcopy
 from .exceptions import *
 from StringIO import StringIO
-from .utils import dumptree
 
 
 class EntitySet(object):
@@ -110,7 +109,6 @@ def parse_saml_metadata(source,
                                             .format(base_url, source, xml_error(ex.error_log, m=base_url)))
 
         if t is not None:
-            #log.debug(dumptree(t))
             if t.tag == "{%s}EntityDescriptor" % NS['md']:
                 t = entitiesdescriptor([t], base_url, copy=False, validate=True, nsmap=t.nsmap)
 

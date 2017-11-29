@@ -1,15 +1,9 @@
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
 
+from StringIO import StringIO
 import time
 from copy import deepcopy
-
 import re
 from redis import Redis
-
 from .constants import NS, ATTRS
 from .decorators import cached
 from .logs import log
