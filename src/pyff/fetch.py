@@ -17,6 +17,7 @@ from concurrent import futures
 from .parse import parse_resource
 from itertools import chain
 from requests_cache.core import CachedSession
+from copy import deepcopy
 
 requests.packages.urllib3.disable_warnings()
 
@@ -89,8 +90,6 @@ class ResourceManager(DictMixin):
                     from traceback import print_exc
                     print_exc()
 
-        log.debug("finished...")
-
 class Resource(object):
     def __init__(self, url, post, **kwargs):
         self.url = url
@@ -106,7 +105,7 @@ class Resource(object):
         self.opts.setdefault('fail_on_error', False)
         self.opts.setdefault('as', None)
         self.opts.setdefault('verify', None)
-        self.opts.setdefault('filter_invalid', False)
+        self.opts.setdefault('filter_invalid', True)
         self.opts.setdefault('validate', True)
 
         if "://" not in self.url:
@@ -133,8 +132,10 @@ class Resource(object):
     def add_info(self, info):
         self._infos.append(info)
 
-    def add_child(self, url):
-        self.children.append(Resource(url, self.post, **self.opts))
+    def add_child(self, url, **kwargs):
+        opts = deepcopy(self.opts)
+        opts.update(kwargs)
+        self.children.append(Resource(url, self.post, **opts))
 
     @property
     def name(self):
@@ -145,7 +146,10 @@ class Resource(object):
 
     @property
     def info(self):
-        return self._infos[0]
+        if self._infos is None or not self._infos:
+            return dict()
+        else:
+            return self._infos[-1]
 
     def fetch(self):
         s = None
@@ -158,13 +162,12 @@ class Resource(object):
         r = s.get(self.url, verify=False, timeout=config.request_timeout)
         info = dict()
         info['Response Headers'] = r.headers
-        log.debug(r.encoding)
+        log.debug("got status_code={:d}, encoding={} from {}".format(r.status_code, r.encoding, r.url))
         data = r.text
-        log.debug(type(data))
 
         if r.ok and data:
             info.update(parse_resource(self, data))
-            if self.t:
+            if self.t is not None:
                 self.last_seen = datetime.now()
                 if self.post is not None:
                     self.t = self.post(self.t)
@@ -174,8 +177,9 @@ class Resource(object):
 
                 for (eid, error) in info['Validation Errors'].items():
                     log.error(error)
-            else:
-                log.error("Got no valid data from {}".format(r.url))
+
+            for c in self.children:
+                c.fetch()
 
             self.add_info(info)
         else:
