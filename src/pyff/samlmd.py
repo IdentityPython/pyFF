@@ -13,6 +13,7 @@ from itertools import chain
 from copy import deepcopy
 from .exceptions import *
 from StringIO import StringIO
+from .utils import dumptree
 
 
 class EntitySet(object):
@@ -104,12 +105,14 @@ def parse_saml_metadata(source,
                 try:
                     validate_document(t)
                 except DocumentInvalid as ex:
-                    raise MetadataException("schema validation failed: [%s] '%s': %s" %
-                                            (base_url, source, xml_error(ex.error_log, m=base_url)))
+                    validation_errors[base_url] = xml_error(ex.error_log, m=base_url)
+                    raise MetadataException("schema validation failed: [{}] '{}': {}"
+                                            .format(base_url, source, xml_error(ex.error_log, m=base_url)))
 
         if t is not None:
+            #log.debug(dumptree(t))
             if t.tag == "{%s}EntityDescriptor" % NS['md']:
-                t = entitiesdescriptor([t], base_url, copy=False)
+                t = entitiesdescriptor([t], base_url, copy=False, validate=True, nsmap=t.nsmap)
 
     except Exception as ex:
         if fail_on_error:
@@ -147,8 +150,9 @@ class SAMLMetadataResourceParser():
             resource.expire_time = expire_time
             info['Expiration Time'] = str(expire_time)
 
-        resource.t = t
-        resource.type = "application/samlmetadata+xml"
+        if t is not None:
+            resource.t = t
+            resource.type = "application/samlmetadata+xml"
 
         return info
 
@@ -191,7 +195,14 @@ def filter_invalids_from_document(t, base_url, validation_errors):
     return t
 
 
-def entitiesdescriptor(entities, name, lookup_fn=None, cache_duration=None, valid_until=None, validate=True, copy=True):
+def entitiesdescriptor(entities,
+                       name,
+                       lookup_fn=None,
+                       cache_duration=None,
+                       valid_until=None,
+                       validate=True,
+                       copy=True,
+                       nsmap=dict()):
     """
 :param lookup_fn: a function used to lookup entities by name
 :param entities: a set of entities specifiers (lookup is used to find entities from this set)
@@ -204,38 +215,39 @@ def entitiesdescriptor(entities, name, lookup_fn=None, cache_duration=None, vali
 Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
     """
 
-    def _insert(ent):
-        entity_id = ent.get('entityID', None)
-        # log.debug("adding %s to set" % entity_id)
-        if (ent is not None) and (entity_id is not None) and (entity_id not in seen):
-            ent_insert = ent
-            if copy:
-                ent_insert = deepcopy(ent_insert)
-            t.append(ent_insert)
-            # log.debug("really adding %s to set" % entity_id)
-            seen[entity_id] = True
+    def _resolve(member, l_fn):
+        if hasattr(member, 'tag'):
+            return [member]
+        else:
+            return l_fn(member)
 
-    attrs = dict(Name=name, nsmap=NS)
+    nsmap.update(NS)
+    resolved_entities = set()
+    for member in entities:
+        for entity in _resolve(member, lookup_fn):
+            resolved_entities.add(entity)
+
+    if not resolved_entities:
+        return None
+
+    for entity in resolved_entities:
+        nsmap.update(entity.nsmap)
+
+    log.debug("selecting %d entities before validation" % len(resolved_entities))
+
+    attrs = dict(Name=name, nsmap=nsmap)
     if cache_duration is not None:
         attrs['cacheDuration'] = cache_duration
     if valid_until is not None:
         attrs['validUntil'] = valid_until
     t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], **attrs)
-    nent = 0
-    seen = {}  # TODO make better de-duplication
-    for member in entities:
-        if hasattr(member, 'tag'):
-            _insert(member)
-            nent += 1
-        else:
-            for entity in lookup_fn(member):
-                _insert(entity)
-                nent += 1
-
-    log.debug("selecting %d entities before validation" % nent)
-
-    if not nent:
-        return None
+    for entity in resolved_entities:
+        entity_id = entity.get('entityID', None)
+        if (entity is not None) and (entity_id is not None):
+            ent_insert = entity
+            if copy:
+                ent_insert = deepcopy(ent_insert)
+            t.append(ent_insert)
 
     if validate:
         try:
