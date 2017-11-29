@@ -1,7 +1,6 @@
 *.pyc
 *.egg
-.coverage
-.coverage.*
+.coverage*
 cover
 .coveralls.yml
 
@@ -22,3 +21,4 @@ sign.key
 _site
 profile.out*
 localconfig.py
+*.sqlite
