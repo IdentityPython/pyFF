@@ -1,5 +1,5 @@
 
-from StringIO import StringIO
+from six import StringIO
 import time
 from copy import deepcopy
 import re

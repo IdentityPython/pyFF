@@ -1,12 +1,6 @@
 import unittest
 import urllib
-
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
-
+from six import StringIO
 import tempfile
 from threading import Thread
 from time import sleep

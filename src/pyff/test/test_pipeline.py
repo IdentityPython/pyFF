@@ -1,14 +1,12 @@
 import shutil
 import sys
 import tempfile
-from StringIO import StringIO
-
+from six import StringIO
 import os
 import yaml
 from mako.lookup import TemplateLookup
 from mock import patch
 from nose.plugins.skip import Skip
-
 from pyff.mdrepo import MDRepository, MetadataException
 from pyff.pipes import plumbing, Plumbing, PipeException
 from pyff.test import ExitException

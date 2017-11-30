@@ -12,7 +12,7 @@ from lxml.etree import DocumentInvalid
 from itertools import chain
 from copy import deepcopy
 from .exceptions import *
-from StringIO import StringIO
+from six import StringIO
 
 
 class EntitySet(object):

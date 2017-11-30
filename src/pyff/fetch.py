@@ -18,14 +18,10 @@ from .parse import parse_resource
 from itertools import chain
 from requests_cache.core import CachedSession
 from copy import deepcopy
+from six import StringIO
 
 requests.packages.urllib3.disable_warnings()
 
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
 
 
 class ResourceException(Exception):

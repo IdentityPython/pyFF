@@ -50,7 +50,7 @@ import importlib
 import pkg_resources
 
 
-from StringIO import StringIO
+from six import StringIO
 import getopt
 import urlparse
 from cherrypy.lib.cpstats import StatsPage

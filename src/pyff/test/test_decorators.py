@@ -1,5 +1,5 @@
 import logging
-from StringIO import StringIO
+from six import StringIO
 from time import sleep
 from unittest import TestCase, skip
 

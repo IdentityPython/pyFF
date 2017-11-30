@@ -28,12 +28,7 @@ from .stats import set_metadata_info
 from .utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, validate_document
 from .samlmd import iter_entities, annotate_entity, set_entity_attributes
 from .fetch import Resource
-
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
+from six import StringIO
 
 __author__ = 'leifj'
 

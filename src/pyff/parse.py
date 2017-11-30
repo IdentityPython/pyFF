@@ -5,7 +5,7 @@ from .constants import NS
 from .logs import log
 from xmlsec.crypto import CertDict
 from datetime import datetime
-from StringIO import StringIO
+from six import StringIO
 
 __author__ = 'leifj'
 

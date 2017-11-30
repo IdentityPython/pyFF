@@ -2,9 +2,9 @@
 Pipes and plumbing. Plumbing instances are sequences of pipes. Each pipe is called in order to load, select,
 transform, sign or output SAML metadata.
 """
-import traceback
 
-from StringIO import StringIO
+import traceback
+from six import StringIO
 import os
 import yaml
 from .utils import resource_string, PyffException
