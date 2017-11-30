@@ -2,8 +2,7 @@ from __future__ import absolute_import, unicode_literals
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
-    has_tag, hash_id
-
+    has_tag, hash_id, load_callable, rreplace
 from .logs import log
 from .constants import config, NS, ATTRS, NF_URI, PLACEHOLDER_ICON
 from lxml import etree
@@ -43,21 +42,10 @@ class EntitySet(object):
 
 def find_merge_strategy(strategy_name):
     if '.' not in strategy_name:
-        strategy_name = "pyff.merge_strategies.%s" % strategy_name
-    (mn, sep, fn) = strategy_name.rpartition('.')
-    # log.debug("import %s from %s" % (fn,mn))
-    module = None
-    if '.' in mn:
-        (pn, sep, modn) = mn.rpartition('.')
-        module = getattr(__import__(pn, globals(), locals(), [modn], -1), modn)
-    else:
-        module = __import__(mn, globals(), locals(), [], -1)
-    strategy = getattr(module, fn)  # we might aswell let this fail early if the strategy is wrongly named
-
-    if strategy is None:
-        raise MetadataException("Unable to find merge strategy %s" % strategy_name)
-
-    return strategy
+        strategy_name = "pyff.merge_strategies:%s" % strategy_name
+    if ':' not in strategy_name:
+        strategy_name = rreplace(strategy_name, '.', ':') # backwards compat for old way of specifying these
+    return load_callable(strategy_name)
 
 
 def parse_saml_metadata(source,

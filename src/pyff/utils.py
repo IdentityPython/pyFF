@@ -462,11 +462,17 @@ def sync_nsmap(nsmap, elt):
             pass
 
 
+def rreplace(s, old, new, occurrence):
+    li = s.rsplit(old, occurrence)
+    return new.join(li)
+
+
 def load_callable( name ):
     from importlib import import_module
     p, m = name.rsplit(':', 1)
     mod = import_module(p)
     return getattr(mod, m)
+
 
 # semantics copied from https://github.com/lordal/md-summary/blob/master/md-summary
 # many thanks to Anders Lordahl & Scotty Logan for the idea
