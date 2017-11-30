@@ -147,22 +147,29 @@ class Resource(object):
         else:
             return self._infos[-1]
 
-    def fetch(self):
+    def fetch(self, recurse=True):
         s = None
         if 'file://' in self.url:
             s = requests.session()
             s.mount('file://', FileAdapter())
         else:
-            s = CachedSession(cache_name="pyff_cache", expire_after=config.request_cache_time)
+            s = CachedSession(cache_name="pyff_cache",
+                              expire_after=config.request_cache_time,
+                              old_data_on_error=True)
 
         r = s.get(self.url, verify=False, timeout=config.request_timeout)
+        if config.request_override_encoding is not None:
+            r.encoding = config.request_override_encoding
         info = dict()
         info['Response Headers'] = r.headers
-        log.debug("got status_code={:d}, encoding={} from {}".format(r.status_code, r.encoding, r.url))
+        log.debug("got status_code={:d}, encoding={} from_cache={} from {}".
+                  format(r.status_code, r.encoding, r.from_cache, r.url))
         data = r.text
-
         if r.ok and data:
-            info.update(parse_resource(self, data))
+            parse_info = parse_resource(self, data)
+            if parse_info is not None and isinstance(parse_info, dict):
+                info.update(parse_info)
+
             if self.t is not None:
                 self.last_seen = datetime.now()
                 if self.post is not None:
@@ -174,8 +181,9 @@ class Resource(object):
                 for (eid, error) in info['Validation Errors'].items():
                     log.error(error)
 
-            for c in self.children:
-                c.fetch()
+            if recurse:
+                for c in self.children:
+                    c.fetch()
 
             self.add_info(info)
         else:

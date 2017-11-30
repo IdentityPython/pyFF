@@ -59,6 +59,7 @@ class Config(object):
     store_class = pyconfig.setting("pyff.store.class", "pyff.store:MemoryStore")
     update_frequency = pyconfig.setting("pyff.update_frequency",600)
     request_timeout = pyconfig.setting("pyff.request_timeout",10)
-    request_cache_time = pyconfig.setting("pyff.request_cache_time", 5)
+    request_cache_time = pyconfig.setting("pyff.request_cache_time", 300)
+    request_override_encoding = pyconfig.setting("pyff.request_override_encoding", "utf8") # set to non to enable chardet guessing
 
 config = Config()
