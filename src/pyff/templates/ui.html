@@ -69,8 +69,10 @@
 {% endblock %}
 
 {% block final %}
+{% if google_api_key %}
 <script type="text/javascript" src="//maps.google.com/maps/api/js?key={{google_api_key}}"></script>
-<script type="text/javascript" src="/static/js/jquery.ui.map.full.min.js"></script>
+{% endif %}
+<!-- TODO: drop - script type="text/javascript" src="/static/js/jquery.ui.map.full.min.js"></script -->
 <script type="text/javascript" src="/static/js/prettify.js"></script>
 <script type="text/javascript" src="/static/js/typeahead.bundle.min.js"></script>
 <script type="text/javascript">
