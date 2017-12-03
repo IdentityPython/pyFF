@@ -132,7 +132,7 @@ The dict in the list contains three items:
 
             if d is not None:
                 if related is not None:
-                    d['ddist'] = avg_domain_distance(related, d['entity_domains'])
+                    d['ddist'] = avg_domain_distance(related, d['domains'])
                 else:
                     d['ddist'] = 0
 
