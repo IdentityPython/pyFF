@@ -30,6 +30,7 @@ install_requires = [
     'futures',
     'requests',
     'requests_cache',
+    'requests_file',
     'pyconfig',
     'pyyaml',
     'multiprocess'

@@ -17,3 +17,4 @@ pyconfig
 pyyaml
 multiprocess
 requests_cache
+requests_file
