@@ -53,29 +53,10 @@ body {
   margin: 30px 0;
 }
 
-/* Main marketing message and sign up button */
-.jumbotron {
-  text-align: center;
-  border-bottom: 1px solid #e5e5e5;
-}
-.jumbotron .btn {
-  font-size: 21px;
-  padding: 14px 24px;
-}
-
-/* Supporting marketing content */
-.marketing {
-  margin: 40px 0;
-}
-.marketing p + h4 {
-  margin-top: 28px;
-}
-
 /* Responsive: Portrait tablets and up */
 @media screen and (min-width: 768px) {
   /* Remove the padding we set earlier */
   .header,
-  .marketing,
   .footer {
     padding-left: 0;
     padding-right: 0;
@@ -83,10 +64,6 @@ body {
   /* Space out the masthead */
   .header {
     margin-bottom: 30px;
-  }
-  /* Remove the bottom border on the jumbotron for visual effect */
-  .jumbotron {
-    border-bottom: 0;
   }
 }
 
@@ -118,12 +95,10 @@ body {
     overflow-y: auto;
     font-size: small;
 }
+
 .inline li {
     display: inline;
 }
-
-#remember-message { margin-top: 20px; }
-#remember-message form { margin-bottom: 2px; }
 
 .navbar {
    margin-bottom: 30px;
@@ -150,12 +125,6 @@ body {
 .sp-icon { width: auto; margin-bottom:5px;}
 .sp-thumbnail {width: 100px; margin: 0 0; padding-left: 5px;}
 
-.idselect { width: 100%; }
-
-.img-small {
-    max-height: 50px;
-}
-
 .cpstats td, th { font-size: x-small; }
 
 pre.prettyprint {
@@ -177,11 +146,14 @@ pre.prettyprint {
 
 }
 
+/** TODO: remove
 span.select:hover, span.proceed:hover {
     background-color: lightgrey !important;
 }
+*/
 
-.wide { width: 100%; display: block; }
+/* TODO: remove */
+/* .wide { width: 100%; display: block; } */
 
 .vertical-align {
     display: flex;
@@ -208,4 +180,8 @@ h5.sp {
 h3.sp {
     margin-bottom: 1px;
     padding-bottom: 0px;
+}
+
+#pyff-saved-choices {
+    margin-bottom: 10px;
 }

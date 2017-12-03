@@ -101,7 +101,7 @@ class TestRepo(TestCase):
         assert (summary['entityID'] == entity_id)
         assert ('entity_icon' in summary)
         assert ('icon_url' in summary and summary['entity_icon'] == summary['icon_url'])
-        assert ('entity_domains' in summary)
+        assert ('domains' in summary)
         assert ('id' in summary)
 
         empty = self.md.simple_summary(None)

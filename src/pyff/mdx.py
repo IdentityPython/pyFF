@@ -344,6 +344,16 @@ User-agent: *
 Disallow: /
 """
 
+    @cherrypy.expose()
+    @cherrypy.tools.expires(secs=3600, debug=True)
+    def storage(self):
+        """
+        The crossdomain storage hub iframe
+        """
+
+        entity_id = cherrypy.request.params.get('entity_id')
+        return render_template("storage.html")
+
     @cherrypy.expose
     def favicon_ico(self):
         """Returns the pyff icon (the alchemic symbol for sublimation).
@@ -566,21 +576,23 @@ class MDServer(object):
                 entity_id = kwargs.get('entityID', None)
                 if entity_id is None:
                     raise HTTPError(400, _("400 Bad Request - missing entityID"))
-                pdict['sp'] = hash_id(entity_id, 'sha1')
+
                 e = self.md.store.lookup(entity_id)
                 if e is None or len(e) == 0:
                     raise HTTPError(404)
 
                 if len(e) > 1:
-                    raise HTTPError(400, _("400 Bad Request - multiple matches for") + " %s" % entity_id)
+                    raise HTTPError(400, _("Bad Request - multiple matches for") + " %s" % entity_id)
 
                 pdict['entity'] = entity_simple_summary(e[0])
                 if not path:
                     pdict['search'] = "/search/"
                     pdict['list'] = "/role/idp.json"
                 else:
-                    pdict['search'] = "%s.s" % path
-                    pdict['list'] = "%s.json" % path
+                    pdict['search'] = u"{}.s".format(path)
+                    pdict['list'] = u"{}.json".format(path)
+
+                pdict['storage'] = "/storage/"
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return render_template("ds.html", **pdict)
             elif ext == 's':
