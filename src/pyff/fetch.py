@@ -163,7 +163,7 @@ class Resource(object):
         info = dict()
         info['Response Headers'] = r.headers
         log.debug("got status_code={:d}, encoding={} from_cache={} from {}".
-                  format(r.status_code, r.encoding, r.from_cache, r.url))
+                  format(r.status_code, r.encoding, getattr(r,"from_cache",False), r.url))
         data = r.text
         if r.ok and data:
             parse_info = parse_resource(self, data)
