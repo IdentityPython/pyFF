@@ -26,7 +26,7 @@ from .logs import log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .stats import set_metadata_info
 from .utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, validate_document
-from .samlmd import iter_entities, annotate_entity, set_entity_attributes
+from .samlmd import iter_entities, annotate_entity, set_entity_attributes, discojson
 from .fetch import Resource
 from six import StringIO
 
@@ -688,7 +688,7 @@ Return a discojuice-compatible json representation of the tree
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    res = [req.md.discojson(e) for e in iter_entities(req.t)]
+    res = [discojson(e) for e in iter_entities(req.t)]
     res.sort(key=operator.itemgetter('title'))
 
     return json.dumps(res)
