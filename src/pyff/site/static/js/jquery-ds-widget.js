@@ -8,7 +8,7 @@ $.widget("pyff.discovery_client", {
     },
 
     _create: function() {
-        this._entity_template = Hogan.compile('<div class="identityprovider list-group-item"><div class="media">'+
+        this._entity_template = Hogan.compile('<div data-href="{{entity_id}}" class="identityprovider list-group-item"><div class="media">'+
             '<div class="media-body"><h5 class="mt-0 mb-1">{{title}}</h5>{{#descr}}{{descr}}{{/descr}}</div>'+
             '{{#icon}}<div class="d-flex ml-3"><img src="{{icon}}" class="pyff-idp-icon img-responsive"/></div>{{/icon}}</div></div>');
         this._entity_template2 = Hogan.compile('<div class="identityprovider list-group-item" alt="{{title}}" data-href="{{entity_id}}">' +
@@ -90,6 +90,7 @@ $.widget("pyff.discovery_client", {
                     return $.getJSON(remote,callback);
                 },
                 sourceNode: function (data) {
+                    console.log(data);
                     return obj._entity_template.render(data);
                 },
                 cancelNode: null
