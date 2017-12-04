@@ -54,10 +54,7 @@ $.widget("pyff.discovery_client", {
         });
 
         $('body').on('click', '.close', function (e) {
-            e.stopPropagation()
-
-
-            ;
+            e.stopPropagation();
             var entity_element = $(this).closest('.identityprovider');
             var entity_id = entity_element.attr('data-href');
             console.log("removing... "+entity_id);
