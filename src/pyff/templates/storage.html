@@ -24,7 +24,7 @@
                         result.push({entity: entity, use_count: 0, last_refresh: CrossStorageHub._now()});
                     }
                 }
-                storage.set("pyff_discovery_choices", result);
+                storage.setItem("pyff_discovery_choices", result);
             }
         });
     </script>
