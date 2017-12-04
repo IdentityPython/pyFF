@@ -559,6 +559,7 @@ def entity_simple_summary(e):
     entity_id = e.get('entityID')
     d = dict(title=title,
              descr=descr,
+             entity_id=entity_id,
              entityID=entity_id,
              domains=";".join(sub_domains(e)),
              id=hash_id(e, 'sha1'))
