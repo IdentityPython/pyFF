@@ -18,7 +18,8 @@
             _import: function(storage) {
                 var result = [];
                 var lst = $.jStorage.get('pyff.discovery.idps',[]);
-                if (storage.getItem("pyff_discovery_choices") == undefined && lst.length != 0) {
+                var disabled = true;
+                if (!disabled && storage.getItem("pyff_discovery_choices") == undefined && lst.length != 0) {
                     for (var i = 0; i < lst.length; i++) {
                         var entity = $.jStorage.get(lst[i]);
                         if (typeof entity != 'undefined') {
