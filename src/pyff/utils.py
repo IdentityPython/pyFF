@@ -265,7 +265,9 @@ def template(name):
 
 def render_template(name, **kwargs):
     kwargs.setdefault('http', cherrypy.request)
-    kwargs.setdefault('brand', "pyFF @ %s" % request_vhost(cherrypy.request))
+    vhost = request_vhost(cherrypy.request)
+    kwargs.setdefault('vhost', vhost)
+    kwargs.setdefault('brand', "pyFF @ %s" % vhost)
     kwargs.setdefault('google_api_key', config.google_api_key)
     kwargs.setdefault('_', _)
     return template(name).render(**kwargs)
