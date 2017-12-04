@@ -119,7 +119,7 @@ body {
 
 .idp-description { width: 65%; }
 
-.idp-icon { max-width: 29%; max-height: 50px; margin-right: 5%; margin-top: -3%; width: auto; }
+.pyff-idp-icon { max-height: 50px; margin-right: 10%; padding-right: 5px; margin-top: 0%; width: auto; }
 
 .sp-description { max-width: 75%; }
 .sp-icon { width: auto; margin-bottom:5px;}
