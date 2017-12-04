@@ -8,7 +8,9 @@ $.widget("pyff.discovery_client", {
     },
 
     _create: function() {
-        this._entity_template = Hogan.compile('<div data-href="{{entity_id}}" class="identityprovider list-group-item"><div class="media">'+
+        this._entity_template = Hogan.compile('<div data-href="{{entity_id}}" class="identityprovider list-group-item">' +
+            '<button type="button" data-toggle="tooltip" data-placement="left" class="close">&times;</button>'+
+            '<div class="media">'+
             '<div class="media-body"><h5 class="mt-0 mb-1">{{title}}</h5>{{#descr}}{{descr}}{{/descr}}</div>'+
             '{{#icon}}<div class="d-flex ml-3"><img src="{{icon}}" class="pyff-idp-icon img-responsive"/></div>{{/icon}}</div></div>');
         this._entity_template2 = Hogan.compile('<div class="identityprovider list-group-item" alt="{{title}}" data-href="{{entity_id}}">' +
@@ -52,8 +54,13 @@ $.widget("pyff.discovery_client", {
         });
 
         $('body').on('click', '.close', function (e) {
+            e.stopPropagation()
+
+
+            ;
             var entity_element = $(this).closest('.identityprovider');
             var entity_id = entity_element.attr('data-href');
+            console.log("removing... "+entity_id);
             if (entity_id) {
                 obj._ds.remove(entity_id).then(function () {
                     entity_element.remove();

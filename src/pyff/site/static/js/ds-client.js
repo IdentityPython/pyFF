@@ -61,6 +61,13 @@
                 lst.pop();
             }
 
+            lst.forEach(function(item) {
+                var entity = item.entity;
+                if (entity && entity.entityID) {
+                    entity.entity_id = entity.entityID
+                }
+            });
+
             return lst;
         });
     };
@@ -172,7 +179,7 @@
             var lst = JSON.parse(data || '[]') || [];
 
             return lst.filter(function(item) {
-                return item.entity.entity_id != id;
+                return item.entity.entity_id != id && item.entity.entityID != id;
             })
         }).then(function (lst) {
             return storage.set(storage_key, JSON.stringify(lst));
