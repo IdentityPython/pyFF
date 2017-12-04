@@ -21,7 +21,7 @@
                 for (var i = 0; i < lst.length; i++) {
                     var entity = $.jStorage.get(lst[i]);
                     if (typeof entity != 'undefined') {
-                        result.append({entity: entity, use_count: 0, last_refresh: CrossStorageHub._now()});
+                        result.push({entity: entity, use_count: 0, last_refresh: CrossStorageHub._now()});
                     }
                 }
                 storage.set("pyff_discovery_choices", result);
