@@ -5,29 +5,20 @@
 {% block header %}
     <div class="row discovery">
         <div class="col-md-12">
-            <ul class="list-inline">
-                {% if 'icon' in entity %}
-                <li id="sp-icon-container">
-                    <img class="sp-thumbnail fallback" src="{{ entity['icon'] }}"/>
-                </li>
-                {% endif %}
-                <li id="sp-title-container">
-                    <div class="small">{{ gettext('You are accessing ...') }}</div>
-                    {% if 'title' in entity %}
-                    <h3 class="sp">{{ entity['title'] }}</h3>
-                    {% else %}
-                    <h3 class="sp">{{ entity['entity_id'] }}</h3>
+            <div class="media">
+                <div class="media-body">
+                    <h3 class="mt-0 mb-1">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</h3>
+                    {% if entity.descr and entity.descr != entity.title %}
+                    <span class="small">{{ entity.descr }}</span>
                     {% endif %}
-                    {% if 'descr' in entity and entity['descr'] != entity['title'] %}
-                    <span class="small">{{ entity['descr'] }}</span>
-                    {% endif %}
-                    {% if 'psu' in entity %}
+                    {% if entity.psu %}
                     <span class="small">
-                        <a title="Privacy Statement" href="{{ entity['psu'] }}">Privacy Statement</a>
+                        <a title="Privacy Statement" href="{{ entity.psu }}">Privacy Statement</a>
                     </span>
                     {% endif %}
-                </li>
-            </ul>
+                </div>
+                <div class="d-flex ml-3 sp-icon"><img src="{{entity.entity_icon}}"/></div>
+            </div>
         </div>
     </div>
 {% endblock %}
