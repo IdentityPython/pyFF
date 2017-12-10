@@ -44,10 +44,29 @@ $.widget("pyff.discovery_client", {
         if (typeof this.options['after'] == 'function') {
             return this.options['after'](count);
         } else {
-            if (count == 0) {
-                $(this.input_field_selector).parent().show();
-            } else {
-                $(this.input_field_selector).parent().hide();
+            if (this.discovery_service_search_url) {
+                var search_list_element = $('<div>').addClass("list-group").attr('id','pyff-search-list');
+                var top_element = this.element;
+                top_element.append(search_list_element);
+                var search_base, search_related, list_uri;
+                search_base = $(top_element).attr('data-search');
+                search_related = $(top_element).attr('data-related');
+                $(this.input_field_selector).focus();
+                $(search_list_element).btsListFilter(this.input_field_selector, {
+                    resetOnBlur: false,
+                    sourceData: function (text, callback) {
+                        var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
+
+                        if (search_related) {
+                            remote = remote + "&related=" + search_related;
+                        }
+                        return $.getJSON(remote, callback);
+                    },
+                    sourceNode: function (data) {
+                        return obj._render(data);
+                    },
+                    cancelNode: null
+                });
             }
         }
     },
@@ -91,33 +110,6 @@ $.widget("pyff.discovery_client", {
             }
         });
 
-        var saved_choices_element = $('<div>').addClass("list-group").attr('id','pyff-saved-choices');
-        top_element.prepend(saved_choices_element);
-        var search_list_element = $('<div>').addClass("list-group").attr('id','pyff-search-list');
-        top_element.append(search_list_element);
-
-        if (this.discovery_service_search_url && search_list_element) {
-            var search_base, search_related, list_uri;
-            search_base = $(top_element).attr('data-search');
-            search_related = $(top_element).attr('data-related');
-            $(this.input_field_selector).focus();
-            $(search_list_element).btsListFilter(this.input_field_selector, {
-                resetOnBlur: false,
-                sourceData: function (text, callback) {
-                    var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
-
-                    if (search_related) {
-                        remote = remote + "&related=" + search_related;
-                    }
-                    return $.getJSON(remote, callback);
-                },
-                sourceNode: function (data) {
-                    return obj._render(data);
-                },
-                cancelNode: null
-            });
-        }
-
         this._ds.choices().then(function(entities) {
             if (typeof obj.options['before'] === 'function') {
                 entities = obj.options['before'](entities);
@@ -125,6 +117,8 @@ $.widget("pyff.discovery_client", {
             return entities;
         }).then(function(entities) {
             var count = 0;
+            var saved_choices_element = $('<div>').addClass("list-group").attr('id','pyff-saved-choices');
+            top_element.prepend(saved_choices_element);
             entities.forEach(function (item) {
                 var entity_element = obj._render(item.entity);
                 saved_choices_element.append(entity_element);
