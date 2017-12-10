@@ -675,8 +675,8 @@ then the outer EntitiesDescriptor is stripped. This method does exactly that:
     return req.t
 
 
-@pipe
-def discojson(req, *opts):
+@pipe(name='discojson')
+def _discojson(req, *opts):
     """
 Return a discojuice-compatible json representation of the tree
 
