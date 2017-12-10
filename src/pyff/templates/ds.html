@@ -3,7 +3,7 @@
 {% block title %}{{ gettext('Please login...') }}{% endblock %}
 
 {% block header %}
-    <div class="row vertical-align">
+    <div class="row discovery">
         <div class="col-md-12">
             <ul class="list-inline">
                 {% if 'icon' in entity %}
@@ -33,24 +33,28 @@
 {% endblock %}
 
 {% block content %}
-        <p class="small">
-            {{ gettext('This service requests that you login.') }}
-        </p>
-        <div id="ds"
-             data-href="{{ entity['entity_id'] }}"
-             data-mdq="/metadata/"
-             data-store="{{storage}}"
-             data-search="{{search}}"
-             data-list="{{list}}"
-             data-related="{{ entity['domains'] }}"
-             data-inputfieldselector="#searchinput">
-            <div class="form-group">
-                <div class="input-group">
-                    <div class="input-group-addon"><i id="searchindicator" class="fa fa-search"></i></div>
-                    <input id="searchinput"
-                           placeholder="{{ gettext('Start typing to search for your login provider or home organization ...') }}"
-                           class="form-control"
-                           type="search"/>
+        <div class="row discovery">
+            <div class="col-md-12">
+                <p class="text-muted">
+                    {{ gettext('This service requests that you login. Select your preferred method below...') }}
+                </p>
+                <div id="ds"
+                     data-href="{{ entity['entity_id'] }}"
+                     data-mdq="/metadata/"
+                     data-store="{{storage}}"
+                     data-search="{{search}}"
+                     data-list="{{list}}"
+                     data-related="{{ entity['domains'] }}"
+                     data-inputfieldselector="#searchinput">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <div class="input-group-addon"><i id="searchindicator" class="fa fa-search"></i></div>
+                            <input id="searchinput"
+                                   placeholder="{{ gettext('Start typing to search for your login provider or home organization ...') }}"
+                                   class="form-control"
+                                   type="search"/>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
