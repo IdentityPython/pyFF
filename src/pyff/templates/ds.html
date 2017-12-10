@@ -7,7 +7,7 @@
         <div class="col-md-12">
             <div class="media">
                 <div class="media-body">
-                    <h3 class="mt-0 mb-1">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</h3>
+                    <h1 class="mt-0 mb-1">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</h1>
                     {% if entity.descr and entity.descr != entity.title %}
                     <span class="small">{{ entity.descr }}</span>
                     {% endif %}
@@ -26,7 +26,7 @@
 {% block content %}
         <div class="row discovery">
             <div class="col-md-12">
-                <p class="text-muted">
+                <p class="text-info">
                     {{ gettext('This service requests that you login. Select your preferred method below...') }}
                 </p>
                 <div id="ds"
