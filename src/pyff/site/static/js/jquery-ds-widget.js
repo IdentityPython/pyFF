@@ -45,6 +45,7 @@ $.widget("pyff.discovery_client", {
             return this.options['after'](count);
         } else {
             if (this.discovery_service_search_url) {
+                var obj = this;
                 var search_list_element = $('<div>').addClass("list-group").attr('id','pyff-search-list');
                 var top_element = this.element;
                 top_element.append(search_list_element);

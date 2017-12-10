@@ -178,7 +178,7 @@
             var lst = JSON.parse(data || '[]') || [];
 
             return lst.filter(function(item) {
-                return item.entity.entity_id != id || item.entity.entityID != id;
+                return item.entity.entity_id != id && item.entity.entityID != id;
             })
         }).then(function (lst) {
             return storage.set(storage_key, JSON.stringify(lst));
