@@ -46,7 +46,6 @@
         }).then(function(data) {
             data = data || '[]';
             var lst = JSON.parse(data) || [];
-            console.log(lst);
             lst.sort(function (a, b) { // decending order - most commonly used stuff on top
                 if (a.use_count < b.use_count) {
                     return 1;
@@ -63,7 +62,7 @@
 
             lst.forEach(function(item) {
                 var entity = item.entity;
-                if (entity && entity.entityID) {
+                if (entity && entity.entityID && !entity.entity_id) {
                     entity.entity_id = entity.entityID
                 }
             });
@@ -134,7 +133,7 @@
 
     DiscoveryService._incr_use_count = function (entity_id, list) {
         for (var i = 0; i < list.length; i++) {
-            if (list[i].entity.entity_id == entity_id) {
+            if (list[i].entity.entity_id == entity_id || list[i].entity.entityID == entity_id) {
                 var use_count = list[i].use_count;
                 list[i].use_count += 1;
                 return use_count;
@@ -179,7 +178,7 @@
             var lst = JSON.parse(data || '[]') || [];
 
             return lst.filter(function(item) {
-                return item.entity.entity_id != id && item.entity.entityID != id;
+                return item.entity.entity_id != id || item.entity.entityID != id;
             })
         }).then(function (lst) {
             return storage.set(storage_key, JSON.stringify(lst));

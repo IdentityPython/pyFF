@@ -3,10 +3,10 @@
   <head>
       <title>pyFF Storage Hub @ {{vhost}}</title>
       <meta charset="utf-8">
-      <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
+      <!-- script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script -->
       <script type="text/javascript" src="/static/js/hub.min.js"></script>
-      <script type="text/javascript" src="/static/js/jstorage.min.js"></script>
-      <script type="text/javascript" src="/static/js/json2.min.js"></script>
+      <!-- script type="text/javascript" src="/static/js/jstorage.min.js"></script>
+      <script type="text/javascript" src="/static/js/json2.min.js"></script -->
   </head>
   <body>
     <script>
@@ -14,22 +14,7 @@
         CrossStorageHub.init([
           {% raw %}{{% endraw %} origin: /{{vhost}}$/, allow: ['get','set','del']{% raw %}}{% endraw %},
           {% raw %}{{% endraw %} origin: /.+$/, allow: ['get']{% raw %}}{% endraw %}
-        ],{
-            _import: function(storage) {
-                var result = [];
-                var lst = $.jStorage.get('pyff.discovery.idps',[]);
-                var disabled = true;
-                if (!disabled && storage.getItem("pyff_discovery_choices") == undefined && lst.length != 0) {
-                    for (var i = 0; i < lst.length; i++) {
-                        var entity = $.jStorage.get(lst[i]);
-                        if (typeof entity != 'undefined') {
-                            result.push({entity: entity, use_count: 0, last_refresh: CrossStorageHub._now()});
-                        }
-                    }
-                    storage.setItem("pyff_discovery_choices", JSON.stringify(result));
-                }
-            }
-        });
+        ]);
     </script>
   </body>
 </html>

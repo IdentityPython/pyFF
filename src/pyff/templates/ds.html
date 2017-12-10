@@ -32,11 +32,6 @@
     </div>
 {% endblock %}
 
-{% block script %}
-    <script type="text/javascript" src="/static/js/client.min.js"></script>
-    <script type="text/javascript" src="/static/js/ds-client.js"></script>
-{% endblock %}
-
 {% block content %}
         <p class="small">
             {{ gettext('This service requests that you login.') }}
@@ -52,16 +47,22 @@
             <div class="form-group">
                 <div class="input-group">
                     <div class="input-group-addon"><i id="searchindicator" class="fa fa-search"></i></div>
-                    <input id="searchinput" placeholder="{{ gettext('Start typing to search for your login provider or home organization ...') }}" class="form-control" type="search"/>
+                    <input id="searchinput"
+                           placeholder="{{ gettext('Start typing to search for your login provider or home organization ...') }}"
+                           class="form-control"
+                           type="search"/>
                 </div>
             </div>
         </div>
 {% endblock %}
 
 {% block endscripts %}
-        <script type="text/javascript" src="/static/js/json2.min.js"></script>
+        <script type="text/javascript" src="/static/js/hashes.min.js"></script>
+        <script type="text/javascript" src="/static/js/client.min.js"></script>
+        <script type="text/javascript" src="/static/js/ds-client.js"></script>
         <script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
         <script type="text/javascript" src="/static/js/jquery-ds-widget.js"></script>
+        <!-- script type="text/javascript" src="/static/js/json2.min.js"></script -->
         <script type="text/javascript" src="/static/js/bootstrap-list-filter.src.js"></script>
 {% endblock %}
 
