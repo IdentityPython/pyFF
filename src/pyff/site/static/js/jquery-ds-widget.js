@@ -17,7 +17,7 @@ $.widget("pyff.discovery_client", {
             obj._template = Hogan.compile('<div data-href="{{entity_id}}" class="identityprovider list-group-item">' +
                 '{{^sticky}}<button type="button" alt="{{ _(\"Remove from list\") }}" data-toggle="tooltip" data-placement="left" class="close">&times;</button>{{/sticky}}' +
                 '<div class="media"><div class="d-flex mr-3"><div class="frame-round">' +
-                '<div class="crop"><img{{#icon}} src="{{icon}}"{{/icon}} data-id={{entity_id}} class="pyff-idp-icon"/></div></div></div>' +
+                '<div class="crop"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} data-id={{entity_id}} class="pyff-idp-icon"/></div></div></div>' +
                 '<div class="media-body"><h5 class="mt-0 mb-1">{{title}}</h5>{{#descr}}{{descr}}{{/descr}}</div>' +
                 '</div></div>');
 
