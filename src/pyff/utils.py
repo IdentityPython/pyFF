@@ -122,13 +122,13 @@ def totimestamp(dt, epoch=datetime(1970, 1, 1)):
     return int(ts)
 
 
-def dumptree(t, pretty_print=False, xml_declaration=True):
+def dumptree(t, pretty_print=False, method='xml', xml_declaration=True):
     """
 Return a string representation of the tree, optionally pretty_print(ed) (default False)
 
 :param t: An ElemenTree to serialize
     """
-    return etree.tostring(t, encoding='UTF-8', xml_declaration=xml_declaration, pretty_print=pretty_print)
+    return etree.tostring(t, encoding='UTF-8', method=method, xml_declaration=xml_declaration, pretty_print=pretty_print)
 
 
 def iso_now():

@@ -2,7 +2,7 @@ from __future__ import absolute_import, unicode_literals
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
-    has_tag, hash_id, load_callable, rreplace
+    has_tag, hash_id, load_callable, rreplace, dumptree
 from .logs import log
 from .constants import config, NS, ATTRS, NF_URI, PLACEHOLDER_ICON
 from lxml import etree
@@ -373,6 +373,17 @@ def _all_domains_and_subdomains(entity):
     return dlist
 
 
+def entity_attributes(entity):
+    d = {}
+
+    def _u(an, values):
+        d[an] = values
+
+    with_entity_attributes(entity, _u)
+
+    return d
+
+
 def entity_attribute_dict(entity):
     d = {}
 
@@ -527,8 +538,8 @@ def discojson(e, langs=None):
     icon_info = entity_icon(e)
     if icon_info is not None:
         d['entity_icon'] = icon_info.get('url', PLACEHOLDER_ICON)
-        d['icon_height'] = icon_info.get('height', 64)
-        d['icon_width'] = icon_info.get('width', 64)
+        d['entity_icon_height'] = icon_info.get('height', 64)
+        d['entity_icon_width'] = icon_info.get('width', 64)
 
     scopes = entity_scopes(e)
     if scopes is not None and len(scopes) > 0:
@@ -565,9 +576,10 @@ def entity_simple_summary(e):
              id=hash_id(e, 'sha1'))
     icon_info = entity_icon(e)
     if icon_info is not None:
-        url = icon_info.get('url', 'data:image/gif;base64,R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==')
-        d['icon_url'] = url
-        d['entity_icon'] = url
+        d['entity_icon'] = icon_info.get('url', PLACEHOLDER_ICON)
+        d['icon_url'] = d['entity_icon']
+        d['entity_icon_height'] = icon_info.get('height', 64)
+        d['entity_icon_width'] = icon_info.get('width', 64)
 
     psu = privacy_statement_url(e, None)
     if psu:
@@ -575,6 +587,104 @@ def entity_simple_summary(e):
 
     return d
 
+
+def first_text(elt, tag, default=None):
+    for matching in elt.iter(tag):
+        return matching.text
+    return default
+
+
+def entity_orgurl(entity, langs=None):
+    for organizationUrl in filter_lang(entity.iter("{%s}OrganizationURL" % NS['md']), langs=langs):
+        return organizationUrl.text
+    return None
+
+
+def entity_service_name(entity, langs=None):
+    for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md']), langs=langs):
+        return serviceName.text
+
+
+def entity_service_description(entity, langs=None):
+    for serviceName in filter_lang(entity.iter("{%s}ServiceDescription" % NS['md']), langs=langs):
+        return serviceName.text
+
+
+def entity_requested_attributes(entity, langs=None):
+    return [(a.get('Name'),bool(a.get('isRequired'))) for a in filter_lang(entity.iter("{%s}RequestedAttribute" % NS['md']), langs=langs)]
+
+
+def entity_idp(entity):
+    for idp in entity.iter("{%s}IDPSSODescriptor" % NS['md']):
+        return idp
+
+    return None
+
+
+def entity_sp(entity):
+    for sp in entity.iter("{%s}SPSSODescriptor" % NS['md']):
+        return sp
+
+    return None
+
+
+def entity_contacts(entity):
+    def _contact_dict(contact):
+        first_name = first_text(contact, "{%s}GivenName" % NS['md'])
+        last_name = first_text(contact, "{%s}SurName" % NS['md'])
+        org = first_text(entity,"{%s}OrganizationName" % NS['md']) or first_text(entity,"{%s}OrganizationDisplayName" % NS['md'])
+        company = first_text(entity,"{%s}Company" % NS['md'])
+        mail = first_text(contact, "{%s}EmailAddress" % NS['md'])
+        display_name = "Unknown"
+        if first_name and last_name:
+            display_name = ' '.join([first_name,last_name])
+        elif first_name:
+            display_name = first_name
+        elif last_name:
+            display_name = last_name
+        elif mail:
+            _,_,display_name = mail.partition(':')
+
+        return dict(type=contact.get('contactType'),
+                    first_name=first_name,
+                    last_name=last_name,
+                    company=company or org,
+                    display_name=display_name,
+                    mail=mail)
+
+    return [_contact_dict(c) for c in entity.iter("{%s}ContactPerson" % NS['md'])]
+
+
+def entity_nameid_formats(entity):
+    return [nif.text for nif in entity.iter("{%s}NameIDFormat" % NS['md'])]
+
+
+def entity_info(e, langs=None):
+    d = entity_simple_summary(e)
+    keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
+    if keywords is not None:
+        lst = [elt.text for elt in keywords]
+        if len(lst) > 0:
+            d['keywords'] = ",".join(lst)
+
+    d['privacy_statement_url'] = privacy_statement_url(e, langs)
+    d['geo'] = entity_geoloc(e)
+    d['orgurl'] = entity_orgurl(e, langs)
+    d['scopes'] = entity_scopes(e)
+    d['service_name'] = entity_service_name(e, langs)
+    d['service_descr'] = entity_service_description(e, langs)
+    d['requested_attributes'] = entity_requested_attributes(e, langs)
+    d['entity_attributes'] = entity_attributes(e)
+    d['contacts'] = entity_contacts(e)
+    d['name_id_formats'] = entity_nameid_formats(e)
+    d['is_idp'] = is_idp(e)
+    d['is_sp'] = is_sp(e)
+    d['is_aa'] = is_aa(e)
+    d['xml'] = dumptree(e, xml_declaration=False, pretty_print=True).decode('utf8').replace('<','&lt;').replace('>','&gt;')
+    if d['is_idp']:
+        d['protocols'] = entity_idp(e).get('protocolSupportEnumeration',"").split()
+
+    return d
 
 def entity_extensions(e):
     """Return a list of the Extensions elements in the EntityDescriptor

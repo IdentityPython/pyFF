@@ -1,0 +1,41 @@
+.frame-square, .frame-round {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.125);
+  display: inline-block;
+  vertical-align: top;
+  padding: 2px;
+  width: 64px;
+  height: 64px;
+  margin-right: .5em;
+  margin-bottom: .3em;
+}
+
+.frame-round {
+  border-radius: 50%;
+  overflow: hidden;
+}
+.frame-round .crop {
+  border-radius: 50%;
+}
+
+.crop {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+.crop img {
+  display: block;
+  min-width: 100%;
+  min-height: 100%;
+  margin: auto;
+  position: absolute;
+  top: -100%;
+  right: -100%;
+  bottom: -100%;
+  left: -100%;
+}
+
+.retina .crop img {
+  transform: scale(0.5, 0.5);
+}
+

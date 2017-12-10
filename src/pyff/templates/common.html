@@ -1,16 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
     <title>{% block title %}{{brand}}{% endblock %}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=10" />
     <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=1">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
 
-    <!-- link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/ -->
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet"/>
     <link href="/static/css/nav.css" rel="stylesheet"/>
-    <link rel="stylesheet" href="/static/css/font-awesome.min.css">
-    <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
+    <link href="/static/css/icon.css" rel="stylesheet"/>
+    {% block css %}
+    {% endblock %}
     {% block script %}
     {% endblock %}
 </head>
@@ -21,12 +22,9 @@
         <div class="header text-muted">
             {% block header %}
             <div class="row">
-                <div class="col-md-10">
-                    <h3>{% block headline %}{% trans %}{{ headline }}{% endtrans %}{% endblock %}</h3>
-                    {% block subheading %}<small>{{subheading}}</small>{% endblock %}
-                </div>
-                <div class="col-md-2">
-                    {% block minitools scoped %}{% endblock minitools %}
+                <div class="col-12 text-truncate">
+                    <h2>{% block headline %}{% trans %}{{ headline }}{% endtrans %}{% endblock %}</h2>
+                    <small>{% block subheading %}{{subheading}}{% endblock %}</small>
                 </div>
             </div>
             {% endblock header %}
@@ -40,29 +38,18 @@
         </div>
         {% block footer %}
         {% endblock %}
-
-        <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
-        <script type="text/javascript" src="/static/js/hashes.min.js"></script>
-        <script type="text/javascript" src="/static/js/jquery.browser.js"></script> <!-- needed for bbq -->
-        <script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script> <!-- needed for ds response -->
-        <script type="text/javascript" src="/static/js/imgload.js"></script>
-        <script type="text/javascript" src="/static/js/hogan.min.js"></script>
-        {% block endscripts %}{% endblock %}
         <!--[if lt IE 9]>
         <script src="/static/js/html5shiv.js"></script>
         <script src="/static/js/respond.min.js"></script>
         <![endif]-->
-        <script type="text/javascript">
-            $(document).ready(function() {
-               $('img.fallback').bind('error', function () {
-                   $(this).unbind('error');
-                   $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
-               }).imgLoad(function() {
-                   $(this).fadeIn(300);
-               });
-            });
-        </script>
-
+        <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
+        <script type="text/javascript" src="/static/js/popper.min.js"></script>
+        <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
+        <!-- script type="text/javascript" src="/static/js/jquery.browser.js"></script --> <!-- needed for bbq -->
+        <!-- script type="text/javascript" src="/static/js/jquery.ba-bbq.min.js"></script --> <!-- needed for ds response -->
+        <script type="text/javascript" src="/static/js/hogan.min.js"></script>
+        {% block endscripts %}
+        {% endblock %}
         {% block final %}
         {% endblock %}
 

@@ -71,7 +71,7 @@ from .pipes import plumbing
 from .utils import resource_string, xslt_transform, dumptree, duration2timedelta, \
     debug_observer, render_template, hash_id
 from .logs import log, SysLogLibHandler
-from .samlmd import entity_simple_summary, entity_display_name
+from .samlmd import entity_simple_summary, entity_display_name, entity_info
 import logging
 from .stats import stats
 from lxml import html
@@ -659,25 +659,12 @@ class MDServer(object):
                                                entities=entities)
                     else:
                         entity = entities[0]
-                        t = html.fragment_fromstring(unicode(xslt_transform(entity, "entity2html.xsl")))
-                        for c_elt in t.findall(".//code[@role='entity']"):
-                            c_txt = dumptree(entity)
-                            parser = etree.XMLParser(remove_blank_text=True)
-                            src = StringIO(c_txt)
-                            tree = etree.parse(src, parser)
-                            c_txt = dumptree(tree, pretty_print=True, xml_declaration=False).decode("utf-8")
-                            p = c_elt.getparent()
-                            p.remove(c_elt)
-                            if p.text is not None:
-                                p.text += c_txt
-                            else:
-                                p.text = c_txt
-                        xml = dumptree(t, xml_declaration=False).decode('utf-8')
                         return render_template("entity.html",
                                                headline=entity_display_name(entity),
                                                subheading=entity.get('entityID'),
                                                entity_id=entity.get('entityID'),
-                                               content=xml)
+                                               samlmd=samlmd,
+                                               entity=entity_info(entity))
             else:
                 for p in self.plumbings:
                     state = {'request': True,
