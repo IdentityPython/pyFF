@@ -151,12 +151,12 @@ class EncodingDispatcher(object):
         vpath = path_info
         for prefix in self.prefixes:
             if vpath.startswith(prefix):
-                log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
+                #log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
                 vpath = path_info.replace("%2F", "/")
                 plen = len(prefix)
                 vpath = vpath[plen + 1:]
                 npath = "%s/%s" % (prefix, self.enc(vpath))
-                log.debug("EncodingDispatcher %s" % npath)
+                #log.debug("EncodingDispatcher %s" % npath)
                 return self.next_dispatcher(npath.encode('ascii',errors='ignore'))
         return self.next_dispatcher(vpath)
 
@@ -440,7 +440,7 @@ Search the active set for matching entities.
         """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
         handler.
         """
-        log.debug("ROOT default args: %s, kwargs: %s" % (repr(args), repr(kwargs)))
+        #log.debug("ROOT default args: %s, kwargs: %s" % (repr(args), repr(kwargs)))
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
             if len(args) > 1:
@@ -518,7 +518,7 @@ class MDServer(object):
         def _d(x, do_split=True):
             if x is not None:
                 x = x.strip()
-            log.debug("_d(%s,%s)" % (x, do_split))
+            #log.debug("_d(%s,%s)" % (x, do_split))
             if x is None or len(x) == 0:
                 return None, None
 
