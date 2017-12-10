@@ -64,6 +64,7 @@ $.widget("pyff.discovery_client", {
                         return $.getJSON(remote, callback);
                     },
                     sourceNode: function (data) {
+                        data.sticky = true;
                         return obj._render(data);
                     },
                     cancelNode: null
