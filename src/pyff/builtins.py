@@ -787,7 +787,7 @@ Display statistics about the current working document.
     """
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
-    
+
     print ("---")
     print ("total size:     {:d}".format(req.store.size()))
     if not hasattr(req.t, 'xpath'):

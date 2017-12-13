@@ -144,6 +144,7 @@ class Resource(object):
 
     def add_child(self, url, **kwargs):
         opts = deepcopy(self.opts)
+        del opts['as']
         opts.update(kwargs)
         self.children.append(Resource(url, self.post, **opts))
 
