@@ -20,6 +20,7 @@ class ParserException(Exception):
 
 
 class NoParser():
+
     def magic(self, content):
         return True
 
@@ -35,8 +36,9 @@ class DirectoryParser():
     def magic(self, content):
         return os.path.isdir(content)
 
-    def _find_matching_files(self, dir):
-        for top, dirs, files in os.walk(dir):
+    def _find_matching_files(self, d):
+        log.debug("find files in {}".format(repr(d)))
+        for top, dirs, files in os.walk(d):
             for dn in dirs:
                 if dn.startswith("."):
                     dirs.remove(dn)
@@ -48,8 +50,13 @@ class DirectoryParser():
 
     def parse(self, resource, content):
         resource.children = []
-        for fn in self._find_matching_files(dir):
+        n = 0
+        for fn in self._find_matching_files(content):
             resource.add_child("file://"+fn)
+            n += 1
+
+        if n == 0:
+            raise IOError("no entities found in {}".format(content))
 
         return dict()
 
@@ -82,10 +89,13 @@ class XRDParser():
 
         return info
 
+
 _parsers = [DirectoryParser('.xml'), XRDParser(), NoParser()]
+
 
 def add_parser(parser):
     _parsers.insert(0,parser)
+
 
 def parse_resource(resource, content):
     for parser in _parsers:

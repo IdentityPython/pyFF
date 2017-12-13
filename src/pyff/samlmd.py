@@ -85,6 +85,9 @@ def parse_saml_metadata(source,
 
         t = root(t)
 
+        if fail_on_error:
+            filter_invalid = False
+
         if validate:
             if filter_invalid:
                 t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
@@ -103,7 +106,6 @@ def parse_saml_metadata(source,
     except Exception as ex:
         if fail_on_error:
             raise ex
-        #traceback.print_exc(ex)
         log.error(ex)
         return None, None
 

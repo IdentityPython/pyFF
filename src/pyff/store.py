@@ -17,6 +17,7 @@ def _now():
 
 DINDEX = ('sha1', 'sha256', 'null')
 
+
 class StoreBase(object):
     def lookup(self, key):
         raise NotImplementedError()

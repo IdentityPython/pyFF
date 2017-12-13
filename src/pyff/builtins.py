@@ -114,8 +114,8 @@ in the case of the MDX server - but by adding 'merge' to the options with an opt
 behaviour can be changed to merge the result of the inner pipeline back to the parent working document.
 
 The default merge strategy is 'replace_existing' which replaces each EntityDescriptor found in the resulting
-document in the parent document (using the entityID as a pointer). Any python module path ('a.mod.u.le.callable')
-ending in a callable is accepted. If the path doesn't contain a '.' then it is assumed to reference one of the
+document in the parent document (using the entityID as a pointer). Any python module path ('a.mod.u.le:callable')
+ending in a callable is accepted. If the path doesn't contain a ':' then it is assumed to reference one of the
 standard merge strategies in pyff.merge_strategies.
 
 For instance the following block can be used to set an attribute on a single entity:
@@ -146,7 +146,6 @@ active document. To avoid this do a select before your fork, thus:
         nt = deepcopy(req.t)
 
     ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
-    # ip.process(req.md,t=nt)
     ireq = Plumbing.Request(ip, req.md, nt)
     ip.iprocess(ireq)
 
@@ -338,7 +337,7 @@ Publish the working document in XML form.
         if os.path.isdir(output_file):
             out = "{}.xml".format(os.path.join(output_file, req.id))
         safe_write(out, dumptree(req.t))
-        req.md.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
+        req.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
 
 
@@ -434,6 +433,8 @@ Defaults are marked with (*)
     opts['filter_invalid'] = bool(strtobool(opts['filter_invalid']))
 
     remotes = []
+    store = req.md.store_class() # start the load process by creating a provisional store object
+    req._store = store
     for x in req.args:
         x = x.strip()
         log.debug("load parsing '%s'" % x)
@@ -465,12 +466,16 @@ Defaults are marked with (*)
 
         post = _null
         if params['via'] is not None:
-            post = PipelineCallback(params['via'], req)
+            post = PipelineCallback(params['via'], req, store=store)
+
+        params.update(opts)
 
         req.md.rm.add(Resource(url, post, **params))
 
     log.debug("Refreshing all resources")
-    req.md.reload()
+    req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']), store=store)
+    req._store = None
+    req.md.store = store # commit the store
 
 
 def _select_args(req):
@@ -479,9 +484,9 @@ def _select_args(req):
     if args is None and 'select' in req.state:
         args = [req.state.get('select')]
     if args is None:
-        args = req.md.store.collections()
+        args = req.store.collections()
     if args is None or not args:
-        args = req.md.store.lookup('entities')
+        args = req.store.lookup('entities')
     if args is None or not args:
         args = []
 
@@ -568,7 +573,7 @@ alias invisible for anything except the corresponding mime type.
 
     if alias:
         nfo = dict(Status='default', Description="Synthetic collection")
-        n = req.md.store.update(ot, name)
+        n = req.store.update(ot, name)
         nfo['Size'] = str(n)
         set_metadata_info(name, nfo)
 
@@ -616,7 +621,7 @@ def _filter(req, *opts):
     ot = req.md.entity_set(args, name, lookup_fn=_find, copy=False)
     if alias:
         nfo = dict(Status='default', Description="Synthetic collection")
-        n = req.md.store.update(ot, name)
+        n = req.store.update(ot, name)
         nfo['Size'] = str(n)
         set_metadata_info(name, nfo)
 
@@ -780,8 +785,11 @@ Display statistics about the current working document.
     - stats
 
     """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+    
     print ("---")
-    print ("total size:     {:d}".format(req.md.store.size()))
+    print ("total size:     {:d}".format(req.store.size()))
     if not hasattr(req.t, 'xpath'):
         raise PipeException("Unable to call stats on non-XML")
 
@@ -793,8 +801,8 @@ Display statistics about the current working document.
     return req.t
 
 
-@pipe
-def store(req, *opts):
+@pipe(name='store')
+def _store(req, *opts):
     """
 Save the working document as separate files
 
@@ -1038,7 +1046,7 @@ HTML.
                                             "certificate has unknown expiration time",
                                             "%s unknown expiration time %s" % (cert.getSubject(), notafter))
 
-                    req.md.store.update(entity_elt)
+                    req.store.update(entity_elt)
             except Exception as ex:
                 log.error(ex)
 
@@ -1292,6 +1300,6 @@ document for later processing.
     for e in iter_entities(req.t):
         # log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         set_entity_attributes(e, req.args)
-        req.md.store.update(e)
+        req.store.update(e)
 
     return req.t

@@ -111,17 +111,18 @@ class PipelineCallback(object):
 A delayed pipeline callback used as a post for parse_saml_metadata
     """
 
-    def __init__(self, entry_point, req):
+    def __init__(self, entry_point, req, store=None):
         self.entry_point = entry_point
         self.plumbing = Plumbing(req.plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
         self.req = req
+        self.store = store
 
     def __call__(self, *args, **kwargs):
         t = args[0]
         if t is None:
             raise ValueError("PipelineCallback must be called with a parse-tree argument")
         try:
-            return self.plumbing.process(self.req.md, state={self.entry_point: True}, t=t)
+            return self.plumbing.process(self.req.md, store=self.store, state={self.entry_point: True}, t=t)
         except Exception as ex:
             traceback.print_exc(ex)
             raise ex
@@ -182,7 +183,7 @@ Represents a single request. When processing a set of pipelines a single request
 may modify any of the fields.
         """
 
-        def __init__(self, pl, md, t, name=None, args=None, state=None):
+        def __init__(self, pl, md, t, name=None, args=None, state=None, store=None):
             if not state:
                 state = dict()
             if not args:
@@ -194,6 +195,16 @@ may modify any of the fields.
             self.args = args
             self.state = state
             self.done = False
+            self._store = store
+
+        def lookup(self, member):
+            return self.md.lookup(member, store=self.store)
+
+        @property
+        def store(self):
+            if self._store:
+                return self._store
+            return self.md.store
 
         def process(self, pl):
             """The inner request pipeline processor.
@@ -217,7 +228,7 @@ may modify any of the fields.
                     break
             return self.t
 
-    def process(self, md, state=None, t=None):
+    def process(self, md, state=None, t=None, store=None):
         """
 The main entrypoint for processing a request pipeline. Calls the inner processor.
 
@@ -229,10 +240,8 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
         """
         if not state:
             state = dict()
-        # req = Plumbing.Request(self, md, t, state=state)
-        # self.iprocess(req)
-        # return req.t
-        return Plumbing.Request(self, md, t, state=state).process(self)
+
+        return Plumbing.Request(self, md, t, state=state, store=store).process(self)
 
     def iprocess(self, req):
         """The inner request pipeline processor.

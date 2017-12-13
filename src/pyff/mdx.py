@@ -106,6 +106,7 @@ class MDUpdate(Monitor):
                 state = {'update': True}
                 p.process(self.server.md, state)
 
+            self.server.ready = True
         except Exception as ex:
             log.error(ex.message)
         finally:
@@ -471,14 +472,11 @@ class MDServer(object):
         self.aliases = config.aliases
         self.psl = PublicSuffixList()
         self.md = MDRepository()
+        self.ready = False
 
         if config.autoreload:
             for f in pipes:
                 cherrypy.engine.autoreload.files.add(f)
-
-    @property
-    def ready(self):
-        return self.md.store is not None
 
     def reload_pipeline(self):
         new_plumbings = [plumbing(v) for v in self._pipes]

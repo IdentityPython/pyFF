@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 import unittest
 import urllib
 from six import StringIO
@@ -61,7 +64,7 @@ class PyFFDTest(PipeLineTest):
             fd.write(cls.mdx_template.render(ctx=cls))
         cls.curdir = os.getcwd()
         cls.port = find_unbound_port()
-        print "Using port %d, logging to %s" % (cls.port, cls.logfile)
+        print("Using port {:d}, logging to {}".format(cls.port, cls.logfile))
         cls.pyffd_thread = Thread(target=run_pyffd,
                                   name="pyffd-test",
                                   args=["--loglevel=DEBUG",
@@ -82,11 +85,11 @@ class PyFFDTest(PipeLineTest):
                 if r.json() and 'running' in r.json()['status']:
                     return
 
-                print r.json()
+                print(r.json())
                 sleep(1)
-            except Exception, ex:
+            except Exception as ex:
                 from traceback import print_exc
-                print print_exc(ex)
+                print(print_exc(ex))
                 pass
             sleep(1)
         raise ValueError("unable to start test pyffd server on port %d" % cls.port)
@@ -176,7 +179,7 @@ class PyFFDTest(PipeLineTest):
     def test_parse_robots(self):
         try:
             import robotparser
-        except ImportError, ex:
+        except ImportError as ex:
             raise unittest.SkipTest()
 
         rp = robotparser.RobotFileParser()
@@ -208,7 +211,7 @@ class PyFFDTest(PipeLineTest):
         SignerTestCase.tearDownClass()
         try:
             requests.get("http://127.0.0.1:%s/shutdown" % cls.port)
-        except Exception, ex:
+        except Exception as ex:
             from traceback import print_exc
             print_exc(ex)
         finally:
