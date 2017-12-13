@@ -74,7 +74,7 @@ class TestResources(TestCase):
             assert(resource_filename(tmp) == tmp)
             (d, fn) = os.path.split(tmp)
             assert(resource_filename(fn, d) == tmp)
-        except IOError, ex:
+        except IOError as ex:
             raise ex
         finally:
             try:
@@ -95,7 +95,7 @@ class TestResources(TestCase):
             assert(resource_string(tmp) == "test")
             (d, fn) = os.path.split(tmp)
             assert(resource_string(fn, d) == "test")
-        except IOError, ex:
+        except IOError as ex:
             raise ex
         finally:
             try:

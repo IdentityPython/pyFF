@@ -19,7 +19,6 @@ import xmlsec
 import yaml
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-
 from .constants import NS
 from .decorators import deprecated
 from .logs import log
@@ -433,7 +432,7 @@ Defaults are marked with (*)
     opts['filter_invalid'] = bool(strtobool(opts['filter_invalid']))
 
     remotes = []
-    store = req.md.store_class() # start the load process by creating a provisional store object
+    store = req.md.store_class()  # start the load process by creating a provisional store object
     req._store = store
     for x in req.args:
         x = x.strip()
@@ -475,7 +474,7 @@ Defaults are marked with (*)
     log.debug("Refreshing all resources")
     req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']), store=store)
     req._store = None
-    req.md.store = store # commit the store
+    req.md.store = store  # commit the store
 
 
 def _select_args(req):
@@ -788,16 +787,18 @@ Display statistics about the current working document.
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    print ("---")
-    print ("total size:     {:d}".format(req.store.size()))
+    print("---")
+    print("total size:     {:d}".format(req.store.size()))
     if not hasattr(req.t, 'xpath'):
         raise PipeException("Unable to call stats on non-XML")
 
     if req.t is not None:
-        print ("selected:       {:d}".format(len(req.t.xpath("//md:EntityDescriptor", namespaces=NS))))
-        print ("          idps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:IDPSSODescriptor]", namespaces=NS))))
-        print ("           sps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:SPSSODescriptor]", namespaces=NS))))
-    print ("---")
+        print("selected:       {:d}".format(len(req.t.xpath("//md:EntityDescriptor", namespaces=NS))))
+        print("          idps: {:d}".format(
+            len(req.t.xpath("//md:EntityDescriptor[md:IDPSSODescriptor]", namespaces=NS))))
+        print(
+            "           sps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:SPSSODescriptor]", namespaces=NS))))
+    print("---")
     return req.t
 
 

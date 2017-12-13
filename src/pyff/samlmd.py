@@ -44,7 +44,7 @@ def find_merge_strategy(strategy_name):
     if '.' not in strategy_name:
         strategy_name = "pyff.merge_strategies:%s" % strategy_name
     if ':' not in strategy_name:
-        strategy_name = rreplace(strategy_name, '.', ':') # backwards compat for old way of specifying these
+        strategy_name = rreplace(strategy_name, '.', ':')  # backwards compat for old way of specifying these
     return load_callable(strategy_name)
 
 
@@ -115,7 +115,6 @@ def parse_saml_metadata(source,
 
 
 class SAMLMetadataResourceParser():
-
     def __init__(self):
         pass
 
@@ -146,6 +145,7 @@ class SAMLMetadataResourceParser():
 
 
 from .parse import add_parser
+
 add_parser(SAMLMetadataResourceParser())
 
 
@@ -561,8 +561,10 @@ def discojson(e, langs=None):
 
     return d
 
+
 def sha1_id(e):
     return hash_id(e, 'sha1')
+
 
 def entity_simple_summary(e):
     if e is None:
@@ -613,7 +615,8 @@ def entity_service_description(entity, langs=None):
 
 
 def entity_requested_attributes(entity, langs=None):
-    return [(a.get('Name'),bool(a.get('isRequired'))) for a in filter_lang(entity.iter("{%s}RequestedAttribute" % NS['md']), langs=langs)]
+    return [(a.get('Name'), bool(a.get('isRequired'))) for a in
+            filter_lang(entity.iter("{%s}RequestedAttribute" % NS['md']), langs=langs)]
 
 
 def entity_idp(entity):
@@ -634,18 +637,20 @@ def entity_contacts(entity):
     def _contact_dict(contact):
         first_name = first_text(contact, "{%s}GivenName" % NS['md'])
         last_name = first_text(contact, "{%s}SurName" % NS['md'])
-        org = first_text(entity,"{%s}OrganizationName" % NS['md']) or first_text(entity,"{%s}OrganizationDisplayName" % NS['md'])
-        company = first_text(entity,"{%s}Company" % NS['md'])
+        org = first_text(entity, "{%s}OrganizationName" % NS['md']) or first_text(entity,
+                                                                                  "{%s}OrganizationDisplayName" % NS[
+                                                                                      'md'])
+        company = first_text(entity, "{%s}Company" % NS['md'])
         mail = first_text(contact, "{%s}EmailAddress" % NS['md'])
         display_name = "Unknown"
         if first_name and last_name:
-            display_name = ' '.join([first_name,last_name])
+            display_name = ' '.join([first_name, last_name])
         elif first_name:
             display_name = first_name
         elif last_name:
             display_name = last_name
         elif mail:
-            _,_,display_name = mail.partition(':')
+            _, _, display_name = mail.partition(':')
 
         return dict(type=contact.get('contactType'),
                     first_name=first_name,
@@ -682,11 +687,13 @@ def entity_info(e, langs=None):
     d['is_idp'] = is_idp(e)
     d['is_sp'] = is_sp(e)
     d['is_aa'] = is_aa(e)
-    d['xml'] = dumptree(e, xml_declaration=False, pretty_print=True).decode('utf8').replace('<','&lt;').replace('>','&gt;')
+    d['xml'] = dumptree(e, xml_declaration=False, pretty_print=True).decode('utf8').replace('<', '&lt;').replace('>',
+                                                                                                                 '&gt;')
     if d['is_idp']:
-        d['protocols'] = entity_idp(e).get('protocolSupportEnumeration',"").split()
+        d['protocols'] = entity_idp(e).get('protocolSupportEnumeration', "").split()
 
     return d
+
 
 def entity_extensions(e):
     """Return a list of the Extensions elements in the EntityDescriptor
@@ -760,7 +767,7 @@ def set_entity_attributes(e, d, nf=NF_URI):
     if e.tag != "{%s}EntityDescriptor" % NS['md']:
         raise MetadataException("I can only add EntityAttribute(s) to EntityDescriptor elements")
 
-    for attr, value in d.iteritems():
+    for attr, value in d.items():
         a = _eattribute(e, attr, nf)
         velt = etree.Element("{%s}AttributeValue" % NS['saml'])
         velt.text = value
@@ -804,7 +811,7 @@ def set_reginfo(e, policy=None, authority=None):
     ri = etree.Element("{%s}RegistrationInfo" % NS['mdrpi'])
     ext.append(ri)
     ri.set('registrationAuthority', authority)
-    for lang, policy_url in policy.iteritems():
+    for lang, policy_url in policy.items():
         rp = etree.Element("{%s}RegistrationPolicy" % NS['mdrpi'])
         rp.text = policy_url
         rp.set('{%s}lang' % NS['xml'], lang)

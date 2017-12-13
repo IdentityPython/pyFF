@@ -61,5 +61,6 @@ class Config(object):
     request_timeout = pyconfig.setting("pyff.request_timeout",10)
     request_cache_time = pyconfig.setting("pyff.request_cache_time", 300)
     request_override_encoding = pyconfig.setting("pyff.request_override_encoding", "utf8") # set to non to enable chardet guessing
+    devel_memory_profile = pyconfig.setting("pyff.devel_memory_profile", False)
 
 config = Config()

@@ -18,7 +18,6 @@ from .parse import parse_resource
 from itertools import chain
 from requests_cache.core import CachedSession
 from copy import deepcopy
-from six import StringIO
 
 requests.packages.urllib3.disable_warnings()
 
@@ -90,8 +89,8 @@ class ResourceManager(DictMixin):
                             for nr in res:
                                 new_resources.append(nr)
                     except Exception as ex:
-                        #from traceback import print_exc
-                        #print_exc()
+                        # from traceback import print_exc
+                        # print_exc()
                         print("caught fetch thread exception")
                         print(ex)
                         log.error(ex)
@@ -214,4 +213,3 @@ class Resource(object):
         self.add_info(info)
 
         return self.children
-

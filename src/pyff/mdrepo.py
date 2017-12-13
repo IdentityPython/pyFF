@@ -187,8 +187,10 @@ Lookup elements in the working metadata repository
 :type member: basestring
 :param xp: An optional xpath filter
 :type xp: basestring
+:param store: the store to operate on
 :return: An interable of EntityDescriptor elements
 :rtype: etree.Element
+
 
 **Selector Syntax**
 

@@ -1,4 +1,3 @@
-
 import os
 from .utils import parse_xml, root
 from .constants import NS
@@ -8,6 +7,7 @@ from datetime import datetime
 from six import StringIO
 
 __author__ = 'leifj'
+
 
 class ParserException(Exception):
     def __init__(self, msg, wrapped=None, data=None):
@@ -20,7 +20,6 @@ class ParserException(Exception):
 
 
 class NoParser():
-
     def magic(self, content):
         return True
 
@@ -29,7 +28,6 @@ class NoParser():
 
 
 class DirectoryParser():
-
     def __init__(self, ext):
         self.ext = ext
 
@@ -52,7 +50,7 @@ class DirectoryParser():
         resource.children = []
         n = 0
         for fn in self._find_matching_files(content):
-            resource.add_child("file://"+fn)
+            resource.add_child("file://" + fn)
             n += 1
 
         if n == 0:
@@ -62,7 +60,6 @@ class DirectoryParser():
 
 
 class XRDParser():
-
     def __init__(self):
         pass
 
@@ -86,7 +83,6 @@ class XRDParser():
                 resource.add_child(link_href, verify=fp)
         resource.last_seen = datetime.now
         resource.expire_time = None
-
         return info
 
 
@@ -94,7 +90,7 @@ _parsers = [DirectoryParser('.xml'), XRDParser(), NoParser()]
 
 
 def add_parser(parser):
-    _parsers.insert(0,parser)
+    _parsers.insert(0, parser)
 
 
 def parse_resource(resource, content):

@@ -85,7 +85,7 @@ class MemoryStore(StoreBase):
             _m(self.index[hn], hash_id(entity, hn, False))
 
         attr_idx = self.index.setdefault('attr', {})
-        for attr, values in entity_attribute_dict(entity).iteritems():
+        for attr, values in entity_attribute_dict(entity).items():
             vidx = attr_idx.setdefault(attr, {})
             for v in values:
                 _m(vidx, v)
@@ -113,7 +113,7 @@ class MemoryStore(StoreBase):
             else:
                 m = re.compile(v)
                 entities = []
-                for value, ents in idx.iteritems():
+                for value, ents in idx.items():
                     if m.match(value):
                         entities.extend(ents)
                 return entities
@@ -278,7 +278,7 @@ class RedisStore(StoreBase):
                 entity_id = relt.get("entityID")
                 if entity_id is not None:
                     self.membership("entities", entity_id, ts, p)
-                for ea, eav in entity_attribute_dict(relt).iteritems():
+                for ea, eav in entity_attribute_dict(relt).items():
                     for v in eav:
                         # log.debug("%s=%s" % (ea, v))
                         self.membership("{%s}%s" % (ea, v), tid, ts, p)

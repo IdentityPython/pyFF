@@ -236,6 +236,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
 :param md: The current metadata repository
 :param state: The active request state
 :param t: The active working document
+:param store: The store object to operate on
 :return: The result of applying the processing pipeline to t.
         """
         if not state:
@@ -251,7 +252,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
         log.debug("Processing pipeline... {}".format(self.pipeline))
         for p in self.pipeline:
             try:
-                pipe, opts, name, args = load_pipe(p)
+                pipefn, opts, name, args = load_pipe(p)
                 # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
                 if type(args) is str or type(args) is unicode:
                     args = [args]
@@ -259,7 +260,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
                     raise PipeException("Unknown argument type %s" % repr(args))
                 req.args = args
                 req.name = name
-                ot = pipe(req, *opts)
+                ot = pipefn(req, *opts)
                 if ot is not None:
                     req.t = ot
                 if req.done:

@@ -49,7 +49,6 @@ import importlib
 
 import pkg_resources
 
-
 from six import StringIO
 import getopt
 import urlparse
@@ -152,13 +151,13 @@ class EncodingDispatcher(object):
         vpath = path_info
         for prefix in self.prefixes:
             if vpath.startswith(prefix):
-                #log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
+                # log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
                 vpath = path_info.replace("%2F", "/")
                 plen = len(prefix)
                 vpath = vpath[plen + 1:]
                 npath = "%s/%s" % (prefix, self.enc(vpath))
-                #log.debug("EncodingDispatcher %s" % npath)
-                return self.next_dispatcher(npath.encode('ascii',errors='ignore'))
+                # log.debug("EncodingDispatcher %s" % npath)
+                return self.next_dispatcher(npath.encode('ascii', errors='ignore'))
         return self.next_dispatcher(vpath)
 
 
@@ -306,12 +305,12 @@ class MDRoot(object):
     stats = MDStats()
     discovery = SHIBDiscovery()
 
-    try:  # pragma: nocover
-        import dowser
-
-        memory = dowser.Root()
-    except ImportError:
-        memory = NotImplementedFunction('Memory profiling needs dowser')
+    if config.devel_memory_profile:
+        try:  # pragma: nocover
+            import dowser
+            memory = dowser.Root()
+        except ImportError:
+            memory = NotImplementedFunction('Memory profiling needs dowser')
 
     _well_known = WellKnown()
     static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
@@ -441,7 +440,7 @@ Search the active set for matching entities.
         """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
         handler.
         """
-        #log.debug("ROOT default args: %s, kwargs: %s" % (repr(args), repr(kwargs)))
+        # log.debug("ROOT default args: %s, kwargs: %s" % (repr(args), repr(kwargs)))
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
             if len(args) > 1:
@@ -511,12 +510,12 @@ class MDServer(object):
         path = kwargs.get('path', None)
         content_type = kwargs.get('content_type', None)
 
-        #log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
+        # log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
 
         def _d(x, do_split=True):
             if x is not None:
                 x = x.strip()
-            #log.debug("_d(%s,%s)" % (x, do_split))
+            # log.debug("_d(%s,%s)" % (x, do_split))
             if x is None or len(x) == 0:
                 return None, None
 
