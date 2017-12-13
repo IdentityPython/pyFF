@@ -36,11 +36,6 @@ class MDRepository():
         self.store_class = load_callable(config.store_class)
         self.store = None
 
-    def reload(self, fail_on_error=False):
-        store = self.store_class()
-        self.rm.reload(fail_on_error=fail_on_error, store=store)
-        self.store = store
-
     def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None, related=None):
         """
 :param query: A string to search for.
