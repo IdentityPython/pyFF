@@ -6,7 +6,8 @@ import os
 
 from pyff import utils
 from pyff.constants import NS
-from pyff.utils import resource_filename, parse_xml, find_entity, root, resource_string, entities_list
+from pyff.samlmd import find_entity, entities_list
+from pyff.utils import resource_filename, parse_xml, root, resource_string
 from ..merge_strategies import replace_existing, remove
 
 
