@@ -20,7 +20,8 @@ NS = dict(md="urn:oasis:names:tc:SAML:2.0:metadata",
           xml='http://www.w3.org/XML/1998/namespace',
           saml="urn:oasis:names:tc:SAML:2.0:assertion",
           xs="http://www.w3.org/2001/XMLSchema",
-          xsi="http://www.w3.org/2001/XMLSchema-instance")
+          xsi="http://www.w3.org/2001/XMLSchema-instance",
+          ser="http://eidas.europa.eu/metadata/servicelist")
 
 ATTRS = {'collection': 'http://pyff.io/collection',
          'entity-category': 'http://macedir.org/entity-category',
@@ -62,5 +63,6 @@ class Config(object):
     request_cache_time = pyconfig.setting("pyff.request_cache_time", 300)
     request_override_encoding = pyconfig.setting("pyff.request_override_encoding", "utf8") # set to non to enable chardet guessing
     devel_memory_profile = pyconfig.setting("pyff.devel_memory_profile", False)
+    devel_write_xml_to_file = pyconfig.setting("pyff.devel_write_xml_to_file", False)
 
 config = Config()
