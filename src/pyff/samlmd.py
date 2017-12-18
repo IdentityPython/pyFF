@@ -2,7 +2,7 @@ from __future__ import absolute_import, unicode_literals
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
-    has_tag, hash_id, load_callable, rreplace, dumptree
+    has_tag, hash_id, load_callable, rreplace, dumptree, first_text
 from .logs import log
 from .constants import config, NS, ATTRS, NF_URI, PLACEHOLDER_ICON
 from lxml import etree
@@ -12,6 +12,7 @@ from itertools import chain
 from copy import deepcopy
 from .exceptions import *
 from six import StringIO
+from .parse import add_parser
 
 
 class EntitySet(object):
@@ -53,6 +54,7 @@ def parse_saml_metadata(source,
                         base_url=None,
                         fail_on_error=False,
                         filter_invalid=True,
+                        cleanup=None,
                         validate=True,
                         validation_errors=None):
     """Parse a piece of XML and return an EntitiesDescriptor element after validation.
@@ -64,6 +66,7 @@ def parse_saml_metadata(source,
 :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
 :param validate: (default: True) set to False to turn off all XML schema validation
 :param validation_errors: A dict that will be used to return validation errors to the caller
+:param cleanup: A callable that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
 (but after xinclude processing and signature validation)
     """
 
@@ -78,10 +81,12 @@ def parse_saml_metadata(source,
 
         t = check_signature(t, key)
 
-        # get rid of ID as early as possible - probably not unique
-        for e in iter_entities(t):
-            if e.get('ID') is not None:
-                del e.attrib['ID']
+        if cleanup is not None:
+            t = cleanup(t)
+        else:  # at least get rid of ID attribute
+            for e in iter_entities(t):
+                if e.get('ID') is not None:
+                    del e.attrib['ID']
 
         t = root(t)
 
@@ -127,6 +132,7 @@ class SAMLMetadataResourceParser():
         t, expire_time_offset = parse_saml_metadata(StringIO(content.encode('utf8')),
                                                     key=resource.opts['verify'],
                                                     base_url=resource.url,
+                                                    cleanup=resource.opts['cleanup'],
                                                     fail_on_error=resource.opts['fail_on_error'],
                                                     filter_invalid=resource.opts['filter_invalid'],
                                                     validate=resource.opts['validate'],
@@ -190,7 +196,7 @@ def entitiesdescriptor(entities,
                        valid_until=None,
                        validate=True,
                        copy=True,
-                       nsmap=dict()):
+                       nsmap=None):
     """
 :param lookup_fn: a function used to lookup entities by name
 :param entities: a set of entities specifiers (lookup is used to find entities from this set)
@@ -202,6 +208,9 @@ def entitiesdescriptor(entities,
 
 Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
     """
+
+    if nsmap is None:
+        nsmap = dict()
 
     def _resolve(member, l_fn):
         if hasattr(member, 'tag'):
@@ -236,6 +245,10 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             if copy:
                 ent_insert = deepcopy(ent_insert)
             t.append(ent_insert)
+
+    if config.devel_write_xml_to_file:
+        with open("/tmp/pyff_entities_out.xml", "w") as fd:
+            fd.write(dumptree(t))
 
     if validate:
         try:
@@ -590,13 +603,6 @@ def entity_simple_summary(e):
         d['privacy_statement_url'] = psu
 
     return d
-
-
-def first_text(elt, tag, default=None):
-    for matching in elt.iter(tag):
-        return matching.text
-    return default
-
 
 def entity_orgurl(entity, langs=None):
     for organizationUrl in filter_lang(entity.iter("{%s}OrganizationURL" % NS['md']), langs=langs):

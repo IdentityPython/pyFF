@@ -439,37 +439,36 @@ Defaults are marked with (*)
         log.debug("load parsing '%s'" % x)
         r = x.split()
 
-        assert len(r) in range(1, 7), PipeException(
-            "Usage: load resource [as url] [[verify] verification] [via pipeline]")
+        assert len(r) in range(1, 8), PipeException(
+            "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
 
         url = r.pop(0)
         params = dict()
 
         while len(r) > 0:
             elt = r.pop(0)
-            if elt in ("as", "verify", "via"):
+            if elt in ("as", "verify", "via", "cleanup"):
                 if len(r) > 0:
                     params[elt] = r.pop(0)
                 else:
-                    raise PipeException("Usage: load resource [as url] [[verify] verification] [via pipeline]")
+                    raise PipeException("Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
             else:
                 params['verify'] = elt
 
-        for elt in ("verify", "via"):
+        for elt in ("verify", "via", "cleanup"):
             params.setdefault(elt, None)
 
         params.setdefault('as', url)
 
-        def _null(t):
-            return t
-
-        post = _null
         if params['via'] is not None:
-            post = PipelineCallback(params['via'], req, store=store)
+            params['via'] = PipelineCallback(params['via'], req, store=store)
+
+        if params['cleanup'] is not None:
+            params['cleanup'] = PipelineCallback(params['cleanup'], req, store=store)
 
         params.update(opts)
 
-        req.md.rm.add(Resource(url, post, **params))
+        req.md.rm.add(Resource(url, **params))
 
     log.debug("Refreshing all resources")
     req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']), store=store)
