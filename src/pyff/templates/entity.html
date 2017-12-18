@@ -64,10 +64,12 @@
                         {% endif %}
                     </dd>
                     {% endif %}
+                    {% if entity.descr %}
                     <dt>Description</dt>
                     <dd>
                         {{entity.descr}}
                     </dd>
+                    {% endif %}
                     {% if entity.orgurl %}
                     <dt>URL</dt>
                     <dd><a href="{{entity.orgurl}}" rel="external">{{entity.orgurl}}</a></dd>
@@ -104,7 +106,7 @@
                     {% if entity.entity_attributes %}
                     <dt>Entity Attributes</dt>
                     <dd>
-                        <dl>role="tab" data-toggle="tab"
+                        <dl>
                             {% for a,v in entity.entity_attributes.items() %}
                             <dt>{{a}}</dt>
                             <dd>

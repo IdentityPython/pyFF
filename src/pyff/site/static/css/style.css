@@ -96,6 +96,10 @@ body {
     font-size: small;
 }
 
+.card {
+    margin-bottom: 10px;
+}
+
 .inline li {
     display: inline;
 }
@@ -191,4 +195,14 @@ h3.sp {
 
 #pyff-saved-choices {
     margin-bottom: 10px;
+}
+
+xscroll {
+    overflow-y: hidden;
+    overflow-x: auto;
+}
+
+yscroll {
+    overflow-x: hidden;
+    overflow-y: auto;
 }

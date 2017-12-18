@@ -15,7 +15,8 @@ from threading import local
 from time import gmtime, strftime
 from urlparse import urlparse
 from itertools import chain
-
+from StringIO import StringIO
+import yaml
 import xmlsec
 import cherrypy
 import iso8601
@@ -148,6 +149,10 @@ Timestamp in ISO format
 def iso2datetime(s):
     return iso8601.parse_date(s)
 
+def first_text(elt, tag, default=None):
+    for matching in elt.iter(tag):
+        return matching.text
+    return default
 
 class ResourceResolver(etree.Resolver):
     def __init__(self):
@@ -255,8 +260,17 @@ def truncate_filter(s, max_len=10):
         return s
 
 
+def to_yaml_filter(pipeline):
+    print(pipeline)
+    out = StringIO()
+    yaml.dump(pipeline, stream=out)
+    return out.getvalue()
+
+
 env.filters['u'] = urlencode_filter
 env.filters['truncate'] = truncate_filter
+env.filters['to_yaml'] = to_yaml_filter
+env.filters['sha1'] = lambda x: hash_id(x,'sha1', False)
 
 
 def template(name):

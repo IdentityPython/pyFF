@@ -10,7 +10,7 @@
         </ul>
     {% else %}
         <div class="row" id="metadataIndex">
-            <div class="col-xs-3 col-md-3">
+            <div class="col-sm-3">
                 <ul class="nav nav-pills flex-column">
                 {% for a in aliases %}
                     {% if md.store.attribute(aliases[a]) %}
@@ -19,7 +19,7 @@
                 {% endfor %}
                 </ul>
             </div>
-            <div class="col-xs-9 col-md-9">
+            <div class="col-sm-9">
                 <div class="tab-content">
                 {% for a in aliases %}
                     {% if md.store.attribute(aliases[a]) %}
