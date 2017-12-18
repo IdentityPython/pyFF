@@ -391,7 +391,7 @@ Disallow: /
                                cmdline=" ".join(sys.argv),
                                stats=stats,
                                repo=self.server.md,
-                               plumbings=["%s" % p for p in self.server.plumbings])
+                               plumbings=self.server.plumbings)
 
     @cherrypy.expose
     def reset(self):
@@ -815,6 +815,7 @@ def main():
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
             'checker.on': False,
+            'log.screen': False,
             'tools.proxy.on': config.proxy,
             'allow_shutdown': config.allow_shutdown,
             'error_page.404': lambda **kwargs: error_page(404, _=_, **kwargs),
