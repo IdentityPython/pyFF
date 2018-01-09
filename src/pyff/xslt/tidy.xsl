@@ -5,6 +5,8 @@
                 xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
 
   <xsl:template match="@ID"/>
+  <xsl:template match="@Id"/>
+  <xsl:template match="@xml:id"/>
   <xsl:template match="@validUntil"/>
   <xsl:template match="@cacheDuration"/>
   <xsl:template match="@xml:base"/>
