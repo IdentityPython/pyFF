@@ -300,6 +300,13 @@ def root(t):
         return t
 
 
+def with_tree(elt, cb):
+    cb(elt)
+    if isinstance(elt.tag,basestring):
+        for child in list(elt):
+            with_tree(child, cb)
+
+
 def duration2timedelta(period):
     regex = re.compile(
         '(?P<sign>[-+]?)P(?:(?P<years>\d+)[Yy])?(?:(?P<months>\d+)[Mm])?(?:(?P<days>\d+)[Dd])?(?:T(?:(?P<hours>\d+)[Hh])?(?:(?P<minutes>\d+)[Mm])?(?:(?P<seconds>\d+)[Ss])?)?')
