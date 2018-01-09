@@ -573,3 +573,19 @@ class SigningTest(PipeLineTest):
                 raise Skip
             print(md.lookup('https://idp.example.com/saml2/idp/metadata.php'))
             assert (not md.lookup('https://idp.example.com/saml2/idp/metadata.php'))
+
+    def test_bad_namespace(self):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            tmpfile = tempfile.NamedTemporaryFile('w').name
+            try:
+                res, md = self.exec_pipeline("""
+- when batch:
+    - load:
+        - %s/bad_metadata cleanup bad
+    - loadstats
+- when bad:
+    - check_xml_namespaces
+""" % self.datadir)
+            except ValueError:
+                raise Skip
+            assert("Expected exception from bad namespace in")

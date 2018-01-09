@@ -24,10 +24,11 @@ from .decorators import deprecated
 from .logs import log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .stats import set_metadata_info
-from .utils import total_seconds, dumptree, safe_write, root, duration2timedelta, xslt_transform, validate_document
+from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, validate_document
 from .samlmd import iter_entities, annotate_entity, set_entity_attributes, discojson
 from .fetch import Resource
 from six import StringIO
+from six.moves.urllib_parse import urlparse
 
 __author__ = 'leifj'
 
@@ -938,6 +939,27 @@ This example would drop the first Signature element only.
 
     return req.t
 
+@pipe
+def check_xml_namespaces(req, *opts):
+    """
+
+    :param req: The request
+    :param opts: Options (not used)
+    :return: always returns the unmodified working document or throws an exception if checks fail
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    def _verify(elt):
+        if isinstance(elt.tag, basestring):
+            for prefix, uri in elt.nsmap.items():
+                if not uri.startswith('urn:'):
+                    u = urlparse(uri)
+                    if u.scheme not in ('http','https'):
+                        raise ValueError("Namespace URIs must be be http(s) URIs ('{}' declared on {})".format(uri,elt.tag))
+
+    with_tree(root(req.t), _verify)
+    return req.t
 
 @pipe
 def certreport(req, *opts):
