@@ -3,10 +3,14 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
                 xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+                xmlns:samla="urn:oasis:names:tc:SAML:2.0:assertion"
+                xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute"
                 xmlns:saml="urn:oasis:names:tc:SAML:2.0:protocol">
 
     <!-- remove ID, validUntil, cacheDuration and xml:base -->
     <xsl:template match="@ID"/>
+    <xsl:template match="@Id"/>
+    <xsl:template match="@xml:id"/>
     <xsl:template match="@validUntil"/>
     <xsl:template match="@cacheDuration"/>
     <xsl:template match="@xml:base"/>
@@ -63,6 +67,34 @@
         <xsl:element name="md:Extensions">
             <xsl:apply-templates select="text()|comment()|@*|node()"/>
         </xsl:element>
+    </xsl:template>
+
+    <xsl:template name="attributes">
+        <samla:Attribute Name="https://pyff.io/eidas/endpoint_type">
+            <samla:AttributeValue><xsl:value-of select="$eidas_endpoint_type"/></samla:AttributeValue>
+        </samla:Attribute>
+        <samla:Attribute Name="https://pyff.io/eidas/territory">
+            <samla:AttributeValue><xsl:value-of select="$eidas_territory"/></samla:AttributeValue>
+        </samla:Attribute>
+    </xsl:template>
+
+    <xsl:template match="md:EntityDescriptor">
+        <xsl:choose>
+            <xsl:when test="md:Extensions">
+                <xsl:copy>
+                    <xsl:apply-templates select="node()|@*"/>
+                </xsl:copy>
+            </xsl:when>
+            <xsl:otherwise>
+                <mdattr:EntityAttributes>
+                    <xsl:call-template name="attributes"/>
+                </mdattr:EntityAttributes>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+
+    <xsl:template match="mdattr:EntityAttributes">
+        <xsl:call-template name="attributes"/>
     </xsl:template>
 
     <!-- just copy everything else -->
