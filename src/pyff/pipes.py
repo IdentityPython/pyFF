@@ -123,7 +123,7 @@ A delayed pipeline callback used as a post for parse_saml_metadata
         if t is None:
             raise ValueError("PipelineCallback must be called with a parse-tree argument")
         try:
-            return self.plumbing.process(self.req.md, store=self.store, state={self.entry_point: True}, t=t)
+            return self.plumbing.process(self.req.md, args=kwargs, store=self.store, state={self.entry_point: True}, t=t)
         except Exception as ex:
             traceback.print_exc(ex)
             raise ex
@@ -227,7 +227,7 @@ may modify any of the fields.
                     break
             return self.t
 
-    def process(self, md, state=None, t=None, store=None):
+    def process(self, md, args=None, state=None, t=None, store=None):
         """
 The main entrypoint for processing a request pipeline. Calls the inner processor.
 
@@ -241,7 +241,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
         if not state:
             state = dict()
 
-        return Plumbing.Request(self, md, t, state=state, store=store).process(self)
+        return Plumbing.Request(self, md, t, args=args, state=state, store=store).process(self)
 
     def iprocess(self, req):
         """The inner request pipeline processor.

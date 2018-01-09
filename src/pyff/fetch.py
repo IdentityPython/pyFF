@@ -213,7 +213,7 @@ class Resource(object):
         if self.t is not None:
             self.last_seen = datetime.now()
             if self.post is not None:
-                self.t = self.post(self.t)
+                self.t = self.post(self.t, **self.opts)
 
             if self.is_expired():
                 info['Expired'] = True
