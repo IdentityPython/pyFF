@@ -189,13 +189,12 @@ def schema():
     return thread_data.schema
 
 
-def check_signature(t, key):
+def check_signature(t, key, only_one_signature=False):
     if key is not None:
         log.debug("verifying signature using %s" % key)
         refs = xmlsec.verified(t, key, drop_signature=True)
-        if len(refs) != 1:
-            raise MetadataException(
-                "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+        if only_one_signature and len(refs) != 1:
+            raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
         t = refs[0]  # prevent wrapping attacks
 
     return t
