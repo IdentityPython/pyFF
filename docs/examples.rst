@@ -11,7 +11,7 @@ Fetch SWAMID metadata, split it up into EntityDescriptor elements and store each
 .. code-block:: yaml
 
    - load:
-        - http://md.swamid.se/md/swamid-2.0.xml
+        - http://mds.swamid.se/md/swamid-2.0.xml
    - select
    - publish: "/tmp/swamid-2.0.xml"
    - stats
@@ -114,31 +114,43 @@ contains the following:
     <?xml version="1.0" encoding="UTF-8"?>
     <XRDS xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
         <XRD>
-            <Subject>http://md.swamid.se/md/swamid-2.0.xml</Subject>
-            <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.swamid.se/md/swamid-2.0.xml">
+            <Subject>http://mds.swamid.se/md/swamid-2.0.xml</Subject>
+            <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://mds.swamid.se/md/swamid-2.0.xml">
                 <Title>SWAMID</Title>
                 <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
                     <ds:X509Data>
                         <ds:X509Certificate>
-        MIIDdTCCAl0CBEY7EskwDQYJKoZIhvcNAQEEBQAwfzELMAkGA1UEBhMCU0UxEjAQ
-        BgNVBAgTCVN0b2NraG9sbTESMBAGA1UEBxMJU3RvY2tob2xtMREwDwYDVQQKEwhT
-        V0FNSS5zZTEPMA0GA1UECxMGU1dBTUlEMSQwIgYDVQQDExtTV0FNSUQgbWV0YWRh
-        dGEgc2lnbmVyIHYxLjEwHhcNMDcwNTA0MTEwMjMzWhcNMTcwNTAxMTEwMjMzWjB/
-        MQswCQYDVQQGEwJTRTESMBAGA1UECBMJU3RvY2tob2xtMRIwEAYDVQQHEwlTdG9j
-        a2hvbG0xETAPBgNVBAoTCFNXQU1JLnNlMQ8wDQYDVQQLEwZTV0FNSUQxJDAiBgNV
-        BAMTG1NXQU1JRCBtZXRhZGF0YSBzaWduZXIgdjEuMTCCASIwDQYJKoZIhvcNAQEB
-        BQADggEPADCCAQoCggEBAM6wXN3pVCo98SACS6JCHjSlWj83oNL/Ct+a9hmAx1NZ
-        SKg7lnEJYwWBvzJt5o/47jRQbGm94a45Yy5LVoXq4XyCKINhMxSwbRROvr8Hw6tg
-        P1Z9dk5Jjejvus3gyaH3+EuEyP4aIjTlgmHDwW6HOv/m/4bOXSHB4Pisn7aocqU7
-        kjpOn1f0cGodWOgGO4tP7KXs6ndcLhIkW+e/B80WEr0kocuc/pvx+aLuKSkttk/A
-        fP1DFs5sqX31RXQKGrB/uEEYVv1Qvneig+RXGSbqk2Tab3BcLE/Cjnfi9Q9cH/jR
-        eL/YSSafGtl+EBgXKszxjMtELhiEWsL9RrMu1HUkBusCAwEAATANBgkqhkiG9w0B
-        AQQFAAOCAQEAkXaa61gp/lkEDNRFc0bzH3ZyoUFgol64F1zdAwBS3xnsCkTnAXt3
-        p452daEyz+0UR5J/BruMOyvR57w1m7ckVnx/sAgRgaD6gQlUWehjKPEsx8o5iDfO
-        5R1V5Rn2o7+0VuIJDDObEAtMwqn2Nk6TTzsUVfz5y9nUQAxBz3EqXnnSgRwqSwRF
-        yiVkpVfwtUHIolAf6O2N9Fg1jqoqt4mQCOyRZpD0/5SRYESTY6TJjTmvoh+zOPlI
-        yEiw+Zrl/FWjXtBnRnz8AVT5NRzYiMHdbTHs0Fh6elsb5b9gTBo7j6+t36m7oo2K
-        DaWWpMWvuWHugEqvIAXDCI/HzTbbiWm9NQ==
+ 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       
                         </ds:X509Certificate>
                     </ds:X509Data>
               </ds:KeyInfo>
@@ -194,7 +206,7 @@ the Singature object.
 .. code-block:: yaml
 
     - load:
-       - http://md.swamid.se/md/swamid-2.0.xml 12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB
+       - http://mds.swamid.se/md/swamid-2.0.xml A6:78:5A:37:C9:C9:0C:25:AD:5F:1F:69:22:EF:76:7B:C9:78:67:67:3A:AF:4F:8B:EA:A1:A7:6D:A3:A8:E5:85
     - select: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - xslt:
         stylesheet: tidy.xsl
