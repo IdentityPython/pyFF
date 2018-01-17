@@ -29,6 +29,7 @@ from .samlmd import iter_entities, annotate_entity, set_entity_attributes, disco
 from .fetch import Resource
 from six import StringIO
 from six.moves.urllib_parse import urlparse
+from .exceptions import MetadataException
 
 __author__ = 'leifj'
 
@@ -956,7 +957,7 @@ def check_xml_namespaces(req, *opts):
                 if not uri.startswith('urn:'):
                     u = urlparse(uri)
                     if u.scheme not in ('http','https'):
-                        raise ValueError("Namespace URIs must be be http(s) URIs ('{}' declared on {})".format(uri,elt.tag))
+                        raise MetadataException("Namespace URIs must be be http(s) URIs ('{}' declared on {})".format(uri,elt.tag))
 
     with_tree(root(req.t), _verify)
     return req.t
