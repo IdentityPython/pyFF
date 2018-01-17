@@ -1,19 +1,22 @@
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 import shutil
 import sys
 import tempfile
-from StringIO import StringIO
-
+from six import StringIO
 import os
 import yaml
 from mako.lookup import TemplateLookup
 from mock import patch
 from nose.plugins.skip import Skip
-
 from pyff.mdrepo import MDRepository, MetadataException
 from pyff.pipes import plumbing, Plumbing, PipeException
 from pyff.test import ExitException
 from pyff.test import SignerTestCase
 from pyff.utils import hash_id, parse_xml, resource_filename, root
+from pyff.parse import ParserException
+from pyff.fetch import ResourceException
 
 __author__ = 'leifj'
 
@@ -35,7 +38,7 @@ class PipeLineTest(SignerTestCase):
     def exec_pipeline(self, pstr):
         md = MDRepository()
         p = yaml.load(StringIO(pstr))
-        # print p
+        print(p)
         res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}})
         return res, md
 
@@ -45,7 +48,7 @@ class PipeLineTest(SignerTestCase):
 
     def setUp(self):
         SignerTestCase.setUpClass()
-        print "setup called for PipeLineTest"
+        print("setup called for PipeLineTest")
         self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'simple-pipeline')])
 
 
@@ -75,13 +78,12 @@ class ParseTest(PipeLineTest):
 - select
 - stats
 """ % self.datadir)
-                print sys.stdout.captured
-                print sys.stderr.captured
+                print(sys.stdout.captured)
+                print(sys.stderr.captured)
                 eIDs = [e.get('entityID') for e in md.store]
                 assert ('https://idp.example.com/saml2/idp/metadata.php1' not in eIDs)
                 assert ('https://idp.example.com/saml2/idp/metadata.php' in eIDs)
-                assert (
-                "removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed" in str(l))
+                assert ("removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed" in str(l))
 
 
 # To run all LoadErrorTests: ./setup.py test -s pyff.test.test_pipeline.LoadErrorTest
@@ -102,18 +104,17 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir, self.datadir))
-                except PipeException, ex:
-                    print ex
-                    assert ("Don't know how to load" in str(ex))
+                except (PipeException,ResourceException) as ex:
+                    print(ex)
                     assert ("file_that_does_not_exist.xml" in str(ex))
                     return True
                 finally:
                     if os.path.isfile(self.output):
                         os.unlink(self.output)
-                    print sys.stdout.captured
-                    print sys.stderr.captured
+                    print(sys.stdout.captured)
+                    print(sys.stderr.captured)
 
-        assert "Expected PipeException" == False
+        assert "Expected PipeException or ResourceException" == False
 
     # A File that does not exist must throw an error with fail_on_error=True
     def test_fail_on_error_no_file_url(self):
@@ -130,18 +131,17 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir, self.datadir))
-                except MetadataException, ex:
-                    print ex
-                    assert ("error fetching" in str(ex))
+                except ResourceException as ex:
+                    print(ex)
                     assert ("file_that_does_not_exist.xml" in str(ex))
                     return True
                 finally:
                     if os.path.isfile(self.output):
                         os.unlink(self.output)
-                    print sys.stdout.captured
-                    print sys.stderr.captured
+                    print(sys.stdout.captured)
+                    print(sys.stderr.captured)
 
-        assert "Expected PipeException" == False
+        assert "Expected ResourceException" == False
 
     # An URL that cannot be downloaded must throw an error with fail_on_error=True
     # Note: Due to load_url retries it takes 20s to complete this test
@@ -159,17 +159,17 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir))
-                except MetadataException, ex:
-                    print ex
-                    assert ("http://127.0.0.1/does_not_exist.xml" in str(ex))
+                except Exception as ex:
+                    print(ex)
+                    assert ("does_not_exist.xml" in str(ex))
                     return True
                 finally:
                     if os.path.isfile(self.output):
                         os.unlink(self.output)
-                    print sys.stdout.captured
-                    print sys.stderr.captured
+                    print(sys.stdout.captured)
+                    print(sys.stderr.captured)
 
-        assert "Expected PipeException" == False
+        assert "Expected Exception" == False
 
     # A file with invalid XML must throw an exception with fail_on_error True:
     def test_fail_on_error_invalid_file(self):
@@ -186,18 +186,16 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir, self.datadir))
-                except MetadataException, ex:
-                    print ex
-                    assert ("no valid metadata found" in str(ex))
-                    assert ("/metadata/test02-invalid.xml" in str(ex))
+                except (MetadataException, ParserException) as ex:
+                    print(ex)
                     return True
                 finally:
                     if os.path.isfile(self.output):
                         os.unlink(self.output)
-                    print sys.stdout.captured
-                    print sys.stderr.captured
+                    print(sys.stdout.captured)
+                    print(sys.stderr.captured)
 
-        assert "Expected MetadataException" == False
+        assert "Expected MetadataException or ParserException" == False
 
     # A directory with a file with invalid metadata must throw an exception with fail_on_error True and filter_invalid False:
     def test_fail_on_error_invalid_dir(self):
@@ -213,16 +211,16 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir))
-                except MetadataException, ex:
-                    print ex
+                except (MetadataException, ParserException) as ex:
+                    print(ex)
                     return True
                 finally:
                     if os.path.isfile(self.output):
                         os.unlink(self.output)
-                    print sys.stdout.captured
-                    print sys.stderr.captured
+                    print(sys.stdout.captured)
+                    print(sys.stderr.captured)
 
-        assert "Expected MetadataException" == False
+        assert "Expected MetadataException or ParserException" == False
 
     # A file with invalid XML must not throw an exception by default (fail_on_error False):
     def test_no_fail_on_error_invalid_file(self):
@@ -238,8 +236,8 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir, self.datadir))
-                print sys.stdout.captured
-                print sys.stderr.captured
+                print(sys.stdout.captured)
+                print(sys.stderr.captured)
                 if os.path.isfile(self.output):
                     os.unlink(self.output)
 
@@ -258,16 +256,16 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir, self.datadir))
-                except MetadataException, ex:
-                    print ex
+                except MetadataException as ex:
+                    print(ex)
                     assert ("schema validation failed" in str(ex))
                     assert ("/metadata/test03-invalid.xml" in str(ex))
                     return True
                 finally:
                     if os.path.isfile(self.output):
                         os.unlink(self.output)
-                    print sys.stdout.captured
-                    print sys.stderr.captured
+                    print(sys.stdout.captured)
+                    print(sys.stderr.captured)
 
     # Test default behaviour. Loading a file with an invalid entity must not raise an exception
     def test_no_fail_on_error_invalid_entity(self):
@@ -283,29 +281,12 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir, self.datadir))
-                print sys.stdout.captured
-                print sys.stderr.captured
+                print(sys.stdout.captured)
+                print(sys.stderr.captured)
                 if os.path.isfile(self.output):
                     os.unlink(self.output)
 
-    # When an invalid entity is filtered (filter_invalid True) it must not cause an exception, even if fail_on_error True
-    def test_no_fail_on_error_filtered_entity(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
-            from testfixtures import LogCapture
-            with LogCapture() as l:
-                res, md = self.exec_pipeline("""
-    - load fail_on_error True filter_invalid True:
-        - %s/metadata/test01.xml
-        - %s/metadata/test03-invalid.xml
-    - select
-    - stats
-    """ % (self.datadir, self.datadir))
-                print sys.stdout.captured
-                print sys.stderr.captured
-                if os.path.isfile(self.output):
-                    os.unlink(self.output)
+
 
     # A directory with a file with invalid metadata must not throw by default:
     def test_no_fail_on_error_invalid_dir(self):
@@ -322,8 +303,8 @@ class LoadErrorTest(PipeLineTest):
     """ % (self.datadir))
                 if os.path.isfile(self.output):
                     os.unlink(self.output)
-                print sys.stdout.captured
-                print sys.stderr.captured
+                print(sys.stdout.captured)
+                print(sys.stderr.captured)
 
 
 # noinspection PyUnresolvedReferences
@@ -360,14 +341,14 @@ class SigningTest(PipeLineTest):
         self.output = tempfile.NamedTemporaryFile('w').name
         res, md, ctx = self.run_pipeline("certreport-swamid.fd", self)
         with open(self.output, 'r') as fd:
-            print fd.read()
+            print(fd.read())
 
     def test_info_and_dump(self):
         with patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
             try:
                 self.exec_pipeline("""
 - load:
-  - http://md.swamid.se/md/swamid-2.0.xml
+  - http://mds.swamid.se/md/swamid-2.0.xml
 - select
 - dump
 - info
@@ -387,7 +368,7 @@ class SigningTest(PipeLineTest):
                 assert False
             except IOError:
                 raise Skip
-            except ExitException, ex:
+            except ExitException as ex:
                 assert ex.code == 22
                 assert "slartibartifast" in "".join(sys.stdout.captured)
 
@@ -485,7 +466,7 @@ class SigningTest(PipeLineTest):
             except IOError:
                 raise Skip
 
-    def test_empty_store(self):
+    def test_empty_store2(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
                 self.exec_pipeline("""
@@ -562,9 +543,9 @@ class SigningTest(PipeLineTest):
 - publish: %s
 """ % (self.datadir, tmpfile))
                 assert False
-            except PipeException, ex:
-                print "".join(sys.stdout.captured)
-                print str(ex)
+            except PipeException as ex:
+                print("".join(sys.stdout.captured))
+                print(str(ex))
                 pass
             except IOError:
                 raise Skip
@@ -590,5 +571,21 @@ class SigningTest(PipeLineTest):
 """ % self.datadir)
             except IOError:
                 raise Skip
-            print md.lookup('https://idp.example.com/saml2/idp/metadata.php')
+            print(md.lookup('https://idp.example.com/saml2/idp/metadata.php'))
             assert (not md.lookup('https://idp.example.com/saml2/idp/metadata.php'))
+
+    def test_bad_namespace(self):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            tmpfile = tempfile.NamedTemporaryFile('w').name
+            try:
+                res, md = self.exec_pipeline("""
+- when batch:
+    - load:
+        - %s/bad_metadata cleanup bad
+    - loadstats
+- when bad:
+    - check_xml_namespaces
+""" % self.datadir)
+            except ValueError:
+                raise Skip
+            assert("Expected exception from bad namespace in")

@@ -1,9 +1,9 @@
+from __future__ import absolute_import, print_function
+
 import logging
-from StringIO import StringIO
+from six import StringIO
 from unittest import TestCase
-
 from mock import patch
-
 from pyff.logs import log, SysLogLibHandler
 
 

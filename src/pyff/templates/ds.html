@@ -1,102 +1,69 @@
-{% extends "base.html" %}
+{% extends "common.html" %}
 
 {% block title %}{{ gettext('Please login...') }}{% endblock %}
 
 {% block header %}
-    <div class="row vertical-align">
+    <div class="row discovery">
         <div class="col-md-12">
-            <ul class="list-inline">
-                {% if 'icon' in entity %}
-                <li id="sp-icon-container">
-                    <img class="sp-thumbnail fallback-icon" src="{{ entity['icon'] }}"/>
-                </li>
-                {% endif %}
-                <li id="sp-title-container">
-                    <div class="small">{{ gettext('You are connecting to...') }}</div>
-                    {% if 'title' in entity %}
-                    <h3 class="sp">{{ entity['title'] }}</h3>
-                    {% else %}
-                    <h3 class="sp">{{ entity['entity_id'] }}</h3>
+            <div class="media">
+                <div class="media-body">
+                    <h1 class="mt-0 mb-1">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</h1>
+                    {% if entity.descr and entity.descr != entity.title %}
+                    <span class="small">{{ entity.descr }}</span>
                     {% endif %}
-                    {% if 'descr' in entity and entity['descr'] != entity['title'] %}
-                    <span class="small">{{ entity['descr'] }}</span>
-                    {% endif %}
-                    {% if 'psu' in entity %}
+                    {% if entity.psu %}
                     <span class="small">
-                        <a title="Privacy Statement" href="{{ entity['psu'] }}">Privacy Statement</a>
+                        <a title="Privacy Statement" href="{{ entity.psu }}">Privacy Statement</a>
                     </span>
                     {% endif %}
-                </li>
-            </ul>
+                </div>
+                <div class="d-flex ml-3 sp-icon"><img class="img-thumbnail" src="{{entity.entity_icon}}"/></div>
+            </div>
         </div>
     </div>
 {% endblock %}
 
 {% block content %}
-        <p class="small">
-            {{ gettext('This service requests that you <strong>identify yourself</strong>. Select your preferred identity service below... ')}}
-        </p>
-        <div id="idpchooser">
-            <div id="quickLinks"
-                 data-target="/metadata/{http://pyff.io/domain}{{entity['domains']}}+{http://pyff.io/role}idp.json">
-            </div>
-            <form role="form" class="hidden">
-                <div class="form-group">
-                    <div class="input-group">
-                        <div class="input-group-addon"><i id="searchindicator" class="fa fa-search"></i></div>
-                        <input id="searchinput" class="form-control"
-                               data-target="{{search}}"
-                               data-related="{{entity['domains']}}"
-                               type="search"
-                               placeholder="{{ gettext('Start typing to search for your identity service...') }}" />
+        <div class="row discovery">
+            <div class="col-md-12">
+                <p class="text-info">
+                    {{ gettext('This service requests that you login. Select your preferred method below...') }}
+                </p>
+                <div id="ds"
+                     data-href="{{ entity['entity_id'] }}"
+                     data-mdq="/metadata/"
+                     data-store="{{storage}}"
+                     data-search="{{search}}"
+                     data-list="{{list}}"
+                     data-related="{{ entity['domains'] }}"
+                     data-inputfieldselector="#searchinput">
+                    <div class="form-group">
+                        <input id="searchinput"
+                               placeholder="{{ gettext('Start typing to search for your login provider or home organization ...') }}"
+                               class="form-control"
+                               type="search"/>
                     </div>
                 </div>
-                <div id="searchlist" data-target="{{search}}" data-related="{{entity['domains']}}" class="list-group"></div>
-            </form>
-            <a id="show" class="btn btn-info btn-block hidden">{{ gettext('Show me more choices') }}</a>
-        </div>
-        <div class="hidden" id="remember-selection-dlg">
-            <div class="list-group confirm"></div>
-            <p class="small">
-                {{ gettext('If you always use one and the same login provider for everything it might be a good idea to remember your choice by pressing <em>Login and use Forever</em>. Press <em>Start Over</em> to redo the search and pick another login provider.') }}
-            </p>
-            <div class="btn-block">
-                <a id="proceed" class="btn btn-large btn-primary proceed btn-responsive">{{ gettext('Proceed to Login') }}</a>
-                <a id="remember" class="btn btn-large btn-warning remember btn-responsive">{{ gettext('Login and use Forever') }}</a>
-                <a id="proceed_and_remember" class="btn btn-large btn-success hidden proceed_and_remember btn-responsive">{{ gettext('Yes I am Sure - Use Forever') }}</a>
-                <a id="cancel" class="btn btn-large btn-default cancel btn-responsive pull-right">{{ gettext('Start Over') }}</a>
             </div>
         </div>
+{% endblock %}
+
+{% block endscripts %}
+        <script type="text/javascript" src="/static/js/hashes.min.js"></script>
+        <script type="text/javascript" src="/static/js/client.min.js"></script>
+        <script type="text/javascript" src="/static/js/ds-client.js"></script>
+        <script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="/static/js/jquery-ds-widget.js"></script>
+        <!-- script type="text/javascript" src="/static/js/json2.min.js"></script -->
+        <script type="text/javascript" src="/static/js/bootstrap-list-filter.src.js"></script>
 {% endblock %}
 
 {% block final %}
-    <script type="text/javascript" src="/static/js/jquery.mobile.custom.min.js"></script>
-    <script type="text/javascript">
-        $(document).ready(function() {
-            $("*[data-toggle='popover']").popover({trigger: 'hover', container: 'body'});
-            $("*[data-toggle='tooltip']").tooltip({trigger: 'hover', container: 'body'});
-
-            $('#idselect').dsSelect({});
-            $('#quickLinks').dsQuickLinks('{{sp}}', function (n, msg) {
-                //console.log(n);
-                //console.log(msg);
-                $('#show').removeClass("hidden");
-                if (n == 0) {
-                    $('#idselect').dsSelect("show");
-                }
+        <script type="text/javascript">
+            $(document).ready(function() {
+                $("#ds").discovery_client();
             });
-            $('#show').click(function () {
-                $('#show').addClass("hidden");
-                $('#idselect').dsSelect('show');
-            });
-        });
-    </script>
-{% endblock %}
-
-{% block footer %}
-        <small id="reset_info" class="hidden">
-            <i class="glyphicon glyphicon-exclamation-sign"></i> If you change your mind, visit <a href="{{http.base}}/reset">{{http.base}}/reset</a> to change your settings.
-        </small>
+        </script>
 {% endblock %}
 </body>
 </html>

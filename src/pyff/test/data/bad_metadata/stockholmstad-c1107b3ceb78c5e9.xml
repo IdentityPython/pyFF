@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EntityDescriptor entityID="https://login001.test.stockholm.se-SP" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
+    <md:Extensions xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
+        <mdattr:EntityAttributes xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute">
+            <saml2:Attribute Name="http://macedir.org/entity-category" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion">
+                <saml2:AttributeValue xsi:type="xs:string" xmlns:xsi="xsi">http://id.elegnamnden.se/ec/1.0/eidas-naturalperson</saml2:AttributeValue>
+                <saml2:AttributeValue xsi:type="xs:string" xmlns:xsi="xsi">http://id.elegnamnden.se/ec/1.0/loa2-pnr</saml2:AttributeValue>
+                <saml2:AttributeValue xsi:type="xs:string" xmlns:xsi="xsi">http://id.elegnamnden.se/ec/1.0/loa3-pnr</saml2:AttributeValue>
+                <saml2:AttributeValue xsi:type="xs:string" xmlns:xsi="xsi">http://id.elegnamnden.se/ec/1.0/loa4-pnr</saml2:AttributeValue>
+            </saml2:Attribute>
+        </mdattr:EntityAttributes>
+    </md:Extensions>
+    <SPSSODescriptor AuthnRequestsSigned="true" WantAssertionsSigned="false" ID="SM1a3f7037ba83ed03de0fc1c456cc464d5352866c5f" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <KeyDescriptor use="encryption">
+            <ns1:KeyInfo Id="SM1b68d069e2f7a5f3130cf1b2474a602e140d610edef" xmlns:ns1="http://www.w3.org/2000/09/xmldsig#">
+                <ns1:X509Data>
+                    <ns1:X509IssuerSerial>
+                        <ns1:X509IssuerName>CN=Stockholm idPortal Root CA,OU=BOA idPortalen,O=Tieto,ST=Stockholm,C=SE</ns1:X509IssuerName>
+                        <ns1:X509SerialNumber>5</ns1:X509SerialNumber>
+                    </ns1:X509IssuerSerial>
+                    <ns1:X509Certificate>MIIE6TCCAtGgAwIBAgIBBTANBgkqhkiG9w0BAQsFADBvMQswCQYDVQQGEwJTRTESMBAGA1UECAwJU3RvY2tob2xtMQ4wDAYDVQQKDAVUaWV0bzEXMBUGA1UECwwOQk9BIGlkUG9ydGFsZW4xIzAhBgNVBAMMGlN0b2NraG9sbSBpZFBvcnRhbCBSb290IENBMB4XDTE3MDgyMzA5MTI1NVoXDTI3MDgyMTA5MTI1NVowgYMxCzAJBgNVBAYTAlNFMRIwEAYDVQQIDAlTdG9ja2hvbG0xEjAQBgNVBAcMCVN0b2NraG9sbTEOMAwGA1UECgwFVGlldG8xFzAVBgNVBAsMDkJPQSBpZFBvcnRhbGVuMSMwIQYDVQQDDBpsb2dpbjAwMS50ZXN0LnN0b2NraG9sbS5zZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL7IR8dkdU2eAhCUB8/m0vrbTxdH9le/OXeBNzfhYLKhlO6GkixTiS62wkthLHCLBnYVpYMk/qfzLna8HRyafsrUo/cbEp2e4ACVk3qOGHkVZ6GWyZFqm4XmCtW8nxODsg+l/jXpxJf1dfQaVSuT3/CoGl5h9kTfeLwv53ft82gf0yjs9jN1d4NFG3KmjXXRzUTqYAwZd5/mq+h0tXi0TRzAMNaB/Lhw1Z42anJ2rrJ9dYCAzu84eHR+9EtSkaplsj4aYRWY6YYkNbgy9Kb5zX9MW4d/0yVbcLlBSm6jN4PtIVPSZyTQwAa27P1EqgEzeHqu/x9LEnwKEGQgumihvsECAwEAAaN7MHkwCQYDVR0TBAIwADAsBglghkgBhvhCAQ0EHxYdT3BlblNTTCBHZW5lcmF0ZWQgQ2VydGlmaWNhdGUwHQYDVR0OBBYEFGr6fKO9U7BSGaOYBphFqwuq/A7JMB8GA1UdIwQYMBaAFOXS113Q3kuDGmq3CDpL3IIJuLC4MA0GCSqGSIb3DQEBCwUAA4ICAQABCf2Z2GcfKJG6+m/ys6USLQ6lxVGqzw4rbU4YZR5sGP3Mzin/sJfLfcWecIzVHeGrhgcIlQlETTWY3uCoGyphdXAWq1Ylb0NDHk+wwAv61LcNHB0mWMMtMfmimfhCsqPlc8vR12MbeRGj48x065Zoj7ZCxUjEruQ756VF0m2pK0bRhvZU+T6FNwEerXgp7QgTA93B3PHBmcdJnimRFcWckEcG4WU+8r55DjTgXmAkjlRKZ6KXYDyUhj14YE+vQgLKGektpaFGpfPmYuhXLIu9n+5eoPOY45BJ40nDz3WCks2LSuTxp0LG8woOMSDDeT9qoYRMK5HRc7tXGDM89XyO0JN7slwCv7VBGUFVO9aBmoZSALxCgqoJXaTtzlEnF47D9ctRhKeC7ykbZHvXB0T8hBDaYoTB6aK2xD5VIN5UhtvR02xQwCnDDkBIONa4EZXB0mqrrx8FuWlVGLeX0PLbjOLdv7xzsXHFtE7XohLCxDr8VBW+w0IBPamNZ1GAGHe18mcvI2++C/oPaavKxaB8ibIvnU5Jg52eGYeX9tSwts5Xtgon2DnnGQNnM9Kn3jaB5aMxZLxurLuH7fiDuJrkSFAAgAxaeEYv/J240Pmm9XvKl257ypYT4N97p4XfJVpghbC58tAkBJhAE3FnhYJUimD+gDxhkUmKvHCY4etGWQ==</ns1:X509Certificate>
+                    <ns1:X509SubjectName>CN=login001.test.stockholm.se,OU=BOA idPortalen,O=Tieto,L=Stockholm,ST=Stockholm,C=SE</ns1:X509SubjectName>
+                </ns1:X509Data>
+            </ns1:KeyInfo>
+        </KeyDescriptor>
+        <KeyDescriptor use="signing">
+            <ns2:KeyInfo Id="SM466486a0738500a4d8dae08944c0374d40d8cf1fee" xmlns:ns2="http://www.w3.org/2000/09/xmldsig#">
+                <ns2:X509Data>
+                    <ns2:X509IssuerSerial>
+                        <ns2:X509IssuerName>CN=Stockholm idPortal Root CA,OU=BOA idPortalen,O=Tieto,ST=Stockholm,C=SE</ns2:X509IssuerName>
+                        <ns2:X509SerialNumber>5</ns2:X509SerialNumber>
+                    </ns2:X509IssuerSerial>
+                    <ns2:X509Certificate>MIIE6TCCAtGgAwIBAgIBBTANBgkqhkiG9w0BAQsFADBvMQswCQYDVQQGEwJTRTESMBAGA1UECAwJU3RvY2tob2xtMQ4wDAYDVQQKDAVUaWV0bzEXMBUGA1UECwwOQk9BIGlkUG9ydGFsZW4xIzAhBgNVBAMMGlN0b2NraG9sbSBpZFBvcnRhbCBSb290IENBMB4XDTE3MDgyMzA5MTI1NVoXDTI3MDgyMTA5MTI1NVowgYMxCzAJBgNVBAYTAlNFMRIwEAYDVQQIDAlTdG9ja2hvbG0xEjAQBgNVBAcMCVN0b2NraG9sbTEOMAwGA1UECgwFVGlldG8xFzAVBgNVBAsMDkJPQSBpZFBvcnRhbGVuMSMwIQYDVQQDDBpsb2dpbjAwMS50ZXN0LnN0b2NraG9sbS5zZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL7IR8dkdU2eAhCUB8/m0vrbTxdH9le/OXeBNzfhYLKhlO6GkixTiS62wkthLHCLBnYVpYMk/qfzLna8HRyafsrUo/cbEp2e4ACVk3qOGHkVZ6GWyZFqm4XmCtW8nxODsg+l/jXpxJf1dfQaVSuT3/CoGl5h9kTfeLwv53ft82gf0yjs9jN1d4NFG3KmjXXRzUTqYAwZd5/mq+h0tXi0TRzAMNaB/Lhw1Z42anJ2rrJ9dYCAzu84eHR+9EtSkaplsj4aYRWY6YYkNbgy9Kb5zX9MW4d/0yVbcLlBSm6jN4PtIVPSZyTQwAa27P1EqgEzeHqu/x9LEnwKEGQgumihvsECAwEAAaN7MHkwCQYDVR0TBAIwADAsBglghkgBhvhCAQ0EHxYdT3BlblNTTCBHZW5lcmF0ZWQgQ2VydGlmaWNhdGUwHQYDVR0OBBYEFGr6fKO9U7BSGaOYBphFqwuq/A7JMB8GA1UdIwQYMBaAFOXS113Q3kuDGmq3CDpL3IIJuLC4MA0GCSqGSIb3DQEBCwUAA4ICAQABCf2Z2GcfKJG6+m/ys6USLQ6lxVGqzw4rbU4YZR5sGP3Mzin/sJfLfcWecIzVHeGrhgcIlQlETTWY3uCoGyphdXAWq1Ylb0NDHk+wwAv61LcNHB0mWMMtMfmimfhCsqPlc8vR12MbeRGj48x065Zoj7ZCxUjEruQ756VF0m2pK0bRhvZU+T6FNwEerXgp7QgTA93B3PHBmcdJnimRFcWckEcG4WU+8r55DjTgXmAkjlRKZ6KXYDyUhj14YE+vQgLKGektpaFGpfPmYuhXLIu9n+5eoPOY45BJ40nDz3WCks2LSuTxp0LG8woOMSDDeT9qoYRMK5HRc7tXGDM89XyO0JN7slwCv7VBGUFVO9aBmoZSALxCgqoJXaTtzlEnF47D9ctRhKeC7ykbZHvXB0T8hBDaYoTB6aK2xD5VIN5UhtvR02xQwCnDDkBIONa4EZXB0mqrrx8FuWlVGLeX0PLbjOLdv7xzsXHFtE7XohLCxDr8VBW+w0IBPamNZ1GAGHe18mcvI2++C/oPaavKxaB8ibIvnU5Jg52eGYeX9tSwts5Xtgon2DnnGQNnM9Kn3jaB5aMxZLxurLuH7fiDuJrkSFAAgAxaeEYv/J240Pmm9XvKl257ypYT4N97p4XfJVpghbC58tAkBJhAE3FnhYJUimD+gDxhkUmKvHCY4etGWQ==</ns2:X509Certificate>
+                    <ns2:X509SubjectName>CN=login001.test.stockholm.se,OU=BOA idPortalen,O=Tieto,L=Stockholm,ST=Stockholm,C=SE</ns2:X509SubjectName>
+                </ns2:X509Data>
+            </ns2:KeyInfo>
+        </KeyDescriptor>
+        <NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</NameIDFormat>
+        <AssertionConsumerService index="0" isDefault="false" Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://login001.test.stockholm.se/affwebservices/public/saml2assertionconsumer"/>
+        <AttributeConsumingService index="0" isDefault="true">
+            <ServiceName xml:lang="sv">Stockholms Stad Test SP</ServiceName>
+            <ServiceName xml:lang="en">City of Stockholm Test SP</ServiceName>
+            <RequestedAttribute Name="urn:oid:1.2.752.29.4.13" isRequired="true"/>
+            <RequestedAttribute Name="urn:oid:2.5.4.4" isRequired="false"/>
+            <RequestedAttribute Name="urn:oid:2.5.4.42" isRequired="false"/>
+            <RequestedAttribute Name="urn:oid:2.16.840.1.113730.3.1.241" isRequired="false"/>
+            <RequestedAttribute Name="urn:oid:1.2.752.201.3.2" isRequired="true"/>
+            <RequestedAttribute Name="urn:oid:1.3.6.1.5.5.7.9.2" isRequired="true"/>
+        </AttributeConsumingService>
+    </SPSSODescriptor>
+</EntityDescriptor>

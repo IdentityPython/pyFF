@@ -29,7 +29,11 @@ install_requires = [
     'redis',
     'futures',
     'requests',
-    'pyconfig'
+    'requests_cache',
+    'requests_file',
+    'pyconfig',
+    'pyyaml',
+    'multiprocess'
 ]
 
 python_implementation_str = python_implementation()

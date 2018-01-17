@@ -37,12 +37,12 @@ def retry(ex, tries=4, delay=3, backoff=2, logger=log):
             while mtries > 1:
                 try:
                     return f(*args, **kwargs)
-                except ex, e:
+                except ex as e:
                     msg = "%s, Retrying in %d seconds..." % (str(e), mdelay)
                     if logger:
                         logger.warn(msg)
                     else:
-                        print msg
+                        print(msg)
                     time.sleep(mdelay)
                     mtries -= 1
                     mdelay *= backoff
@@ -67,7 +67,7 @@ def deprecated(logger=log):
             if logger:
                 logger.warn(msg)
             else:
-                print msg
+                print(msg)
 
             return func(*args, **kwargs)
 
@@ -79,6 +79,7 @@ class _HashedSeq(list):
     __slots__ = 'hashvalue'
 
     def __init__(self, tup, thehash=hash):
+        super(_HashedSeq, self).__init__()
         self[:] = tup
         self.hashvalue = thehash(tup)
 
@@ -93,8 +94,24 @@ def _make_key(args, kwds, typed,
               thetuple=tuple,
               thetype=type,
               thelen=len):
-    'Make a cache key from optionally typed positional and keyword arguments'
+    """
+
+    :param args:
+    :param kwds:
+    :param typed:
+    :param kwd_mark:
+    :param fasttypes:
+    :param thesorted:
+    :param thetuple:
+    :param thetype:
+    :param thelen:
+    :return:
+
+    Make a cache key from optionally typed positional and keyword arguments
+
+    """
     key = args
+    sorted_items = dict()
     if kwds:
         sorted_items = thesorted(kwds.items())
         key += kwd_mark
@@ -161,5 +178,3 @@ def cached(typed=False, ttl=None, hash_key=None):
         return functools.update_wrapper(wrapper, func)
 
     return decorating
-
-

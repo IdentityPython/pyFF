@@ -46,36 +46,17 @@ body {
 /* Customize container */
 @media (min-width: 768px) {
   .container {
-    max-width: 730px;
+    max-width: 900px;
   }
 }
 .container-narrow > hr {
   margin: 30px 0;
 }
 
-/* Main marketing message and sign up button */
-.jumbotron {
-  text-align: center;
-  border-bottom: 1px solid #e5e5e5;
-}
-.jumbotron .btn {
-  font-size: 21px;
-  padding: 14px 24px;
-}
-
-/* Supporting marketing content */
-.marketing {
-  margin: 40px 0;
-}
-.marketing p + h4 {
-  margin-top: 28px;
-}
-
 /* Responsive: Portrait tablets and up */
 @media screen and (min-width: 768px) {
   /* Remove the padding we set earlier */
   .header,
-  .marketing,
   .footer {
     padding-left: 0;
     padding-right: 0;
@@ -84,13 +65,9 @@ body {
   .header {
     margin-bottom: 30px;
   }
-  /* Remove the bottom border on the jumbotron for visual effect */
-  .jumbotron {
-    border-bottom: 0;
-  }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .btn-responsive {
     padding: 6px 8px;
     margin-bottom: 10px;
@@ -118,15 +95,19 @@ body {
     overflow-y: auto;
     font-size: small;
 }
+
+.card {
+    margin-bottom: 10px;
+}
+
 .inline li {
     display: inline;
 }
 
-#remember-message { margin-top: 20px; }
-#remember-message form { margin-bottom: 2px; }
-
 .navbar {
-   margin-bottom: 30px;
+    margin-top: 10px;
+    margin-bottom: 30px;
+    border-bottom: 4px solid #e97d20;
 }
 
 @-webkit-viewport   { width: device-width; }
@@ -144,17 +125,16 @@ body {
 
 .idp-description { width: 65%; }
 
-.idp-icon { max-width: 29%; max-height: 50px; margin-right: 5%; margin-top: -3%; width: auto; }
+.pyff-idp-icon { max-height: 64px; max-width: 64px; margin-right: 10%; padding-right: 2px; margin-top: 0%; width: auto; }
 
 .sp-description { max-width: 75%; }
-.sp-icon { width: auto; margin-bottom:5px;}
-.sp-thumbnail {width: 100px; margin: 0 0; padding-left: 5px;}
-
-.idselect { width: 100%; }
-
-.img-small {
-    max-height: 50px;
+.sp-icon {
+    width: auto;
+    height: auto;
+    max-height: 60px;
+    max-width: 30%;
 }
+.sp-thumbnail {width: 100px; margin: 0 0; padding-left: 5px;}
 
 .cpstats td, th { font-size: x-small; }
 
@@ -174,14 +154,17 @@ pre.prettyprint {
 }
 
 .fallback {
-    display: none;
+
 }
 
+/** TODO: remove
 span.select:hover, span.proceed:hover {
     background-color: lightgrey !important;
 }
+*/
 
-.wide { width: 100%; display: block; }
+/* TODO: remove */
+/* .wide { width: 100%; display: block; } */
 
 .vertical-align {
     display: flex;
@@ -208,4 +191,18 @@ h5.sp {
 h3.sp {
     margin-bottom: 1px;
     padding-bottom: 0px;
+}
+
+#pyff-saved-choices {
+    margin-bottom: 10px;
+}
+
+xscroll {
+    overflow-y: hidden;
+    overflow-x: auto;
+}
+
+yscroll {
+    overflow-x: hidden;
+    overflow-y: auto;
 }

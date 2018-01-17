@@ -1,5 +1,5 @@
 - load:
-    http://md.swamid.se/md/swamid-idp.xml
+    http://mds.swamid.se/md/swamid-idp.xml
 - select
 - certreport
 - xslt:

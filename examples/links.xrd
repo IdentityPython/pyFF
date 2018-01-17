@@ -1,31 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <XRDS xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
     <XRD>
-        <Subject>https://md.swamid.se/md/swamid-2.0.xml</Subject>
-        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://md.swamid.se/md/swamid-2.0.xml">
+        <Subject>https://mds.swamid.se/md/swamid-2.0.xml</Subject>
+        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="https://mds.swamid.se/md/swamid-2.0.xml">
             <Title>SWAMID</Title>
             <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
                 <ds:X509Data>
                     <ds:X509Certificate>
-    MIIDdTCCAl0CBEY7EskwDQYJKoZIhvcNAQEEBQAwfzELMAkGA1UEBhMCU0UxEjAQ
-    BgNVBAgTCVN0b2NraG9sbTESMBAGA1UEBxMJU3RvY2tob2xtMREwDwYDVQQKEwhT
-    V0FNSS5zZTEPMA0GA1UECxMGU1dBTUlEMSQwIgYDVQQDExtTV0FNSUQgbWV0YWRh
-    dGEgc2lnbmVyIHYxLjEwHhcNMDcwNTA0MTEwMjMzWhcNMTcwNTAxMTEwMjMzWjB/
-    MQswCQYDVQQGEwJTRTESMBAGA1UECBMJU3RvY2tob2xtMRIwEAYDVQQHEwlTdG9j
-    a2hvbG0xETAPBgNVBAoTCFNXQU1JLnNlMQ8wDQYDVQQLEwZTV0FNSUQxJDAiBgNV
-    BAMTG1NXQU1JRCBtZXRhZGF0YSBzaWduZXIgdjEuMTCCASIwDQYJKoZIhvcNAQEB
-    BQADggEPADCCAQoCggEBAM6wXN3pVCo98SACS6JCHjSlWj83oNL/Ct+a9hmAx1NZ
-    SKg7lnEJYwWBvzJt5o/47jRQbGm94a45Yy5LVoXq4XyCKINhMxSwbRROvr8Hw6tg
-    P1Z9dk5Jjejvus3gyaH3+EuEyP4aIjTlgmHDwW6HOv/m/4bOXSHB4Pisn7aocqU7
-    kjpOn1f0cGodWOgGO4tP7KXs6ndcLhIkW+e/B80WEr0kocuc/pvx+aLuKSkttk/A
-    fP1DFs5sqX31RXQKGrB/uEEYVv1Qvneig+RXGSbqk2Tab3BcLE/Cjnfi9Q9cH/jR
-    eL/YSSafGtl+EBgXKszxjMtELhiEWsL9RrMu1HUkBusCAwEAATANBgkqhkiG9w0B
-    AQQFAAOCAQEAkXaa61gp/lkEDNRFc0bzH3ZyoUFgol64F1zdAwBS3xnsCkTnAXt3
-    p452daEyz+0UR5J/BruMOyvR57w1m7ckVnx/sAgRgaD6gQlUWehjKPEsx8o5iDfO
-    5R1V5Rn2o7+0VuIJDDObEAtMwqn2Nk6TTzsUVfz5y9nUQAxBz3EqXnnSgRwqSwRF
-    yiVkpVfwtUHIolAf6O2N9Fg1jqoqt4mQCOyRZpD0/5SRYESTY6TJjTmvoh+zOPlI
-    yEiw+Zrl/FWjXtBnRnz8AVT5NRzYiMHdbTHs0Fh6elsb5b9gTBo7j6+t36m7oo2K
-    DaWWpMWvuWHugEqvIAXDCI/HzTbbiWm9NQ==
+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
                     </ds:X509Certificate>
                 </ds:X509Data>
           </ds:KeyInfo>
@@ -57,45 +69,6 @@ Dh96n5US06lszEc+Lj3dqdxWkXRRqEbjhBFh/utXaeyeSOtaX65GwD5svDHnJBcl
 AGkzeRIXqxmYG+I2zMm/JYGzEnbwToyC7yF6Q8cQxOr37hEpqz+WN/x3qM2qyBLE
 CQFjmlJrvRLkSL15PCZiu+xFNFd/zx6btDun5DBlfDS9DG+SHCNH6Nq+NfP+ZQ8C
 GzP/3TaZPzMlKPDCjp0XOQfyQqFIXdwjPFTWjEusDBlm4qJAlQ==
-                    </ds:X509Certificate>
-                </ds:X509Data>
-          </ds:KeyInfo>
-        </Link>
-    </XRD -->
-    <!-- XRD>
-        <Subject>Skolfederation</Subject>
-        <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://meta01.skolfederation.se/skolfederation-2_0.xml">
-            <Title>Skolfederation Metadata</Title>
-            <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
-                <ds:X509Data>
-                    <ds:X509Certificate>
-MIIE+DCCAuACCQDz68MlqYKzETANBgkqhkiG9w0BAQUFADA+MQswCQYDVQQGEwJT
-RTEhMB8GA1UEAxMYbWV0YTAxLnNrb2xmZWRlcmF0aW9uLnNlMQwwCgYDVQQKEwNJ
-SVMwHhcNMTMwNDAzMTMxMDQ3WhcNMjMwNDAxMTMxMDQ3WjA+MQswCQYDVQQGEwJT
-RTEhMB8GA1UEAxMYbWV0YTAxLnNrb2xmZWRlcmF0aW9uLnNlMQwwCgYDVQQKEwNJ
-SVMwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDTugaeIk5XZlnMWBpj
-rJZRvwm2YItd4Hbx285//LL9k2HjYhLnWwfdjv0yZSCuw49E47FdhT5j3rnQJayQ
-ifKffn6M2jMnDZh9MYx8SjT/CMFid5TXVS5jFcEtfzYfSl9Fv8rqFAjJTDDroneT
-dnMVRlcW03XVDG1ryOou3W1pCrRRsHe+HHkpP3H4cL9pSaXgR9ptAadTHfzEFFnX
-qVwvSJD1SMK7+OvFUDQCnoKYEdyNpFfsouwtessXtq4jTOZdzjTxeLIrVnfFpVPf
-F2xN8298x3fCDeoUPjQKDNYYwNq5N4U7RnsM+KYjTQ8rLelOyP5hsy/wETtUJ5vR
-OAa6WQyxPmqFJnwTALPhDhUyw4CvOHiQahlPSxouXZdBQt5pt/nu3VJ33DhF6POw
-aJUetzl6TY4bNNp2tIQQhcqBCTHDfLBnMR3VyrUMcYWZ6qNGp+4Lhjl2KRNn9VF7
-a5+TVzTFd63pLXrXY1KvUcJQFk8Su/BsrJrPKg8z6WvC+h5vXAF1dwkx3oz96VTp
-9xIwbVMGxSfx30AKWTR+V7XpoqNWtXTbtJKcxRXto2ZWI9FAmnr/a1j0knAn1v/x
-3Lqt6krJihCt5YLxq7oft6XzWw/i+rrSdmeXIZi8qV1Moo/2yCNxVpi4TyBH2Qo5
-xG2krTe4lWAI/+PcKvzYgEVP5wIDAQABMA0GCSqGSIb3DQEBBQUAA4ICAQCBqZbH
-u7DnFWiBa1pSYijGfTpws1HASiHxQc5h8UHDxqVwakLftdIn9IH6flRPEwQceNHF
-59G3wdn10QcDCURprMkVN+6XAhOIKmFz4UA6d87lR+qDasKZSMetX79l9mMWiMWl
-dX7yyy/Q8pYhZrwQySzTRV+IP7bviyfUVSTirUy4bYgS3e3KDVGi3d+kZjh70OL+
-bPAJEVmLfoFjWuaeOHxRvdNw4f2Zd5XczhiU5tHv+Fnx+tO1bNhE6ySq5JzYiTrJ
-58psZPp43uOAWZnchFZ9fGuzHkS7QgeJjeLnF2y+gCYTLYeLw0mEA2cprzOSBu2P
-4eEV2nr2vU8SX8aE4/XfE7UISzW2Q5zbpsImGCZEZG1gVO9cha1oSwkg4x+a0xBB
-rQRvEDN8AzzwHdDTH6CXcMnNSK6fDyUlw7BrAhrVYX/pF1ppD4hhxLw0VPYO71DT
-Fxcmr0p11ZHG18Jilfthhe+/7JWgRv4kuSjFlKy8B3RcUVz9hP5h1ARxtZRDBZNy
-Y3YP/wCNH8WPZb6iUk1evwV/2qYLnE5FT8V/LvbEo5oNFi9oynMK3m/uHbWTQTAm
-K0AZ2JBDFxho9PJlXqTZhCEXdtz1CU0gj3W8GRYoN/xlrCFDpCTXlChrKRQKf2fn
-eb/5QMtDmtGlRI0wxYt7B/Wfaal9/KMRTnYkoA==                                                                                 
                     </ds:X509Certificate>
                 </ds:X509Data>
           </ds:KeyInfo>

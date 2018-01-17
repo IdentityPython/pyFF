@@ -2,7 +2,6 @@ __author__ = 'leifj'
 # -*- coding: utf-8 -*-
 
 import gettext
-
 import cherrypy
 import locale
 import os

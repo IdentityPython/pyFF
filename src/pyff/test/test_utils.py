@@ -6,7 +6,8 @@ import os
 
 from pyff import utils
 from pyff.constants import NS
-from pyff.utils import resource_filename, parse_xml, find_entity, root, resource_string, entities_list
+from pyff.samlmd import find_entity, entities_list
+from pyff.utils import resource_filename, parse_xml, root, resource_string
 from ..merge_strategies import replace_existing, remove
 
 
@@ -73,7 +74,7 @@ class TestResources(TestCase):
             assert(resource_filename(tmp) == tmp)
             (d, fn) = os.path.split(tmp)
             assert(resource_filename(fn, d) == tmp)
-        except IOError, ex:
+        except IOError as ex:
             raise ex
         finally:
             try:
@@ -94,7 +95,7 @@ class TestResources(TestCase):
             assert(resource_string(tmp) == "test")
             (d, fn) = os.path.split(tmp)
             assert(resource_string(fn, d) == "test")
-        except IOError, ex:
+        except IOError as ex:
             raise ex
         finally:
             try:

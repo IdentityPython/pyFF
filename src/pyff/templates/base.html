@@ -8,7 +8,7 @@
     <link href="/static/css/style.css" rel="stylesheet"/>
     <link href="/static/css/nav.css" rel="stylesheet"/>
     <link rel="stylesheet" href="/static/css/font-awesome.min.css">
-    <script type="text/javascript" src="/static/js/jquery-1.12.2.min.js"></script>
+    <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
     {% block script %}
     {% endblock %}
 </head>
@@ -46,9 +46,6 @@
         <script type="text/javascript" src="/static/js/hogan.min.js"></script>
         <script type="text/javascript" src="/static/js/json2.min.js"></script>
         <script type="text/javascript" src="/static/js/jstorage.min.js"></script>
-        <script type="text/javascript" src="/static/js/oboe-browser.min.js"></script>
-
-        <script type="text/javascript" src="/static/js/pyff.js"></script>
         <script type="text/javascript" src="/static/js/imgload.js"></script>
         <script type="text/javascript" src="/static/js/bootstrap-list-filter.src.js"></script>
 
@@ -58,8 +55,9 @@
         <![endif]-->
         <script type="text/javascript">
             $(document).ready(function() {
-               $('img.fallback').on('error', function () {
-                    $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
+               $('img.fallback').bind('error', function () {
+                   $(this).unbind('error');
+                   $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
                }).imgLoad(function() {
                    $(this).fadeIn(300);
                });

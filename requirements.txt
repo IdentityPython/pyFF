@@ -14,3 +14,7 @@ requests
 simplejson
 jinja2
 pyconfig
+pyyaml
+multiprocess
+requests_cache
+requests_file

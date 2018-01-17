@@ -7,15 +7,15 @@
 <ul class="list-unstyled">
 {% for entity in entities %}
     <li>
-        <a href="/metadata/{{ md.sha1_id(entity) }}.html">
-        {% if md.is_idp(entity) %}
+        <a href="/metadata/{{ samlmd.sha1_id(entity) }}.html">
+        {% if samlmd.is_idp(entity) %}
         <span class="fa fa-users"></span>
-        {% elif md.is_sp(entity) %}
+        {% elif samlmd.is_sp(entity) %}
         <span class="fa fa-cloud"></span>
         {% else %}
         <span class="fa fa-question"></span>
         {% endif %}
-        {{ md.display(entity) }}
+        {{ samlmd.entity_display_name(entity) }}
         </a>
     </li>
 {% endfor %}
