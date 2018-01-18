@@ -103,7 +103,7 @@ class MDUpdate(Monitor):
 
             for p in server.plumbings:
                 state = {'update': True}
-                p.process(self.server.md, state)
+                p.process(self.server.md, state=state)
 
             self.server.ready = True
         except Exception as ex:
@@ -815,7 +815,7 @@ def main():
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
             'checker.on': False,
-            'log.screen': False,
+            'log.screen': True,
             'tools.proxy.on': config.proxy,
             'allow_shutdown': config.allow_shutdown,
             'error_page.404': lambda **kwargs: error_page(404, _=_, **kwargs),
