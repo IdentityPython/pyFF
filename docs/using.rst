@@ -13,10 +13,10 @@ in-memory representation of a set of SAML metadata documents - and an empty "wor
 EntityDescriptor elements in the active repository.
 
 The pyffd tool starts a metadata server with an HTTP-based interface for viewing and downloading metadata. The
-HTTP interface can produce *XML*, *HTML* and *JSON* output (aswell as other formats with a bit of configuration) and
+HTTP interface can produce *XML*, *HTML* and *JSON* output (as well as other formats with a bit of configuration) and
 implements the MDX specification for online SAML metadata query.
 
-Pipeline files are *yaml* document representing a list of processing steps:
+Pipeline files are *yaml* documents representing a list of processing steps:
 
 .. code-block:: yaml
 
