@@ -128,7 +128,7 @@ class MDServiceListParser():
         return info
 
 
-_parsers = [DirectoryParser('.xml'), XRDParser(), MDServiceListParser(), NoParser()]
+_parsers = [XRDParser(), MDServiceListParser(), DirectoryParser('.xml'), NoParser()]
 
 
 def add_parser(parser):
