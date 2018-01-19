@@ -16,10 +16,10 @@ Fetch SWAMID metadata, split it up into EntityDescriptor elements and store each
    - publish: "/tmp/swamid-2.0.xml"
    - stats
 
-This is a simple example in 3 steps: load, select, store and stats. Each of these commands operate on a metada
+This is a simple example in 3 steps: load, select, store and stats. Each of these commands operate on a metadata
 repository that starts out as empty. The first command (load) causes a URL to be downloaded and the SAML metadata
 found there is stored in the metadata repository. The next command (select) creates an active document (which in
-this case consists of all EntityDescriptors in the metadata repository). Next publish is called which causes
+this case consists of all EntityDescriptors in the metadata repository). Next, publish is called which causes
 the active document to be stored in an XML file. Finally the stats command prints out some information about
 the metadata repository.
 
@@ -105,7 +105,7 @@ supports XRD-files for this purpose. Modify the previous example to look like th
     - stats
 
 Note that in this case the select doesn't include the http://mds.edugain.org prefix before the '!'-sign. This causes
-the xpath to operate on all source URLs, rather than just the single source http://mds.edugain.org . It wdould have
+the xpath to operate on all source URLs, rather than just the single source http://mds.edugain.org . It would have
 been possible to call select with multiple arguments, each using a different URL from the file links.xrd which
 contains the following:
 
@@ -191,7 +191,7 @@ contains the following:
 
 The structure of the file should be fairly self-evident. Only links with @rel="urn:oasis:names:tc:SAML:2.0:metadata"
 will be parsed. If a KeyInfo with a X509Certificate element (usual base64-encoded certificate format) then this
-certificate is used to validate signature on the donwloaded SAML metadata. Note that while 'load' supports validation
+certificate is used to validate the signature on the downloaded SAML metadata. Note that while 'load' supports validation
 based on certificate fingerprint the XRD format does not and you will have to include Base64-encoded certificates if
 you want validation to work.
 
@@ -201,7 +201,7 @@ Example 4 - Sign using a PKCS#11 module
 Fetch SWAMID metadata (and validate the signature using a certificate matching the given SHA1 fingerprint), select
 the Identity Providers, tidy it up a bit and sign with the key with the label 'signer' in the PKCS#11 module
 /usr/lib/libsofthsm.so. If a certificate is found in the same PKCS#11 object, that certificate is included in
-the Singature object.
+the Signature object.
 
 .. code-block:: yaml
 
@@ -216,7 +216,7 @@ the Singature object.
     - stats
 
 Running this example requires some preparation. Run the 'p11setup.sh' script in the examples directory.
-This results in an SoftHSM token begin setup with the PIN 'secret1' and SO_PIN 'secret2'. Now run pyff (assuming
+This results in a SoftHSM token being setup with the PIN 'secret1' and SO_PIN 'secret2'. Now run pyFF (assuming
 you are using a unix-like environment).
 
 .. code-block:: bash
@@ -226,7 +226,7 @@ you are using a unix-like environment).
 Example 5 - MDX
 ---------------
 
-Runing an MDX server is pretty easy using pyff. Lets start with the links.xrd file (cf example above) and add
+Running an MDX server is pretty easy using pyFF. Lets start with the links.xrd file (cf example above) and add
 this simple pipeline.
 
 .. code-block:: yaml
@@ -257,7 +257,7 @@ this simple pipeline.
                  - break
 
 The big difference here are the two when commands. They are used to select between the two main entrypoints
-for the pyff server: the update flow and the request flow. The update flow is run repeatedly and is usually
+for the pyFF server: the update flow and the request flow. The update flow is run repeatedly and is usually
 used for updating the internal metadata repository.
 
 The request flow is called every time an MDX request is submitted. The internal when statements are used to
@@ -280,8 +280,8 @@ Now start pyffd:
 
   # pyffd -f --loglevel=DEBUG -p /var/run/pyffd.pid mdx.fd
 
-This should start pyffd in the foreground. If you remove the ``-f`` pyff should daemonize. For running
-pyff in production I suggest something like this:
+This should start pyffd in the foreground. If you remove the ``-f`` pyFF should daemonize. For running
+pyFF in production I suggest something like this:
 
 .. code-block:: bash
 
@@ -289,6 +289,6 @@ pyff in production I suggest something like this:
 
 This starts pyff on the interface <ip>:80 and uses the current directory as the working directory. If you leave
 out --dir then pyffd will change directory to $HOME of the current user which is probably not what you want. 
-In this case logging is done through syslog (the auth facility) and with log level INFO. The refres-rate is set
+In this case logging is done through syslog (the auth facility) and with log level INFO. The refresh-rate is set
 to 300 seconds so at minimum your downstream feeds will be refreshed that often.
 
