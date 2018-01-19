@@ -22,9 +22,12 @@ __author__ = 'leifj'
 
 
 class PipeLineTest(SignerTestCase):
-    def run_pipeline(self, pl_name, ctx=None, md=MDRepository()):
+    def run_pipeline(self, pl_name, ctx=None, md=None):
         if ctx is None:
             ctx = dict()
+
+        if md is None:
+            md = MDRepository()
 
         templates = TemplateLookup(directories=[os.path.join(self.datadir, 'simple-pipeline')])
         pipeline = tempfile.NamedTemporaryFile('w').name
@@ -309,6 +312,7 @@ class LoadErrorTest(PipeLineTest):
 
 # noinspection PyUnresolvedReferences
 class SigningTest(PipeLineTest):
+
     def test_signing(self):
         self.output = tempfile.NamedTemporaryFile('w').name
         res, md, ctx = self.run_pipeline("signer.fd", self)
