@@ -25,7 +25,7 @@ from .logs import log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .stats import set_metadata_info
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, validate_document
-from .samlmd import iter_entities, annotate_entity, set_entity_attributes, discojson
+from .samlmd import iter_entities, annotate_entity, set_entity_attributes, discojson, set_pubinfo, set_reginfo
 from .fetch import Resource
 from six import StringIO
 from six.moves.urllib_parse import urlparse
@@ -1261,7 +1261,7 @@ elements of the active document.
         raise PipeException("Your pipeline is missing a select statement.")
 
     for e in iter_entities(req.t):
-        req.md.set_reginfo(e, **req.args)
+        set_reginfo(e, **req.args)
 
     return req.t
 
@@ -1288,7 +1288,7 @@ elements of the active document.
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    req.md.set_pubinfo(root(req.t), **req.args)
+    set_pubinfo(root(req.t), **req.args)
 
     return req.t
 
