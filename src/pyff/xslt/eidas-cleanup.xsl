@@ -7,6 +7,9 @@
                 xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute"
                 xmlns:saml="urn:oasis:names:tc:SAML:2.0:protocol">
 
+    <xsl:variable name="eidas_territory"/>
+    <xsl:variable name="eidas_endpoint_type"/>
+
     <!-- remove ID, validUntil, cacheDuration and xml:base -->
     <xsl:template match="@ID"/>
     <xsl:template match="@Id"/>
@@ -70,12 +73,17 @@
     </xsl:template>
 
     <xsl:template name="attributes">
-        <samla:Attribute Name="https://pyff.io/eidas/endpoint_type">
-            <samla:AttributeValue><xsl:value-of select="$eidas_endpoint_type"/></samla:AttributeValue>
-        </samla:Attribute>
-        <samla:Attribute Name="https://pyff.io/eidas/territory">
-            <samla:AttributeValue><xsl:value-of select="$eidas_territory"/></samla:AttributeValue>
-        </samla:Attribute>
+        <xsl:if test="$eidas_endpoint_type and $eidas_territory">
+            <samla:Attribute Name="https://pyff.io/eidas/endpoint_type">
+                <samla:AttributeValue><xsl:value-of select="$eidas_endpoint_type"/></samla:AttributeValue>
+            </samla:Attribute>
+            <samla:Attribute Name="https://pyff.io/eidas/territory">
+                <samla:AttributeValue><xsl:value-of select="$eidas_territory"/></samla:AttributeValue>
+            </samla:Attribute>
+        </xsl:if>
+        <xsl:copy>
+            <xsl:apply-templates select="node()|@*"/>
+        </xsl:copy>
     </xsl:template>
 
     <xsl:template match="md:EntityDescriptor">
