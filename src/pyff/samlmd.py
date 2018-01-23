@@ -382,7 +382,8 @@ def _all_domains_and_subdomains(entity):
     try:
         for dn in _domains(entity):
             for sub in subdomains(dn):
-                dlist.append(sub)
+                if len(sub) > 1:  # TLD
+                    dlist.append(sub)
     except ValueError:
         pass
     return dlist
