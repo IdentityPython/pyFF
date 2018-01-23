@@ -45,6 +45,9 @@ class StoreBase(object):
     def reset(self):
         raise NotImplementedError()
 
+    def entity_ids(self):
+        return set(e.get('entityID') for e in self.lookup('entities'))
+
 
 class MemoryStore(StoreBase):
     def __init__(self):
