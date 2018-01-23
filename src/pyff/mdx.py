@@ -50,8 +50,8 @@ import importlib
 import pkg_resources
 
 from six import StringIO
+from six.moves.urllib_parse import urlparse, quote_plus
 import getopt
-import urlparse
 from cherrypy.lib.cpstats import StatsPage
 import os
 import sys
@@ -73,7 +73,6 @@ from .logs import log, SysLogLibHandler
 from .samlmd import entity_simple_summary, entity_display_name, entity_info
 import logging
 from .stats import stats
-from lxml import html
 from datetime import datetime
 from lxml import etree
 from . import __version__ as pyff_version
@@ -219,7 +218,7 @@ Depending on which version of pyFF your're running and the configuration you may
 listed using the 'role' attribute to the link elements.
         """
         if resource is None:
-            raise cherrypy.HTTPError(400, _("Bad Request - missing resource parameter"))
+            resource = cherrypy.request.base
 
         jrd = dict()
         dt = datetime.now() + duration2timedelta("PT1H")
@@ -228,26 +227,37 @@ listed using the 'role' attribute to the link elements.
         links = list()
         jrd['links'] = links
 
-        def _links(url):
-            links.append(
-                dict(rel='urn:oasis:names:tc:SAML:2.0:metadata',
-                     role="provider",
-                     href='%s/%s.xml' % (cherrypy.request.base, url)))
-            links.append(dict(rel='disco-json', href='%s/%s.json' % (cherrypy.request.base, url)))
+        _dflt_rels = {
+            'urn:oasis:names:tc:SAML:2.0:metadata': '.xml',
+            'disco-json': '.json'
+        }
 
+        if rel is None:
+            rel = _dflt_rels.keys()
+        else:
+            rel = [rel]
+
+        def _links(url):
+            if url.startswith('/'):
+                url = url.lstrip('/')
+            for r in rel:
+                suffix = ""
+                if not url.endswith('/'):
+                    suffix = _dflt_rels[r]
+                links.append(dict(rel=r,
+                                  href='%s/%s%s' % (cherrypy.request.base, url, suffix)))
+
+        _links('/entities/')
         for a in self.server.md.store.collections():
             if '://' not in a:
-                a = a.lstrip('/')
                 _links(a)
-            elif 'http://' in a or 'https://' in a:
-                links.append(dict(rel='urn:oasis:names:tc:SAML:2.0:metadata',
-                                  href=a,
-                                  role="consumer",
-                                  properties=dict()))
+
+        for entity_id in self.server.md.store.entity_ids():
+            _links("/metadata/%s" % hash_id(entity_id))
 
         for a in self.server.aliases.keys():
             for v in self.server.md.store.attribute(self.server.aliases[a]):
-                _links('%s/%s' % (a, v))
+                _links('%s/%s' % (a, quote_plus(v)))
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return dumps(jrd)
