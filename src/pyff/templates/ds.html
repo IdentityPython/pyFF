@@ -17,7 +17,12 @@
                     </span>
                     {% endif %}
                 </div>
-                <div class="d-flex ml-3 sp-icon"><img class="img-thumbnail" src="{{entity.entity_icon}}"/></div>
+                <div class="d-flex ml-3 sp-icon">
+                    {% if entity.entity_icon %}
+                    <img class="img-thumbnail fallback" src="{{entity.entity_icon}}"/>
+                    {% endif %}
+                </div>
+
             </div>
         </div>
     </div>
@@ -52,12 +57,20 @@
         <script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
         <script type="text/javascript" src="/static/js/ds-widget.min.js"></script>
         <script type="text/javascript" src="/static/js/bootstrap-list-filter.src.js"></script>
+        <script type="text/javascript" src="/static/js/imgload.js"></script>
 {% endblock %}
 
 {% block final %}
         <script type="text/javascript">
             $(document).ready(function() {
                 $("#ds").discovery_client();
+            });
+
+            $('img.fallback').bind('error', function () {
+                   $(this).unbind('error');
+                   $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
+               }).imgLoad(function() {
+                   $(this).fadeIn(300);
             });
         </script>
 {% endblock %}
