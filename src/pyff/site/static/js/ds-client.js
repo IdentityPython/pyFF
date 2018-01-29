@@ -177,18 +177,23 @@
             var lst = JSON.parse(data || '[]') || [];
             console.log("found current list...")
             console.log(lst);
+            var p;
             if (DiscoveryService._incr_use_count(id,lst) == -1) {
-                promise = obj.json_mdq_get(DiscoveryService._sha1_id(id)).then(function (entity) {
+                p = obj.json_mdq_get(DiscoveryService._sha1_id(id)).then(function (entity) {
                     console.log("mdq found entity: ",entity);
                     lst.push({last_refresh: DiscoveryService._now(), use_count: 1, entity: entity});
                     return lst;
                 });
+            } else {
+                p = Promise.resolve(lst);
             }
-            console.log("done");
-            return lst;
-        }).then(function (lst) {
-            console.log(lst);
-            return storage.set(storage_key, JSON.stringify(lst));
+            console.log("final promise...");
+            console.log(p);
+            return p.then(function(lst) {
+                console.log("setting...");
+                console.log(lst);
+                return storage.set(storage_key, JSON.stringify(lst));
+            })
         });
     };
 
