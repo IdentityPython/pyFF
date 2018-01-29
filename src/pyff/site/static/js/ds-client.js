@@ -10,6 +10,23 @@
        this.mdq_url = mdq_url;
     }
 
+    DiscoveryService._querystring = (function(paramsArray) {
+        var params = {};
+
+        for (var i = 0; i < paramsArray.length; ++i)
+        {
+            var param = paramsArray[i]
+                .split('=', 2);
+
+            if (param.length !== 2)
+                continue;
+
+            params[param[0]] = decodeURIComponent(param[1].replace(/\+/g, " "));
+        }
+
+        return params;
+    })(window.location.search.substr(1).split('&'));
+
     DiscoveryService.prototype.get_storage = function() {
         return new CrossStorageClient(this.storage_url)
     };
@@ -118,9 +135,10 @@
     };
 
     DiscoveryService.prototype.saml_discovery_response = function(entity_id) {
-        return this.add(entity_id).then(function() {
+        var obj = this;
+        return obj.add(entity_id).then(function() {
             console.log("returning discovery response...");
-            var params = $.deparam.querystring();
+            var params = DiscoveryService._querystring;
             var qs;
             if (params['return']) {
                 qs = params['return'].indexOf('?') === -1 ? '?' : '&';
@@ -157,8 +175,8 @@
             return storage.get(storage_key);
         }).then(function (data) {
             var lst = JSON.parse(data || '[]') || [];
-
-            var promise = new Promise(function(resolve, reject) { return lst; });
+            console.log("found current list...")
+            console.log(lst);
             if (DiscoveryService._incr_use_count(id,lst) == -1) {
                 promise = obj.json_mdq_get(DiscoveryService._sha1_id(id)).then(function (entity) {
                     console.log("mdq found entity: ",entity);
@@ -166,8 +184,10 @@
                     return lst;
                 });
             }
-            return promise;
+            console.log("done");
+            return lst;
         }).then(function (lst) {
+            console.log(lst);
             return storage.set(storage_key, JSON.stringify(lst));
         });
     };
