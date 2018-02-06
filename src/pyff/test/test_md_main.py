@@ -161,10 +161,6 @@ class PyFFDTest(PipeLineTest):
         assert (t is not None)
         validate_document(t)
 
-    def test_webfinger_bad_protocol(self):
-        r = requests.get("http://127.0.0.1:%s/.well-known/webfinger" % self.port)
-        assert (r.status_code == 400)
-
     def test_webfinger(self):
         r = requests.get(
             "http://127.0.0.1:%s/.well-known/webfinger?resource=http://127.0.0.1:%s" % (self.port, self.port))
