@@ -17,4 +17,6 @@ mkdir -p $target && (
  wget $WGET_ARGS "$base/$idx_obj" && jq -r '.links[].href' < "$idx_obj" | wget $WGET_ARGS -i -
 )
 
-rsync -az --delete $dir/ $target/ 
+RSYNC_OPTS="$RSYNC_OPTS -az --delete"
+
+rsync $RSYNC_OPTS $dir/ $target/ 

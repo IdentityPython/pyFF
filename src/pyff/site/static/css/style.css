@@ -206,3 +206,7 @@ yscroll {
     overflow-x: hidden;
     overflow-y: auto;
 }
+
+.identityprovider {
+    cursor: pointer;
+}
