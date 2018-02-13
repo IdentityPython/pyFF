@@ -10,7 +10,7 @@
      - http://www.garr.it/idem-metadata/idem2edugain-metadata-sha256.xml
      - https://metadata.feide.no/feide-edugain-metadata.xml
      - https://www.rediris.es/sir/edugain-sir-metadata.xml
-     - https://md.swamid.se/md/swamid-edugain-1.0.xml
+     - https://mds.swamid.se/md/swamid-edugain-1.0.xml
      - http://metadata.aai.switch.ch/metadata.edugain.xml
      - https://wayf.surfnet.nl/federate/surfnet/edugain
 - select

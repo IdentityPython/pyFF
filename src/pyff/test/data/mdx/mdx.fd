@@ -8,7 +8,7 @@
     - break
 - when update:
     - load:
-       - http://md.swamid.se/md/swamid-2.0.xml via swamid
+       - http://mds.swamid.se/md/swamid-2.0.xml via swamid
     - select
     - fork and merge:
        - select: "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
@@ -57,7 +57,6 @@
              - emit application/xml
              - break
         - when accept application/json:
-             - xslt:
-                 stylesheet: discojson.xsl
+             - discojson
              - emit application/json
              - break

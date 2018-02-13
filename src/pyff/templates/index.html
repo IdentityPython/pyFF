@@ -10,16 +10,16 @@
         </ul>
     {% else %}
         <div class="row" id="metadataIndex">
-            <div class="col-xs-4 col-md-4">
-                <ul class="nav nav-pills nav-stacked">
+            <div class="col-sm-3">
+                <ul class="nav nav-pills flex-column">
                 {% for a in aliases %}
                     {% if md.store.attribute(aliases[a]) %}
-                        <li><a href="#{{a}}" role="tab" data-toggle="tab">{{a}}</a></li>
+                        <li class="nav-item"><a href="#{{a}}" class="nav-link" role="tab" data-toggle="tab">{{a}}</a></li>
                     {% endif %}
                 {% endfor %}
                 </ul>
             </div>
-            <div class="col-xs-8 col-md-8">
+            <div class="col-sm-9">
                 <div class="tab-content">
                 {% for a in aliases %}
                     {% if md.store.attribute(aliases[a]) %}
@@ -29,7 +29,7 @@
                             {% if v %}
                             <li>
                                 <a href="/{{ a }}/{{ v|u }}.html">{{ v }}</a>
-                                <span class="badge pull-right">{{ md.store.size(aliases[a],v) }}</span>
+                                <span class="badge badge-pill badge-secondary pull-right">{{ md.store.size(aliases[a],v) }}</span>
                             </li>
                             {% endif %}
                             {% endfor %}

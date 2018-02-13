@@ -11,15 +11,15 @@ Fetch SWAMID metadata, split it up into EntityDescriptor elements and store each
 .. code-block:: yaml
 
    - load:
-        - http://md.swamid.se/md/swamid-2.0.xml
+        - http://mds.swamid.se/md/swamid-2.0.xml
    - select
    - publish: "/tmp/swamid-2.0.xml"
    - stats
 
-This is a simple example in 3 steps: load, select, store and stats. Each of these commands operate on a metada
+This is a simple example in 3 steps: load, select, store and stats. Each of these commands operate on a metadata
 repository that starts out as empty. The first command (load) causes a URL to be downloaded and the SAML metadata
 found there is stored in the metadata repository. The next command (select) creates an active document (which in
-this case consists of all EntityDescriptors in the metadata repository). Next publish is called which causes
+this case consists of all EntityDescriptors in the metadata repository). Next, publish is called which causes
 the active document to be stored in an XML file. Finally the stats command prints out some information about
 the metadata repository.
 
@@ -105,7 +105,7 @@ supports XRD-files for this purpose. Modify the previous example to look like th
     - stats
 
 Note that in this case the select doesn't include the http://mds.edugain.org prefix before the '!'-sign. This causes
-the xpath to operate on all source URLs, rather than just the single source http://mds.edugain.org . It wdould have
+the xpath to operate on all source URLs, rather than just the single source http://mds.edugain.org . It would have
 been possible to call select with multiple arguments, each using a different URL from the file links.xrd which
 contains the following:
 
@@ -114,31 +114,43 @@ contains the following:
     <?xml version="1.0" encoding="UTF-8"?>
     <XRDS xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
         <XRD>
-            <Subject>http://md.swamid.se/md/swamid-2.0.xml</Subject>
-            <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://md.swamid.se/md/swamid-2.0.xml">
+            <Subject>http://mds.swamid.se/md/swamid-2.0.xml</Subject>
+            <Link rel="urn:oasis:names:tc:SAML:2.0:metadata" href="http://mds.swamid.se/md/swamid-2.0.xml">
                 <Title>SWAMID</Title>
                 <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
                     <ds:X509Data>
                         <ds:X509Certificate>
-        MIIDdTCCAl0CBEY7EskwDQYJKoZIhvcNAQEEBQAwfzELMAkGA1UEBhMCU0UxEjAQ
-        BgNVBAgTCVN0b2NraG9sbTESMBAGA1UEBxMJU3RvY2tob2xtMREwDwYDVQQKEwhT
-        V0FNSS5zZTEPMA0GA1UECxMGU1dBTUlEMSQwIgYDVQQDExtTV0FNSUQgbWV0YWRh
-        dGEgc2lnbmVyIHYxLjEwHhcNMDcwNTA0MTEwMjMzWhcNMTcwNTAxMTEwMjMzWjB/
-        MQswCQYDVQQGEwJTRTESMBAGA1UECBMJU3RvY2tob2xtMRIwEAYDVQQHEwlTdG9j
-        a2hvbG0xETAPBgNVBAoTCFNXQU1JLnNlMQ8wDQYDVQQLEwZTV0FNSUQxJDAiBgNV
-        BAMTG1NXQU1JRCBtZXRhZGF0YSBzaWduZXIgdjEuMTCCASIwDQYJKoZIhvcNAQEB
-        BQADggEPADCCAQoCggEBAM6wXN3pVCo98SACS6JCHjSlWj83oNL/Ct+a9hmAx1NZ
-        SKg7lnEJYwWBvzJt5o/47jRQbGm94a45Yy5LVoXq4XyCKINhMxSwbRROvr8Hw6tg
-        P1Z9dk5Jjejvus3gyaH3+EuEyP4aIjTlgmHDwW6HOv/m/4bOXSHB4Pisn7aocqU7
-        kjpOn1f0cGodWOgGO4tP7KXs6ndcLhIkW+e/B80WEr0kocuc/pvx+aLuKSkttk/A
-        fP1DFs5sqX31RXQKGrB/uEEYVv1Qvneig+RXGSbqk2Tab3BcLE/Cjnfi9Q9cH/jR
-        eL/YSSafGtl+EBgXKszxjMtELhiEWsL9RrMu1HUkBusCAwEAATANBgkqhkiG9w0B
-        AQQFAAOCAQEAkXaa61gp/lkEDNRFc0bzH3ZyoUFgol64F1zdAwBS3xnsCkTnAXt3
-        p452daEyz+0UR5J/BruMOyvR57w1m7ckVnx/sAgRgaD6gQlUWehjKPEsx8o5iDfO
-        5R1V5Rn2o7+0VuIJDDObEAtMwqn2Nk6TTzsUVfz5y9nUQAxBz3EqXnnSgRwqSwRF
-        yiVkpVfwtUHIolAf6O2N9Fg1jqoqt4mQCOyRZpD0/5SRYESTY6TJjTmvoh+zOPlI
-        yEiw+Zrl/FWjXtBnRnz8AVT5NRzYiMHdbTHs0Fh6elsb5b9gTBo7j6+t36m7oo2K
-        DaWWpMWvuWHugEqvIAXDCI/HzTbbiWm9NQ==
+			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       
                         </ds:X509Certificate>
                     </ds:X509Data>
               </ds:KeyInfo>
@@ -179,7 +191,7 @@ contains the following:
 
 The structure of the file should be fairly self-evident. Only links with @rel="urn:oasis:names:tc:SAML:2.0:metadata"
 will be parsed. If a KeyInfo with a X509Certificate element (usual base64-encoded certificate format) then this
-certificate is used to validate signature on the donwloaded SAML metadata. Note that while 'load' supports validation
+certificate is used to validate the signature on the downloaded SAML metadata. Note that while 'load' supports validation
 based on certificate fingerprint the XRD format does not and you will have to include Base64-encoded certificates if
 you want validation to work.
 
@@ -189,12 +201,12 @@ Example 4 - Sign using a PKCS#11 module
 Fetch SWAMID metadata (and validate the signature using a certificate matching the given SHA1 fingerprint), select
 the Identity Providers, tidy it up a bit and sign with the key with the label 'signer' in the PKCS#11 module
 /usr/lib/libsofthsm.so. If a certificate is found in the same PKCS#11 object, that certificate is included in
-the Singature object.
+the Signature object.
 
 .. code-block:: yaml
 
     - load:
-       - http://md.swamid.se/md/swamid-2.0.xml 12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB
+       - http://mds.swamid.se/md/swamid-2.0.xml A6:78:5A:37:C9:C9:0C:25:AD:5F:1F:69:22:EF:76:7B:C9:78:67:67:3A:AF:4F:8B:EA:A1:A7:6D:A3:A8:E5:85
     - select: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - xslt:
         stylesheet: tidy.xsl
@@ -204,7 +216,7 @@ the Singature object.
     - stats
 
 Running this example requires some preparation. Run the 'p11setup.sh' script in the examples directory.
-This results in an SoftHSM token begin setup with the PIN 'secret1' and SO_PIN 'secret2'. Now run pyff (assuming
+This results in a SoftHSM token being setup with the PIN 'secret1' and SO_PIN 'secret2'. Now run pyFF (assuming
 you are using a unix-like environment).
 
 .. code-block:: bash
@@ -214,7 +226,7 @@ you are using a unix-like environment).
 Example 5 - MDX
 ---------------
 
-Runing an MDX server is pretty easy using pyff. Lets start with the links.xrd file (cf example above) and add
+Running an MDX server is pretty easy using pyFF. Lets start with the links.xrd file (cf example above) and add
 this simple pipeline.
 
 .. code-block:: yaml
@@ -245,7 +257,7 @@ this simple pipeline.
                  - break
 
 The big difference here are the two when commands. They are used to select between the two main entrypoints
-for the pyff server: the update flow and the request flow. The update flow is run repeatedly and is usually
+for the pyFF server: the update flow and the request flow. The update flow is run repeatedly and is usually
 used for updating the internal metadata repository.
 
 The request flow is called every time an MDX request is submitted. The internal when statements are used to
@@ -268,8 +280,8 @@ Now start pyffd:
 
   # pyffd -f --loglevel=DEBUG -p /var/run/pyffd.pid mdx.fd
 
-This should start pyffd in the foreground. If you remove the ``-f`` pyff should daemonize. For running
-pyff in production I suggest something like this:
+This should start pyffd in the foreground. If you remove the ``-f`` pyFF should daemonize. For running
+pyFF in production I suggest something like this:
 
 .. code-block:: bash
 
@@ -277,6 +289,6 @@ pyff in production I suggest something like this:
 
 This starts pyff on the interface <ip>:80 and uses the current directory as the working directory. If you leave
 out --dir then pyffd will change directory to $HOME of the current user which is probably not what you want. 
-In this case logging is done through syslog (the auth facility) and with log level INFO. The refres-rate is set
+In this case logging is done through syslog (the auth facility) and with log level INFO. The refresh-rate is set
 to 300 seconds so at minimum your downstream feeds will be refreshed that often.
 

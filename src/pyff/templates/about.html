@@ -3,108 +3,98 @@
 {% block content %}
     <div class="row">
         <div class="col-xs-3 col-md-3">
-            <ul class="nav nav-pills nav-stacked">
-                <li class="active"><a href="#info" data-toggle="tab">{{ gettext('Server Info') }}</a>
-                <li><a href="#repo" data-toggle="tab">{{ gettext('Repository') }}</a></li>
+            <ul class="nav nav-pills flex-column">
+                <li class="active nav-item"><a href="#info" class="nav-link" data-toggle="tab">{{ gettext('Server Info') }}</a>
+                <li class="nav-item"><a href="#repo" class="nav-link" data-toggle="tab">{{ gettext('Resources') }}</a></li>
+                <li class="nav-item"><a href="#pipeline" class="nav-link" data-toggle="tab">{{ gettext('Pipeline') }}</a></li>
             </ul>
         </div>
         <div class="col-xs-9 col-md-9">
             <div class="tab-content">
                 <div class="tab-pane active" id="info">
-                    <table class="table">
-                        <tr>
-                            <th>pyFF {{ gettext('version') }}</th>
-                            <td>{{ version }}</td>
-                        </tr>
-                        <tr>
-                            <th>Cherrypy {{ gettext('version') }}</th>
-                            <td>{{ cversion }}</td>
-                        </tr>
-                        <tr>
-                            <th>{{ gettext('Startup arguments') }}</th>
-                            <td>{{ cmdline }}</td>
-                        </tr>
-                        <tr>
-                            <th>{{ gettext('System information') }}</th>
-                            <td>{{ sysinfo }}</td>
-                        </tr>
-                        <tr>
-                           <th>{{ gettext('Repository size') }}</th>
-                            <td>{{ stats['Repository Size'] }}</td>
-                        </tr>
-                        <tr>
-                            <th>{{ gettext('Last update') }}</th>
-                            <td>{{ stats['Repository Update Time'] }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="2">
-                                <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#pipeline_source">{{ gettext('Show Pipeline') }}</button>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <div class="modal fade" id="pipeline_source">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                                    <h4 class="modal-title" id="myModalLabel">{{ gettext('Pipeline Souurce') }}</h4>
-                                </div>
-                                <div class="modal-body">
-                                    {% for p in plumbings %}
-                                    <pre class="pre-scrollable prettyprint">{{ p }}</pre>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <dl class="row">
+                        <dt class="col-sm-3">pyFF {{ gettext('version') }}</dt>
+                        <dd class="col-sm-9">{{ version }}</dd>
+                        <dt class="col-sm-3">Cherrypy {{ gettext('version') }}</dt>
+                        <dd class="col-sm-9">{{ cversion }}</dd>
+                        <dt class="col-sm-3">{{ gettext('Startup arguments') }}</dt>
+                        <dd class="col-sm-9">{{ cmdline }}</dd>
+                        <dt class="col-sm-3">{{ gettext('System information') }}</dt>
+                        <dd class="col-sm-9">{{ sysinfo }}</dd>
+                        <dt class="col-sm-3">{{ gettext('Repository size') }}</dt>
+                        <dd class="col-sm-9">{{ stats['Repository Size'] }}</dd>
+                        <dt class="col-sm-3">{{ gettext('Last update') }}</dt>
+                        <dd class="col-sm-9">{{ stats['Repository Update Time'] }}</dd>
+                    </dl>
+                </div>
+                <div class="tab-pane" id="pipeline">
+                    {% for p in plumbings %}
+                    <pre class="pre-scrollable prettyprint">{{ p | to_yaml }}</pre>
+                    {% endfor %}
                 </div>
                 <div class="tab-pane" id="repo">
-                    {% for uri in repo.store.collections() %}
-                    {% set info = repo.summary(uri) %}
-                    <div class="panel panel-{{info['Status']}}">
-                        <div class="panel-heading" title="{{uri|trim}}">{{ uri|trim|truncate(60) }}</div>
-                        {% if info['Description'] %}
-                        <div class="panel-body small">{{ info['Description'] }}</div>
-                        {% endif %}
-                        <table class="table table-condensed">
-                            {% for k,v in info.iteritems() %}
-                            {% if k and v and not k in ('URL','Description','Validation Errors','Status') %}
-                            <tr>
-                                <th>{{ k|trim|truncate(20) }}</th>
-                                <td>
-                                    {% if v is string %}
-                                    {{ v|trim|truncate(60) }}
-                                    {% elif v is mapping %}
-                                        <dl class="dl-horizontal">
-                                            {% for h,hv in v.iteritems() %}
-                                            <dt>{{h|trim}}</dt>
-                                            <dd>{{hv|trim|truncate(30)}}</dd>
-                                            {% endfor %}
-                                        </dl>
-                                    {% elif v is iterable %}
-                                        <ul class="list-unstyled">
-                                        {% for vv in v %}
-                                            <li>{{ vv }}</li>
-                                        {% endfor %}
-                                        </ul>
-                                    {% endif %}
-                                </td>
-                            </tr>
+                    {% for resource in repo.rm.walk() %}
+                    {% set info = resource.info %}
+                    <div class="card">
+                        <div class="card-header {% if info.Expired %}bg-danger{% elif info['Validation Errors'] %}bg-warning{% else %}bg-success{% endif %}">
+                            <h4 class="card-title text-truncate">{{ resource.url }}</h4>
+                        </div>
+                        <div class="card-body small">
+                            {% if info['Description'] %}
+                            <p class="card-text">{{ info['Description'] }}</p>
                             {% endif %}
-                            {% endfor %}
-                        </table>
-                        {% if info['Validation Errors'] %}
-                        <table class="table">
-                            {% for ei,ee in info['Validation Errors'].iteritems() %}
-                            <tr>
-                                <th>{{ei|trim|truncate(30)}}</th>
-                                <td>{{ee|trim}}</td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                        {% endif %}
-
+                            <table class="table table-bordered table-striped" id="{{resource.url|sha1}}">
+                                {% if resource.children %}
+                                <tr>
+                                    <th class="align-middle" scope="row">Children</th>
+                                    <td>
+                                        <ul class="list-unstyled">
+                                            {% for c in resource.children %}
+                                            <li><a href="#{{c.url|sha1}}">{{c.url|truncate(60)}}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </td>
+                                {% endif %}
+                                </tr>
+                                {% for k,v in info.items() %}
+                                {% if k and v and not k in ('URL','Description','Validation Errors','Status', 'Expired') %}
+                                <tr>
+                                    <th class="align-middle" scope="row">{{ k|trim }}</th>
+                                    <td>
+                                        {% if v is string %}
+                                        {{ v|trim|truncate(60) }}
+                                        {% elif v is mapping %}
+                                            <dl class="row">
+                                                {% for h,hv in v.items() %}
+                                                {% if h and hv %}
+                                                <dt class="col-sm-3">{{h|trim}}</dt>
+                                                <dd class="col-sm-9">{{hv|trim|truncate(40)}}</dd>
+                                                {% endif %}
+                                                {% endfor %}
+                                            </dl>
+                                        {% elif v is iterable %}
+                                            <ul class="list-unstyled">
+                                            {% for vv in v %}
+                                                <li>{{ vv }}</li>
+                                            {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </table>
+                            {% if info['Validation Errors'] %}
+                            <table class="table table-bordered table-striped">
+                                {% for ei,ee in info['Validation Errors'].items() %}
+                                <tr>
+                                    <th class="align-middle" scope="row">{{ei|trim|truncate(30)}}</th>
+                                    <td>{{ee|trim}}</td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                            {% endif %}
+                        </div>
                     </div>
                     {% endfor %}
                 </div>

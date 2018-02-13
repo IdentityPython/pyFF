@@ -21,3 +21,4 @@ sign.key
 _site
 profile.out*
 localconfig.py
+*.sqlite

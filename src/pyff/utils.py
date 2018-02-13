@@ -1,4 +1,6 @@
 # coding=utf-8
+from __future__ import print_function, unicode_literals, absolute_import
+
 """
 
 This module contains various utilities.
@@ -7,40 +9,31 @@ This module contains various utilities.
 import hashlib
 import io
 import tempfile
-from collections import namedtuple
 from datetime import timedelta, datetime
 from email.utils import parsedate
 from threading import local
-from time import gmtime, strftime, clock
-from traceback import print_exc
+from time import gmtime, strftime
 from urlparse import urlparse
 from itertools import chain
-
+from StringIO import StringIO
+import yaml
 import xmlsec
 import cherrypy
-import httplib2
 import iso8601
 import os
 import pkg_resources
 import re
 from jinja2 import Environment, PackageLoader
 from lxml import etree
-
-from .constants import NS
-from .constants import config
-from .decorators import retry
+from .constants import config, NS
 from .logs import log
+from .exceptions import *
+from .i18n import language
 
 __author__ = 'leifj'
 
-import i18n
-
 sentinel = object()
 thread_data = local()
-
-
-class PyffException(Exception):
-    pass
 
 
 def xml_error(error_log, m=None):
@@ -57,6 +50,9 @@ def xml_error(error_log, m=None):
 def debug_observer(e):
     log.error(repr(e))
 
+
+def trunc_str(x, l):
+    return (x[:l] + '..') if len(x) > l else x
 
 def resource_string(name, pfx=None):
     """
@@ -127,13 +123,13 @@ def totimestamp(dt, epoch=datetime(1970, 1, 1)):
     return int(ts)
 
 
-def dumptree(t, pretty_print=False, xml_declaration=True):
+def dumptree(t, pretty_print=False, method='xml', xml_declaration=True):
     """
 Return a string representation of the tree, optionally pretty_print(ed) (default False)
 
 :param t: An ElemenTree to serialize
     """
-    return etree.tostring(t, encoding='UTF-8', xml_declaration=xml_declaration, pretty_print=pretty_print)
+    return etree.tostring(t, encoding='UTF-8', method=method, xml_declaration=xml_declaration, pretty_print=pretty_print)
 
 
 def iso_now():
@@ -153,6 +149,10 @@ Timestamp in ISO format
 def iso2datetime(s):
     return iso8601.parse_date(s)
 
+def first_text(elt, tag, default=None):
+    for matching in elt.iter(tag):
+        return matching.text
+    return default
 
 class ResourceResolver(etree.Resolver):
     def __init__(self):
@@ -162,7 +162,7 @@ class ResourceResolver(etree.Resolver):
         """
         Resolves URIs using the resource API
         """
-        log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
+        #log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
         path = system_url.split("/")
         fn = path[len(path) - 1]
         if pkg_resources.resource_exists(__name__, fn):
@@ -183,22 +183,22 @@ def schema():
             parser.resolvers.add(ResourceResolver())
             st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
             thread_data.schema = etree.XMLSchema(st)
-        except etree.XMLSchemaParseError, ex:
+        except etree.XMLSchemaParseError as ex:
             log.error(xml_error(ex.error_log))
             raise ex
     return thread_data.schema
 
 
-def check_signature(t, key):
+def check_signature(t, key, only_one_signature=False):
     if key is not None:
         log.debug("verifying signature using %s" % key)
         refs = xmlsec.verified(t, key, drop_signature=True)
-        if len(refs) != 1:
-            raise MetadataException(
-                "XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+        if only_one_signature and len(refs) != 1:
+            raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
         t = refs[0]  # prevent wrapping attacks
 
     return t
+
 
 # @cached(hash_key=lambda *args, **kwargs: hash(args[0]))
 def validate_document(t):
@@ -225,20 +225,20 @@ def safe_write(fn, data):
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
             os.rename(tmpn, fn)
             return True
-    except Exception, ex:
+    except Exception as ex:
         log.error(ex)
     finally:
         if tmpn is not None and os.path.exists(tmpn):
             try:
                 os.unlink(tmpn)
-            except Exception, ex:
+            except Exception as ex:
                 log.warn(ex)
     return False
 
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 env = Environment(loader=PackageLoader(__package__, 'templates'), extensions=['jinja2.ext.i18n'])
-env.install_gettext_callables(i18n.language.gettext, i18n.language.ngettext, newstyle=True)
+getattr(env, 'install_gettext_callables')(language.gettext, language.ngettext, newstyle=True)
 
 import urllib
 from markupsafe import Markup
@@ -251,14 +251,25 @@ def urlencode_filter(s):
     s = urllib.quote_plus(s)
     return Markup(s)
 
-def truncate_filter(s,max_len=10):
+
+def truncate_filter(s, max_len=10):
     if len(s) > max_len:
-        return s[0:max_len]+"..."
+        return s[0:max_len] + "..."
     else:
         return s
 
+
+def to_yaml_filter(pipeline):
+    print(pipeline)
+    out = StringIO()
+    yaml.dump(pipeline, stream=out)
+    return out.getvalue()
+
+
 env.filters['u'] = urlencode_filter
 env.filters['truncate'] = truncate_filter
+env.filters['to_yaml'] = to_yaml_filter
+env.filters['sha1'] = lambda x: hash_id(x,'sha1', False)
 
 
 def template(name):
@@ -267,13 +278,12 @@ def template(name):
 
 def render_template(name, **kwargs):
     kwargs.setdefault('http', cherrypy.request)
-    kwargs.setdefault('brand', "pyFF @ %s" % request_vhost(cherrypy.request))
+    vhost = request_vhost(cherrypy.request)
+    kwargs.setdefault('vhost', vhost)
+    kwargs.setdefault('brand', "pyFF @ %s" % vhost)
     kwargs.setdefault('google_api_key', config.google_api_key)
     kwargs.setdefault('_', _)
     return template(name).render(**kwargs)
-
-
-_Resource = namedtuple("Resource", ["result", "cached", "date", "last_modified", "resp", "time"])
 
 
 def parse_date(s):
@@ -282,65 +292,18 @@ def parse_date(s):
     return datetime(*parsedate(s)[:6])
 
 
-@retry((IOError, httplib2.HttpLib2Error))
-def load_url(url, enable_cache=True, timeout=60):
-    start_time = clock()
-    cache = httplib2.FileCache(".cache")
-    headers = dict()
-    if not enable_cache:
-        headers['cache-control'] = 'no-cache'
-
-    log.debug("fetching (caching: %s) '%s'" % (enable_cache, url))
-
-    if url.startswith('file://'):
-        path = url[7:]
-        if not os.path.exists(path):
-            log.error("file not found: %s" % path)
-            return _Resource(result=None,
-                             cached=False,
-                             date=None,
-                             resp=None,
-                             time=None,
-                             last_modified=None)
-
-        with io.open(path, 'rb') as fd:
-            return _Resource(result=fd.read(),
-                             cached=False,
-                             date=datetime.now(),
-                             resp=None,
-                             time=clock() - start_time,
-                             last_modified=datetime.fromtimestamp(os.stat(path).st_mtime))
-    else:
-        h = httplib2.Http(cache=cache,
-                          timeout=timeout,
-                          disable_ssl_certificate_validation=True)  # trust is done using signatures over here
-        log.debug("about to request %s" % url)
-        print repr(cache.__dict__)
-        try:
-            resp, content = h.request(url, headers=headers)
-        except Exception, ex:
-            print_exc(ex)
-            raise ex
-        log.debug("got status: %d" % resp.status)
-        if resp.status != 200:
-            log.debug("got resp code %d (%d bytes)" % (resp.status, len(content)))
-            raise IOError(resp.reason)
-        log.debug("last-modified header: %s" % resp.get('last-modified'))
-        log.debug("date header: %s" % resp.get('date'))
-        log.debug("last modified: %s" % resp.get('date', resp.get('last-modified', None)))
-        return _Resource(result=content,
-                         cached=resp.fromcache,
-                         date=parse_date(resp['date']),
-                         resp=resp,
-                         time=clock() - start_time,
-                         last_modified=parse_date(resp.get('date', resp.get('last-modified', None))))
-
-
 def root(t):
     if hasattr(t, 'getroot') and hasattr(t.getroot, '__call__'):
         return t.getroot()
     else:
         return t
+
+
+def with_tree(elt, cb):
+    cb(elt)
+    if isinstance(elt.tag,basestring):
+        for child in list(elt):
+            with_tree(child, cb)
 
 
 def duration2timedelta(period):
@@ -367,7 +330,6 @@ def duration2timedelta(period):
 
 
 def filter_lang(elts, langs=None):
-
     if langs is None or type(langs) is not list:
         langs = ['en']
 
@@ -398,7 +360,7 @@ def xslt_transform(t, stylesheet, params=None):
     transform = thread_data.xslt[stylesheet]
     try:
         return transform(t, **params)
-    except etree.XSLTApplyError, ex:
+    except etree.XSLTApplyError as ex:
         for entry in transform.error_log:
             log.error('\tmessage from line %s, col %s: %s' % (entry.line, entry.column, entry.message))
             log.error('\tdomain: %s (%d)' % (entry.domain_name, entry.domain))
@@ -464,86 +426,6 @@ def parse_xml(io, base_url=None):
     return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
 
 
-class EntitySet(object):
-    def __init__(self, initial=None):
-        self._e = dict()
-        if initial is not None:
-            for e in initial:
-                self.add(e)
-
-    def add(self, value):
-        self._e[value.get('entityID')] = value
-
-    def discard(self, value):
-        entity_id = value.get('entityID')
-        if entity_id in self._e:
-            del self._e[entity_id]
-
-    def __iter__(self):
-        for e in self._e.values():
-            yield e
-
-    def __len__(self):
-        return len(self._e.keys())
-
-    def __contains__(self, item):
-        return item.get('entityID') in self._e.keys()
-
-
-class MetadataException(Exception):
-    pass
-
-
-class MetadataExpiredException(MetadataException):
-    pass
-
-
-def find_merge_strategy(strategy_name):
-    if '.' not in strategy_name:
-        strategy_name = "pyff.merge_strategies.%s" % strategy_name
-    (mn, sep, fn) = strategy_name.rpartition('.')
-    # log.debug("import %s from %s" % (fn,mn))
-    module = None
-    if '.' in mn:
-        (pn, sep, modn) = mn.rpartition('.')
-        module = getattr(__import__(pn, globals(), locals(), [modn], -1), modn)
-    else:
-        module = __import__(mn, globals(), locals(), [], -1)
-    strategy = getattr(module, fn)  # we might aswell let this fail early if the strategy is wrongly named
-
-    if strategy is None:
-        raise MetadataException("Unable to find merge strategy %s" % strategy_name)
-
-    return strategy
-
-
-def entities_list(t=None):
-    """
-        :param t: An EntitiesDescriptor or EntityDescriptor element
-
-        Returns the list of contained EntityDescriptor elements
-        """
-    if t is None:
-        return []
-    elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
-        return [root(t)]
-    else:
-        return iter_entities(t)
-
-
-def iter_entities(t):
-    if t is None:
-        return []
-    return t.iter('{%s}EntityDescriptor' % NS['md'])
-
-
-def find_entity(t, e_id, attr='entityID'):
-    for e in iter_entities(t):
-        if e.get(attr) == e_id:
-            return e
-    return None
-
-
 def has_tag(t, tag):
     tags = t.iter(tag)
     return next(tags, sentinel) is not sentinel
@@ -585,16 +467,40 @@ def avg_domain_distance(d1, d2):
     for a in d1.split(';'):
         for b in d2.split(';'):
             d = ddist(a, b)
-            #log.debug("ddist %s %s -> %d" % (a, b, d))
+            # log.debug("ddist %s %s -> %d" % (a, b, d))
             dd += d
             n += 1
     return int(dd / n)
 
 
+def sync_nsmap(nsmap, elt):
+    fix = []
+    for ns in elt.nsmap:
+        if ns not in nsmap:
+            nsmap[ns] = elt.nsmap[ns]
+        elif nsmap[ns] != elt.nsmap[ns]:
+            fix.append(ns)
+        else:
+            pass
+
+
+def rreplace(s, old, new, occurrence):
+    li = s.rsplit(old, occurrence)
+    return new.join(li)
+
+
+def load_callable( name ):
+    from importlib import import_module
+    p, m = name.rsplit(':', 1)
+    mod = import_module(p)
+    return getattr(mod, m)
+
+
 # semantics copied from https://github.com/lordal/md-summary/blob/master/md-summary
 # many thanks to Anders Lordahl & Scotty Logan for the idea
 def guess_entity_software(e):
-    for elt in chain(e.findall(".//{%s}SingleSignOnService" % NS['md']), e.findall(".//{%s}AssertionConsumerService" % NS['md'])):
+    for elt in chain(e.findall(".//{%s}SingleSignOnService" % NS['md']),
+                     e.findall(".//{%s}AssertionConsumerService" % NS['md'])):
         location = elt.get('Location')
         if location:
             if 'Shibboleth.sso' in location \
@@ -645,3 +551,10 @@ def guess_entity_software(e):
         return 'OpenAthens'
 
     return 'other'
+
+
+def printable(s):
+    if type(s) is unicode:
+        return s.encode('ascii', errors='ignore').decode()
+    else:
+        return s.decode("ascii", errors="ignore").encode()

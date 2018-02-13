@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "common.html" %}
 
 {% block script %}
     <link href="/static/css/typeaheadjs.css" rel="stylesheet"/>
@@ -6,34 +6,27 @@
 {% endblock %}
 
 {% block nav %}
-<div class="topnav navbar navbar-default">
-    <div class="navbar-header">
-        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
-          <span class="sr-only">{{ gettext('Toggle navigation') }}</span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-        </button>
-        <a class="navbar-brand" href="#"><small>{{ brand }}</small></a>
-    </div>
-    <div class="collapse navbar-collapse navbar-ex1-collapse">
-        <ul class="nav navbar-nav pull-right">
-            <li>
-                <form class="navbar-form navbar-left pull-right" role="search">
-                    <div class="form-group">
-                        <input type="text"
-                               size="60"
-                               class="typeahead search-query form-control input-sm"
-                               placeholder="Start typing here to search"/>
-                    </div>
-                </form>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="#"><small>{{ brand }}</small></a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="/">Home</a>
             </li>
-            <li>
-                <a href="/metadata" class="input-sm"><i title="{{ gettext('All Entities') }}" class="glyphicon glyphicon-list"></i></a>
-            </li>
+            {% block navtools %}{% endblock %}
         </ul>
+        <form class="form-inline my-2 my-lg-0">
+            <div class="form-group">
+                <input type="text"
+                       class="typeahead search-query mr-sm-2 form-control input-sm"
+                       placeholder="Start typing here to search"/>
+            </div>
+        </form>
     </div>
-</div>
+</nav>
 {% endblock %}
 
 {% block footer %}
@@ -69,8 +62,9 @@
 {% endblock %}
 
 {% block final %}
+{% if google_api_key %}
 <script type="text/javascript" src="//maps.google.com/maps/api/js?key={{google_api_key}}"></script>
-<script type="text/javascript" src="/static/js/jquery.ui.map.full.min.js"></script>
+{% endif %}
 <script type="text/javascript" src="/static/js/prettify.js"></script>
 <script type="text/javascript" src="/static/js/typeahead.bundle.min.js"></script>
 <script type="text/javascript">
@@ -109,7 +103,7 @@
             }
         });
         $('.tt-hint').addClass('form-control');
-        $('table').wrap($('<div></div>').addClass('table-wrapper')).addClass("table table-striped table-condensed table-bordered");
+        //$('table').wrap($('<div></div>').addClass('table-wrapper')).addClass("table table-striped table-condensed table-bordered");
         $('form[action="pause"] > input:submit').addClass("btn btn-xs btn-danger disable");
         $('form[action="resume"] > input:submit').addClass("btn btn-xs btn-success disable");
 

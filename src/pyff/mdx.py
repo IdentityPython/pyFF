@@ -23,8 +23,6 @@ An implementation of draft-lajoie-md-query
             Listen on the specified port
     -H<host>|--host=<host>
             Listen on the specified interface
-    -R
-            Use redis-based store
     --frequency=<seconds>
             Wake up every <seconds> and run the update pipeline. By
             default the frequency is set to 600.
@@ -44,18 +42,16 @@ An implementation of draft-lajoie-md-query
             One or more pipeline files
 
 """
+
+from __future__ import absolute_import, print_function, unicode_literals
+
 import importlib
 
 import pkg_resources
 
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
-
+from six import StringIO
+from six.moves.urllib_parse import urlparse, quote_plus
 import getopt
-import urlparse
 from cherrypy.lib.cpstats import StatsPage
 import os
 import sys
@@ -67,29 +63,30 @@ from cherrypy.lib import cptools
 from cherrypy.process.plugins import Monitor, SimplePlugin
 from cherrypy.lib import caching
 from simplejson import dumps
-from pyff.constants import ATTRS, EVENT_REPOSITORY_LIVE, config
-from pyff.locks import ReadWriteLock
-from pyff.mdrepo import MDRepository
-from pyff.pipes import plumbing
-from pyff.utils import resource_string, xslt_transform, dumptree, duration2timedelta, debug_observer, render_template
-from pyff.logs import log, SysLogLibHandler
+from .constants import config
+from .locks import ReadWriteLock
+from .mdrepo import MDRepository
+from .pipes import plumbing
+from .utils import resource_string, xslt_transform, dumptree, duration2timedelta, \
+    debug_observer, render_template, hash_id
+from .logs import log, SysLogLibHandler
+from .samlmd import entity_simple_summary, entity_display_name, entity_info
 import logging
-from pyff.stats import stats
-from lxml import html
+from .stats import stats
 from datetime import datetime
 from lxml import etree
-from pyff import __version__ as pyff_version
-from pyff.store import MemoryStore, RedisStore
+from . import __version__ as pyff_version
 from publicsuffix import PublicSuffixList
-import i18n
+from .i18n import language
+from . import samlmd
 
-_ = i18n.language.ugettext
+_ = language.ugettext
 
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
 
 class MDUpdate(Monitor):
-    def __init__(self, bus, frequency=600, server=None):
+    def __init__(self, bus, frequency=int(config.update_frequency), server=None):
         self.lock = Lock()
         self.server = server
         self.bus = bus
@@ -102,27 +99,13 @@ class MDUpdate(Monitor):
         try:
             self.lock.acquire()
             locked = True
-            md = self.server.md.clone()
 
             for p in server.plumbings:
-                state = {'update': True, 'stats': {}}
-                p.process(md, state)
-                stats.update(state.get('stats', {}))
+                state = {'update': True}
+                p.process(self.server.md, state=state)
 
-            with server.lock.writelock:
-                log.debug("update produced new repository with %d entities" % server.md.store.size())
-                server.md = md
-                server.md.fire(type=EVENT_REPOSITORY_LIVE, size=server.md.store.size())
-                stats['Repository Update Time'] = datetime.now()
-                stats['Repository Size'] = server.md.store.size()
-
-            self.nruns += 1
-
-            stats['Updates Since Server Start'] = self.nruns
-
-            if hasattr(self.server.md.store, 'periodic'):
-                self.server.md.store.periodic(stats)
-        except Exception, ex:
+            self.server.ready = True
+        except Exception as ex:
             log.error(ex.message)
         finally:
             if locked:
@@ -167,13 +150,13 @@ class EncodingDispatcher(object):
         vpath = path_info
         for prefix in self.prefixes:
             if vpath.startswith(prefix):
-                log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
+                # log.debug("EncodingDispatcher (%s) called with %s" % (",".join(self.prefixes), path_info))
                 vpath = path_info.replace("%2F", "/")
                 plen = len(prefix)
                 vpath = vpath[plen + 1:]
                 npath = "%s/%s" % (prefix, self.enc(vpath))
-                log.debug("EncodingDispatcher %s" % npath)
-                return self.next_dispatcher(npath)
+                # log.debug("EncodingDispatcher %s" % npath)
+                return self.next_dispatcher(npath.encode('ascii', errors='ignore'))
         return self.next_dispatcher(vpath)
 
 
@@ -235,7 +218,7 @@ Depending on which version of pyFF your're running and the configuration you may
 listed using the 'role' attribute to the link elements.
         """
         if resource is None:
-            raise cherrypy.HTTPError(400, _("Bad Request - missing resource parameter"))
+            resource = cherrypy.request.base
 
         jrd = dict()
         dt = datetime.now() + duration2timedelta("PT1H")
@@ -244,26 +227,37 @@ listed using the 'role' attribute to the link elements.
         links = list()
         jrd['links'] = links
 
-        def _links(a):
-            links.append(
-                dict(rel='urn:oasis:names:tc:SAML:2.0:metadata',
-                     role="provider",
-                     href='%s/%s.xml' % (cherrypy.request.base, a)))
-            links.append(dict(rel='disco-json', href='%s/%s.json' % (cherrypy.request.base, a)))
+        _dflt_rels = {
+            'urn:oasis:names:tc:SAML:2.0:metadata': '.xml',
+            'disco-json': '.json'
+        }
 
+        if rel is None:
+            rel = _dflt_rels.keys()
+        else:
+            rel = [rel]
+
+        def _links(url):
+            if url.startswith('/'):
+                url = url.lstrip('/')
+            for r in rel:
+                suffix = ""
+                if not url.endswith('/'):
+                    suffix = _dflt_rels[r]
+                links.append(dict(rel=r,
+                                  href='%s/%s%s' % (cherrypy.request.base, url, suffix)))
+
+        _links('/entities/')
         for a in self.server.md.store.collections():
             if '://' not in a:
-                a = a.lstrip('/')
                 _links(a)
-            elif 'http://' in a or 'https://' in a:
-                links.append(dict(rel='urn:oasis:names:tc:SAML:2.0:metadata',
-                                  href=a,
-                                  role="consumer",
-                                  properties=dict()))
+
+        for entity_id in self.server.md.store.entity_ids():
+            _links("/metadata/%s" % hash_id(entity_id))
 
         for a in self.server.aliases.keys():
             for v in self.server.md.store.attribute(self.server.aliases[a]):
-                _links('%s/%s' % (a, v))
+                _links('%s/%s' % (a, quote_plus(v)))
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return dumps(jrd)
@@ -321,12 +315,12 @@ class MDRoot(object):
     stats = MDStats()
     discovery = SHIBDiscovery()
 
-    try:  # pragma: nocover
-        import dowser
-
-        memory = dowser.Root()
-    except ImportError:
-        memory = NotImplementedFunction('Memory profiling needs dowser')
+    if config.devel_memory_profile:
+        try:  # pragma: nocover
+            import dowser
+            memory = dowser.Root()
+        except ImportError:
+            memory = NotImplementedFunction('Memory profiling needs dowser')
 
     _well_known = WellKnown()
     static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
@@ -359,6 +353,16 @@ class MDRoot(object):
 User-agent: *
 Disallow: /
 """
+
+    @cherrypy.expose()
+    @cherrypy.tools.expires(secs=3600, debug=True)
+    def storage(self):
+        """
+        The crossdomain storage hub iframe
+        """
+
+        entity_id = cherrypy.request.params.get('entity_id')
+        return render_template("storage.html")
 
     @cherrypy.expose
     def favicon_ico(self):
@@ -397,7 +401,7 @@ Disallow: /
                                cmdline=" ".join(sys.argv),
                                stats=stats,
                                repo=self.server.md,
-                               plumbings=["%s" % p for p in self.server.plumbings])
+                               plumbings=self.server.plumbings)
 
     @cherrypy.expose
     def reset(self):
@@ -446,7 +450,7 @@ Search the active set for matching entities.
         """The default request processor unpacks base64-encoded reuqests and passes them onto the MDServer.request
         handler.
         """
-        log.debug("ROOT default args: %s, kwargs: %s" % (repr(args), repr(kwargs)))
+        # log.debug("ROOT default args: %s, kwargs: %s" % (repr(args), repr(kwargs)))
         if len(args) > 0 and args[0] in self.server.aliases:
             kwargs['pfx'] = args[0]
             if len(args) > 1:
@@ -476,15 +480,12 @@ class MDServer(object):
         self.refresh.subscribe()
         self.aliases = config.aliases
         self.psl = PublicSuffixList()
-        self.md = MDRepository(metadata_cache_enabled=config.caching_enabled, store=config.store)
+        self.md = MDRepository()
+        self.ready = False
 
         if config.autoreload:
             for f in pipes:
                 cherrypy.engine.autoreload.files.add(f)
-
-    @property
-    def ready(self):
-        return self.md.store.ready()
 
     def reload_pipeline(self):
         new_plumbings = [plumbing(v) for v in self._pipes]
@@ -519,12 +520,12 @@ class MDServer(object):
         path = kwargs.get('path', None)
         content_type = kwargs.get('content_type', None)
 
-        log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
+        # log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
 
         def _d(x, do_split=True):
             if x is not None:
                 x = x.strip()
-            log.debug("_d(%s,%s)" % (x, do_split))
+            # log.debug("_d(%s,%s)" % (x, do_split))
             if x is None or len(x) == 0:
                 return None, None
 
@@ -582,21 +583,23 @@ class MDServer(object):
                 entity_id = kwargs.get('entityID', None)
                 if entity_id is None:
                     raise HTTPError(400, _("400 Bad Request - missing entityID"))
-                pdict['sp'] = self.md.sha1_id(entity_id)
+
                 e = self.md.store.lookup(entity_id)
                 if e is None or len(e) == 0:
                     raise HTTPError(404)
 
                 if len(e) > 1:
-                    raise HTTPError(400, _("400 Bad Request - multiple matches for") + " %s" % entity_id)
+                    raise HTTPError(400, _("Bad Request - multiple matches for") + " %s" % entity_id)
 
-                pdict['entity'] = self.md.simple_summary(e[0])
+                pdict['entity'] = entity_simple_summary(e[0])
                 if not path:
                     pdict['search'] = "/search/"
                     pdict['list'] = "/role/idp.json"
                 else:
-                    pdict['search'] = "%s.s" % path
-                    pdict['list'] = "%s.json" % path
+                    pdict['search'] = u"{}.s".format(path)
+                    pdict['list'] = u"{}.json".format(path)
+
+                pdict['storage'] = "/storage/"
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return render_template("ds.html", **pdict)
             elif ext == 's':
@@ -612,6 +615,7 @@ class MDServer(object):
                 if query is None:
                     log.debug("empty query - creating one")
                     query = [cherrypy.request.remote.ip]
+                    # XXX fix this - urlparse is not 3.x and also this way to handle extra info sucks
                     referrer = cherrypy.request.headers.get('referrer', None)
                     if referrer is not None:
                         log.debug("including referrer: %s" % referrer)
@@ -646,6 +650,7 @@ class MDServer(object):
                         title = _("Metadata By Attributes")
                     return render_template("index.html",
                                            md=self.md,
+                                           samlmd=samlmd,
                                            alias=alias,
                                            aliases=self.aliases,
                                            title=title)
@@ -656,29 +661,17 @@ class MDServer(object):
                     if len(entities) > 1:
                         return render_template("metadata.html",
                                                md=self.md,
+                                               samlmd=samlmd,
                                                subheading=q,
                                                entities=entities)
                     else:
                         entity = entities[0]
-                        t = html.fragment_fromstring(unicode(xslt_transform(entity, "entity2html.xsl")))
-                        for c_elt in t.findall(".//code[@role='entity']"):
-                            c_txt = dumptree(entity)
-                            parser = etree.XMLParser(remove_blank_text=True)
-                            src = StringIO(c_txt)
-                            tree = etree.parse(src, parser)
-                            c_txt = dumptree(tree, pretty_print=True, xml_declaration=False).decode("utf-8")
-                            p = c_elt.getparent()
-                            p.remove(c_elt)
-                            if p.text is not None:
-                                p.text += c_txt
-                            else:
-                                p.text = c_txt
-                        xml = dumptree(t, xml_declaration=False).decode('utf-8')
                         return render_template("entity.html",
-                                               headline=self.md.display(entity).strip(),
+                                               headline=entity_display_name(entity),
                                                subheading=entity.get('entityID'),
                                                entity_id=entity.get('entityID'),
-                                               content=xml)
+                                               samlmd=samlmd,
+                                               entity=entity_info(entity))
             else:
                 for p in self.plumbings:
                     state = {'request': True,
@@ -709,13 +702,10 @@ def main():
                                    ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
                                     'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
                                     'alias=', 'dir=', 'version', 'proxy', 'allow_shutdown'])
-    except getopt.error, msg:
-        print msg
-        print __doc__
+    except getopt.error as msg:
+        print(msg)
+        print(__doc__)
         sys.exit(2)
-
-    if config.store is None:
-        config.store = MemoryStore()
 
     if config.loglevel is None:
         config.loglevel = logging.INFO
@@ -729,7 +719,7 @@ def main():
     try:  # pragma: nocover
         for o, a in opts:
             if o in ('-h', '--help'):
-                print __doc__
+                print(__doc__)
                 sys.exit(0)
             elif o == '--loglevel':
                 config.loglevel = getattr(logging, a.upper(), None)
@@ -748,8 +738,6 @@ def main():
                 config.port = int(a)
             elif o in ('--pidfile', '-p'):
                 config.pid_file = a
-            elif o in '-R':
-                config.store = RedisStore()
             elif o in ('--no-caching', '-C'):
                 config.caching_enabled = False
             elif o in ('--caching-delay', 'D'):
@@ -774,14 +762,14 @@ def main():
             elif o in ('-m', '--module'):
                 config.modules.append(a)
             elif o in '--version':
-                print "pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__)
+                print("pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__))
                 sys.exit(0)
             else:
                 raise ValueError("Unknown option '%s'" % o)
 
-    except Exception, ex:
-        print ex
-        print __doc__
+    except Exception as ex:
+        print(ex)
+        print(__doc__)
         sys.exit(3)
 
     engine = cherrypy.engine
@@ -836,6 +824,8 @@ def main():
             'tools.caching.antistampede_timeout': 30,
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
             'tools.cpstats.on': True,
+            'checker.on': False,
+            'log.screen': True,
             'tools.proxy.on': config.proxy,
             'allow_shutdown': config.allow_shutdown,
             'error_page.404': lambda **kwargs: error_page(404, _=_, **kwargs),
@@ -890,7 +880,7 @@ def main():
     engine.signals.subscribe()
     try:
         engine.start()
-    except Exception, ex:
+    except Exception as ex:
         logging.error(ex)
         sys.exit(1)
     else:

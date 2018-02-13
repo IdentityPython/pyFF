@@ -6,7 +6,6 @@ from mako.lookup import TemplateLookup
 from pyff.constants import NS
 from pyff.mdrepo import MDRepository
 from pyff.pipes import plumbing
-from pyff.store import MemoryStore
 from pyff.test import SignerTestCase
 
 
@@ -20,8 +19,8 @@ class SimplePipeLineTest(SignerTestCase):
         self.signer_template = self.templates.get_template('signer.fd')
         self.validator = tempfile.NamedTemporaryFile('w').name
         self.validator_template = self.templates.get_template('validator.fd')
-        self.md_signer = MDRepository(store=MemoryStore())
-        self.md_validator = MDRepository(store=MemoryStore())
+        self.md_signer = MDRepository()
+        self.md_validator = MDRepository()
         with open(self.signer, "w") as fd:
             fd.write(self.signer_template.render(ctx=self))
         with open(self.validator, "w") as fd:
@@ -31,10 +30,12 @@ class SimplePipeLineTest(SignerTestCase):
 
     def test_entityid_present(self):
         eids = [e.get('entityID') for e in self.md_signer.store]
+        print(eids)
         assert('https://idp.aco.net/idp/shibboleth' in eids)
         assert('https://skriptenforum.net/shibboleth' in eids)
 
         eids = [e.get('entityID') for e in self.md_validator.store]
+        print(eids)
         assert('https://idp.aco.net/idp/shibboleth' in eids)
         assert('https://skriptenforum.net/shibboleth' in eids)
 
@@ -53,6 +54,6 @@ class SimplePipeLineTest(SignerTestCase):
 
     def tear_down(self):
         super(SimplePipeLineTest, self).tearDown()
-        os.unlink(self.signer)
-        os.unlink(self.validator)
-        os.unlink(self.output)
+        #os.unlink(self.signer)
+        #os.unlink(self.validator)
+        #os.unlink(self.output)

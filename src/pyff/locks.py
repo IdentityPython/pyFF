@@ -137,6 +137,7 @@ class ReadWriteLock(object):
     * In case timeout is None, the call to acquireWrite blocks until the lock request can be serviced.
     * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
 
+        endtime = None
         if timeout is not None:
             endtime = time() + timeout
         me, upgradewriter = currentThread(), False

@@ -2,13 +2,9 @@
 Pipes and plumbing. Plumbing instances are sequences of pipes. Each pipe is called in order to load, select,
 transform, sign or output SAML metadata.
 """
-import traceback
 
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
+import traceback
+from six import StringIO
 import os
 import yaml
 from .utils import resource_string, PyffException
@@ -24,6 +20,7 @@ def pipe(*args, **kwargs):
     Register the decorated function in the pyff pipe registry
     :param name: optional name - if None, use function name
     """
+
     def deco_none(f):
         return f
 
@@ -55,13 +52,13 @@ class PluginsRegistry(dict):
     Referencing this function as an entry_point using something = module:the_somethig_func in setup.py allows the
     function to be referenced as 'something' in a pipeline.
     """
-    #def __init__(self):
-        #for entry_point in iter_entry_points('pyff.pipe'):
-        #    if entry_point.name in self:
-        #        log.warn("Duplicate entry point: %s" % entry_point.name)
-        #    else:
-        #        log.debug("Registering entry point: %s" % entry_point.name)
-        #        self[entry_point.name] = entry_point.load()
+    # def __init__(self):
+    #    for entry_point in iter_entry_points('pyff.pipe'):
+    #        if entry_point.name in self:
+    #            log.warn("Duplicate entry point: %s" % entry_point.name)
+    #        else:
+    #            log.debug("Registering entry point: %s" % entry_point.name)
+    #            self[entry_point.name] = entry_point.load()
 
 
 def load_pipe(d):
@@ -111,20 +108,23 @@ def load_pipe(d):
 
 class PipelineCallback(object):
     """
-A delayed pipeline callback used as a post for parse_metadata
+A delayed pipeline callback used as a post for parse_saml_metadata
     """
-    def __init__(self, entry_point, req):
+
+    def __init__(self, entry_point, req, store=None):
         self.entry_point = entry_point
         self.plumbing = Plumbing(req.plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
         self.req = req
+        self.store = store
 
     def __call__(self, *args, **kwargs):
+        log.debug("called %s" % repr(self.plumbing))
         t = args[0]
         if t is None:
             raise ValueError("PipelineCallback must be called with a parse-tree argument")
         try:
-            return self.plumbing.process(self.req.md, state={self.entry_point: True}, t=t)
-        except Exception, ex:
+            return self.plumbing.process(self.req.md, args=kwargs, store=self.store, state={self.entry_point: True}, t=t)
+        except Exception as ex:
             traceback.print_exc(ex)
             raise ex
 
@@ -174,9 +174,7 @@ would then be signed (using signer.key) and finally published in /var/metadata/p
         return self.pipeline
 
     def __str__(self):
-        out = StringIO()
-        yaml.dump(self.pipeline, stream=out)
-        return out.getvalue()
+        return "PL[{}]".format(self.pid)
 
     class Request(object):
         """
@@ -184,7 +182,7 @@ Represents a single request. When processing a set of pipelines a single request
 may modify any of the fields.
         """
 
-        def __init__(self, pl, md, t, name=None, args=None, state=None):
+        def __init__(self, pl, md, t, name=None, args=None, state=None, store=None):
             if not state:
                 state = dict()
             if not args:
@@ -196,15 +194,25 @@ may modify any of the fields.
             self.args = args
             self.state = state
             self.done = False
+            self._store = store
+
+        def lookup(self, member):
+            return self.md.lookup(member, store=self.store)
+
+        @property
+        def store(self):
+            if self._store:
+                return self._store
+            return self.md.store
 
         def process(self, pl):
             """The inner request pipeline processor.
 
             :param pl: The plumbing to run this request through
             """
-            log.debug('Processing \n%s' % pl)
             for p in pl.pipeline:
                 cb, opts, name, args = load_pipe(p)
+                log.debug("calling '{}' in {} using args: {} and opts: {}".format(name, pl, repr(args), repr(opts)))
                 # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
                 if type(args) is str or type(args) is unicode:
                     args = [args]
@@ -219,31 +227,31 @@ may modify any of the fields.
                     break
             return self.t
 
-    def process(self, md, state=None, t=None):
+    def process(self, md, args=None, state=None, t=None, store=None):
         """
 The main entrypoint for processing a request pipeline. Calls the inner processor.
+
 
 :param md: The current metadata repository
 :param state: The active request state
 :param t: The active working document
+:param store: The store object to operate on
 :return: The result of applying the processing pipeline to t.
         """
         if not state:
             state = dict()
-        #req = Plumbing.Request(self, md, t, state=state)
-        #self._process(req)
-        #return req.t
-        return Plumbing.Request(self, md, t, state=state).process(self)
 
-    def _process(self, req):
+        return Plumbing.Request(self, md, t, args=args, state=state, store=store).process(self)
+
+    def iprocess(self, req):
         """The inner request pipeline processor.
 
         :param req: The request to run through the pipeline
         """
-        log.debug('Processing \n%s' % self)
+        log.debug("Processing {}".format(self.pipeline))
         for p in self.pipeline:
             try:
-                pipe, opts, name, args = load_pipe(p)
+                pipefn, opts, name, args = load_pipe(p)
                 # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
                 if type(args) is str or type(args) is unicode:
                     args = [args]
@@ -251,12 +259,12 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
                     raise PipeException("Unknown argument type %s" % repr(args))
                 req.args = args
                 req.name = name
-                ot = pipe(req, *opts)
+                ot = pipefn(req, *opts)
                 if ot is not None:
                     req.t = ot
                 if req.done:
                     break
-            except PipeException, ex:
+            except PipeException as ex:
                 log.error(ex)
                 break
         return req.t
@@ -278,6 +286,3 @@ This uses the resource framework to locate the yaml file which means that pipeli
     pipeline = yaml.safe_load(ystr)
 
     return Plumbing(pipeline=pipeline, pid=pid)
-
-
-

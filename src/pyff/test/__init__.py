@@ -1,15 +1,9 @@
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    print(" *** install cStringIO for better performance")
-    from StringIO import StringIO
 
 import logging
 import subprocess
 import sys
 import tempfile
 from unittest import TestCase
-
 import os
 import pkg_resources
 

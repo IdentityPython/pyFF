@@ -9,7 +9,7 @@ pyFF is a simple but reasonably complete SAML metadata processor. It is intended
 used by anyone who needs to aggregate, validate, combine, transform, sign or publish
 SAML metadata.
 
-Possible usecases include running an federation aggregator, filtering metdata for use
+Possible usecases include running an federation aggregator, filtering metadata for use
 by a discovery service, generating reports from metadata (eg certificate expiration reports),
 transforming metadata to add custom elements.
 
