@@ -102,12 +102,12 @@ class TestReadWriteLock(TestCase):
 
     def _rww(self, timeout=1, to_wait_for=2):
         try:
-            self.lock.acquireRead(timeout=0.01)
+            self.lock.acquireRead(timeout=timeout)
             self.readers += 1
             while to_wait_for - self.readers > 0:
                 pass
-            self.lock.acquireWrite(timeout=0.01)
-            self.lock.acquireWrite(timeout=0.01)
+            self.lock.acquireWrite(timeout=timeout)
+            self.lock.acquireWrite(timeout=timeout)
         except Exception, ex:
             self.exceptions[current_thread().name] = ex
 
@@ -130,7 +130,7 @@ class TestReadWriteLock(TestCase):
         try:
             w = []
             for i in range(0, 10):
-                w.append(Thread(target=self._rww, name="w%s" % i, args=[0.01]))
+                w.append(Thread(target=self._rww, name="w%s" % i))
             for i in range(0, 10):
                 w[i].start()
             for i in range(0, 10):
