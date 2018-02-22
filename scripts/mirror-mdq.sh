@@ -20,7 +20,7 @@ mkdir -p $target && (
  idx_obj=".well-known/webfinger?rel=urn:oasis:names:tc:SAML:2.0:metadata"
  wget $WGET_ARGS "$base/$idx_obj" && jq -r '.links[].href' < "$idx_obj" | wget $WGET_ARGS -i -
  if [ -d "${MIRROR_MDQ_POST}" ]; then
-    env SOURCE=$1 TARGET=$target IDX_OBJ=$idx_obj run-parts -- ${MIRROR_MDQ_POST}
+    env SOURCE=$1 TARGET=$target IDX_OBJ=$idx_obj run-parts --regex '^[0-9]+-' -- ${MIRROR_MDQ_POST}
  fi
 )
 
