@@ -310,6 +310,115 @@ class LoadErrorTest(PipeLineTest):
                 print(sys.stderr.captured)
 
 
+class SortTest(PipeLineTest):
+    EID1 = "https://idp.aco.net/idp/shibboleth"
+    EID2 = "https://idp.example.com/saml2/idp/metadata.php"
+    EID3 = "https://sharav.abes.fr/idp/shibboleth"
+
+    @staticmethod
+    def _run_sort_test(expected_order, sxp, res, l):
+        if sxp is not None:
+            # Verify expected warnings for missing sort values
+            for e in expected_order:
+                try:
+                    if not isinstance(e[1], bool):
+                        raise TypeError
+                    if not e[1]:
+                        keygen_fail_str = ("Sort pipe: unable to sort entity by '%s'. "
+                                           "Entity '%s' has no such value" % (sxp, e[0]))
+                        try:
+                            assert (keygen_fail_str in unicode(l))
+                        except AssertionError:
+                            print("Test failed on expecting missing sort value from: '%s'.\nCould not find string "
+                                  "on the output: '%s'.\nOutput was:\n %s" % (e[0], keygen_fail_str,unicode(l)))
+                            raise
+                except (IndexError, TypeError):
+                    print("Test failed  for: '%s' due to 'order_by' xpath supplied without proper expectation tuple." %
+                          "".join(e))
+                    raise
+
+        # Verify order
+        for i, me in enumerate(expected_order):
+            try:
+                assert res[i].attrib.get("entityID") == me[0]
+            except AssertionError:
+                print(("Test failed on verifying sort position %i.\nExpected: %s; Found: %s " %
+                       (i, me[0], res[i].attrib.get("entityID"))))
+                raise
+
+    # Test sort by entityID only
+    def test_sort(self):
+        sxp = None
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
+                            stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                res, md = self.exec_pipeline("""
+    - load:
+        - %s/metadata
+        - %s/simple-pipeline/idp.aco.net.xml
+    - select:
+        - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+    - sort
+    - stats
+    """ % (self.datadir, self.datadir))
+            print(sys.stdout.captured)
+            print(sys.stderr.captured)
+
+            # tuple format (entityID, has value for 'order_by' xpath)
+            expected_order = [(self.EID1, ), (self.EID2, ), (self.EID3, )]
+            self._run_sort_test(expected_order, sxp, res, l)
+
+    # Test sort entries first by registrationAuthority
+    def test_sort_by_ra(self):
+        sxp = ".//md:Extensions/mdrpi:RegistrationInfo/@registrationAuthority"
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
+                            stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                res, md = self.exec_pipeline("""
+    - load:
+        - %s/metadata
+        - %s/simple-pipeline/idp.aco.net.xml
+    - select:
+        - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+    - sort order_by %s
+    - stats
+    """ % (self.datadir, self.datadir, sxp))
+            print(sys.stdout.captured)
+            print(sys.stderr.captured)
+
+            # tuple format (entityID, has value for 'order_by' xpath)
+            expected_order = [(self.EID3, True), (self.EID1, False), (self.EID2, False)]
+            self._run_sort_test(expected_order, sxp, res, l)
+
+    # Test group entries by specific NameIDFormat support
+    def test_sort_group(self):
+        sxp = ".//md:IDPSSODescriptor/md:NameIDFormat[./text()='urn:mace:shibboleth:1.0:nameIdentifier']"
+        self.output = tempfile.NamedTemporaryFile('w').name
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
+                            stderr=StreamCapturing(sys.stderr)):
+            from testfixtures import LogCapture
+            with LogCapture() as l:
+                res, md = self.exec_pipeline("""
+    - load:
+        - %s/metadata
+        - %s/simple-pipeline/idp.aco.net.xml
+    - select:
+        - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+    - sort order_by %s
+    - stats
+    """ % (self.datadir, self.datadir, sxp))
+            print(sys.stdout.captured)
+            print(sys.stderr.captured)
+
+            # tuple format (entityID, has value for 'order_by' xpath)
+            expected_order = [(self.EID1, True), (self.EID3, True), (self.EID2, False)]
+            self._run_sort_test(expected_order, sxp, res, l)
+
+
 # noinspection PyUnresolvedReferences
 class SigningTest(PipeLineTest):
 

@@ -841,3 +841,37 @@ def expiration(t):
             return duration2timedelta(cache_duration)
 
     return None
+
+
+def sort_entities(t, sxp=None):
+    """
+Sorts the working entities 't' by the value returned by the xpath 'sxp'
+By default, entities are sorted by 'entityID' when this method is called without 'sxp', and otherwise as
+second criteria.
+Entities where no value exists for the given 'sxp' are sorted last.
+
+:param t: An element tree containing the entities to sort
+:param sxp: xpath expression selecting the value used for sorting the entities
+"""
+    def get_key(e):
+        eid = e.attrib.get('entityID')
+        sv = None
+        try:
+            sxp_values = e.xpath(sxp, namespaces=NS, smart_strings=False)
+            try:
+                sv = sxp_values[0]
+                try:
+                    sv = sv.text
+                except AttributeError:
+                    pass
+            except IndexError:
+                log.warn("Sort pipe: unable to sort entity by '%s'. "
+                         "Entity '%s' has no such value" % (sxp, eid))
+        except TypeError:
+            pass
+
+        log.debug("Generated sort key for entityID='%s' and %s='%s'" % (eid, sxp, sv))
+        return sv is None, sv, eid
+
+    container = root(t)
+    container[:] = sorted(container, key=lambda e: get_key(e))
