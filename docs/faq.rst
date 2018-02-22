@@ -1,4 +1,4 @@
-Frequenty Asked Questions
+Frequently Asked Questions
 =========================
 
   Q: I get 'select is empty' but I know my xpath should match. What is wrong?
