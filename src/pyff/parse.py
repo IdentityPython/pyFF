@@ -97,6 +97,7 @@ class MDServiceListParser():
         info = dict()
         info['Description'] = "eIDAS MetadataServiceList from {}".format(resource.url)
         t = parse_xml(StringIO(content.encode('utf8')))
+        t.xinclude()
         relt = root(t)
         info['Version'] = relt.get('Version', '0')
         info['IssueDate'] = relt.get('IssueDate')
