@@ -213,19 +213,34 @@
         });
     };
 
-    /**
-     * Export for various environments.
-     */
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports = DiscoveryService;
-    } else if (typeof exports !== 'undefined') {
-        exports.DiscoveryService = DiscoveryService;
-    } else if (typeof define === 'function' && define.amd) {
-        define([], function() {
-            return DiscoveryService;
-        });
-    } else {
-        root.DiscoveryService = DiscoveryService;
-    }
+    // exposes DiscoveryService
+    (function(window, undefined) {
+        var freeExports = false;
+        if (typeof exports === 'object') {
+          freeExports = exports;
+          if (exports && typeof global === 'object' && global && global === global.global) {
+            window = global;
+          }
+        }
 
-}(this));
+        if (typeof define === 'function' && typeof define.amd === 'object' && define.amd) {
+            // define as an anonymous module, so, through path mapping, it can be aliased
+            define(function() {
+                return DiscoveryService;
+            });
+        } else if (freeExports) {
+        // in Node.js or RingoJS v0.8.0+
+            if (typeof module === 'object' && module && module.exports === freeExports) {
+                module.exports = DiscoveryService;
+            }
+            // in Narwhal or RingoJS v0.7.0-
+            else {
+                freeExports.DiscoveryService = DiscoveryService;
+            }
+        } else {
+            // in a browser or Rhino
+            window.DiscoveryService = DiscoveryService;
+        }
+    }(this));
+
+}());
