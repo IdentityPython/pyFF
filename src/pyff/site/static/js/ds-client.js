@@ -164,8 +164,8 @@
     };
 
     DiscoveryService._sha1_id = function (s) {
-        var sha1 = new Hashes.SHA1;
-        return "{sha1}"+sha1.hex(s);
+        //var sha1 = new Hashes.SHA1();
+        return "{sha1}"+hex_sha1(s);
     };
 
     DiscoveryService.prototype.add = function (id) {
