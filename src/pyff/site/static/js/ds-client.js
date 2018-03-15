@@ -1,4 +1,4 @@
-;(function(root) {
+(function() {
 
     const storage_key = "pyff_discovery_choices";
     const cache_time = 60 * 10 * 1000; // 10 minutes
