@@ -29,7 +29,7 @@ jQuery(function ($) {
             if (typeof obj.options['fallback_icon'] != 'function') {
                 obj.options['fallback_icon'] = $.noop
             }
-            this._update();
+            obj._update();
         },
 
         _setOption: function (key, value) {
@@ -48,13 +48,13 @@ jQuery(function ($) {
                 if (this.discovery_service_search_url) {
                     var obj = this;
                     var search_list_element = $('<div>').addClass("list-group").attr('id', 'pyff-search-list');
-                    var top_element = this.element;
+                    var top_element = obj.element;
                     top_element.append(search_list_element);
                     var search_base, search_related, list_uri;
                     search_base = $(top_element).attr('data-search');
                     search_related = $(top_element).attr('data-related');
-                    $(this.input_field_selector).focus();
-                    $(search_list_element).btsListFilter(this.input_field_selector, {
+                    $(obj.input_field_selector).focus();
+                    $(search_list_element).btsListFilter(obj.input_field_selector, {
                         resetOnBlur: false,
                         sourceData: function (text, callback) {
                             var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
@@ -75,14 +75,14 @@ jQuery(function ($) {
         },
 
         _update: function () {
-            this.discovery_service_storage_url = this.options['discovery_service_storage_url'] || this.element.attr('data-store');
-            this.sp_entity_id = this.options['sp_entity_id'] || this.element.attr('data-href');
-            this.discovery_service_search_url = this.options['discovery_service_search_url'] || this.element.attr('data-search');
-            this.mdq_url = this.options['mdq_url'] || this.element.attr('data-mdq');
-            this.input_field_selector = this.options['input_field_selector'] || this.element.attr('data-inputfieldselector') || 'input';
             var obj = this;
-            this._ds = new DiscoveryService(this.mdq_url, this.discovery_service_storage_url, this.sp_entity_id);
-            var top_element = this.element;
+            obj.discovery_service_storage_url = obj.options['discovery_service_storage_url'] || obj.element.attr('data-store');
+            obj.sp_entity_id = obj.options['sp_entity_id'] || obj.element.attr('data-href');
+            obj.discovery_service_search_url = obj.options['discovery_service_search_url'] || obj.element.attr('data-search');
+            obj.mdq_url = obj.options['mdq_url'] || obj.element.attr('data-mdq');
+            obj.input_field_selector = obj.options['input_field_selector'] || obj.element.attr('data-inputfieldselector') || 'input';
+            obj._ds = new DiscoveryService(obj.mdq_url, obj.discovery_service_storage_url, obj.sp_entity_id);
+            var top_element = obj.element;
 
             $('img.pyff-idp-icon').bind('error', function () {
                 $(this).unbind('error');
@@ -102,6 +102,10 @@ jQuery(function ($) {
                 return obj._ds.saml_discovery_response(entity_id);
             });
 
+            $(obj.input_field_selector).closest('form').submit(function(e) {
+                e.preventDefault();
+            });
+
             $('body').on('click', '.close', function (e) {
                 e.stopPropagation();
                 var entity_element = $(this).closest('.identityprovider');
@@ -113,7 +117,7 @@ jQuery(function ($) {
                 }
             });
 
-            this._ds.choices().then(function (entities) {
+            obj._ds.choices().then(function (entities) {
                 if (typeof obj.options['before'] === 'function') {
                     entities = obj.options['before'](entities);
                 }
