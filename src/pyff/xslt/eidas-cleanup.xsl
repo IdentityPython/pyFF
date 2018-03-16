@@ -65,10 +65,24 @@
         </xsl:copy>
     </xsl:template>
 
+    <xsl:template match="md:Extensions[not(mdattr:EntityAttributes)]">
+        <md:Extensions>
+            <mdattr:EntityAttributes/>
+            <xsl:apply-templates/>
+        </md:Extensions>
+    </xsl:template>
+
+    <xsl:template match="saml:Extensions[not(mdattr:EntityAttributes)]">
+        <md:Extensions>
+            <mdattr:EntityAttributes/>
+            <xsl:apply-templates/>
+        </md:Extensions>
+    </xsl:template>
+
     <!-- correct namespace for Extension element in some versions of EU-provided EIDAS software -->
     <xsl:template match="saml:Extensions">
         <xsl:element name="md:Extensions">
-            <xsl:apply-templates select="text()|comment()|@*|node()"/>
+            <xsl:apply-templates/>
         </xsl:element>
     </xsl:template>
 
@@ -86,19 +100,11 @@
         </xsl:copy>
     </xsl:template>
 
-    <xsl:template match="md:EntityDescriptor">
-        <xsl:choose>
-            <xsl:when test="md:Extensions">
-                <xsl:copy>
-                    <xsl:apply-templates select="node()|@*"/>
-                </xsl:copy>
-            </xsl:when>
-            <xsl:otherwise>
-                <mdattr:EntityAttributes>
-                    <xsl:call-template name="attributes"/>
-                </mdattr:EntityAttributes>
-            </xsl:otherwise>
-        </xsl:choose>
+    <xsl:template match="md:EntityDescriptor[not(md:Extensions) and not(saml:Extensions)]">
+        <md:EntityDescriptor>
+            <md:Extensions/>
+            <xsl:apply-templates/>
+        </md:EntityDescriptor>
     </xsl:template>
 
     <xsl:template match="mdattr:EntityAttributes">
