@@ -20,6 +20,8 @@
 			eventKey: 'keyup',
 			resetOnBlur: true,
 			sourceData: null,
+			onHide: function () {console.log("on hide")},
+			onShow: function () {console.log("on show")},
 			sourceTmpl: '<a class="list-group-item" href="#"><span>{title}</span></a>',
 			sourceNode: function(data) {
 				return tmpl(opts.sourceTmpl, data);
@@ -102,14 +104,15 @@
 
 			if(val!=='' && val.length >= opts.minLength)
 			{
-				contains.show();
+				opts.onShow();
+				contains.hide();
 				containsNot.hide();
 
 				if($.type(opts.sourceData)==='function')
 				{
 					contains.hide();
 					containsNot.hide();
-					
+
 					if(callReq)
 					{
 						if($.isFunction(callReq.abort))
@@ -142,6 +145,7 @@
 			}
 			else
 			{
+				opts.onHide();
 				contains.show();
 				containsNot.show();
 				searchlist$.find('.'+opts.itemClassTmp).remove();

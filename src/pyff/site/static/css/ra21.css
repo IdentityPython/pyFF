@@ -1,0 +1,426 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700');
+
+html {
+    height: 100%;
+	background-image: linear-gradient(#FFFFFF, #d3d3d3);
+	background-repeat: no-repeat;
+    background-attachment: fixed;
+	font-family: 'Roboto', sans-serif;
+	color: #3B3B3B;
+}
+
+h1, h2, h3, h4, h5 {
+	font-family: 'Roboto', sans-serif;
+	color: #3B3B3B;
+}
+
+h3{
+	font-size: 1rem;
+}
+
+body {
+	min-width: 100%;
+	min-height: 100%;
+	/*background-image: url("./imgs/ra_pattern_04.png");*/
+	background-color:rgba(0,0,0,0.0);
+	margin: 0;
+	padding: 0;
+}
+
+h2 img {
+	margin-left: 15px;
+	width: 4%;
+	margin-right: 5px;
+}
+
+.elsevier-label {
+	color: #ff8200;
+	display: inline;
+    padding: .2em .6em .3em;
+    font-weight: 500;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25em;
+	border: 2px #ff8200 solid;
+}
+
+
+
+.row {
+	margin-left: 0px;
+	margin-right: 0px;
+}
+
+.no-left {
+	margin-left: 0px;
+	padding-left: 0px;
+}
+
+.padding-left {
+	padding-left: 15px;
+}
+
+.light {
+	font-weight: 300;
+}
+
+.container {
+	position: relative;
+}
+
+.card-container.card {
+    padding: 40px 40px;
+	text-align: left;
+}
+
+.btn {
+    font-weight: 700;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+	padding-top: 12px;
+}
+
+
+.card {
+    background-color: #FFFFFF;
+    padding: 20px 25px 30px;
+    margin: 0 auto 25px;
+    margin-top: 50px;
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+    border-radius: 2px;
+    -moz-box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.3);
+    -webkit-box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.3);
+    box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.3);
+}
+
+
+
+.form-control:focus {
+    border-color: rgb(20, 125, 250);
+    outline: 0;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgb(20, 125, 250);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgb(20, 125, 250);
+}
+
+
+
+
+
+/*-------------------------------------------------*/
+
+
+
+.input-group {
+	margin: 3px 0 5px 0;
+}
+
+h2.accessHeader {
+	font-size: 1.4rem;
+}
+
+footer h2 {
+	margin: 10px 0 5px 0;
+	font-size: 1.4rem;
+	font-family: 'Roboto', sans-serif;
+	text-transform: uppercase;
+	font-weight: 300;
+}
+
+footer h3 {
+	margin-bottom: 10px;
+	font-size: 1.1rem;
+}
+
+footer p {
+	font-size: 0.8rem;
+    font-family: 'Roboto', sans-serif;
+}
+	
+p {
+	font-size: 0.9rem;
+	font-family: 'Roboto', sans-serif;
+}
+
+.lookupRA21 {
+	margin: 50px 0 50px 0;
+}
+
+.detailtextRA21{
+	color: rgba(0,0,0,0.65);
+	font-size: .9rem;
+}
+
+.subtitleRA21{
+	font-size: 1.25rem;
+	font-weight: 300;
+	color: rgba(0,0,0,0.65);
+}
+
+.notopborder{
+	border-top-style:none;
+}
+
+
+.counter{
+	color: rgba(0,0,0,0.65);
+	font-weight: 2rem;
+	background-color: #E7EFFB;
+	text-align: center;
+	padding-right: 13px;
+	padding-left: 13px;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	margin-right: 5px;
+}
+
+.howItWorksSectionHeading{
+	color: rgba(0,0,0,0.65);
+}
+
+.card-title{
+	color: rgba(0,0,0,0.65);
+}
+
+.howItWorksImg{
+	height:100px; 
+	width:100px;
+}
+
+.spacer { 
+	margin:0; 
+	padding:0; 
+	height:50px; 
+}
+
+
+.lightGrey{
+	color:#999999;
+}
+
+
+
+
+.material-icons.md-18 { font-size: 18px; }
+
+
+
+
+.d-flex {
+    display:flex;
+}
+
+.card-block {
+    -webkit-box-flex: 1;
+    -webkit-flex: 1 1 auto;
+    -ms-flex: 1 1 auto;
+    flex: 1 1 auto;
+    padding: 1.25rem;
+}
+
+.card {
+  position: relative;
+  border: none;
+  box-shadow: 0 1.5rem 3rem rgba(0,0,0,.15);
+  text-align: center;
+
+}
+
+.card-deck .card {
+	padding: 0;
+	margin: 0;
+	flex-wrap: wrap;
+	flex: initial; 
+}
+
+.card-img-top {
+	width: 75%;
+	margin: 0 auto;
+	margin-top: 10px;
+}
+
+.card-block {
+	position: relative;
+	padding: 1.4rem;
+}
+  
+.card-text {
+	margin-bottom: 0;
+	font-size: 0.9rem;
+	font-weight: 300;
+	line-height: 1.5em;
+}
+
+.card-title {
+	font-size: 1.35rem;
+	font-weight: 300;
+	line-height: 1.2em;
+}
+
+.card-title span {
+	color: #147dfa;
+}
+
+.card-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.card-links hr {
+  border-bottom: 0;
+  border-top: 1px solid #ddd;
+  margin: 0;
+}
+
+.card-links a {
+	text-decoration: none;
+	color: #147dfa;
+	cursor: pointer;
+	width: 100%;
+}
+
+.card-links a li {
+  margin: 0;
+  padding: 14px 6px;
+  border-left: 1px solid #fff;
+  transition: background-color 0.2s ease,
+              border-left 0.2s ease,
+              color 0.2s ease;
+	cursor: pointer;
+}
+
+.card-links a li:hover {
+  border-left: 3px solid #033D83;
+  background: #FFFFFF;
+  color: #44474a;
+	cursor: pointer;
+}
+
+
+.card-links a li i {
+	float: right;
+	color: #147dfa;
+	margin-top: 2px;
+	margin-left: 4px;  
+}
+
+
+.card-links a li.known-inst {
+  margin: 0;
+	margin-bottom: 5px;
+	border-radius: 3px;
+  padding: 14px 6px;
+  border-left: none;
+	color: #147dfa;
+  transition: background-color 0.2s ease,
+              border-left 0.2s ease,
+              color 0.2s ease;
+	cursor: pointer;
+	background-color: #F3F3F3;
+}
+
+.card-links a li.known-inst:hover {
+  border-left: none;
+  background: #284788;
+  color: #FFFFFF;
+	cursor: pointer;
+}
+
+
+.card-header {
+    padding: .75rem 0rem;
+    margin-bottom: 0;
+    background-color: rgba(0,0,0,.0);
+    border-bottom: 1px solid rgba(0,0,0,.125);
+}
+
+.logo {
+	width: 40px;
+	height: 40px;
+	margin-right: 14px;
+}
+
+.link-favorites {
+  border-bottom-left-radius: 4px;
+}
+
+footer {
+	background-color: rgba(255,255,255,.5);
+	padding: 15px 10px 10px 10px;
+}
+
+footer .step {
+	margin: 10px 0px;
+}
+
+.site {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.site-content {
+  flex: 1;
+	padding-top: 20px;
+}
+
+
+/*--*/
+
+
+.institution {
+	position: relative;
+	display: inline-block;
+}
+
+.institution:hover .external {
+	display: block;
+}
+
+.external {
+	padding-top: 12px;	
+	padding-right: 7px;
+	position: absolute;
+	right: 0;
+	top: 0;
+	display: none;
+}
+
+.external a {
+	float: right;
+}
+
+.label-url {
+	float: right;
+	padding-right: 35px;
+	color: #ABABAB;
+}
+
+.alert ul{
+    padding-left: 1rem;
+}
+
+/*--*/
+
+@media (max-width: 768px) {
+
+footer .step {
+	border-bottom: solid #DADADA 1px;
+}
+	
+.label-url {
+	float: none;
+	padding-right: 5px;
+	color: #ABABAB;
+	display: block;
+}
+
+
+
+	
+}

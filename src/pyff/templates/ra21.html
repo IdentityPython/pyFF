@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<!-- saved from url=(0051)https://getbootstrap.com/docs/4.0/examples/pricing/ -->
+<html lang="en">
+	<head>
+		
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<meta name="description" content="">
+		<meta name="author" content="">
+		<link rel="icon" href="https://getbootstrap.com/favicon.ico">
+
+		<title>RA21-Initial</title>
+
+		<!-- Bootstrap core CSS -->
+		<link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+
+
+		<!-- Custom styles for this template -->
+		<link href="/static/css/ra21.css" rel="stylesheet">
+
+		<!--Google Material icons-->
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+		<!--Font awesome-->
+		<script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
+
+
+		<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+        <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
+        <script type="text/javascript" src="/static/js/popper.min.js"></script>
+        <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="/static/js/hogan.min.js"></script>
+
+		<script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
+        <!-- un-minified -->
+        <script type="text/javascript" src="/static/js/sha1.js"></script>
+        <script type="text/javascript" src="/static/js/client.min.js"></script>
+        <script type="text/javascript" src="/static/js/ds-client.js"></script>
+        <script type="text/javascript" src="/static/js/jquery-ds-widget.js"></script>
+        <!-- eof -->
+        <script type="text/javascript" src="/static/js/bootstrap-list-filter.src.js"></script>
+
+	</head>
+
+<body class="site">
+
+
+	
+	<main class="site-content">
+		
+		<h2 class="accessHeader"><img alt="" src="imgs/ra_icon_2.png"/><span class="light">Get access to</span> <span class="elsevier-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span></h2>
+		
+	<div class="col-md-6 offset-md-3">
+        <div class="card card-container">
+			
+          <h1>
+          Find Your Institution
+          <p class="subtitleRA21">Your university, organization or company</p>
+          </h1>
+
+          <div id="dsclient"
+                     data-href="{{ entity['entity_id'] }}"
+                     data-mdq="/metadata/"
+                     data-store="{{storage}}"
+                     data-search="{{search}}"
+                     data-list="{{list}}"
+                     data-related="{{ entity['domains'] }}"
+                     data-inputfieldselector="#searchinput">
+			  <ul class="card-links" id="pyff-saved-choices">
+				  <div class="collapse" id="addwidget">
+					  <hr>
+					  <a data-toggle="collapse" onclick='$("#searchwidget").show()' href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
+						  <li><span class="label"><i class="material-icons">add_circle</i> Add another</span></li>
+					  </a>
+				  </div>
+			  </ul>
+			  <div class="collapse" id="searchwidget">
+				  <div class="input-group" role="button">
+					<input type="text" id="searchinput" type="search" class="form-control" placeholder="" aria-label="input group" aria-describedby="btnGroupAddon" autofocus>
+					<div class="input-group-append">
+						<button type="button" id="findbutton" class="btn btn-primary" aria-describedby="btnGroupAddon"><i class="material-icons">search</i></button>
+					</div>
+				  </div>
+				  <p id="examples" class="detailtextRA21">Examples: Science Institute, xxx@YourInstitution.edu, UCLA</p>
+			  </div>
+
+			  <div class="collapse" id="resultwidget">
+				<div class="card-header">
+					<h3>We found these institutions</h3>
+				</div>
+				<ul class="card-links" id="pyff-search-list"></ul>
+			  </div>
+		  </div>
+			
+        </div><!-- /card-container -->
+	</div>
+
+	</main>
+	
+	
+	<footer>
+		<div class="row">
+				
+				<h2 class="padding-left">How It Works</h2>
+
+			</div>
+				  
+			<div class="row">
+					
+				<div class="col-sm-6 col-md-6 col-lg-3 step">
+					<div class="row">
+						<h3>1. Find your institution</h3>
+					</div>
+					<div class="row">
+						<div class="col-4 no-left">
+							<img class="img-fluid" src="/static/icons/ra21/ra_1.png" alt="Card image cap">
+						</div>
+						<div class="col-7 no-left">
+							<p>Search by instituion name, email to find your institution. </p>
+						</div>
+						
+					</div>
+				</div>
+
+				<div class="col-sm-6 col-md-6 col-lg-3 step">
+					<div class="row">
+						<h3>2. Log-in</h3>
+					</div>
+					<div class="row">
+						<div class="col-4 no-left">
+							<img class="img-fluid" src="/static/icons/ra21/ra_2.png" alt="Card image cap">
+						</div>
+						<div class="col-7 no-left">
+							<p>Use your institutional credentials to log in as you normally do.</p>
+						</div>
+						
+					</div>
+				</div>
+				
+				<div class="col-sm-6 col-md-6 col-lg-3 step">
+					<div class="row">
+						<h3>3. Enjoy</h3>
+					</div>
+					<div class="row">
+						<div class="col-4 no-left">
+							<img class="img-fluid" src="/static/icons/ra21/ra_3.png" alt="Card image cap">
+						</div>
+						<div class="col-7 no-left">
+							<p>Access the content and features provided by your instituion.</p>
+						</div>
+						
+					</div>
+				</div>
+
+				<div class="col-sm-6 col-md-6 col-lg-3 step">
+					<div class="row">
+						<h3>4. Explore</h3>
+					</div>
+					<div class="row">
+						<div class="col-4 no-left">
+							<img class="img-fluid" src="/static/icons/ra21/ra_4.png" alt="Card image cap">
+						</div>
+						<div class="col-7 no-left">
+							<p>Continue to work seamlessly with your instituional access. </p>
+						</div>
+					</div>
+				</div>
+				
+				
+			</div>
+		</footer>
+
+
+  <script type="text/javascript">
+		$(document).ready(function() {
+
+			{% raw %}
+		    var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}"><li><span class="label">{{title}}</span>{{#domain}}<span class="label-url">{{domain}}</span>{{/domain}}<div class="external"><i class="material-icons">open_in_new</i></div></li></a>');
+			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}"><li class="known-inst"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} class="rounded-circle logo" alt="logo"><span class="label">{{title}} <i class="close material-icons">clear </i></span></li></a>');
+			var no_results = Hogan.compile('<div class="alert alert-info mt-3" role="alert"><h3>No matching institution found</h3><ul><li>Try institution name, your institution email, or an abbreviation</li><li>Contact your institution librarian</li></ul></div>');
+			{% endraw %}
+
+			$("#dsclient").discovery_client({
+				render_search_result: function(item) {
+				    return search.render(item);
+				},
+				render_saved_choice: function(item) {
+				    return saved.render(item);
+				},
+				no_results: function() {
+				    return no_results.render();
+				},
+				on_show: function() {
+				    $("#resultwidget").show();
+				},
+				on_hide: function() {
+				    $("#resultwidget").hide();
+				}
+			});
+		});
+  </script>
+
+</body>
+	
+</html>

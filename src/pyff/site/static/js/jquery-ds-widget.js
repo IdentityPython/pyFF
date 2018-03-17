@@ -9,7 +9,14 @@ jQuery(function ($) {
             before: undefined,
             after: undefined,
             render: undefined,
-            fallback_icon: undefined
+            render_search_result: undefined,
+            render_saved_choice: undefined,
+            fallback_icon: undefined,
+            search_result_selector: '#pyff-search-list',
+            saved_choices_selector: '#pyff-saved-choices',
+            selection_selector: '.identityprovider',
+            on_show: undefined,
+            on_hide: undefined
         },
 
         _create: function () {
@@ -23,11 +30,24 @@ jQuery(function ($) {
                     '</div></div>');
 
                 obj.options['render'] = function (item) {
+                    item.selection_class = obj.selection_class;
                     return obj._template.render(item);
                 }
             }
+            if (typeof obj.options['render_search_result'] != 'function') {
+                obj.options['render_search_result'] = obj.options['render'];
+            }
+            if (typeof obj.options['render_saved_choice'] != 'function') {
+                obj.options['render_saved_choice'] = obj.options['render'];
+            }
             if (typeof obj.options['fallback_icon'] != 'function') {
-                obj.options['fallback_icon'] = $.noop
+                obj.options['fallback_icon'] = $.noop;
+            }
+            if (typeof obj.options['on_show'] != 'function') {
+                obj.options['on_show'] = $.noop;
+            }
+            if (typeof obj.options['on_hide'] != 'function') {
+                obj.options['on_hide'] = $.noop;
             }
             obj._update();
         },
@@ -37,25 +57,25 @@ jQuery(function ($) {
             this._update();
         },
 
-        _render: function (item) {
-            return this.options['render'](item);
-        },
-
         _after: function (count) {
+            var saved_choices_element = $(this.options['saved_choices_selector']);
             if (typeof this.options['after'] == 'function') {
-                return this.options['after'](count);
+                return this.options['after'](count, saved_choices_element);
             } else {
+
                 if (this.discovery_service_search_url) {
                     var obj = this;
-                    var search_list_element = $('<div>').addClass("list-group").attr('id', 'pyff-search-list');
-                    var top_element = obj.element;
-                    top_element.append(search_list_element);
+                    var search_result_element = $(obj.options['search_result_selector']);
                     var search_base, search_related, list_uri;
-                    search_base = $(top_element).attr('data-search');
-                    search_related = $(top_element).attr('data-related');
+                    search_base = obj.element.attr('data-search');
+                    search_related = obj.element.attr('data-related');
                     $(obj.input_field_selector).focus();
-                    $(search_list_element).btsListFilter(obj.input_field_selector, {
+                    search_result_element.btsListFilter(obj.input_field_selector, {
                         resetOnBlur: false,
+                        itemEl: '.identityprovider',
+                        emptyNode: obj.options['no_results'],
+                        onShow: obj.options['on_show'],
+                        onHide: obj.options['on_hide'],
                         sourceData: function (text, callback) {
                             var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
 
@@ -66,10 +86,17 @@ jQuery(function ($) {
                         },
                         sourceNode: function (data) {
                             data.sticky = true;
-                            return obj._render(data);
+                            return obj.options['render_search_result'](data);
                         },
                         cancelNode: null
                     });
+                }
+                if (count == 0) {
+                    $("#searchwidget").show();
+                    $("#addwidget").hide();
+                } else {
+                    $("#searchwidget").hide();
+                    $("#addwidget").show();
                 }
             }
         },
@@ -81,6 +108,7 @@ jQuery(function ($) {
             obj.discovery_service_search_url = obj.options['discovery_service_search_url'] || obj.element.attr('data-search');
             obj.mdq_url = obj.options['mdq_url'] || obj.element.attr('data-mdq');
             obj.input_field_selector = obj.options['input_field_selector'] || obj.element.attr('data-inputfieldselector') || 'input';
+            obj.selection_selector = obj.options['selection_selector'];
             obj._ds = new DiscoveryService(obj.mdq_url, obj.discovery_service_storage_url, obj.sp_entity_id);
             var top_element = obj.element;
 
@@ -89,15 +117,15 @@ jQuery(function ($) {
                 obj.options['fallback_icon'](this);
             });
 
-            $('body').on('mouseenter', 'div.identityprovider', function (e) {
+            $('body').on('mouseenter', obj.selection_selector, function (e) {
                 $(this).addClass("active");
             });
-            $('body').on('mouseleave', 'div.identityprovider', function (e) {
+            $('body').on('mouseleave', obj.selection_selector, function (e) {
                 $(this).removeClass("active");
             });
 
-            $('body').on('click', '.identityprovider', function (e) {
-                var entity_id = $(this).closest('.identityprovider').attr('data-href');
+            $('body').on('click', obj.selection_selector, function (e) {
+                var entity_id = $(this).closest(obj.selection_selector).attr('data-href');
                 console.log(entity_id);
                 return obj._ds.saml_discovery_response(entity_id);
             });
@@ -108,7 +136,7 @@ jQuery(function ($) {
 
             $('body').on('click', '.close', function (e) {
                 e.stopPropagation();
-                var entity_element = $(this).closest('.identityprovider');
+                var entity_element = $(this).closest(obj.selection_selector);
                 var entity_id = entity_element.attr('data-href');
                 if (entity_id) {
                     obj._ds.remove(entity_id).then(function () {
@@ -124,11 +152,10 @@ jQuery(function ($) {
                 return entities;
             }).then(function (entities) {
                 var count = 0;
-                var saved_choices_element = $('<div>').addClass("list-group").attr('id', 'pyff-saved-choices');
-                top_element.prepend(saved_choices_element);
+                var saved_choices_element = $(obj.options['saved_choices_selector']);
                 entities.forEach(function (item) {
-                    var entity_element = obj._render(item.entity);
-                    saved_choices_element.append(entity_element);
+                    var entity_element = obj.options['render_saved_choice'](item.entity);
+                    saved_choices_element.prepend(entity_element);
                     count++;
                 });
                 return count;
