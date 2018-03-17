@@ -857,6 +857,12 @@ def main():
 
     root = MDRoot(server)
     app = cherrypy.tree.mount(root, config=cfg)
+    app.log.error_log.setLevel(config.loglevel)
+    log_args = {'level': config.loglevel}
+    if config.error_log is not None:
+        log_args['filename'] = config.error_log
+    logging.basicConfig(**log_args)
+
     if config.error_log is not None:
         if config.error_log.startswith('syslog:'):
             facility = config.error_log[7:]
@@ -874,8 +880,6 @@ def main():
             cherrypy.config.update({'log.access_file': ''})
         else:
             cherrypy.config.update({'log.access_file': config.access_log})
-
-    app.log.error_log.setLevel(config.loglevel)
 
     engine.signals.subscribe()
     try:
