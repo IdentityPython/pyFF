@@ -601,7 +601,7 @@ class MDServer(object):
 
                 pdict['storage'] = "/storage/"
                 cherrypy.response.headers['Content-Type'] = 'text/html'
-                return render_template("ds.html", **pdict)
+                return render_template(config.ds_template, **pdict)
             elif ext == 's':
                 paged = bool(kwargs.get('paged', False))
                 query = kwargs.get('query', None)

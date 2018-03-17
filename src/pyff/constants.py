@@ -64,5 +64,6 @@ class Config(object):
     request_override_encoding = pyconfig.setting("pyff.request_override_encoding", "utf8") # set to non to enable chardet guessing
     devel_memory_profile = pyconfig.setting("pyff.devel_memory_profile", False)
     devel_write_xml_to_file = pyconfig.setting("pyff.devel_write_xml_to_file", False)
+    ds_template = pyconfig.setting("pyff.ds_template","ds.html")
 
 config = Config()
