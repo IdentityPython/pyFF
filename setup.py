@@ -16,7 +16,7 @@ README = open(join(here, 'README.rst')).read()
 NEWS = open(join(here, 'NEWS.txt')).read()
 
 install_requires = [
-    'lxml >=3.0',
+    'lxml==4.1.1',
     'pyyaml >=3.10',
     'pyXMLSecurity >=0.15',
     'cherrypy >=3.2.0',
