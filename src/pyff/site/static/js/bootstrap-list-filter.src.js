@@ -14,7 +14,7 @@
 
 		opts = $.extend({
 			delay: 300,
-			minLength: 1,
+			minLength: 2,
 			initial: true,
 			casesensitive: false,
 			eventKey: 'keyup',
@@ -32,6 +32,7 @@
 			itemClassTmp: 'bts-dynamic-item',
 			itemEl: '.list-group-item',
 			itemChild: null,
+            getValue: function(obj) { return obj.val(); },
 			itemFilter: function(item, val) {
 				//val = val.replace(new RegExp("^[.]$|[\[\]|()*]",'g'),'');
 				//val = val.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
@@ -84,7 +85,7 @@
 
 		inputEl$.on(opts.eventKey, debouncer(function(e) {
 			
-			var val = $(this).val();
+			var val = opts.getValue($(this));
 
 			if(opts.itemEl)
 				items$ = searchlist$.find(opts.itemEl);
