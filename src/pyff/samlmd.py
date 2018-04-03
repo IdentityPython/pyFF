@@ -179,9 +179,10 @@ def filter_invalids_from_document(t, base_url, validation_errors):
     xsd = schema()
     for e in iter_entities(t):
         if not xsd.validate(e):
+            log.debug(etree.tostring(e))
             error = xml_error(xsd.error_log, m=base_url)
             entity_id = e.get("entityID")
-            log.warn('removing \'%s\': schema validation failed (%s)' % (entity_id, error))
+            log.warn('removing \'%s\': schema validation failed: %s' % (entity_id, xsd.error_log))
             validation_errors[entity_id] = error
             if e.getparent() is None:
                 return None
