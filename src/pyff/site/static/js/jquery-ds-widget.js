@@ -98,9 +98,13 @@ jQuery(function ($) {
                 }
                 if (count == 0) {
                     $("#searchwidget").show();
+                    $("#title-find").hide();
+                    $("#title-choose").show();
                     $("#addwidget").hide();
                 } else {
                     $("#searchwidget").hide();
+                    $("#title-find").show();
+                    $("#title-choose").hide();
                     $("#addwidget").show();
                 }
             }

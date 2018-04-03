@@ -49,15 +49,17 @@
 	
 	<main class="site-content">
 		
-		<h2 class="accessHeader"><img alt="" src="imgs/ra_icon_2.png"/><span class="light">Get access to</span> <span class="elsevier-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span></h2>
+		<h2 class="accessHeader"><img alt="" src="imgs/ra_icon_2.png"/><span class="light">Get access to</span> <span class="default-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span></h2>
 		
 	<div class="col-md-6 offset-md-3">
         <div class="card card-container">
-			
-          <h1>
-          Find Your Institution
-          <p class="subtitleRA21">Your university, organization or company</p>
-          </h1>
+            <h1 id="title-find" class="d-none">Find Your Institution
+                <p class="subtitleRA21">Your university, organization or company</p>
+            </h1>
+
+            <h1 id="title-choose" class="d-none">Choose Your Institution
+                <p class="subtitleRA21">Institutions you used previously</p>
+            </h1>
 
           <div id="dsclient"
                      data-href="{{ entity['entity_id'] }}"
