@@ -49,6 +49,9 @@ jQuery(function ($) {
             if (typeof obj.options['on_hide'] != 'function') {
                 obj.options['on_hide'] = $.noop;
             }
+            if (typeof obj.options['after'] != 'function') {
+                obj.options['after'] = $.noop;
+            }
             obj._update();
         },
 
@@ -59,55 +62,40 @@ jQuery(function ($) {
 
         _after: function (count) {
             var saved_choices_element = $(this.options['saved_choices_selector']);
-            if (typeof this.options['after'] == 'function') {
-                return this.options['after'](count, saved_choices_element);
-            } else {
+            if (this.discovery_service_search_url) {
+                var obj = this;
+                var search_result_element = $(obj.options['search_result_selector']);
+                var search_base, search_related, list_uri;
+                search_base = obj.element.attr('data-search');
+                search_related = obj.element.attr('data-related');
+                $(obj.input_field_selector).focus();
+                search_result_element.btsListFilter(obj.input_field_selector, {
+                    resetOnBlur: false,
+                    itemEl: '.identityprovider',
+                    emptyNode: obj.options['no_results'],
+                    onShow: obj.options['on_show'],
+                    onHide: obj.options['on_hide'],
+                    getValue: function(that) {
+                        var v = that.val();
+                        var i = v.indexOf('@');
+                        return i > 0 ? v.substr(i) : v;
+                    },
+                    sourceData: function (text, callback) {
+                        var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
 
-                if (this.discovery_service_search_url) {
-                    var obj = this;
-                    var search_result_element = $(obj.options['search_result_selector']);
-                    var search_base, search_related, list_uri;
-                    search_base = obj.element.attr('data-search');
-                    search_related = obj.element.attr('data-related');
-                    $(obj.input_field_selector).focus();
-                    search_result_element.btsListFilter(obj.input_field_selector, {
-                        resetOnBlur: false,
-                        itemEl: '.identityprovider',
-                        emptyNode: obj.options['no_results'],
-                        onShow: obj.options['on_show'],
-                        onHide: obj.options['on_hide'],
-                        getValue: function(that) {
-                            var v = that.val();
-                            var i = v.indexOf('@');
-                            return i > 0 ? v.substr(i) : v;
-                        },
-                        sourceData: function (text, callback) {
-                            var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
-
-                            if (search_related) {
-                                remote = remote + "&related=" + search_related;
-                            }
-                            return $.getJSON(remote, callback);
-                        },
-                        sourceNode: function (data) {
-                            data.sticky = true;
-                            return obj.options['render_search_result'](data);
-                        },
-                        cancelNode: null
-                    });
-                }
-                if (count == 0) {
-                    $("#searchwidget").show();
-                    $("#title-find").hide();
-                    $("#title-choose").show();
-                    $("#addwidget").hide();
-                } else {
-                    $("#searchwidget").hide();
-                    $("#title-find").show();
-                    $("#title-choose").hide();
-                    $("#addwidget").show();
-                }
+                        if (search_related) {
+                            remote = remote + "&related=" + search_related;
+                        }
+                        return $.getJSON(remote, callback);
+                    },
+                    sourceNode: function (data) {
+                        data.sticky = true;
+                        return obj.options['render_search_result'](data);
+                    },
+                    cancelNode: null
+                });
             }
+            this.options['after'](count, saved_choices_element);
         },
 
         _update: function () {
@@ -150,6 +138,8 @@ jQuery(function ($) {
                 if (entity_id) {
                     obj._ds.remove(entity_id).then(function () {
                         entity_element.remove();
+                    }).then(function() {
+                        obj._update();
                     });
                 }
             });

@@ -53,13 +53,17 @@
 		
 	<div class="col-md-6 offset-md-3">
         <div class="card card-container">
-            <h1 id="title-find" class="d-none">Find Your Institution
-                <p class="subtitleRA21">Your university, organization or company</p>
-            </h1>
+            <div class="collapse" id="titlefind">
+				<h1>Find Your Institution
+					<p class="subtitleRA21">Your university, organization or company</p>
+				</h1>
+			</div>
 
-            <h1 id="title-choose" class="d-none">Choose Your Institution
-                <p class="subtitleRA21">Institutions you used previously</p>
-            </h1>
+			<div class="collapse" id="titlechoose">
+				<h1>Choose Your Institution
+					<p class="subtitleRA21">Institutions you used previously</p>
+				</h1>
+			</div>
 
           <div id="dsclient"
                      data-href="{{ entity['entity_id'] }}"
@@ -198,6 +202,19 @@
 				},
 				on_hide: function() {
 				    $("#resultwidget").hide();
+				},
+				after: function(count,elt) {
+				    if (count == 0) {
+						$("#searchwidget").show();
+						$("#titlefind").show();
+						$("#titlechoose").hide();
+						$("#addwidget").hide();
+					} else {
+						$("#searchwidget").hide();
+						$("#titlefind").hide();
+						$("#titlechoose").show();
+						$("#addwidget").show();
+					}
 				}
 			});
 		});
