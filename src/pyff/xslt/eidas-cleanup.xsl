@@ -67,14 +67,14 @@
 
     <xsl:template match="md:Extensions[not(mdattr:EntityAttributes)]">
         <md:Extensions>
-            <mdattr:EntityAttributes/>
+            <xsl:call-template name="eidas-attributes-wrapper"/>
             <xsl:apply-templates/>
         </md:Extensions>
     </xsl:template>
 
     <xsl:template match="saml:Extensions[not(mdattr:EntityAttributes)]">
         <md:Extensions>
-            <mdattr:EntityAttributes/>
+            <xsl:call-template name="eidas-attributes-wrapper"/>
             <xsl:apply-templates/>
         </md:Extensions>
     </xsl:template>
@@ -86,18 +86,21 @@
         </xsl:element>
     </xsl:template>
 
-    <xsl:template name="attributes">
+    <xsl:template name="eidas-attributes-wrapper">
         <xsl:if test="$eidas_endpoint_type and $eidas_territory">
-            <samla:Attribute Name="https://pyff.io/eidas/endpoint_type">
-                <samla:AttributeValue><xsl:value-of select="$eidas_endpoint_type"/></samla:AttributeValue>
-            </samla:Attribute>
-            <samla:Attribute Name="https://pyff.io/eidas/territory">
-                <samla:AttributeValue><xsl:value-of select="$eidas_territory"/></samla:AttributeValue>
-            </samla:Attribute>
+            <mdattr:EntityAttributes>
+                <xsl:call-template name="eidas-attributes"/>
+            </mdattr:EntityAttributes>
         </xsl:if>
-        <xsl:copy>
-            <xsl:apply-templates select="node()|@*"/>
-        </xsl:copy>
+    </xsl:template>
+
+    <xsl:template name="eidas-attributes">
+        <samla:Attribute Name="https://pyff.io/eidas/endpoint_type">
+            <samla:AttributeValue><xsl:value-of select="$eidas_endpoint_type"/></samla:AttributeValue>
+        </samla:Attribute>
+        <samla:Attribute Name="https://pyff.io/eidas/territory">
+            <samla:AttributeValue><xsl:value-of select="$eidas_territory"/></samla:AttributeValue>
+        </samla:Attribute>
     </xsl:template>
 
     <xsl:template match="md:EntityDescriptor[not(md:Extensions) and not(saml:Extensions)]">
@@ -108,7 +111,7 @@
     </xsl:template>
 
     <xsl:template match="mdattr:EntityAttributes">
-        <xsl:call-template name="attributes"/>
+        <xsl:call-template name="eidas-attributes"/>
     </xsl:template>
 
     <!-- just copy everything else -->
