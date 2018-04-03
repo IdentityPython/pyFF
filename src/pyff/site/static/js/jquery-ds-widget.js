@@ -76,6 +76,11 @@ jQuery(function ($) {
                         emptyNode: obj.options['no_results'],
                         onShow: obj.options['on_show'],
                         onHide: obj.options['on_hide'],
+                        getValue: function(that) {
+                            var v = that.val();
+                            var i = v.indexOf('@');
+                            return i > 0 ? v.substr(i) : v;
+                        },
                         sourceData: function (text, callback) {
                             var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
 
