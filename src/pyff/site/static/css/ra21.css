@@ -33,17 +33,17 @@ h2 img {
 	margin-right: 5px;
 }
 
-.elsevier-label {
-	color: #ff8200;
-	display: inline;
-    padding: .2em .6em .3em;
-    font-weight: 500;
-    line-height: 1;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: .25em;
-	border: 2px #ff8200 solid;
+.default-label {
+    color: #3B3B3B;
+    display: inline;
+   padding: .2em .6em .3em;
+   font-weight: 500;
+   line-height: 1;
+   text-align: center;
+   white-space: nowrap;
+   vertical-align: baseline;
+   border-radius: .25em;
+    border: 2px #3B3B3B solid;
 }
 
 
