@@ -76,8 +76,8 @@
 			  <ul class="card-links" id="pyff-saved-choices">
 				  <div class="collapse" id="addwidget">
 					  <hr>
-					  <a data-toggle="collapse" onclick='$("#searchwidget").show()' href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
-						  <li><span class="label"><i class="material-icons">add_circle</i> Add another</span></li>
+					  <a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
+						  <li><span class="label"><i id="add_circle" class="material-icons">add_circle</i> Choose another</span></li>
 					  </a>
 				  </div>
 			  </ul>
@@ -182,10 +182,23 @@
 		$(document).ready(function() {
 
 			{% raw %}
-		    var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}"><li><span class="label">{{title}}</span>{{#domain}}<span class="label-url">{{domain}}</span>{{/domain}}<div class="external"><i class="material-icons">open_in_new</i></div></li></a>');
+		    var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}"><li><span class="label">{{title}}</span>{{#domain}}<span class="label-url">{{domain}}</span>{{/domain}}<div class="external"><i class="material-icons"></i></div></li></a>');
 			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}"><li class="known-inst"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} class="rounded-circle logo" alt="logo"><span class="label">{{title}} <i class="close material-icons">clear </i></span></li></a>');
 			var no_results = Hogan.compile('<div class="alert alert-info mt-3" role="alert"><h3>No matching institution found</h3><ul><li>Try institution name, your institution email, or an abbreviation</li><li>Contact your institution librarian</li></ul></div>');
 			{% endraw %}
+
+			$("#searchwidget").on('hidden.bs.collapse',function(event) {
+                $("#titlefind").hide();
+                $("#titlechoose").show();
+                $("#searchwidget").hide();
+                $("#add_circle").html("add_circle");
+            }).on('shown.bs.collapse',function(event) {
+                $("#titlefind").show();
+                $("#titlechoose").hide();
+                $("#searchwidget").show();
+                $("#add_circle").html("remove_circle");
+			    $("#searchinput").focus();
+            });
 
 			$("#dsclient").discovery_client({
 				render_search_result: function(item) {
@@ -205,14 +218,14 @@
 				},
 				after: function(count,elt) {
 				    if (count == 0) {
+				        $("#titlefind").show();
+				        $("#titlechoose").hide();
 						$("#searchwidget").show();
-						$("#titlefind").show();
-						$("#titlechoose").hide();
 						$("#addwidget").hide();
 					} else {
+				        $("#titlefind").hide();
+				        $("#titlechoose").show();
 						$("#searchwidget").hide();
-						$("#titlefind").hide();
-						$("#titlechoose").show();
 						$("#addwidget").show();
 					}
 				}
