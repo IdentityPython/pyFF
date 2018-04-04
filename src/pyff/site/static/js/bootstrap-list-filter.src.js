@@ -20,8 +20,8 @@
 			eventKey: 'keyup',
 			resetOnBlur: true,
 			sourceData: null,
-			onHide: function () {console.log("on hide")},
-			onShow: function () {console.log("on show")},
+			onHide: $.noop,
+			onShow: $.noop,
 			sourceTmpl: '<a class="list-group-item" href="#"><span>{title}</span></a>',
 			sourceNode: function(data) {
 				return tmpl(opts.sourceTmpl, data);
@@ -78,7 +78,7 @@
 			inputEl$.parents('.form-group').addClass('has-feedback');
 			
 			if(!inputEl$.prev().is('.control-label'))
-				cancelEl$.css({top: 0})
+				cancelEl$.css({top: 0});
 
 			cancelEl$.on('click', self.reset);
 		}
