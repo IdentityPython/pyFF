@@ -148,10 +148,7 @@ jQuery(function ($) {
             });
 
             obj._ds.choices().then(function (entities) {
-                if (typeof obj.options['before'] === 'function') {
-                    entities = obj.options['before'](entities);
-                }
-                return entities;
+                return obj.options['before'](entities);
             }).then(function (entities) {
                 var count = 0;
                 var saved_choices_element = $(obj.options['saved_choices_selector']);
