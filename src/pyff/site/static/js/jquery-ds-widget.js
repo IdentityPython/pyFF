@@ -34,23 +34,26 @@ jQuery(function ($) {
                     return obj._template.render(item);
                 }
             }
-            if (typeof obj.options['render_search_result'] != 'function') {
+            if (!$.isFunction(obj.options['render_search_result'])) {
                 obj.options['render_search_result'] = obj.options['render'];
             }
-            if (typeof obj.options['render_saved_choice'] != 'function') {
+            if (!$.isFunction(obj.options['render_saved_choice'])) {
                 obj.options['render_saved_choice'] = obj.options['render'];
             }
-            if (typeof obj.options['fallback_icon'] != 'function') {
+            if (!$.isFunction(obj.options['fallback_icon'])) {
                 obj.options['fallback_icon'] = $.noop;
             }
-            if (typeof obj.options['on_show'] != 'function') {
+            if (!$.isFunction(obj.options['on_show'])) {
                 obj.options['on_show'] = $.noop;
             }
-            if (typeof obj.options['on_hide'] != 'function') {
+            if (!$.isFunction(obj.options['on_hide'])) {
                 obj.options['on_hide'] = $.noop;
             }
-            if (typeof obj.options['after'] != 'function') {
+            if (!$.isFunction(obj.options['after'])) {
                 obj.options['after'] = $.noop;
+            }
+            if (!$.isFunction(obj.options['before'])) {
+                obj.options['before'] = function(x) { return x; }
             }
             obj._update();
         },
