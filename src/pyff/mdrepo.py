@@ -116,8 +116,7 @@ The dict in the list contains three items:
                 if m is not None:
                     d = entity_simple_summary(e)
                     ll = d['title'].lower()
-                    if m != ll and not query[0] in ll:
-                        d['title'] = "%s - %s" % (d['title'], m)
+                    d['matched'] = m
             else:
                 d = entity_simple_summary(e)
 
