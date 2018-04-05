@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)https://getbootstrap.com/docs/4.0/examples/pricing/ -->
 <html lang="en">
 	<head>
 		
@@ -49,7 +48,7 @@
 	
 	<main class="site-content">
 		
-		<h2 class="accessHeader"><img alt="" src="imgs/ra_icon_2.png"/><span class="light">Get access to</span> <span class="default-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span></h2>
+		<h2 class="accessHeader"><img alt="" src="/static/icons/ra21/ra_icon_2.png"/><span class="light">Get access to</span> <span class="default-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span></h2>
 		
 	<div class="col-md-6 offset-md-3">
         <div class="card card-container">
@@ -77,7 +76,7 @@
 				  <div class="collapse" id="addwidget">
 					  <hr>
 					  <a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
-						  <li><span class="label"><i id="add_circle" class="material-icons">add_circle</i> Choose another</span></li>
+						  <li><div class="d-flex flex-row"><span class="label">Choose another</span><i id="add_circle" class="material-icons">add_circle</i></div></li>
 					  </a>
 				  </div>
 			  </ul>
@@ -183,7 +182,7 @@
 
 			{% raw %}
 		    var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}"><li><div class="d-flex flex-row"><span class="label">{{title}}</span>{{#scopes}}<span class="label-url">{{scopes}}</span>{{/scopes}}<div class="external"><i class="material-icons">open_in_new</i></div></div>{{#descr}}<div class="d-flex flex-row"><span class="searchaux">{{descr}}</span></div>{{/descr}}<div class="d-flex flex-row"><span class="searchmatch">Search matched&nbsp;<em>{{matched}}</em></span></div></li></a>');
-			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}"><li class="known-inst"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} class="rounded-circle logo"><span class="label">{{title}} <i class="close material-icons">clear </i></span></li></a>');
+			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}"><li class="known-inst"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="img-thumbnail rounded-circle logo"><span class="label">{{title}} <i class="close material-icons">clear </i></span></li></a>');
 			var no_results = Hogan.compile('<div class="alert alert-info mt-3" role="alert"><h3>No matching institution found</h3><ul><li>Try institution name, your institution email, or an abbreviation</li><li>Contact your institution librarian</li></ul></div>');
 			{% endraw %}
 
