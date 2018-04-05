@@ -46,8 +46,6 @@ h2 img {
     border: 2px #3B3B3B solid;
 }
 
-
-
 .row {
 	margin-left: 0px;
 	margin-right: 0px;
@@ -292,6 +290,13 @@ p {
               border-left 0.2s ease,
               color 0.2s ease;
 	cursor: pointer;
+	min-width: 0;
+}
+
+.card-links a li div span {
+	white-space: nowrap;
+  	overflow: hidden;
+  	text-overflow: ellipsis;
 }
 
 .card-links a li:hover {
@@ -302,13 +307,12 @@ p {
 }
 
 
-.card-links a li i {
+.card-links a li > i {
 	float: right;
 	color: #147dfa;
 	margin-top: 2px;
 	margin-left: 4px;  
 }
-
 
 .card-links a li.known-inst {
   margin: 0;
@@ -399,6 +403,26 @@ footer .step {
 	float: right;
 	padding-right: 35px;
 	color: #ABABAB;
+	margin-left: auto;
+}
+
+.d-flex > span.label {
+	margin-right: auto;
+}
+
+.d-flex > span.label-url {
+	margin-left: auto;
+	max-width: 30%;
+}
+
+.d-flex > span.searchaux {
+	max-width: 75%;
+	font-size: small;
+}
+
+.d-flex > span.searchmatch {
+	max-width: 75%;
+	font-size: x-small;
 }
 
 .alert ul{
@@ -414,7 +438,7 @@ footer .step {
 }
 	
 .label-url {
-	float: none;
+	float: right;
 	padding-right: 5px;
 	color: #ABABAB;
 	display: block;
