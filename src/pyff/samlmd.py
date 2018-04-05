@@ -560,6 +560,8 @@ def discojson(e, langs=None):
     scopes = entity_scopes(e)
     if scopes is not None and len(scopes) > 0:
         d['scope'] = ",".join(scopes)
+        if len(scopes) == 1:
+            d['domain'] = scopes[0]
 
     keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
     if keywords is not None:
@@ -598,6 +600,10 @@ def entity_simple_summary(e):
         d['icon_url'] = d['entity_icon']
         d['entity_icon_height'] = icon_info.get('height', 64)
         d['entity_icon_width'] = icon_info.get('width', 64)
+
+    scopes = entity_scopes(e)
+    if scopes is not None and len(scopes) > 0:
+        d['scopes'] = " ".join(scopes)
 
     psu = privacy_statement_url(e, None)
     if psu:
