@@ -83,7 +83,7 @@ jQuery(function ($) {
                     getValue: function(that) {
                         var v = that.val();
                         var i = v.indexOf('@');
-                        return i > 0 ? v.substring(i+1,v.length) : v;
+                        return i > -1 ? v.substring(i+1,v.length) : v;
                     },
                     sourceData: function (text, callback) {
                         var remote = search_base + "?query=" + text + "&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
