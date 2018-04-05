@@ -183,7 +183,7 @@
 
 			{% raw %}
 		    var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}"><li><div class="d-flex flex-row"><span class="label">{{title}}</span>{{#scopes}}<span class="label-url">{{scopes}}</span>{{/scopes}}<div class="external"><i class="material-icons">open_in_new</i></div></div>{{#descr}}<div class="d-flex flex-row"><span class="searchaux">{{descr}}</span></div>{{/descr}}<div class="d-flex flex-row"><span class="searchmatch">Search matched&nbsp;<em>{{matched}}</em></span></div></li></a>');
-			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}"><li class="known-inst"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} class="rounded-circle logo" alt="logo"><span class="label">{{title}} <i class="close material-icons">clear </i></span></li></a>');
+			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}"><li class="known-inst"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} class="rounded-circle logo"><span class="label">{{title}} <i class="close material-icons">clear </i></span></li></a>');
 			var no_results = Hogan.compile('<div class="alert alert-info mt-3" role="alert"><h3>No matching institution found</h3><ul><li>Try institution name, your institution email, or an abbreviation</li><li>Contact your institution librarian</li></ul></div>');
 			{% endraw %}
 
