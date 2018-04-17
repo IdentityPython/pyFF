@@ -29,6 +29,10 @@ from .constants import config, NS
 from .logs import log
 from .exceptions import *
 from .i18n import language
+import requests
+from requests_file import FileAdapter
+from requests_cache import CachedSession
+import base64
 
 __author__ = 'leifj'
 
@@ -558,3 +562,48 @@ def printable(s):
         return s.encode('ascii', errors='ignore').decode()
     else:
         return s.decode("ascii", errors="ignore").encode()
+
+
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
+def urls_get(urls):
+    """
+    Download multiple URLs and return all the response objects
+    :param urls:
+    :return:
+    """
+    return [url_get(url) for url in urls]
+
+
+def url_get(url):
+    """
+    Download an URL using a cache and return the response object
+    :param url:
+    :return:
+    """
+    s = None
+    info = dict()
+    if 'file://' in url:
+        s = requests.session()
+        s.mount('file://', FileAdapter())
+    else:
+        s = CachedSession(cache_name="pyff_cache",
+                          backend=config.request_cache_backend,
+                          expire_after=config.request_cache_time,
+                          old_data_on_error=True)
+
+    r = s.get(url, verify=False, timeout=config.request_timeout)
+    if config.request_override_encoding is not None:
+        r.encoding = config.request_override_encoding
+
+    return r
+
+
+def img_to_data(data, mime_type):
+    """Convert a file (specified by a path) into a data URI."""
+    data64 = u''.join(base64.encodestring(data).splitlines())
+    return u'data:%s;base64,%s' % (mime_type, data64)

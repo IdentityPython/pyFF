@@ -7,24 +7,17 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 		<meta name="description" content="">
 		<meta name="author" content="">
-		<link rel="icon" href="https://getbootstrap.com/favicon.ico">
+		<link rel="icon" href="/favicon.ico">
 
 		<title>RA21-Initial</title>
 
 		<!-- Bootstrap core CSS -->
 		<link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
 
-
 		<!-- Custom styles for this template -->
-		<link href="/static/css/ra21.css" rel="stylesheet">
+		<link href="/static/css/ra21.css" rel="stylesheet"/>
 
-		<!--Google Material icons-->
-		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
-		<!--Font awesome-->
-		<script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
-
-
+		<script type="text/javascript" src="/static/js/fontawesome-all.min.js"></script>
 		<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
         <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
         <script type="text/javascript" src="/static/js/popper.min.js"></script>
@@ -76,7 +69,7 @@
 				  <div class="collapse" id="addwidget">
 					  <hr>
 					  <a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
-						  <li><div class="d-flex flex-row"><span class="label">Choose another</span><i id="add_circle" class="material-icons">add_circle</i></div></li>
+						  <li><div class="d-flex flex-row"><span class="label">Choose another</span><i id="add_circle" class="far fa-plus-circle"></i></div></li>
 					  </a>
 				  </div>
 			  </ul>
@@ -84,7 +77,7 @@
 				  <div class="input-group" role="button">
 					<input type="text" id="searchinput" type="search" class="form-control" placeholder="" aria-label="input group" aria-describedby="btnGroupAddon" autofocus>
 					<div class="input-group-append">
-						<button type="button" id="findbutton" class="btn btn-primary" aria-describedby="btnGroupAddon"><i class="material-icons">search</i></button>
+						<button type="button" id="findbutton" class="btn btn-primary" aria-describedby="btnGroupAddon"><i class="fas fa-search"></i></button>
 					</div>
 				  </div>
 				  <p id="examples" class="detailtextRA21">Examples: Science Institute, xxx@YourInstitution.edu, UCLA</p>
@@ -181,8 +174,26 @@
 		$(document).ready(function() {
 
 			{% raw %}
-		    var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}"><li><div class="d-flex flex-row"><span class="label">{{title}}</span>{{#scopes}}<span class="label-url">{{scopes}}</span>{{/scopes}}<div class="external"><i class="material-icons">open_in_new</i></div></div>{{#descr}}<div class="d-flex flex-row"><span class="searchaux">{{descr}}</span></div>{{/descr}}<div class="d-flex flex-row"><span class="searchmatch">Search matched&nbsp;<em>{{matched}}</em></span></div></li></a>');
-			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}"><li class="known-inst"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="img-thumbnail rounded-circle logo"><span class="label">{{title}} <i class="close material-icons">clear </i></span></li></a>');
+		    var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}">\
+                <li><div class="d-flex flex-row">\
+                       <span class="label">{{title}}</span>{{#scopes}}<span class="label-url">{{scopes}}</span>{{/scopes}}\
+                       <div class="external"><i class="far fa-external-link"></i></div>\
+                    </div>\
+                    {{#descr}}<div class="d-flex flex-row"><span class="searchaux">{{descr}}</span></div>{{/descr}}\
+                    <div class="d-flex flex-row">\
+                       <span class="searchmatch">Search matched&nbsp;<em>{{matched}}</em></span>\
+                    </div></li></a>');
+			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}">\
+                <li class="known-inst"><div class="d-flex flex-row">\
+                {{#entity_icon}}\
+                <img src="{{entity_icon}}" onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="img-thumbnail rounded-circle logo">\
+                {{/entity_icon}}\
+                {{^entity_icon}}\
+                <svg class="logo" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#aeaeae" />\
+                <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="12px" font-family="Arial" dy=".3em">{{name_tag}}</text></svg>\
+                {{/entity_icon}}\
+                <span class="label">{{title}}</span><i class="cancel far fa-times-circle"></i>\
+                </div></li></a>');
 			var no_results = Hogan.compile('<div class="alert alert-info mt-3" role="alert"><h3>No matching institution found</h3><ul><li>Try institution name, your institution email, or an abbreviation</li><li>Contact your institution librarian</li></ul></div>');
 			{% endraw %}
 
@@ -190,12 +201,12 @@
                 $("#titlefind").hide();
                 $("#titlechoose").show();
                 $("#searchwidget").hide();
-                $("#add_circle").html("add_circle");
+                $("#add_circle").removeClass("fa-minus-circle").addClass("fa-plus-circle");
             }).on('shown.bs.collapse',function(event) {
                 $("#titlefind").show();
                 $("#titlechoose").hide();
                 $("#searchwidget").show();
-                $("#add_circle").html("remove_circle");
+                $("#add_circle").removeClass("fa-plus-circle").addClass("fa-minus-circle");
 			    $("#searchinput").focus();
             });
 

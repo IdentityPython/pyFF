@@ -112,6 +112,7 @@ jQuery(function ($) {
             obj.input_field_selector = obj.options['input_field_selector'] || obj.element.attr('data-inputfieldselector') || 'input';
             obj.selection_selector = obj.options['selection_selector'];
             obj._ds = new DiscoveryService(obj.mdq_url, obj.discovery_service_storage_url, obj.sp_entity_id);
+            obj._count = 0;
             var top_element = obj.element;
 
             $('img.pyff-idp-icon').bind('error', function () {
@@ -136,7 +137,7 @@ jQuery(function ($) {
                 e.preventDefault();
             });
 
-            $('body').on('click', '.close', function (e) {
+            $('body').on('click', '.cancel', function (e) {
                 e.stopPropagation();
                 var entity_element = $(this).closest(obj.selection_selector);
                 var entity_id = entity_element.attr('data-href');
@@ -144,7 +145,8 @@ jQuery(function ($) {
                     obj._ds.remove(entity_id).then(function () {
                         entity_element.remove();
                     }).then(function() {
-                        obj._update();
+                        obj._count -= 1;
+                        obj._after(obj._count)
                     });
                 }
             });
@@ -152,14 +154,14 @@ jQuery(function ($) {
             obj._ds.choices().then(function (entities) {
                 return obj.options['before'](entities);
             }).then(function (entities) {
-                var count = 0;
+                obj._count = 0;
                 var saved_choices_element = $(obj.options['saved_choices_selector']);
                 entities.forEach(function (item) {
                     var entity_element = obj.options['render_saved_choice'](item.entity);
                     saved_choices_element.prepend(entity_element);
-                    count++;
+                    obj._count++;
                 });
-                return count;
+                return obj._count;
             }).then(function (count) {
                 obj._after(count);
             })
