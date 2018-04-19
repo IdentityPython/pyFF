@@ -36,7 +36,6 @@ h2 img {
 a.identityprovider {
     display: inline-block;
 	vertical-align: middle;
-    height: 73px;
     width: 100%;
 }
 
@@ -295,27 +294,18 @@ p {
 .card-links a li {
   margin: 0;
   padding: 14px 6px;
-  border-left: 1px solid #fff;
+  border-left: 3px solid #fff;
   transition: background-color 0.2s ease,
               border-left 0.2s ease,
               color 0.2s ease;
 	cursor: pointer;
-	min-width: 0;
 }
 
-.card-links a li div span {
-	white-space: nowrap;
-  	overflow: hidden;
-  	text-overflow: ellipsis;
-}
-
-.card-links a li:hover {
+.card-links a:hover li {
   border-left: 3px solid #033D83;
   background: #FFFFFF;
   color: #44474a;
-	cursor: pointer;
 }
-
 
 .card-links a li > i {
 	float: right;
@@ -411,32 +401,23 @@ footer .step {
 	float: right;
 }
 
+.label {
+	max-width: 60%;
+}
+
 .label-url {
 	float: right;
 	padding-right: 35px;
 	color: #ABABAB;
-	margin-left: auto;
+	max-width: 40%;
 }
 
-.d-flex > span.label {
-	margin-right: auto;
-}
-
-.d-flex > span.label-url {
-	margin-left: auto;
-	max-width: 30%;
-}
-
-.d-flex > i.cancel {
-	margin-left: auto;
-}
-
-.d-flex > span.searchaux {
+span.searchaux {
 	max-width: 75%;
 	font-size: small;
 }
 
-.d-flex > span.searchmatch {
+span.searchmatch {
 	max-width: 75%;
 	font-size: x-small;
 }

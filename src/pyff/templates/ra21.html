@@ -72,7 +72,7 @@
 				  <div class="collapse" id="addwidget">
 					  <hr>
 					  <a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
-						  <li><div class="d-flex flex-row"><span class="label">Choose another</span><i id="add_circle" class="far fa-plus-circle"></i></div></li>
+						  <li><span class="label">Choose another</span><i id="add_circle" class="float-right far fa-plus-circle"></i></li>
 					  </a>
 				  </div>
 			  </ul>
@@ -178,16 +178,13 @@
 
 			{% raw %}
 		    var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}">\
-                <li><div class="d-flex flex-row">\
-                       <span class="label">{{title}}</span>{{#scopes}}<span class="label-url">{{scopes}}</span>{{/scopes}}\
-                       <div class="external"><i class="far fa-external-link"></i></div>\
-                    </div>\
-                    {{#descr}}<div class="d-flex flex-row"><span class="searchaux">{{descr}}</span></div>{{/descr}}\
-                    <div class="d-flex flex-row">\
-                       <span class="searchmatch">Search matched&nbsp;<em>{{matched}}</em></span>\
-                    </div></li></a>');
+                <li><div class="d-block"><span class="text-truncate label">{{title}}</span>{{#scopes}}<span class="text-truncate label-url">{{scopes}}</span>{{/scopes}}\
+                     <div class="float-right external"><i class="far fa-external-link"></i></div></div>\
+                    {{#descr}}<div class="d-block"><span class="searchaux text-truncate">{{descr}}</span>{{/descr}}</div>\
+                    <div class="d-block"><span class="searchmatch text-truncate">Search matched&nbsp;<em>{{matched}}</em></span></div>\
+                </li></a>');
 			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}">\
-                <li class="known-inst"><div class="d-flex flex-row">\
+                <li class="known-inst">\
                 {{#entity_icon}}\
                 <img src="{{entity_icon}}" onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="img-thumbnail rounded-circle logo">\
                 {{/entity_icon}}\
@@ -195,8 +192,8 @@
                 <svg class="logo" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#aeaeae" />\
                 <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="12px" font-family="Arial" dy=".3em">{{name_tag}}</text></svg>\
                 {{/entity_icon}}\
-                <span class="label">{{title}}</span><i class="cancel far fa-times-circle"></i>\
-                </div></li></a>');
+                <span class="label">{{title}}</span><i class="cancel float-right far fa-times-circle"></i>\
+                </li></a>');
 			var no_results = Hogan.compile('<div class="alert alert-info mt-3" role="alert"><h3>No matching institution found</h3><ul><li>Try institution name, your institution email, or an abbreviation</li><li>Contact your institution librarian</li></ul></div>');
 			{% endraw %}
 
