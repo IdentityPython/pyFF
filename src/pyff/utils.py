@@ -58,6 +58,7 @@ def debug_observer(e):
 def trunc_str(x, l):
     return (x[:l] + '..') if len(x) > l else x
 
+
 def resource_string(name, pfx=None):
     """
 Attempt to load and return the contents (as a string) of the resource named by
@@ -133,7 +134,8 @@ Return a string representation of the tree, optionally pretty_print(ed) (default
 
 :param t: An ElemenTree to serialize
     """
-    return etree.tostring(t, encoding='UTF-8', method=method, xml_declaration=xml_declaration, pretty_print=pretty_print)
+    return etree.tostring(t, encoding='UTF-8', method=method, xml_declaration=xml_declaration,
+                          pretty_print=pretty_print)
 
 
 def iso_now():
@@ -153,10 +155,12 @@ Timestamp in ISO format
 def iso2datetime(s):
     return iso8601.parse_date(s)
 
+
 def first_text(elt, tag, default=None):
     for matching in elt.iter(tag):
         return matching.text
     return default
+
 
 class ResourceResolver(etree.Resolver):
     def __init__(self):
@@ -166,7 +170,7 @@ class ResourceResolver(etree.Resolver):
         """
         Resolves URIs using the resource API
         """
-        #log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
+        # log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
         path = system_url.split("/")
         fn = path[len(path) - 1]
         if pkg_resources.resource_exists(__name__, fn):
@@ -273,7 +277,7 @@ def to_yaml_filter(pipeline):
 env.filters['u'] = urlencode_filter
 env.filters['truncate'] = truncate_filter
 env.filters['to_yaml'] = to_yaml_filter
-env.filters['sha1'] = lambda x: hash_id(x,'sha1', False)
+env.filters['sha1'] = lambda x: hash_id(x, 'sha1', False)
 
 
 def template(name):
@@ -305,7 +309,7 @@ def root(t):
 
 def with_tree(elt, cb):
     cb(elt)
-    if isinstance(elt.tag,basestring):
+    if isinstance(elt.tag, basestring):
         for child in list(elt):
             with_tree(child, cb)
 
@@ -493,7 +497,7 @@ def rreplace(s, old, new, occurrence):
     return new.join(li)
 
 
-def load_callable( name ):
+def load_callable(name):
     from importlib import import_module
     p, m = name.rsplit(':', 1)
     mod = import_module(p)
