@@ -41,19 +41,22 @@
 	
 	<main class="site-content">
 		
-		<h2 class="accessHeader"><img alt="" src="/static/icons/ra21/ra_icon_2.png"/><span class="light">Get access to</span> <span class="default-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span></h2>
+		<h2 class="accessHeader">
+			<img alt="" src="/static/icons/ra21/ra_icon_2.png"/><span class="light">{{ _('Get access to') }}</span>
+			<span class="default-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span>
+		</h2>
 		
 	<div class="col-md-6 offset-md-3">
         <div class="card card-container">
             <div class="collapse" id="titlefind">
-				<h1>Find Your Institution
-					<p class="subtitleRA21">Your university, organization or company</p>
+				<h1>{{ _('Find Your Institution') }}
+					<p class="subtitleRA21">{{ _('Your university, organization or company') }}</p>
 				</h1>
 			</div>
 
 			<div class="collapse" id="titlechoose">
-				<h1>Choose Your Institution
-					<p class="subtitleRA21">Institutions you used previously</p>
+				<h1>{{ _('Choose Your Institution') }}
+					<p class="subtitleRA21">{{ _('Institutions you used previously') }}</p>
 				</h1>
 			</div>
 
@@ -80,14 +83,14 @@
 						<button type="button" id="findbutton" class="btn btn-primary" aria-describedby="btnGroupAddon"><i class="fas fa-search"></i></button>
 					</div>
 				  </div>
-				  <p id="examples" class="detailtextRA21">Examples: Science Institute, xxx@YourInstitution.edu, UCLA</p>
+				  <p id="examples" class="detailtextRA21">{{ _('Examples: Science Institute, xxx@YourInstitution.edu, UCLA') }}</p>
 			  </div>
 
 			  <div class="collapse" id="resultwidget">
 				<div class="card-header">
-					<h3>We found these institutions</h3>
+					<h3>{{ _('We found these institutions') }}</h3>
 				</div>
-				<ul class="card-links" id="pyff-search-list"></ul>
+				<ul class="card-links" id="ds-search-list"></ul>
 			  </div>
 		  </div>
 			
