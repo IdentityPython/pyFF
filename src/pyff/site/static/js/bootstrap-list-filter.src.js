@@ -20,8 +20,8 @@
 			eventKey: 'keyup',
 			resetOnBlur: true,
 			sourceData: null,
-			onHide: $.noop,
-			onShow: $.noop,
+			showEvent: 'show.bs',
+			hideEvent: 'hide.bs',
 			sourceTmpl: '<a class="list-group-item" href="#"><span>{title}</span></a>',
 			sourceNode: function(data) {
 				return tmpl(opts.sourceTmpl, data);
@@ -105,7 +105,7 @@
 
 			if(val!=='' && val.length >= opts.minLength)
 			{
-				opts.onShow();
+				self.trigger(opts.showEvent);
 				contains.hide();
 				containsNot.hide();
 
@@ -146,7 +146,7 @@
 			}
 			else
 			{
-				opts.onHide();
+				self.trigger(opts.hideEvent);
 				contains.show();
 				containsNot.show();
 				searchlist$.find('.'+opts.itemClassTmp).remove();

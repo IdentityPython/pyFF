@@ -210,7 +210,23 @@
 			    $("#searchinput").focus();
             });
 
-			$("#dsclient").discovery_client({
+			$("body").on('mouseenter','i.external',function (event) {
+			   $(this).addClass('far fa-external-link')
+			});
+
+			$("body").on('mouseleave','i.external',function (event) {
+			   $(this).removeClass('far fa-external-link')
+			});
+
+			$("#ds-search-list").on('show.bs', function(event) {
+			    $("#resultwidget").show();
+            });
+
+			$("#ds-search-list").on('hide.bs', function(event) {
+			    $("#resultwidget").hide();
+            });
+
+            $("#dsclient").discovery_client({
 				render_search_result: function(item) {
 				    return search.render(item);
 				},
@@ -219,12 +235,6 @@
 				},
 				no_results: function() {
 				    return no_results.render();
-				},
-				on_show: function() {
-				    $("#resultwidget").show();
-				},
-				on_hide: function() {
-				    $("#resultwidget").hide();
 				},
 				after: function(count,elt) {
 				    if (count == 0) {

@@ -12,11 +12,9 @@ jQuery(function ($) {
             render_search_result: undefined,
             render_saved_choice: undefined,
             fallback_icon: undefined,
-            search_result_selector: '#pyff-search-list',
-            saved_choices_selector: '#pyff-saved-choices',
-            selection_selector: '.identityprovider',
-            on_show: undefined,
-            on_hide: undefined
+            search_result_selector: '#ds-search-list',
+            saved_choices_selector: '#ds-saved-choices',
+            selection_selector: '.identityprovider'
         },
 
         _create: function () {
@@ -42,12 +40,6 @@ jQuery(function ($) {
             }
             if (!$.isFunction(obj.options['fallback_icon'])) {
                 obj.options['fallback_icon'] = $.noop;
-            }
-            if (!$.isFunction(obj.options['on_show'])) {
-                obj.options['on_show'] = $.noop;
-            }
-            if (!$.isFunction(obj.options['on_hide'])) {
-                obj.options['on_hide'] = $.noop;
             }
             if (!$.isFunction(obj.options['after'])) {
                 obj.options['after'] = $.noop;
@@ -78,8 +70,6 @@ jQuery(function ($) {
                     itemEl: '.identityprovider',
                     itemFilter: function (item, val) { return true; },
                     emptyNode: obj.options['no_results'],
-                    onShow: obj.options['on_show'],
-                    onHide: obj.options['on_hide'],
                     getValue: function(that) {
                         var v = that.val();
                         var i = v.indexOf('@');
