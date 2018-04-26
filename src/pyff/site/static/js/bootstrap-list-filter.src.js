@@ -14,12 +14,14 @@
 
 		opts = $.extend({
 			delay: 300,
-			minLength: 1,
+			minLength: 2,
 			initial: true,
 			casesensitive: false,
 			eventKey: 'keyup',
 			resetOnBlur: true,
 			sourceData: null,
+			showEvent: 'show.bs',
+			hideEvent: 'hide.bs',
 			sourceTmpl: '<a class="list-group-item" href="#"><span>{title}</span></a>',
 			sourceNode: function(data) {
 				return tmpl(opts.sourceTmpl, data);
@@ -30,6 +32,7 @@
 			itemClassTmp: 'bts-dynamic-item',
 			itemEl: '.list-group-item',
 			itemChild: null,
+            getValue: function(obj) { return obj.val(); },
 			itemFilter: function(item, val) {
 				//val = val.replace(new RegExp("^[.]$|[\[\]|()*]",'g'),'');
 				//val = val.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
@@ -75,14 +78,14 @@
 			inputEl$.parents('.form-group').addClass('has-feedback');
 			
 			if(!inputEl$.prev().is('.control-label'))
-				cancelEl$.css({top: 0})
+				cancelEl$.css({top: 0});
 
 			cancelEl$.on('click', self.reset);
 		}
 
 		inputEl$.on(opts.eventKey, debouncer(function(e) {
 			
-			var val = $(this).val();
+			var val = opts.getValue($(this));
 
 			if(opts.itemEl)
 				items$ = searchlist$.find(opts.itemEl);
@@ -102,14 +105,15 @@
 
 			if(val!=='' && val.length >= opts.minLength)
 			{
-				contains.show();
+				self.trigger(opts.showEvent);
+				contains.hide();
 				containsNot.hide();
 
 				if($.type(opts.sourceData)==='function')
 				{
 					contains.hide();
 					containsNot.hide();
-					
+
 					if(callReq)
 					{
 						if($.isFunction(callReq.abort))
@@ -142,6 +146,7 @@
 			}
 			else
 			{
+				self.trigger(opts.hideEvent);
 				contains.show();
 				containsNot.show();
 				searchlist$.find('.'+opts.itemClassTmp).remove();
