@@ -364,14 +364,20 @@ footer .step {
 	margin: 10px 0px;
 }
 
-.site {
-  display: flex;
-  min-height: 100vh;
-  flex-direction: column;
+.wrapper{
+	display: flex;
+	flex-direction: column;	
 }
 
 .site-content {
-  flex: 1;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+}
+
+.site-content {
+  	flex: 1;
 	padding-top: 20px;
 }
 
