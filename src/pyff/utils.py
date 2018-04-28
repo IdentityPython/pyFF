@@ -33,6 +33,7 @@ import requests
 from requests_file import FileAdapter
 from requests_cache import CachedSession
 import base64
+from . import __version__
 
 __author__ = 'leifj'
 
@@ -599,8 +600,8 @@ def url_get(url):
                           backend=config.request_cache_backend,
                           expire_after=config.request_cache_time,
                           old_data_on_error=True)
-
-    r = s.get(url, verify=False, timeout=config.request_timeout)
+    headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
+    r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
     if config.request_override_encoding is not None:
         r.encoding = config.request_override_encoding
 
