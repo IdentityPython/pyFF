@@ -476,7 +476,7 @@ class MDServer(object):
         self._pipes = pipes
         self.lock = ReadWriteLock()
         self.plumbings = [plumbing(v) for v in pipes]
-        self.refresh = MDUpdate(cherrypy.engine, server=self, frequency=config.frequency)
+        self.refresh = MDUpdate(cherrypy.engine, server=self, frequency=config.update_frequency)
         self.refresh.subscribe()
         self.aliases = config.aliases
         self.psl = PublicSuffixList()
