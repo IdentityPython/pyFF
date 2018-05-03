@@ -29,7 +29,7 @@ body {
 
 h2 img {
 	margin-left: 15px;
-	width: 4%;
+	width: 67px;
 	margin-right: 5px;
 }
 
@@ -136,6 +136,7 @@ a.identityprovider li span {
 
 h2.accessHeader {
 	font-size: 1.4rem;
+	margin-top:4px;
 }
 
 footer h2 {
