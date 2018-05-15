@@ -95,17 +95,19 @@
     </xsl:template>
 
     <xsl:template name="eidas-attributes">
-        <samla:Attribute Name="https://pyff.io/eidas/endpoint_type">
-            <samla:AttributeValue><xsl:value-of select="$eidas_endpoint_type"/></samla:AttributeValue>
-        </samla:Attribute>
-        <samla:Attribute Name="https://pyff.io/eidas/territory">
-            <samla:AttributeValue><xsl:value-of select="$eidas_territory"/></samla:AttributeValue>
-        </samla:Attribute>
+        <xsl:if test="$eidas_endpoint_type and $eidas_territory">
+            <samla:Attribute Name="https://pyff.io/eidas/endpoint_type">
+                <samla:AttributeValue><xsl:value-of select="$eidas_endpoint_type"/></samla:AttributeValue>
+            </samla:Attribute>
+            <samla:Attribute Name="https://pyff.io/eidas/territory">
+                <samla:AttributeValue><xsl:value-of select="$eidas_territory"/></samla:AttributeValue>
+            </samla:Attribute>
+        </xsl:if>
     </xsl:template>
 
     <xsl:template match="md:EntityDescriptor[not(md:Extensions) and not(saml:Extensions)]">
         <md:EntityDescriptor>
-            <md:Extensions/>
+            <xsl:attribute name="entityID"><xsl:value-of select="@entityID"></xsl:value-of></xsl:attribute>
             <xsl:apply-templates/>
         </md:EntityDescriptor>
     </xsl:template>
