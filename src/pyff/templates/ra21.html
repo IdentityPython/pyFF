@@ -36,19 +36,17 @@
 	</head>
 
 <body class="site">
-
-
-	
-	<main class="site-content">
+			
+	<main>
 		
 		<h2 class="accessHeader">
-			<img alt="" src="/static/icons/ra21/ra_icon_2.png"/><span class="light">{{ _('Get access to') }}</span>
+			<img alt="" src="/static/icons/ra21/ra_icon_2.png" /><span class="light">{{ _('Get access to') }}</span>
 			<span class="default-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span>
 		</h2>
 		
-	<div class="col-md-6 offset-md-3">
-        <div class="card card-container">
-            <div class="collapse" id="titlefind">
+	<div class="col-md-10 offset-md-1 col-lg-6 offset-lg-3">
+		<div class="card card-container">
+			<div class="collapse" id="titlefind">
 				<h1>{{ _('Find Your Institution') }}
 					<p class="subtitleRA21">{{ _('Your university, organization or company') }}</p>
 				</h1>
@@ -60,41 +58,41 @@
 				</h1>
 			</div>
 
-          <div id="dsclient"
-                     data-href="{{ entity['entity_id'] }}"
-                     data-mdq="/metadata/"
-                     data-store="{{storage}}"
-                     data-search="{{search}}"
-                     data-list="{{list}}"
-                     data-related="{{ entity['domains'] }}"
-                     data-inputfieldselector="#searchinput">
-			  <ul class="card-links" id="ds-saved-choices">
-				  <div class="collapse" id="addwidget">
-					  <hr>
-					  <a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
-						  <li><span class="label">Choose another</span><i id="add_circle" class="float-right far fa-plus-circle"></i></li>
-					  </a>
-				  </div>
-			  </ul>
-			  <div class="collapse" id="searchwidget">
-				  <div class="input-group" role="button">
+		<div id="dsclient"
+					data-href="{{ entity['entity_id'] }}"
+					data-mdq="/metadata/"
+					data-store="{{storage}}"
+					data-search="{{search}}"
+					data-list="{{list}}"
+					data-related="{{ entity['domains'] }}"
+					data-inputfieldselector="#searchinput">
+			<ul class="card-links" id="ds-saved-choices">
+				<div class="collapse" id="addwidget">
+					<hr>
+					<a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
+						<li><span class="label">Choose another</span><i id="add_circle" class="float-right far fa-plus-circle"></i></li>
+					</a>
+				</div>
+			</ul>
+			<div class="collapse" id="searchwidget">
+				<div class="input-group" role="button">
 					<input type="text" id="searchinput" type="search" class="form-control" placeholder="" aria-label="input group" aria-describedby="btnGroupAddon" autofocus>
 					<div class="input-group-append">
 						<button type="button" id="findbutton" class="btn btn-primary" aria-describedby="btnGroupAddon"><i class="fas fa-search"></i></button>
 					</div>
-				  </div>
-				  <p id="examples" class="detailtextRA21">{{ _('Examples: Science Institute, xxx@YourInstitution.edu, UCLA') }}</p>
-			  </div>
+				</div>
+				<p id="examples" class="detailtextRA21">{{ _('Examples: Science Institute, xxx@YourInstitution.edu, UCLA') }}</p>
+			</div>
 
-			  <div class="collapse" id="resultwidget">
+			<div class="collapse" id="resultwidget">
 				<div class="card-header">
 					<h3>{{ _('We found these institutions') }}</h3>
 				</div>
 				<ul class="card-links" id="ds-search-list"></ul>
-			  </div>
-		  </div>
+			</div>
+		</div>
 			
-        </div><!-- /card-container -->
+		</div><!-- /card-container -->
 	</div>
 
 	</main>
@@ -171,7 +169,6 @@
 				
 			</div>
 		</footer>
-
 
   <script type="text/javascript">
 		$(document).ready(function() {
