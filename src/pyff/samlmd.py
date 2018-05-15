@@ -2,7 +2,7 @@ from __future__ import absolute_import, unicode_literals
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
-    has_tag, hash_id, load_callable, rreplace, dumptree, first_text
+    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data
 from .logs import log
 from .constants import config, NS, ATTRS, NF_URI, PLACEHOLDER_ICON
 from lxml import etree
@@ -12,7 +12,6 @@ from itertools import chain
 from copy import deepcopy
 from .exceptions import *
 from six import StringIO
-from .parse import add_parser
 
 
 class EntitySet(object):
@@ -181,9 +180,9 @@ def filter_invalids_from_document(t, base_url, validation_errors):
         if not xsd.validate(e):
             log.debug(etree.tostring(e))
             error = xml_error(xsd.error_log, m=base_url)
-            entity_id = e.get("entityID")
+            entity_id = e.get("entityID","(Missing entityID)")
             log.warn('removing \'%s\': schema validation failed: %s' % (entity_id, xsd.error_log))
-            validation_errors[entity_id] = error
+            validation_errors[entity_id] = "{}".format(xsd.error_log)
             if e.getparent() is None:
                 return None
             e.getparent().remove(e)
@@ -428,8 +427,11 @@ def entity_attribute_dict(entity):
 
     return d
 
+def gen_icon(e):
+    scopes = entity_scopes(e)
 
-def entity_icon(e, langs=None):
+
+def entity_icon_url(e, langs=None):
     for ico in filter_lang(e.iter("{%s}Logo" % NS['mdui']), langs=langs):
         return dict(url=ico.text, width=ico.get('width'), height=ico.get('height'))
 
@@ -552,15 +554,33 @@ def discojson(e, langs=None):
     elif 'sp' in eattr[ATTRS['role']]:
         d['type'] = 'sp'
 
-    icon_info = entity_icon(e)
-    if icon_info is not None:
-        d['entity_icon'] = icon_info.get('url', PLACEHOLDER_ICON)
-        d['entity_icon_height'] = icon_info.get('height', 64)
-        d['entity_icon_width'] = icon_info.get('width', 64)
-
     scopes = entity_scopes(e)
+    icon_info = entity_icon_url(e)
+    urls = []
+    if icon_info is not None and 'url' in icon_info:
+        url = icon_info['url']
+        urls.append(url)
+        if scopes is not None and len(scopes) == 1:
+            urls.append("https://{}/favico.ico".format(scopes[0]))
+            urls.append("https://www.{}/favico.ico".format(scopes[0]))
+
+    d['entity_icon'] = None
+    for url in urls:
+        if url.startswith("data:"):
+            d['entity_icon'] = url
+            break
+
+        if '://' in url:
+            r = url_get(url)
+            if r.ok and r.content:
+                d['entity_icon'] = img_to_data(r.content, r.headers.get('Content-Type'))
+                break
+
     if scopes is not None and len(scopes) > 0:
         d['scope'] = ",".join(scopes)
+        if len(scopes) == 1:
+            d['domain'] = scopes[0]
+            d['name_tag'] = (scopes[0].split('.'))[0].upper()
 
     keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
     if keywords is not None:
@@ -593,12 +613,10 @@ def entity_simple_summary(e):
              entityID=entity_id,
              domains=";".join(sub_domains(e)),
              id=hash_id(e, 'sha1'))
-    icon_info = entity_icon(e)
-    if icon_info is not None:
-        d['entity_icon'] = icon_info.get('url', PLACEHOLDER_ICON)
-        d['icon_url'] = d['entity_icon']
-        d['entity_icon_height'] = icon_info.get('height', 64)
-        d['entity_icon_width'] = icon_info.get('width', 64)
+
+    scopes = entity_scopes(e)
+    if scopes is not None and len(scopes) > 0:
+        d['scopes'] = " ".join(scopes)
 
     psu = privacy_statement_url(e, None)
     if psu:

@@ -8,7 +8,6 @@ from __future__ import absolute_import, unicode_literals
 from .logs import log
 import os
 import requests
-from requests_file import FileAdapter
 from .constants import config
 from datetime import datetime
 from collections import deque
@@ -16,21 +15,10 @@ from UserDict import DictMixin
 from concurrent import futures
 from .parse import parse_resource
 from itertools import chain
-from requests_cache.core import CachedSession
-from copy import deepcopy
+from .exceptions import ResourceException
+from .utils import url_get
 
 requests.packages.urllib3.disable_warnings()
-
-
-class ResourceException(Exception):
-    def __init__(self, msg, wrapped=None, data=None):
-        self._wraped = wrapped
-        self._data = data
-        super(self.__class__, self).__init__(msg)
-
-    def raise_wraped(self):
-        raise self._wraped
-
 
 class ResourceManager(DictMixin):
     def __init__(self):
@@ -180,18 +168,7 @@ class Resource(object):
             data = self.url
             info['Directory'] = self.url
         elif '://' in self.url:
-            s = None
-            if 'file://' in self.url:
-                s = requests.session()
-                s.mount('file://', FileAdapter())
-            else:
-                s = CachedSession(cache_name="pyff_cache",
-                                  expire_after=config.request_cache_time,
-                                  old_data_on_error=True)
-
-            r = s.get(self.url, verify=False, timeout=config.request_timeout)
-            if config.request_override_encoding is not None:
-                r.encoding = config.request_override_encoding
+            r = url_get(self.url)
 
             info['HTTP Response Headers'] = r.headers
             log.debug("got status_code={:d}, encoding={} from_cache={} from {}".

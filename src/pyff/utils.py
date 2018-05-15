@@ -29,6 +29,11 @@ from .constants import config, NS
 from .logs import log
 from .exceptions import *
 from .i18n import language
+import requests
+from requests_file import FileAdapter
+from requests_cache import CachedSession
+import base64
+from . import __version__
 
 __author__ = 'leifj'
 
@@ -53,6 +58,7 @@ def debug_observer(e):
 
 def trunc_str(x, l):
     return (x[:l] + '..') if len(x) > l else x
+
 
 def resource_string(name, pfx=None):
     """
@@ -129,7 +135,8 @@ Return a string representation of the tree, optionally pretty_print(ed) (default
 
 :param t: An ElemenTree to serialize
     """
-    return etree.tostring(t, encoding='UTF-8', method=method, xml_declaration=xml_declaration, pretty_print=pretty_print)
+    return etree.tostring(t, encoding='UTF-8', method=method, xml_declaration=xml_declaration,
+                          pretty_print=pretty_print)
 
 
 def iso_now():
@@ -149,10 +156,12 @@ Timestamp in ISO format
 def iso2datetime(s):
     return iso8601.parse_date(s)
 
+
 def first_text(elt, tag, default=None):
     for matching in elt.iter(tag):
         return matching.text
     return default
+
 
 class ResourceResolver(etree.Resolver):
     def __init__(self):
@@ -162,7 +171,7 @@ class ResourceResolver(etree.Resolver):
         """
         Resolves URIs using the resource API
         """
-        #log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
+        # log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
         path = system_url.split("/")
         fn = path[len(path) - 1]
         if pkg_resources.resource_exists(__name__, fn):
@@ -269,7 +278,7 @@ def to_yaml_filter(pipeline):
 env.filters['u'] = urlencode_filter
 env.filters['truncate'] = truncate_filter
 env.filters['to_yaml'] = to_yaml_filter
-env.filters['sha1'] = lambda x: hash_id(x,'sha1', False)
+env.filters['sha1'] = lambda x: hash_id(x, 'sha1', False)
 
 
 def template(name):
@@ -301,7 +310,7 @@ def root(t):
 
 def with_tree(elt, cb):
     cb(elt)
-    if isinstance(elt.tag,basestring):
+    if isinstance(elt.tag, basestring):
         for child in list(elt):
             with_tree(child, cb)
 
@@ -489,7 +498,7 @@ def rreplace(s, old, new, occurrence):
     return new.join(li)
 
 
-def load_callable( name ):
+def load_callable(name):
     from importlib import import_module
     p, m = name.rsplit(':', 1)
     mod = import_module(p)
@@ -558,3 +567,48 @@ def printable(s):
         return s.encode('ascii', errors='ignore').decode()
     else:
         return s.decode("ascii", errors="ignore").encode()
+
+
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
+def urls_get(urls):
+    """
+    Download multiple URLs and return all the response objects
+    :param urls:
+    :return:
+    """
+    return [url_get(url) for url in urls]
+
+
+def url_get(url):
+    """
+    Download an URL using a cache and return the response object
+    :param url:
+    :return:
+    """
+    s = None
+    info = dict()
+    if 'file://' in url:
+        s = requests.session()
+        s.mount('file://', FileAdapter())
+    else:
+        s = CachedSession(cache_name="pyff_cache",
+                          backend=config.request_cache_backend,
+                          expire_after=config.request_cache_time,
+                          old_data_on_error=True)
+    headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
+    r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+    if config.request_override_encoding is not None:
+        r.encoding = config.request_override_encoding
+
+    return r
+
+
+def img_to_data(data, mime_type):
+    """Convert a file (specified by a path) into a data URI."""
+    data64 = u''.join(base64.encodestring(data).splitlines())
+    return u'data:%s;base64,%s' % (mime_type, data64)

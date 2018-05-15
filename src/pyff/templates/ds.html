@@ -34,6 +34,8 @@
                 <p class="text-info">
                     {{ gettext('This service requests that you login. Select your preferred method below...') }}
                 </p>
+                <div id="ds-saved-choices" class="list-group"></div>
+                <br/>
                 <div id="dsclient"
                      data-href="{{ entity['entity_id'] }}"
                      data-mdq="/metadata/"
@@ -50,6 +52,7 @@
                                    type="search"/>
                         </div>
                     </form>
+                    <div id="ds-search-list" class="list-group"></div>
                 </div>
             </div>
         </div>

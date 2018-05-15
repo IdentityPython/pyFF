@@ -38,6 +38,8 @@ Features
 * Support for using PKCS#11 tokens for signing
 * Certificate expiration checking and reporting
 * Fast parallel fetching of multiple streams
+* Integrated discovery service in part based on RA21.org P3W project
+* Support for eIDAS metadata service list format
 
 Dependencies
 ============
