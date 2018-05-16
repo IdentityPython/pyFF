@@ -61,6 +61,7 @@ jQuery(function ($) {
                 var obj = this;
                 var search_result_element = $(obj.options['search_result_selector']);
                 var search_base, search_related, list_uri;
+                var counter = 0;
                 search_base = obj.element.attr('data-search');
                 search_related = obj.element.attr('data-related');
                 $(obj.input_field_selector).focus();
@@ -81,10 +82,14 @@ jQuery(function ($) {
                         if (search_related) {
                             remote = remote + "&related=" + search_related;
                         }
+
+                        counter = 0;
                         return $.getJSON(remote, callback);
                     },
                     sourceNode: function (data) {
                         data.sticky = true;
+                        counter += 1;
+                        data.counter = counter;
                         return obj.options['render_search_result'](data);
                     },
                     cancelNode: null
