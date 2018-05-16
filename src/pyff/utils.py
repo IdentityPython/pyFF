@@ -188,7 +188,7 @@ def schema():
 
     if thread_data.schema is None:
         try:
-            parser = etree.XMLParser()
+            parser = etree.XMLParser(collect_ids=False, resolve_entities=False)
             parser.resolvers.add(ResourceResolver())
             st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
             thread_data.schema = etree.XMLSchema(st)
@@ -432,7 +432,7 @@ def hex_digest(data, hn='sha1'):
 
 
 def parse_xml(io, base_url=None):
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False))
+    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False,collect_ids=False))
 
 
 def has_tag(t, tag):
