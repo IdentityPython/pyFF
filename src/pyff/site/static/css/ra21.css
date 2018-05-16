@@ -412,6 +412,7 @@ div.cancel {
 .label-url {
 	float: right;
 	margin-right: 25px;
+	max-width: 18%;
 	color: #ABABAB;
 }
 
