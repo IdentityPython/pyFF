@@ -9,7 +9,7 @@
 		<meta name="author" content="">
 		<link rel="icon" href="/favicon.ico">
 
-		<title>RA21-Initial</title>
+		<title>{{ _('Get access to ') }} {% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</title>
 
 		<!-- Bootstrap core CSS -->
 		<link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
@@ -36,17 +36,19 @@
 	</head>
 
 <body class="site">
-			
+
+
+	
 	<main>
 		
 		<h2 class="accessHeader">
-			<img alt="" src="/static/icons/ra21/ra_icon_2.png" /><span class="light">{{ _('Get access to') }}</span>
+			<img alt="" src="/static/icons/ra21/ra_icon_2.png"/><span class="light">{{ _('Get access to') }}</span>
 			<span class="default-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span>
 		</h2>
 		
 	<div class="col-md-10 offset-md-1 col-lg-6 offset-lg-3">
-		<div class="card card-container">
-			<div class="collapse" id="titlefind">
+        <div class="card card-container">
+            <div class="collapse" id="titlefind">
 				<h1>{{ _('Find Your Institution') }}
 					<p class="subtitleRA21">{{ _('Your university, organization or company') }}</p>
 				</h1>
@@ -58,41 +60,52 @@
 				</h1>
 			</div>
 
-		<div id="dsclient"
-					data-href="{{ entity['entity_id'] }}"
-					data-mdq="/metadata/"
-					data-store="{{storage}}"
-					data-search="{{search}}"
-					data-list="{{list}}"
-					data-related="{{ entity['domains'] }}"
-					data-inputfieldselector="#searchinput">
-			<ul class="card-links" id="ds-saved-choices">
-				<div class="collapse" id="addwidget">
-					<hr>
-					<a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
-						<li><span class="label">Choose another</span><i id="add_circle" class="float-right far fa-plus-circle"></i></li>
-					</a>
-				</div>
-			</ul>
-			<div class="collapse" id="searchwidget">
-				<div class="input-group" role="button">
+          <div id="dsclient"
+                     data-href="{{ entity['entity_id'] }}"
+                     data-mdq="/metadata/"
+                     data-store="{{storage}}"
+                     data-search="{{search}}"
+                     data-list="{{list}}"
+                     data-related="{{ entity['domains'] }}"
+                     data-inputfieldselector="#searchinput">
+			  <ul class="card-links" id="ds-saved-choices">
+				  <div class="collapse" id="addwidget">
+
+					  <a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
+						  <li><span class="label">Choose another</span><i id="add_circle" class="float-right far fa-plus-circle"></i></li>
+					  </a>
+				  </div>
+			  </ul>
+			  <div class="collapse" id="searchwidget">
+				  <div class="input-group" role="button">
 					<input type="text" id="searchinput" type="search" class="form-control" placeholder="" aria-label="input group" aria-describedby="btnGroupAddon" autofocus>
 					<div class="input-group-append">
 						<button type="button" id="findbutton" class="btn btn-primary" aria-describedby="btnGroupAddon"><i class="fas fa-search"></i></button>
 					</div>
-				</div>
-				<p id="examples" class="detailtextRA21">{{ _('Examples: Science Institute, xxx@YourInstitution.edu, UCLA') }}</p>
-			</div>
+				  </div>
+				  <p id="examples" class="detailtextRA21">{{ _('Examples: Science Institute, xxx@YourInstitution.edu, UCLA') }}</p>
+			  </div>
 
-			<div class="collapse" id="resultwidget">
-				<div class="card-header">
-					<h3>{{ _('We found these institutions') }}</h3>
+			  <div class="collapse" id="resultwidget">
+				<div class="card-header" id="wefoundresults">
+					<h3>{{ _('We found these institutions') }} <span id="count" class="float-right badge badge-pill badge-success">0</span></h3>
 				</div>
-				<ul class="card-links" id="ds-search-list"></ul>
-			</div>
-		</div>
+				<ul class="card-links" id="ds-search-list">
+                    <li class="collapse" id="searching"><i class="far fa-spinner fa-spin"></i></li>
+                    <li>
+                        <div class="collapse alert alert-info mt-3" id="no_results" role="alert">
+                            <h3>No matching institution found</h3>
+                            <ul>
+                                <li>Try institution name, your institution email, or an abbreviation</li>
+                                <li>Contact your institution librarian</li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+			  </div>
+          </div>
 			
-		</div><!-- /card-container -->
+        </div><!-- /card-container -->
 	</div>
 
 	</main>
@@ -170,34 +183,41 @@
 			</div>
 		</footer>
 
+
   <script type="text/javascript">
 		$(document).ready(function() {
 
 			{% raw %}
 		    var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}">\
-                <li><div class="d-block"><span class="text-truncate label">{{title}}</span>{{#scopes}}<span class="text-truncate label-url">{{scopes}}</span>{{/scopes}}\
-                     <div class="float-right external"><i class="far fa-external-link"></i></div></div>\
-                    {{#descr}}<div class="d-block"><span class="searchaux text-truncate">{{descr}}</span>{{/descr}}</div>\
-                    <div class="d-block"><span class="searchmatch text-truncate">Search matched&nbsp;<em>{{matched}}</em></span></div>\
+                <li><div class="d-block"><div class="d-inline-block text-truncate label">{{title}}</div>\
+                     {{#scopes}}<div class="d-none d-md-inline-block text-truncate label-url">{{scopes}}</div>{{/scopes}}\
+                     <div class="external float-right"><i class="far fa-external-link"></i></div></div>\
+                    {{#descr}}<div class="d-none d-sm-block d-md-block d-lg-block searchaux text-truncate">{{descr}}</div>{{/descr}}\
+                    <div class="d-none d-sm-block d-md-block d-lg-block searchmatch text-truncate">Search matched&nbsp;<em>{{matched}}</em></div>\
                 </li></a>');
-			var saved = Hogan.compile('<a class="identityprovider" data-href="{{entity_id}}">\
+			var saved = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}">\
                 <li class="known-inst">\
+                <div class="d-block">\
                 {{#entity_icon}}\
-                <img src="{{entity_icon}}" onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="img-thumbnail rounded-circle logo">\
+                <img src="{{entity_icon}}" onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="d-md-inline-block d-lg-inline-block img-thumbnail rounded-circle logo">\
                 {{/entity_icon}}\
                 {{^entity_icon}}\
-                <svg class="logo" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#aeaeae" />\
+                <svg class="d-md-inline-block d-lg-inline-block logo" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#aeaeae" />\
                 <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="12px" font-family="Arial" dy=".3em">{{name_tag}}</text></svg>\
                 {{/entity_icon}}\
-                <span class="label">{{title}}</span><i class="cancel float-right far fa-times-circle"></i>\
-                </li></a>');
-			var no_results = Hogan.compile('<div class="alert alert-info mt-3" role="alert"><h3>No matching institution found</h3><ul><li>Try institution name, your institution email, or an abbreviation</li><li>Contact your institution librarian</li></ul></div>');
+                <div class="d-inline-block">{{title}}</div>\
+                <div class="cancel float-right"><i class="far fa-times-circle"></i></div>\
+                </div></li></a>');
 			{% endraw %}
+
+			var timer;
 
 			$("#searchwidget").on('hidden.bs.collapse',function(event) {
                 $("#titlefind").hide();
                 $("#titlechoose").show();
                 $("#searchwidget").hide();
+                $("#resultwidget").hide();
+                $("#searchinput").val('');
                 $("#add_circle").removeClass("fa-minus-circle").addClass("fa-plus-circle");
             }).on('shown.bs.collapse',function(event) {
                 $("#titlefind").show();
@@ -207,31 +227,41 @@
 			    $("#searchinput").focus();
             });
 
-			$("body").on('mouseenter','i.external',function (event) {
-			   $(this).addClass('far fa-external-link')
-			});
-
-			$("body").on('mouseleave','i.external',function (event) {
-			   $(this).removeClass('far fa-external-link')
-			});
-
 			$("#ds-search-list").on('show.bs', function(event) {
-			    $("#resultwidget").show();
+			    $("#wefoundresults").hide();
+				$("#count").text(0);
+			    timer = setTimeout( function () { $("#searching").show(); }, 500);
             });
 
 			$("#ds-search-list").on('hide.bs', function(event) {
 			    $("#resultwidget").hide();
+			    $("#searching").hide();
             });
 
             $("#dsclient").discovery_client({
 				render_search_result: function(item) {
+				    if (timer !== undefined) {
+                        clearTimeout(timer);
+                        timer = undefined;
+                        $("#resultwidget").show();
+                        $("#searching").hide();
+                        $("#no_results").hide();
+                    }
+                    $("#wefoundresults").show();
+					$("#count").text(item.counter);
 				    return search.render(item);
 				},
 				render_saved_choice: function(item) {
 				    return saved.render(item);
 				},
 				no_results: function() {
-				    return no_results.render();
+				    if (timer !== undefined) {
+                        clearTimeout(timer);
+                        timer = undefined;
+                        $("#searching").hide();
+                    }
+                    $("#wefoundresults").hide();
+				    $("#no_results").show();
 				},
 				after: function(count,elt) {
 				    if (count == 0) {

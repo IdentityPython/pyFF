@@ -328,7 +328,7 @@ p {
 	background-color: #F3F3F3;
 }
 
-.card-links a li.known-inst:hover {
+.card-links a:hover li.known-inst {
   border-left: none;
   background: #284788;
   color: #FFFFFF;
@@ -346,7 +346,7 @@ p {
 .logo {
 	width: 40px;
 	height: 40px;
-	margin-right: 14px;
+	margin-right: 7px;
 	padding:  0;
 	border-width: 2px;
 }
@@ -384,12 +384,12 @@ footer {
 	display: inline-block;
 }
 
-.institution:hover .external {
-	display: block;
+a.active div.external {
+	display: inline-block;
 }
 
-.external {
-	padding-top: 12px;	
+div.external {
+	padding-top: 5px;
 	padding-right: 7px;
 	position: absolute;
 	right: 0;
@@ -397,33 +397,49 @@ footer {
 	display: none;
 }
 
-.external a {
-	float: right;
+div.cancel {
+	padding-top: 5px;
+	padding-right: 7px;
+	position: absolute;
+	right: 0;
+	top: 0;
 }
 
 .label {
-	max-width: 60%;
+	max-width: 80%;
 }
 
 .label-url {
 	float: right;
-	padding-right: 35px;
+	margin-right: 25px;
+	max-width: 18%;
 	color: #ABABAB;
-	max-width: 40%;
 }
 
-span.searchaux {
+.searchaux {
 	max-width: 75%;
 	font-size: small;
 }
 
-span.searchmatch {
+.searchmatch {
 	max-width: 75%;
 	font-size: x-small;
 }
 
 .alert ul{
     padding-left: 1rem;
+}
+
+.fa-spinner {
+	font-size: 36px;
+	color: #007bff;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+h3.searching {
+	text-align: center
 }
 
 /*--*/
