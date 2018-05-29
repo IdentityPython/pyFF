@@ -26,7 +26,7 @@ def main():
     opts = None
     args = None
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hRm', ['help', 'loglevel=', 'logfile=', 'version', 'module'])
+        opts, args = getopt.getopt(sys.argv[1:], 'hRm:', ['help', 'loglevel=', 'logfile=', 'version', 'module='])
     except getopt.error as msg:
         print(msg)
         print(__doc__)
