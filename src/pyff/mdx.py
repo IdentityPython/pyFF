@@ -35,7 +35,7 @@ An implementation of draft-lajoie-md-query
             Chdir into <dir> after the server starts up.
     --proxy
             The service is running behind a proxy - respect the X-Forwarded-Host header.
-    -m <module>|--modules=<module>
+    -m <module>|--module=<module>
             Load a module
 
     {pipeline-files}+
@@ -700,7 +700,7 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:],
                                    'hP:p:H:CfaA:l:Rm:',
                                    ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
-                                    'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
+                                    'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'module=',
                                     'alias=', 'dir=', 'version', 'proxy', 'allow_shutdown'])
     except getopt.error as msg:
         print(msg)
