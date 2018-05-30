@@ -327,7 +327,7 @@ def publish(req, *opts):
 Publish the working document in XML form.
 
 :param req: The request
-:param opts: Options (unused)
+:param opts: Options: See "Options" below
 :return: None
 
  Publish takes one argument: path to a file where the document tree will be written.
@@ -337,7 +337,16 @@ Publish the working document in XML form.
 .. code-block:: yaml
 
     - publish: /tmp/idp.xml
+
+**Options**
+Defaults are marked with (*)
+- validate <True*|False> : Whether the document is validated before publication (schema validation).
+                           Best practice is to validate your working document before publication.
+                           Only set this to False if you need to and understand the implications.
     """
+    opts = dict(zip(opts[::2], opts[1::2]))
+    opts.setdefault('validate', "True")
+    opts['validate'] = bool(strtobool(opts['validate']))
 
     if req.t is None:
         raise PipeException("Empty document submitted for publication")
@@ -345,11 +354,12 @@ Publish the working document in XML form.
     if req.args is None:
         raise PipeException("publish must specify output")
 
-    try:
-        validate_document(req.t)
-    except DocumentInvalid as ex:
-        log.error(ex.error_log)
-        raise PipeException("XML schema validation failed")
+    if not opts['validate'] == False:
+        try:
+            validate_document(req.t)
+        except DocumentInvalid as ex:
+            log.error(ex.error_log)
+            raise PipeException("XML schema validation failed")
 
     output_file = None
     if type(req.args) is dict:
