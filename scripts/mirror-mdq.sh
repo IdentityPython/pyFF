@@ -12,16 +12,38 @@ function cleanup() {
    rm -rf $dir
 }
 
+function err() {
+   echo "*** ERROR $1"
+   exit $2
+}
+
 trap cleanup EXIT
 
-mkdir -p $target && (
+echo $target | grep -qv '@' && mkdir -p $target 
+
+(
  cd $dir
- WGET_ARGS="--mirror --no-host-directories -q"
+ WGET_ARGS="--mirror --no-host-directories -q --connect-timeout=10"
  idx_obj=".well-known/webfinger?rel=urn:oasis:names:tc:SAML:2.0:metadata"
- wget $WGET_ARGS "$base/$idx_obj" && jq -r '.links[].href' < "$idx_obj" | wget $WGET_ARGS -i -
+ if wget $WGET_ARGS "$base/$idx_obj"; then 
+    jq -r '.links[].href' < "$idx_obj" | wget $WGET_ARGS -i -
+    ret=$?
+ else
+    err "Failed to fetch metadata index $idx_obj" $?
+ fi
+ if [ $ret -ne 0 ]; then
+    err "Failed to mirror metadata from $base" $ret
+ fi
  if [ -d "${MIRROR_MDQ_POST}" ]; then
     env SOURCE=$1 TARGET=$target IDX_OBJ=$idx_obj run-parts --regex '^[0-9]+-' -- ${MIRROR_MDQ_POST}
+    ret=$?
+    if [ $ret -ne 0 ]; then
+       err "Failed post-processing metadata from $base" $ret
+    fi
  fi
 )
-
+ret=$?
+if [ $ret -ne 0 ]; then
+   err "Mirror of metadata from $base failed - skipping final rsync" $ret
+fi
 rsync -az $RSYNC_ARGS --delete $dir/ $target/
