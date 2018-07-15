@@ -18,7 +18,6 @@ jQuery(function ($) {
         },
 
         _create: function () {
-            console.log("_create is called");
             var obj = this;
             if (typeof obj.options['render'] !== 'function') {
                 obj._template = Hogan.compile('<div data-href="{{entity_id}}" class="identityprovider list-group-item">' +
