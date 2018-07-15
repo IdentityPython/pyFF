@@ -18,6 +18,7 @@ jQuery(function ($) {
         },
 
         _create: function () {
+            console.log("_create is called");
             var obj = this;
             if (typeof obj.options['render'] !== 'function') {
                 obj._template = Hogan.compile('<div data-href="{{entity_id}}" class="identityprovider list-group-item">' +
@@ -132,7 +133,7 @@ jQuery(function ($) {
                 e.preventDefault();
             });
 
-            $('body').on('click', '.cancel', function (e) {
+            $('body').on('click', '.close', function (e) {
                 e.stopPropagation();
                 var entity_element = $(this).closest(obj.selection_selector);
                 var entity_id = entity_element.attr('data-href');
