@@ -20,16 +20,26 @@ jQuery(function ($) {
         _create: function () {
             var obj = this;
             if (typeof obj.options['render'] !== 'function') {
-                obj._template = Hogan.compile('<div data-href="{{entity_id}}" class="identityprovider list-group-item">' +
+                obj._template_with_icon = Hogan.compile('<div data-href="{{entity_id}}" class="identityprovider list-group-item">' +
                     '{{^sticky}}<button type="button" alt="{{ _(\"Remove from list\") }}" data-toggle="tooltip" data-placement="left" class="close">&times;</button>{{/sticky}}' +
                     '<div class="media"><div class="d-flex mr-3"><div class="frame-round">' +
+                    '<div class="crop"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} data-id={{entity_id}} class="pyff-idp-icon"/></div></div></div>' +
+                    '<div class="media-body"><h5 class="mt-0 mb-1">{{title}}</h5>{{#descr}}{{descr}}{{/descr}}</div>' +
+                    '</div></div>');
+                obj._template_no_icon = Hogan.compile('<div data-href="{{entity_id}}" class="identityprovider list-group-item">' +
+                    '{{^sticky}}<button type="button" alt="{{ _(\"Remove from list\") }}" data-toggle="tooltip" data-placement="left" class="close">&times;</button>{{/sticky}}' +
+                    '<div class="media"><div class="d-flex mr-3"><div class="frame-round" style="visibility: hidden;">' +
                     '<div class="crop"><img{{#entity_icon}} src="{{entity_icon}}"{{/entity_icon}} data-id={{entity_id}} class="pyff-idp-icon"/></div></div></div>' +
                     '<div class="media-body"><h5 class="mt-0 mb-1">{{title}}</h5>{{#descr}}{{descr}}{{/descr}}</div>' +
                     '</div></div>');
 
                 obj.options['render'] = function (item) {
                     item.selection_class = obj.selection_class;
-                    return obj._template.render(item);
+                    if ('entity_icon' in item) {
+                        return obj._template_with_icon.render(item);
+                    } else {
+                        return obj._template_no_icon.render(item);
+                    }
                 }
             }
             if (!$.isFunction(obj.options['render_search_result'])) {
@@ -132,7 +142,7 @@ jQuery(function ($) {
                 e.preventDefault();
             });
 
-            $('body').on('click', '.cancel', function (e) {
+            $('body').on('click', '.close', function (e) {
                 e.stopPropagation();
                 var entity_element = $(this).closest(obj.selection_selector);
                 var entity_id = entity_element.attr('data-href');
