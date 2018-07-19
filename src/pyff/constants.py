@@ -29,6 +29,8 @@ ATTRS = {'collection': 'http://pyff.io/collection',
          'software': 'http://pyff.io/software',
          'domain': 'http://pyff.io/domain'}
 
+ATTRS_INV = {v: k for k, v in ATTRS.items()}
+
 PLACEHOLDER_ICON = 'data:image/gif;base64,R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
 
 DIGESTS = ['sha1', 'md5', 'null']
