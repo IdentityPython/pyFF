@@ -14,10 +14,8 @@ from .fetch import ResourceManager
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
-
 class MDRepository():
-    """A class representing a set of SAML Metadata. Instances present as dict-like objects where
-    the keys are URIs and values are EntitiesDescriptor elements containing sets of metadata.
+    """A class representing a set of SAML metadata and the resources from where this metadata was loaded.
     """
 
     def __init__(self):
@@ -27,9 +25,7 @@ class MDRepository():
         #     except Exception as ex:
         #         log.error(ex)
         #         self.min_cache_ttl = 300
-        self.store = None
         self.rm = ResourceManager()
-        self.store_class = load_callable(config.store_class)
         self.store = None
 
     def _lookup(self, member, store=None):

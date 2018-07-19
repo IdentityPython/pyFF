@@ -4,6 +4,7 @@ from unittest import TestCase
 import os
 
 from pyff.constants import NS
+from pyff.store import make_store_instance
 from pyff.mdrepo import MDRepository
 from pyff.utils import resource_filename, parse_xml, root, hash_id, MetadataException
 from pyff.samlmd import set_entity_attributes, is_idp, is_sp, entity_icon_url, \
@@ -13,7 +14,7 @@ from pyff.samlmd import set_entity_attributes, is_idp, is_sp, entity_icon_url, \
 class TestRepo(TestCase):
     def setUp(self):
         self.md = MDRepository()
-        self.md.store = self.md.store_class()
+        self.md.store = make_store_instance()
         self.datadir = resource_filename('metadata', 'test/data')
         self.xml_source = os.path.join(self.datadir, 'test01.xml')
         self.swamid_source = os.path.join(self.datadir, 'swamid-2.0-test.xml')

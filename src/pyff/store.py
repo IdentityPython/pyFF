@@ -1,13 +1,14 @@
 
 from six import StringIO
-import time
 from copy import deepcopy
 import re
 from redis import Redis
 from .constants import NS, ATTRS, ATTRS_INV
 from .decorators import cached
 from .logs import log
-from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, avg_domain_distance, ts_now
+from .constants import config
+from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, \
+    avg_domain_distance, ts_now, load_callable
 from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_info, \
     object_id, find_merge_strategy, find_entity, entity_simple_summary
 from whoosh.fields import Schema, TEXT, ID, KEYWORD, STORED, BOOLEAN
@@ -20,7 +21,12 @@ import six
 DINDEX = ('sha1', 'sha256', 'null')
 
 
-class StoreBase(object):
+def make_store_instance():
+    new_store = load_callable(config.store_class)
+    return new_store()
+
+
+class SAMLStoreBase(object):
     def lookup(self, key):
         raise NotImplementedError()
 
@@ -187,7 +193,7 @@ The dict in the list contains three items:
             return res
 
 
-class WhooshStore(StoreBase):
+class WhooshStore(SAMLStoreBase):
 
     def __init__(self):
         self.schema = Schema(scopes=KEYWORD(),
@@ -330,7 +336,7 @@ class WhooshStore(StoreBase):
         return list(lst)
 
 
-class MemoryStore(StoreBase):
+class MemoryStore(SAMLStoreBase):
     def __init__(self):
         self.md = dict()
         self.index = dict()
@@ -488,7 +494,7 @@ class MemoryStore(StoreBase):
         return []
 
 
-class RedisStore(StoreBase):
+class RedisStore(SAMLStoreBase):
     def __init__(self, version=ts_now(), default_ttl=3600 * 24 * 4, respect_validity=True):
         self.rc = Redis()
         self.default_ttl = default_ttl

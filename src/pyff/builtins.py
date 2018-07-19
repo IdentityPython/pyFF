@@ -31,6 +31,7 @@ from .fetch import Resource
 from six import StringIO
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
+from .store import make_store_instance
 
 __author__ = 'leifj'
 
@@ -468,7 +469,7 @@ Defaults are marked with (*)
     opts['filter_invalid'] = bool(strtobool(opts['filter_invalid']))
 
     remotes = []
-    store = req.md.store_class()  # start the load process by creating a provisional store object
+    store = make_store_instance()  # start the load process by creating a provisional store object
     req._store = store
     for x in req.args:
         x = x.strip()

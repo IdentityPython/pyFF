@@ -4,7 +4,7 @@ import mockredis
 import os
 
 from pyff.constants import ATTRS
-from pyff.store import MemoryStore, StoreBase, entity_attribute_dict, RedisStore, WhooshStore
+from pyff.store import MemoryStore, SAMLStoreBase, entity_attribute_dict, RedisStore, WhooshStore
 from pyff.utils import resource_filename, parse_xml, root
 
 
@@ -243,7 +243,7 @@ class TestMemoryStore(TestCase):
 
 class TestStoreBase(TestCase):
     def test_store_base(self):
-        base = StoreBase()
+        base = SAMLStoreBase()
         try:
             base.lookup("x")
             assert False
