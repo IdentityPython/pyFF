@@ -114,7 +114,7 @@
             }
 
             return Promise.all(lst.map(function(item,i) {
-                var last_refresh = item['last_refresh'] || -1;
+                var last_refresh = item.last_refresh || -1;
                 if (last_refresh == -1 || last_refresh + cache_time < DiscoveryService._now()) {
                     var p = obj.json_mdq_get(item.entity.entity_id).then(function(entity) {
                         console.log(entity);
