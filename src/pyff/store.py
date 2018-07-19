@@ -7,7 +7,7 @@ from redis import Redis
 from .constants import NS, ATTRS, ATTRS_INV
 from .decorators import cached
 from .logs import log
-from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, avg_domain_distance
+from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, avg_domain_distance, ts_now
 from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_info, \
     object_id, find_merge_strategy, find_entity, entity_simple_summary
 from whoosh.fields import Schema, TEXT, ID, KEYWORD, STORED, BOOLEAN
@@ -16,10 +16,6 @@ from . import merge_strategies
 import ipaddr
 import operator
 import six
-
-def _now():
-    return int(time.time())
-
 
 DINDEX = ('sha1', 'sha256', 'null')
 
@@ -85,7 +81,6 @@ replace old_e in t.
             new = strategy(old_e, e)
             if new is not None:
                 self.update(new)
-
 
     def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None, related=None):
         """
@@ -494,13 +489,13 @@ class MemoryStore(StoreBase):
 
 
 class RedisStore(StoreBase):
-    def __init__(self, version=_now(), default_ttl=3600 * 24 * 4, respect_validity=True):
+    def __init__(self, version=ts_now(), default_ttl=3600 * 24 * 4, respect_validity=True):
         self.rc = Redis()
         self.default_ttl = default_ttl
         self.respect_validity = respect_validity
 
     def _expiration(self, relt):
-        ts = _now() + self.default_ttl
+        ts = ts_now() + self.default_ttl
         if self.respect_validity:
             return valid_until_ts(relt, ts)
 
@@ -517,7 +512,7 @@ class RedisStore(StoreBase):
                 self.rc.srem(an, c)
 
     def periodic(self, stats):
-        now = _now()
+        now = ts_now()
         stats['Last Periodic Maintenance'] = now
         log.debug("periodic maintentance...")
         self.rc.zremrangebyscore("members", "-inf", now)
@@ -548,7 +543,7 @@ class RedisStore(StoreBase):
         return self.rc.smembers("#attributes")
 
     def attribute(self, an):
-        return self.rc.zrangebyscore("%s#values" % an, _now(), "+inf")
+        return self.rc.zrangebyscore("%s#values" % an, ts_now(), "+inf")
 
     def collections(self):
         return self.rc.smembers("#collections")
@@ -558,7 +553,7 @@ class RedisStore(StoreBase):
         relt = root(t)
         ne = 0
         if ts is None:
-            ts = int(_now() + 3600 * 24 * 4)  # 4 days is the arbitrary default expiration
+            ts = int(ts_now() + 3600 * 24 * 4)  # 4 days is the arbitrary default expiration
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('entityID')
@@ -602,7 +597,7 @@ class RedisStore(StoreBase):
     def _members(self, k):
         mem = []
         if self.rc.exists("%s#members" % k):
-            for entity_id in self.rc.zrangebyscore("%s#members" % k, _now(), "+inf"):
+            for entity_id in self.rc.zrangebyscore("%s#members" % k, ts_now(), "+inf"):
                 mem.extend(self.lookup(entity_id))
         return mem
 
@@ -639,4 +634,4 @@ class RedisStore(StoreBase):
             return self._members(key)
 
     def size(self):
-        return self.rc.zcount("entities#members", _now(), "+inf")
+        return self.rc.zcount("entities#members", ts_now(), "+inf")

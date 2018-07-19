@@ -33,6 +33,7 @@ import requests
 from requests_file import FileAdapter
 from requests_cache import CachedSession
 import base64
+import time
 from . import __version__
 
 __author__ = 'leifj'
@@ -151,6 +152,10 @@ def iso_fmt(tstamp=None):
 Timestamp in ISO format
     """
     return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(tstamp))
+
+
+def ts_now():
+    return int(time.time())
 
 
 def iso2datetime(s):
@@ -615,3 +620,8 @@ def img_to_data(data, mime_type):
     """Convert a file (specified by a path) into a data URI."""
     data64 = u''.join(base64.encodestring(data).splitlines())
     return u'data:%s;base64,%s' % (mime_type, data64)
+
+
+def short_id(data):
+    hasher = hashlib.sha1(data)
+    return base64.urlsafe_b64encode(hasher.digest()[0:10]).rstrip('=')
