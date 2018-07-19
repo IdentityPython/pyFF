@@ -32,13 +32,6 @@ class MDRepository():
         self.store_class = load_callable(config.store_class)
         self.store = None
 
-    def sane(self):
-        """A very basic test for sanity. An empty metadata set is probably not a sane output of any process.
-
-:return: True iff there is at least one EntityDescriptor in the active set.
-        """
-        return len(self.store.collections()) > 0
-
     def _lookup(self, member, store=None):
         if store is None:
             store = self.store
