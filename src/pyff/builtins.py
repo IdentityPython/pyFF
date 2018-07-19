@@ -157,6 +157,8 @@ active document. To avoid this do a select before your fork, thus:
                 sn = opts[-1]
             req.md.merge(req.t, ireq.t, strategy_name=sn)
 
+    return req.t
+
 
 @pipe(name='any')
 def _any(lst, d):
