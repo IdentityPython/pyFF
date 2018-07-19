@@ -8,15 +8,11 @@
     - break
 - when update:
     - load:
-       - http://mds.swamid.se/md/swamid-2.0.xml via swamid
+       - http://mds.swamid.se/md/swamid-2.0.xml via swamid as SWAMID
     - select
     - fork and merge:
-       - select: "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
-       - setattr:
-            http://pyff.io/collection: swamid-2.0
-    - fork and merge:
         - select:
-            - "http://pyff.io/collection=swamid-2.0+http://pyff.io/role=idp"
+            - "http://pyff.io/role=idp"
         - setattr:
             http://pyff.io/collection: swamid-idp
     - fork:
