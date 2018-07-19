@@ -25,7 +25,8 @@ from .logs import log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .stats import set_metadata_info
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, validate_document
-from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, discojson, set_pubinfo, set_reginfo
+from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
+    discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor
 from .fetch import Resource
 from six import StringIO
 from six.moves.urllib_parse import urlparse
@@ -155,7 +156,7 @@ active document. To avoid this do a select before your fork, thus:
             sn = "pyff.merge_strategies:replace_existing"
             if opts[-1] != 'merge':
                 sn = opts[-1]
-            req.md.merge(req.t, ireq.t, strategy_name=sn)
+            req.md.store.merge(req.t, ireq.t, strategy_name=sn)
 
     return req.t
 
@@ -600,7 +601,7 @@ alias invisible for anything except the corresponding mime type.
             name = opts[1]
             alias = True
 
-    ot = req.md.entity_set(args, name)
+    ot = entitiesdescriptor(args, name, lookup_fn=req.md.lookup)
     if ot is None:
         raise PipeException("empty select - stop")
 
@@ -648,10 +649,7 @@ def _filter(req, *opts):
     if args is None or not args:
         args = []
 
-    def _find(member):
-        return req.md.find(req.t, member)
-
-    ot = req.md.entity_set(args, name, lookup_fn=_find, copy=False)
+    ot = entitiesdescriptor(args, name, lookup_fn=lambda member: find_in_document(req.t, member), copy=False)
     if alias:
         nfo = dict(Status='default', Description="Synthetic collection")
         n = req.store.update(ot, name)
@@ -679,7 +677,7 @@ Select a set of EntityDescriptor elements as a working document but don't valida
 Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information about selecting the document.
     """
     args = _select_args(req)
-    ot = req.md.entity_set(args, req.plumbing.id, validate=False)
+    ot = entitiesdescriptor(args, req.plumbing.id, lookup_fn=req.md.lookup, validate=False)
     if ot is None:
         raise PipeException("empty select '%s' - stop" % ",".join(args))
     return ot

@@ -400,6 +400,21 @@ def entity_attributes(entity):
     return d
 
 
+def find_in_document(t, member):
+    relt = root(t)
+    if type(member) is str or type(member) is unicode:
+        if '!' in member:
+            (src, xp) = member.split("!")
+            return relt.xpath(xp, namespaces=NS, smart_strings=False)
+        else:
+            lst = []
+            for e in iter_entities(relt):
+                if e.get('entityID') == member:
+                    lst.append(e)
+            return lst
+    raise MetadataException("unknown format for filtr member: %s" % member)
+
+
 def entity_attribute_dict(entity):
     d = {}
 

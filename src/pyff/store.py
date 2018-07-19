@@ -7,10 +7,14 @@ from redis import Redis
 from .constants import NS, ATTRS, ATTRS_INV
 from .decorators import cached
 from .logs import log
-from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts
-from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_info, object_id
+from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, avg_domain_distance
+from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_info, \
+    object_id, find_merge_strategy, find_entity, entity_simple_summary
 from whoosh.fields import Schema, TEXT, ID, KEYWORD, STORED, BOOLEAN
 from whoosh import writing
+from . import merge_strategies
+import ipaddr
+import operator
 import six
 
 def _now():
@@ -49,6 +53,143 @@ class StoreBase(object):
 
     def entity_ids(self):
         return set(e.get('entityID') for e in self.lookup('entities'))
+
+    def merge(self, t, nt, strategy=merge_strategies.replace_existing, strategy_name=None):
+        """
+:param t: The EntitiesDescriptor element to merge *into*
+:param nt:  The EntitiesDescriptor element to merge *from*
+:param strategy: A callable implementing the merge strategy pattern
+:param strategy_name: The name of a strategy to import. Overrides the callable if present.
+:return:
+
+Two EntitiesDescriptor elements are merged - the second into the first. For each element
+in the second collection that is present (using the @entityID attribute as key) in the
+first the strategy callable is called with the old and new EntityDescriptor elements
+as parameters. The strategy callable thus must implement the following pattern:
+
+:old_e: The EntityDescriptor from t
+:e: The EntityDescriptor from nt
+:return: A merged EntityDescriptor element
+
+Before each call to strategy old_e is removed from the MDRepository index and after
+merge the resultant EntityDescriptor is added to the index before it is used to
+replace old_e in t.
+        """
+        if strategy_name is not None:
+            strategy = find_merge_strategy(strategy_name)
+
+        for e in iter_entities(nt):
+            entity_id = e.get("entityID")
+            # we assume ddup:ed tree
+            old_e = find_entity(t, entity_id)
+            new = strategy(old_e, e)
+            if new is not None:
+                self.update(new)
+
+
+    def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None, related=None):
+        """
+:param query: A string to search for.
+:param path: The repository collection (@Name) to search in - None for search in all collections
+:param page:  When using paged search, the page index
+:param page_limit: When using paged search, the maximum entry per page
+:param entity_filter: An optional lookup expression used to filter the entries before search is done.
+:param related: an optional '+'-separated list of related domain names for prioritizing search results
+
+Returns a list of dict's for each EntityDescriptor present in the metadata store such
+that any of the DisplayName, ServiceName, OrganizationName or OrganizationDisplayName
+elements match the query (as in contains the query as a substring).
+
+The dict in the list contains three items:
+
+:title: A displayable string, useful as a UI label
+:value: The entityID of the EntityDescriptor
+:id: A sha1-ID of the entityID - on the form {sha1}<sha1-hash-of-entityID>
+        """
+
+        match_query = bool(len(query) > 0)
+
+        if isinstance(query, basestring):
+            query = [query.lower()]
+
+        def _strings(elt):
+            lst = []
+            for attr in ['{%s}DisplayName' % NS['mdui'],
+                         '{%s}ServiceName' % NS['md'],
+                         '{%s}OrganizationDisplayName' % NS['md'],
+                         '{%s}OrganizationName' % NS['md'],
+                         '{%s}Keywords' % NS['mdui'],
+                         '{%s}Scope' % NS['shibmd']]:
+                lst.extend([s.text for s in elt.iter(attr)])
+            lst.append(elt.get('entityID'))
+            return filter(lambda item: item is not None, lst)
+
+        def _ip_networks(elt):
+            return [ipaddr.IPNetwork(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
+
+        def _match(qq, elt):
+            for q in qq:
+                q = q.strip()
+                if ':' in q or '.' in q:
+                    try:
+                        nets = _ip_networks(elt)
+                        for net in nets:
+                            if ':' in q and ipaddr.IPv6Address(q) in net:
+                                return net
+                            if '.' in q and ipaddr.IPv4Address(q) in net:
+                                return net
+                    except ValueError:
+                        pass
+
+                if q is not None and len(q) > 0:
+                    tokens = _strings(elt)
+                    for tstr in tokens:
+                        for tpart in tstr.split():
+                            if tpart.lower().startswith(q):
+                                return tstr
+            return None
+
+        f = []
+        if path is not None and path not in f:
+            f.append(path)
+        if entity_filter is not None and entity_filter not in f:
+            f.append(entity_filter)
+        mexpr = None
+        if f:
+            mexpr = "+".join(f)
+
+        log.debug("match using '%s'" % mexpr)
+        res = []
+        for e in self.lookup(mexpr):
+            d = None
+            if match_query:
+                m = _match(query, e)
+                if m is not None:
+                    d = entity_simple_summary(e)
+                    ll = d['title'].lower()
+                    d['matched'] = m
+            else:
+                d = entity_simple_summary(e)
+
+            if d is not None:
+                if related is not None:
+                    d['ddist'] = avg_domain_distance(related, d['domains'])
+                else:
+                    d['ddist'] = 0
+
+                res.append(d)
+
+        res.sort(key=operator.itemgetter('title'))
+        res.sort(key=operator.itemgetter('ddist'), reverse=True)
+
+        if page is not None:
+            total = len(res)
+            begin = (page - 1) * page_limit
+            end = begin + page_limit
+            more = (end < total)
+            return res[begin:end], more, total
+        else:
+            return res
 
 
 class WhooshStore(StoreBase):

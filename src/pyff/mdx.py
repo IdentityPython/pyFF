@@ -430,14 +430,16 @@ Search the active set for matching entities.
         """
         cherrypy.response.headers['Content-Type'] = 'application/json'
         if paged:
-            res, more, total = self.server.md.search(query,
-                                                     page=int(page),
-                                                     page_limit=int(page_limit),
-                                                     entity_filter=entity_filter,
-                                                     related=related)
+            res, more, total = self.server.md.store.search(query,
+                                                           page=int(page),
+                                                           page_limit=int(page_limit),
+                                                           entity_filter=entity_filter,
+                                                           related=related)
             return dumps({'entities': res, 'more': more, 'total': total})
         else:
-            return dumps(self.server.md.search(query, entity_filter=entity_filter, related=related))
+            return dumps(self.server.md.store.search(query,
+                                                     entity_filter=entity_filter,
+                                                     related=related))
 
     @cherrypy.expose
     def index(self):
@@ -629,19 +631,19 @@ class MDServer(object):
                     log.debug("created query: %s" % ",".join(query))
 
                 if paged:
-                    res, more, total = self.md.search(query,
-                                                      path=q,
-                                                      page=int(page),
-                                                      page_limit=int(page_limit),
-                                                      entity_filter=entity_filter,
-                                                      related=related)
+                    res, more, total = self.md.store.search(query,
+                                                            path=q,
+                                                            page=int(page),
+                                                            page_limit=int(page_limit),
+                                                            entity_filter=entity_filter,
+                                                            related=related)
                     # log.debug(dumps({'entities': res, 'more': more, 'total': total}))
                     return dumps({'entities': res, 'more': more, 'total': total})
                 else:
-                    return dumps(self.md.search(query,
-                                                path=q,
-                                                entity_filter=entity_filter,
-                                                related=related))
+                    return dumps(self.md.store.search(query,
+                                                      path=q,
+                                                      entity_filter=entity_filter,
+                                                      related=related))
             elif accept.get('text/html'):
                 if not q:
                     if pfx:

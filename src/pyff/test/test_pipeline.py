@@ -18,6 +18,7 @@ from pyff.test import SignerTestCase
 from pyff.utils import hash_id, parse_xml, resource_filename, root
 from pyff.parse import ParserException
 from pyff.fetch import ResourceException
+import pyff.builtins
 
 __author__ = 'leifj'
 
