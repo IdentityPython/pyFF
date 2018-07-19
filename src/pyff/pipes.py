@@ -118,7 +118,7 @@ A delayed pipeline callback used as a post for parse_saml_metadata
         self.store = store
 
     def __call__(self, *args, **kwargs):
-        log.debug("called %s" % repr(self.plumbing))
+        log.debug("{!s}: called".format(self.plumbing))
         t = args[0]
         if t is None:
             raise ValueError("PipelineCallback must be called with a parse-tree argument")
@@ -174,7 +174,7 @@ would then be signed (using signer.key) and finally published in /var/metadata/p
         return self.pipeline
 
     def __str__(self):
-        return "PL[{}]".format(self.pid)
+        return "PL[id={!s}]".format(self.pid)
 
     class Request(object):
         """
@@ -212,8 +212,7 @@ may modify any of the fields.
             """
             for p in pl.pipeline:
                 cb, opts, name, args = load_pipe(p)
-                log.debug("calling '{}' in {} using args: {} and opts: {}".format(name, pl, repr(args), repr(opts)))
-                # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
+                log.debug("{!s}: calling '{}' using args: {} and opts: {}".format(pl, name, repr(args), repr(opts)))
                 if type(args) is str or type(args) is unicode:
                     args = [args]
                 if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
