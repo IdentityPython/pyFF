@@ -6,7 +6,7 @@ import os
 from pyff.constants import NS
 from pyff.mdrepo import MDRepository
 from pyff.utils import resource_filename, parse_xml, root, hash_id, MetadataException
-from pyff.samlmd import set_entity_attributes, is_idp, is_sp, entity_icon, \
+from pyff.samlmd import set_entity_attributes, is_idp, is_sp, entity_icon_url, \
     entity_domains, entity_extended_display, entity_display_name, entity_simple_summary, \
     metadata_expiration, annotate_entity, sha1_id
 
@@ -52,7 +52,7 @@ class TestRepo(TestCase):
         e = self.md.lookup(entity_id)[0]
         assert (is_idp(e))
         assert (not is_sp(e))
-        icon = entity_icon(e)
+        icon = entity_icon_url(e)
         assert ('url' in icon)
         assert ('https://www.example.com/static/images/umu_logo.jpg' in icon['url'])
         assert ('width' in icon)
