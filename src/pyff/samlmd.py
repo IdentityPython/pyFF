@@ -692,6 +692,10 @@ def entity_nameid_formats(entity):
     return [nif.text for nif in entity.iter("{%s}NameIDFormat" % NS['md'])]
 
 
+def object_id(e):
+    return e.get('entityID')
+
+
 def entity_info(e, langs=None):
     d = entity_simple_summary(e)
     keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
@@ -707,7 +711,7 @@ def entity_info(e, langs=None):
     d['service_name'] = entity_service_name(e, langs)
     d['service_descr'] = entity_service_description(e, langs)
     d['requested_attributes'] = entity_requested_attributes(e, langs)
-    d['entity_attributes'] = entity_attributes(e)
+    d['entity_attributes'] = entity_attribute_dict(e)
     d['contacts'] = entity_contacts(e)
     d['name_id_formats'] = entity_nameid_formats(e)
     d['is_idp'] = is_idp(e)
