@@ -4,12 +4,14 @@ import time
 from copy import deepcopy
 import re
 from redis import Redis
-from .constants import NS, ATTRS
+from .constants import NS, ATTRS, ATTRS_INV
 from .decorators import cached
 from .logs import log
 from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts
-from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp
-
+from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_info, object_id
+from whoosh.fields import Schema, TEXT, ID, KEYWORD, STORED, BOOLEAN
+from whoosh import writing
+import six
 
 def _now():
     return int(time.time())
@@ -47,6 +49,149 @@ class StoreBase(object):
 
     def entity_ids(self):
         return set(e.get('entityID') for e in self.lookup('entities'))
+
+
+class WhooshStore(StoreBase):
+
+    def __init__(self):
+        self.schema = Schema(scopes=KEYWORD(),
+                             descr=TEXT(),
+                             service_name=TEXT(),
+                             service_descr=TEXT(),
+                             keywords=KEYWORD())
+        self.schema.add("object_id", ID(stored=True, unique=True))
+        self.schema.add("entity_id", ID(stored=True, unique=True))
+        for a in ATTRS.keys():
+            self.schema.add(a, KEYWORD())
+        self._collections = set()
+        from whoosh.filedb.filestore import RamStorage, FileStorage
+        self.storage = RamStorage()
+        self.storage.create()
+        self.index = self.storage.create_index(self.schema)
+        self.objects = dict()
+        self.infos = dict()
+
+    def dump(self):
+        ix = self.storage.open_index()
+        print(ix.schema)
+        from whoosh.query import Every
+        with ix.searcher() as searcher:
+            for result in ix.searcher().search(Every('object_id')):
+                print(result)
+
+    def _index_prep(self, info):
+        if 'entity_attributes' in info:
+            for a,v in info.pop('entity_attributes').items():
+                info[a] = v
+        for a,v in info.items():
+            if type(v) is not list and type(v) is not tuple:
+               info[a] = [info.pop(a)]
+
+            if a in ATTRS_INV:
+                info[ATTRS_INV[a]] = info.pop(a)
+
+        for a in info.keys():
+            if not a in self.schema.names():
+                del info[a]
+
+        for a,v in info.items():
+            info[a] = [six.text_type(vv) for vv in v]
+
+    def _index(self, e, tid=None):
+        info = entity_info(e)
+        if tid is not None:
+            info['collection_id'] = tid
+        self._index_prep(info)
+        id = six.text_type(object_id(e))
+        # mix in tid here
+        self.infos[id] = info
+        self.objects[id] = e
+        ix = self.storage.open_index()
+        with ix.writer() as writer:
+            writer.add_document(object_id=id, **info)
+            writer.mergetype = writing.CLEAR
+
+    def update(self, t, tid=None, ts=None, merge_strategy=None):
+        relt = root(t)
+        assert (relt is not None)
+        ne = 0
+
+        if relt.tag == "{%s}EntityDescriptor" % NS['md']:
+            self._index(relt)
+            ne += 1
+        elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
+            if tid is None:
+                tid = relt.get('Name')
+            self._collections.add(tid)
+            for e in iter_entities(t):
+                self._index(e, tid=tid)
+                ne += 1
+
+        return ne
+
+    def collections(self):
+        return self._collections
+
+    def reset(self):
+        self.__init__()
+
+    def size(self, a=None, v=None):
+        if a is None:
+            return len(self.objects.keys())
+        elif a is not None and v is None:
+            return len(self.attribute(a))
+        else:
+            return len(self.lookup("{!s}={!s}".format(a,v)))
+
+    def _attributes(self):
+        ix = self.storage.open_index()
+        with ix.reader() as reader:
+            for n in reader.indexed_field_names():
+                if n in ATTRS:
+                    yield ATTRS[n]
+
+    def attributes(self):
+        return list(self._attributes())
+
+    def attribute(self, a):
+        if a in ATTRS_INV:
+            n = ATTRS_INV[a]
+            ix = self.storage.open_index()
+            with ix.searcher() as searcher:
+                return list(searcher.lexicon(n))
+        else:
+            return []
+
+    def lookup(self, key, raw=True, field="entity_id"):
+        if key == 'entities' or key is None:
+            if raw:
+                return self.objects.values()
+            else:
+                return self.infos.values()
+
+        from whoosh.qparser import QueryParser
+        #import pdb; pdb.set_trace()
+        key = key.strip('+')
+        key = key.replace('+', ' AND ')
+        for uri,a in ATTRS_INV.items():
+            key = key.replace(uri,a)
+        key = " {!s} ".format(key)
+        key = re.sub("([^=]+)=(\S+)","\\1:\\2",key)
+        key = re.sub("{([^}]+)}(\S+)", "\\1:\\2", key)
+        key = key.strip()
+
+        qp = QueryParser("object_id", schema=self.schema)
+        q = qp.parse(key)
+        lst = set()
+        with self.index.searcher() as searcher:
+            results = searcher.search(q,limit=None)
+            for result in results:
+                if raw:
+                    lst.add(self.objects[result['object_id']])
+                else:
+                    lst.add(self.infos[result['object_id']])
+
+        return list(lst)
 
 
 class MemoryStore(StoreBase):
