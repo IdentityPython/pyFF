@@ -592,6 +592,9 @@ def url_get(url):
     """
     s = None
     info = dict()
+
+    log.debug("GET URL {!s}".format(url))
+
     if 'file://' in url:
         s = requests.session()
         s.mount('file://', FileAdapter())
