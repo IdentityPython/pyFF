@@ -17,9 +17,9 @@ class TestDuration(TestCase):
     def test_duration2timedelta(self):
         for expr, secs in TestDuration.DURATIONS:
             td = duration2timedelta(expr)
-            print "timedelta: %s" % td
-            print "duration: %s" % expr
-            print "expected seconds: %s" % secs
+            print("timedelta: %s" % td)
+            print("duration: %s" % expr)
+            print("expected seconds: %s" % secs)
             assert(int(td.total_seconds()) == secs)
             assert(int(total_seconds(td)) == secs)
 
@@ -40,6 +40,4 @@ class TestISO(TestCase):
         iso = iso_fmt(totimestamp(now))
         other_now = iso2datetime(iso)
         other_now = other_now.replace(tzinfo=None)
-        print now
-        print other_now
         assert ((other_now - now).total_seconds() < 0.1)

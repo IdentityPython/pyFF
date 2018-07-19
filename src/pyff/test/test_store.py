@@ -228,7 +228,6 @@ class TestMemoryStore(TestCase):
         store.update(self.test01)
         entity_id = root(self.test01).get('entityID')
         e = store.lookup("%s=%s+%s=%s" % (ATTRS['domain'], 'example.com', ATTRS['role'], 'idp'))
-        print e
         assert (len(e) == 1)
         assert (e[0] is not None)
         assert (e[0].get('entityID') is not None)
@@ -239,7 +238,6 @@ class TestMemoryStore(TestCase):
         store.update(self.test01)
         entity_id = root(self.test01).get('entityID')
         e = store.lookup("%s=%s+%s=%s" % (ATTRS['domain'], 'example.com', ATTRS['role'], 'sp'))
-        print e
         assert (len(e) == 0)
 
 
