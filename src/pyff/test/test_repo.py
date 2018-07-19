@@ -115,7 +115,6 @@ class TestRepo(TestCase):
         assert(name == 'FUNET E-Meeting Service')
         dn = entity_extended_display(funet_connect)
 
-
     def test_missing(self):
         swamid = root(self.swamid)
         self.md.store.update(swamid, swamid.get('Name'))
