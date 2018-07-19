@@ -50,7 +50,15 @@
                                     <td>
                                         <ul class="list-unstyled">
                                             {% for c in resource.children %}
-                                            <li><a href="#{{c.url|sha1}}">{{c.url|truncate(60)}}</a></li>
+                                            <li>
+                                                <b><a href="#{{c.url|sha1}}">{{c.url|truncate(60)}}</a></b>
+                                                <dl class="row container">
+                                                    {% for k,v in c.opts.items() %}
+                                                    <dt class="col-md-4">{{k}}</dt>
+                                                    <dd class="col-md-8">{{v}}</dd>
+                                                    {% endfor %}
+                                                </dl>
+                                            </li>
                                             {% endfor %}
                                         </ul>
                                     </td>
