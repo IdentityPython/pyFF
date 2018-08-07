@@ -150,11 +150,6 @@ class SAMLMetadataResourceParser():
         return info
 
 
-from .parse import add_parser
-
-add_parser(SAMLMetadataResourceParser())
-
-
 def metadata_expiration(t):
     relt = root(t)
     if relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
