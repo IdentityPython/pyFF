@@ -602,7 +602,7 @@ alias invisible for anything except the corresponding mime type.
             name = opts[1]
             alias = True
 
-    ot = entitiesdescriptor(args, name, lookup_fn=req.md.lookup)
+    ot = entitiesdescriptor(args, name, lookup_fn=req.md.select)
     if ot is None:
         raise PipeException("empty select - stop")
 
@@ -678,7 +678,7 @@ Select a set of EntityDescriptor elements as a working document but don't valida
 Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information about selecting the document.
     """
     args = _select_args(req)
-    ot = entitiesdescriptor(args, req.plumbing.id, lookup_fn=req.md.lookup, validate=False)
+    ot = entitiesdescriptor(args, req.plumbing.id, lookup_fn=req.md.select, validate=False)
     if ot is None:
         raise PipeException("empty select '%s' - stop" % ",".join(args))
     return ot

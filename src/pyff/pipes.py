@@ -196,9 +196,6 @@ may modify any of the fields.
             self.done = False
             self._store = store
 
-        def lookup(self, member):
-            return self.md.lookup(member, store=self.store)
-
         @property
         def store(self):
             if self._store:
