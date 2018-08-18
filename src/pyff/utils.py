@@ -36,6 +36,8 @@ import base64
 import time
 from . import __version__
 
+etree.set_default_parser(etree.XMLParser(resolve_entities=False))
+
 __author__ = 'leifj'
 
 sentinel = object()

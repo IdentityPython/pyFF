@@ -19,12 +19,6 @@ class MDRepository():
     """
 
     def __init__(self):
-        # if not isinstance(self.min_cache_ttl, int):
-        #     try:
-        #         self.min_cache_ttl = duration2timedelta(self.min_cache_ttl).total_seconds()
-        #     except Exception as ex:
-        #         log.error(ex)
-        #         self.min_cache_ttl = 300
         self.rm = ResourceManager()
         self.store = None
 
