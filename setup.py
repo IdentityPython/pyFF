@@ -34,7 +34,8 @@ install_requires = [
     'pyconfig',
     'pyyaml',
     'multiprocess',
-    'minify'
+    'minify',
+    'whoosh'
 ]
 
 python_implementation_str = python_implementation()
