@@ -4,7 +4,7 @@ window.OneClickDiscoveryComponent = zoid.create({
     tag: 'my-onclick-component',
 
     url: {
-    	current: '/oneclick'
+    	current: '{{scheme}}://{{vhost}}/oneclick/oneclick.js'
     },
     defaultEnv: 'current',
 

@@ -160,6 +160,33 @@ class EncodingDispatcher(object):
         return self.next_dispatcher(vpath)
 
 
+class ZoidComponent(object):
+    """
+    Serves up a zoid component
+    """
+
+    def __init__(self, name):
+        self.name = name
+
+    @cherrypy.expose()
+    @cherrypy.tools.expires(secs=3600, debug=True)
+    def component_html(self):
+        """
+        The zoid component iframe
+        """
+
+        return render_template("{}/{}.html".format(self.name,self.name))
+
+    @cherrypy.expose()
+    @cherrypy.tools.expires(secs=3600, debug=True)
+    def component_js(self):
+        """
+        The zoid component javascript
+        """
+
+        return render_template("{}/{}.js".format(self.name,self.name))
+
+
 class MDStats(StatsPage):
     """Renders the standard stats page with pyFF style decoration. We use the lxml html parser to locate the
     body and replace it with a '<div>'. The result is passed as the content using the 'basic' template.
@@ -323,6 +350,7 @@ class MDRoot(object):
             memory = NotImplementedFunction('Memory profiling needs dowser')
 
     _well_known = WellKnown()
+    oneclick = ZoidComponent("onelick")
     static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
 
     @cherrypy.expose
@@ -363,15 +391,6 @@ Disallow: /
 
         entity_id = cherrypy.request.params.get('entity_id')
         return render_template("storage.html")
-
-    @cherrypy.expose()
-    @cherrypy.tools.expires(secs=3600, debug=True)
-    def oneclick(self):
-        """
-        The oneclick discovery zoid component iframe
-        """
-
-        return render_template("oneclick.html")
 
     @cherrypy.expose
     def favicon_ico(self):
