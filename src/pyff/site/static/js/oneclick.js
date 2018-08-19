@@ -4,7 +4,6 @@ window.OneClickDiscoveryComponent = zoid.create({
     tag: 'my-onclick-component',
 
     url: {
-        local: 'http://localhost:8080/oneclick',
     	current: '/oneclick'
     },
     defaultEnv: 'current',
