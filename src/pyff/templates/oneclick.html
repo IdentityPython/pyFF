@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-material-design/4.0.2/bootstrap-material-design.css" />
+    <link rel="stylesheet" href="/static/css/oneclick.css" />
+    <link href="//fonts.googleapis.com/css?family=Roboto:100,200,300,400,500,600,700" type="text/css" rel="stylesheet">
+    
+    <!-- Pull in zoid and the 'findinstitution' zoid component -->
+    <script src="/static/js/dist/zoid.min.js"></script>
+    <script src="/static/js/oneclick.js"></script>
+    
+    <!-- remote local storage entityID discovery - start -->
+	<script type="text/javascript">
+	  /**
+	   * Constructs a WAYFLess URL
+	   * @param {String} entityId entityID value
+	   * @return {String} url WAYFLess URL as a string
+	   */
+	    function getWayfLessUrl(entityId) {
+		    return "https://auth.elsevier.com/ShibAuth/institutionLogin?entityID="
+		      + encodeURIComponent(entityId)
+		      + "&appReturnURL=http%3A%2F%2Fwww.sciencedirect.com%2Fscience";
+	    }
+  	</script>
+<!-- remote local storage entityID discovery - end -->	
+</head>
+
+<body>
+    <!-- Set up Access Through Your institution -->
+    <form id="axButtonForm">
+    	<div id="CTAcnt" class="CTAcontainer">
+    		<div class="logobox"><img id="instLogo" width="32" height="32" src=""></div>
+    		<div class="orgNameWidget" id="instWidgetV"></div>
+    	</div>
+    </form>
+
+    <svg id="spinner" class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+        <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle>
+    </svg>
+    
+    <script>
+		// assuming the component is hosted in the domain where the localstorage from Discovery service is
+		// we should be able to directly load the localstorage
+		var storage_key = 'pyff_discovery_choices';
+		let storageObjects = localStorage.getItem(storage_key) ? JSON.parse(localStorage.getItem(storage_key)) : [];
+		var j = 0;
+		var inst = "";
+		var navReturnURL = ""; // will lead to directing the user to 'check access' via a discovery service
+		var entityID = ""; // an empty value will results in using the defaultText value.
+		var defaultText = "Check Access";
+		var boxColor = "blue";
+		var icon = "/static/icons/panth2.png";
+		var dsURL = 'http://discovery.service/url'; // discovery service URL (here would be the default value, this is overwritten)
+		
+		// Modify the default institutional icon if we're passed the parameter 'defaultIcon'
+	    if (window.xprops.DefaultInstIcon) {
+	 	   icon = window.xprops.DefaultInstIcon;
+	    }
+		// Modify defaultText base on the properties defined in the Zoid component
+		if (window.xprops.DefaultText) {
+			defaultText = window.xprops.DefaultText;
+	    }
+	    document.getElementById('instLogo').src = icon;
+		
+     	// Modify the returnURL if we're passed the parameter 'returnURL'
+        if (window.xprops.returnURL) {
+        	navReturnURL = window.xprops.returnURL;
+        }
+     	
+     // Modify the returnURL if we're passed the parameter 'returnURL'
+        if (window.xprops.dsURL) {
+        	dsURL = window.xprops.dsURL;
+        }
+        
+     	// extract the first (most recent) institution from the P3W cross-domain local Storage
+		for (i in storageObjects) {
+			j = j + 1;
+			obj = storageObjects[i];
+			if (j > 1) {break;}
+			entityID = obj.entity.entityID;
+			inst += "<a target=\"_blank\" class=\"orgNameURL\" href=\"" + getWayfLessUrl(entityID) + "\">" 
+			+ obj.entity.title + "</a>";
+		 }
+		 // If we haven't found any institution, display a 'Check Access' to the discovery service
+		 if (j == 0) {
+			 inst = '<a class="orgNameURL" href="">' + defaultText + '</a>';
+		 }
+		 document.getElementById('instWidgetV').innerHTML = inst;
+		 
+		 // Modify the default button background color if we're passed the parameter 'boxColor'
+	     if (window.xprops.boxColor) {
+	      	document.getElementById('instWidgetV').style.backgroundColor = window.xprops.boxColor;
+	      	document.getElementById('CTAcnt').style.backgroundColor = window.xprops.boxColor;
+	     }
+
+        // Hide the loading spinner by default
+        document.querySelector('#spinner').style.display = 'none';
+        
+        // Handle the button click to redirect the user to DS service or sign in via the Identity Provider
+        document.querySelector('#instWidgetV').addEventListener('click', function(event) {
+            event.preventDefault();
+
+            // Hide the axButtonForm form and replace it with a spinner
+            document.querySelector('#axButtonForm').style.display = 'none';
+            document.querySelector('#spinner').style.display = 'inline-block';
+
+            // Pretend to make an ajax call - could be re-written more simply? -
+            setTimeout(function() {
+
+                // Since we had a click, call-back the parent page to let them know the entityID
+                window.xprops.onInstitutionClicked(entityID);
+                window.xchild.close();
+
+            }, 100);
+        });
+    </script>
+    
+</body>
+</html>

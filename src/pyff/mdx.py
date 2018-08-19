@@ -364,6 +364,15 @@ Disallow: /
         entity_id = cherrypy.request.params.get('entity_id')
         return render_template("storage.html")
 
+    @cherrypy.expose()
+    @cherrypy.tools.expires(secs=3600, debug=True)
+    def oneclick(self):
+        """
+        The oneclick discovery zoid component iframe
+        """
+
+        return render_template("oneclick.html")
+
     @cherrypy.expose
     def favicon_ico(self):
         """Returns the pyff icon (the alchemic symbol for sublimation).

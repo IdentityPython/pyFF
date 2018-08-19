@@ -1,0 +1,123 @@
+/*   Custom CSS style - triggering the Layout of the CTA */
+
+html, body {
+    overflow: hidden;
+}
+
+body {
+    text-align: center;
+    border: 1px solid #fff;
+    background-color: white;
+    height: 100%;
+    width: 100%;
+}
+
+.CTAcontainer {
+	margin: auto;
+	border-radius: 5px;
+	border: 0px;
+	background-color: blue;
+	width: 290px;
+	height: 50px;
+	box-shadow: rgba(0,0,0,0.4) 5px 5px;
+}
+.orgNameWidget {
+    float: right;
+    position: relative;
+    text-align: center;
+    margin: 0 auto;
+    word-wrap: break-word;
+    border-radius: 5px;
+    border:1px solid #ffa50000;
+    background-color:blue;
+    width: 250px;
+    height: 50px;
+    font-family: 'Roboto-Regular', 'Roboto';
+    font-weight: 400;
+    font-style: normal;
+    font-size: 16px;
+    color: #FFFFFF;
+}
+.orgNameURL {
+    word-wrap: break-word;
+    font-family: 'Roboto-Regular', 'Roboto';
+    font-weight: 400;
+    font-style: normal;
+    font-size: 16px;
+    color: #FFFFFF;
+    margin: 0;
+   	position: absolute;
+   	top: 50%;
+   	transform: translate(-50%, -50%);
+   	width: 100%;
+}
+
+/* specific style for IE 10+ starts here */
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+/* IE10+ CSS styles go here */
+	a.orgNameURL{
+		position:relative; /* fixing a float:right bug in IE11 */
+	}
+} /* specific style for IE 10+ ends here */
+
+.logobox {
+	float: left;
+    border: 0px;
+    margin: 0;
+    position: absolute;
+	top: 16px;
+	padding: 4px;
+}
+img#instLogo {
+	margin: 0;
+    position: absolute;
+}
+form, input, button {
+    text-align: center;
+    margin-top: 10px;
+}
+
+input {
+    text-align: left;
+    padding-left: 10px;
+}
+
+.spinner {
+    animation: rotator 1.4s linear infinite;
+    display: inline-block;
+    margin-top: 40px;
+}
+
+@keyframes rotator {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(270deg); }
+}
+
+.path {
+    stroke-dasharray: 187;
+    stroke-dashoffset: 0;
+    transform-origin: center;
+    animation:
+            dash 1.4s ease-in-out infinite,
+            colors 5.6s ease-in-out infinite;
+}
+
+@keyframes colors {
+    0% { stroke: #4285F4; }
+    25% { stroke: #DE3E35; }
+    50% { stroke: #F7C223; }
+    75% { stroke: #1B9A59; }
+    100% { stroke: #4285F4; }
+}
+
+@keyframes dash {
+    0% { stroke-dashoffset:187; }
+    50% {
+        stroke-dashoffset: 47;
+        transform:rotate(135deg);
+    }
+    100% {
+        stroke-dashoffset: 187;
+        transform:rotate(450deg);
+    }
+}
