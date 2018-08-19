@@ -179,7 +179,7 @@ class ZoidComponent(object):
 
     @cherrypy.expose()
     @cherrypy.tools.expires(secs=3600, debug=True)
-    def component_js(self, **kwargs):
+    def component_js(self):
         """
         The zoid component javascript
         """
