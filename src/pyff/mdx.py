@@ -758,7 +758,7 @@ def main():
             elif o in ('--autoreload', '-a'):
                 config.autoreload = True
             elif o in '--frequency':
-                config.frequency = int(a)
+                config.update_frequency = int(a)
             elif o in ('-A', '--alias'):
                 (a, colon, uri) = a.partition(':')
                 assert (colon == ':')

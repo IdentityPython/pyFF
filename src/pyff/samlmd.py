@@ -12,6 +12,7 @@ from itertools import chain
 from copy import deepcopy
 from .exceptions import *
 from six import StringIO
+from requests import ConnectionError
 
 
 class EntitySet(object):
@@ -147,11 +148,6 @@ class SAMLMetadataResourceParser():
             resource.type = "application/samlmetadata+xml"
 
         return info
-
-
-from .parse import add_parser
-
-add_parser(SAMLMetadataResourceParser())
 
 
 def metadata_expiration(t):
@@ -586,7 +582,10 @@ def discojson(e, langs=None):
             break
 
         if '://' in url:
-            r = url_get(url)
+            try:
+                r = url_get(url)
+            except ConnectionError:
+                continue
             if r.ok and r.content:
                 d['entity_icon'] = img_to_data(r.content, r.headers.get('Content-Type'))
                 break
