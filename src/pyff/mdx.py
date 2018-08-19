@@ -170,7 +170,7 @@ class ZoidComponent(object):
 
     @cherrypy.expose()
     @cherrypy.tools.expires(secs=3600, debug=True)
-    def component_html(self):
+    def component_html(self, **kwargs):
         """
         The zoid component iframe
         """
@@ -179,7 +179,7 @@ class ZoidComponent(object):
 
     @cherrypy.expose()
     @cherrypy.tools.expires(secs=3600, debug=True)
-    def component_js(self):
+    def component_js(self, **kwargs):
         """
         The zoid component javascript
         """
