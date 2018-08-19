@@ -175,7 +175,7 @@ class ZoidComponent(object):
         The zoid component iframe
         """
 
-        return render_template("{}/{}.html".format(self.name,self.name))
+        return render_template("{}/component.html".format(self.name))
 
     @cherrypy.expose()
     @cherrypy.tools.expires(secs=3600, debug=True)
@@ -184,7 +184,9 @@ class ZoidComponent(object):
         The zoid component javascript
         """
 
-        return render_template("{}/{}.js".format(self.name,self.name))
+        js = render_template("{}/component.js".format(self.name)).encode("ascii")
+        cherrypy.response.headers['Content-Type'] = 'application/javascript'
+        return js
 
 
 class MDStats(StatsPage):
@@ -350,7 +352,7 @@ class MDRoot(object):
             memory = NotImplementedFunction('Memory profiling needs dowser')
 
     _well_known = WellKnown()
-    oneclick = ZoidComponent("onelick")
+    oneclick = ZoidComponent("oneclick")
     static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
 
     @cherrypy.expose
