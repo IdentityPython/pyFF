@@ -1,0 +1,42 @@
+- when normalize:
+    - xslt:
+       stylesheet: tidy.xsl
+    - break
+- when edugain:
+    - xslt:
+       stylesheet: tidy.xsl
+    - break
+- when update:
+    - load:
+       - http://mds.edugain.org via edugain
+    - select
+    - fork:
+        - select as /ndn:
+           - https://idp.nordu.net/idp/shibboleth
+        - break
+    - break
+- when request:
+    - select
+    - pipe:
+        - when accept application/xml:
+             - pipe:
+                 - when path /md/swamid-kalmar-1.0:
+                     - xslt:
+                        stylesheet: kalmar2.xsl
+                     - break
+
+             - xslt:
+                 stylesheet: tidy.xsl
+             - first
+             - finalize:
+                cacheDuration: PT5H
+                validUntil: P10D
+             - sign:
+                 key: sign.key
+                 cert: sign.crt
+             - emit application/xml
+             - break
+        - when accept application/json:
+             - discojson
+             - emit application/json
+             - break

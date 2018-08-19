@@ -1,0 +1,34 @@
+- when normalize:
+    - xslt:
+       stylesheet: tidy.xsl
+    - xslt:
+       stylesheet: unsign.xsl
+    - break
+- when eidas:
+    - xslt:
+       stylesheet: eidas-cleanup.xsl
+    - check_xml_namespaces
+    - break
+- when update:
+    - load:
+       - https://qa.md.eidas.swedenconnect.se/mdservicelist-aggregate.xml cleanup eidas validate True
+    - break
+- when request:
+    - select
+    - pipe:
+        - when accept application/xml:
+             - xslt:
+                 stylesheet: tidy.xsl
+             - first
+             - finalize:
+                cacheDuration: PT20M
+                validUntil: P7D
+             - sign:
+                 key: sign.key
+                 cert: sign.crt
+             - emit application/xml
+             - break
+        - when accept application/json:
+             - discojson
+             - emit application/json:
+             - break
