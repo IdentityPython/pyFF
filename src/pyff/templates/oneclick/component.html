@@ -8,22 +8,9 @@
     
     <!-- Pull in zoid and the 'oneclick discovery' zoid component -->
     <script src="{{scheme}}://{{vhost}}/static/js/zoid.min.js"></script>
+    <script src="{{scheme}}://{{vhost}}/static/js/sha1.js"></script>
+    <script src="{{scheme}}://{{vhost}}/static/js/ds-client.js"></script>
     <script src="{{scheme}}://{{vhost}}/oneclick/component.js"></script>
-    
-    <!-- remote local storage entityID discovery - start -->
-	<script type="text/javascript">
-	  /**
-	   * Constructs a WAYFLess URL
-	   * @param {String} entityId entityID value
-	   * @return {String} url WAYFLess URL as a string
-	   */
-	    function getWayfLessUrl(entityId) {
-		    return "https://auth.elsevier.com/ShibAuth/institutionLogin?entityID="
-		      + encodeURIComponent(entityId)
-		      + "&appReturnURL=http%3A%2F%2Fwww.sciencedirect.com%2Fscience";
-	    }
-  	</script>
-<!-- remote local storage entityID discovery - end -->	
 </head>
 
 <body>
@@ -40,19 +27,28 @@
     </svg>
     
     <script>
-		// assuming the component is hosted in the domain where the localstorage from Discovery service is
-		// we should be able to directly load the localstorage
-		var storage_key = 'pyff_discovery_choices';
-		let storageObjects = localStorage.getItem(storage_key) ? JSON.parse(localStorage.getItem(storage_key)) : [];
-		var j = 0;
-		var inst = "";
-		var navReturnURL = ""; // will lead to directing the user to 'check access' via a discovery service
-		var entityID = ""; // an empty value will results in using the defaultText value.
-		var defaultText = "Check Access";
-		var boxColor = "blue";
-		var icon = "/static/icons/panth2.png";
-		var dsURL = 'http://discovery.service/url'; // discovery service URL (here would be the default value, this is overwritten)
-		
+
+        var mdq_url = "http://localhost/";
+        var storage_url = "local://";
+        var sp_entity_id = window.xprops.SPEntityID;
+
+        var defaultText = "Check Access";
+		var icon = "/static/icons/ra21/panth2.png";
+
+        if (window.xprops.StorageURL) {
+            storage_url = window.xprops.StorageURL;
+        }
+
+        var ds = DiscoveryService(mdq_url, storage_url, sp_entity_id);
+        var inst = '<a class="orgNameURL" href=\"#\" data-href="">' + defaultText + '</a>';
+        var count = 0;
+        ds.each(function (entity) {
+            console.log(entity);
+            if (++count > 0) {
+                inst = "<a  class=\"orgNameURL\" href=\"#\" data-href=\"" + entity.entityID + "\">"+ entity.title + "</a>";
+            }
+        });
+
 		// Modify the default institutional icon if we're passed the parameter 'defaultIcon'
 	    if (window.xprops.DefaultInstIcon) {
 	 	   icon = window.xprops.DefaultInstIcon;
@@ -62,37 +58,13 @@
 			defaultText = window.xprops.DefaultText;
 	    }
 	    document.getElementById('instLogo').src = icon;
-		
-     	// Modify the returnURL if we're passed the parameter 'returnURL'
-        if (window.xprops.returnURL) {
-        	navReturnURL = window.xprops.returnURL;
-        }
-     	
-     // Modify the returnURL if we're passed the parameter 'returnURL'
-        if (window.xprops.dsURL) {
-        	dsURL = window.xprops.dsURL;
-        }
-        
-     	// extract the first (most recent) institution from the P3W cross-domain local Storage
-		for (i in storageObjects) {
-			j = j + 1;
-			obj = storageObjects[i];
-			if (j > 1) {break;}
-			entityID = obj.entity.entityID;
-			inst += "<a target=\"_blank\" class=\"orgNameURL\" href=\"" + getWayfLessUrl(entityID) + "\">" 
-			+ obj.entity.title + "</a>";
-		 }
-		 // If we haven't found any institution, display a 'Check Access' to the discovery service
-		 if (j == 0) {
-			 inst = '<a class="orgNameURL" href="">' + defaultText + '</a>';
-		 }
-		 document.getElementById('instWidgetV').innerHTML = inst;
+        document.getElementById('instWidgetV').innerHTML = inst;
 		 
-		 // Modify the default button background color if we're passed the parameter 'boxColor'
-	     if (window.xprops.boxColor) {
-	      	document.getElementById('instWidgetV').style.backgroundColor = window.xprops.boxColor;
+        // Modify the default button background color if we're passed the parameter 'boxColor'
+        if (window.xprops.boxColor) {
+            document.getElementById('instWidgetV').style.backgroundColor = window.xprops.boxColor;
 	      	document.getElementById('CTAcnt').style.backgroundColor = window.xprops.boxColor;
-	     }
+        }
 
         // Hide the loading spinner by default
         document.querySelector('#spinner').style.display = 'none';
@@ -107,9 +79,11 @@
 
             // Pretend to make an ajax call - could be re-written more simply? -
             setTimeout(function() {
-
+                var params = {'return': window.xprops.returnURL};
                 // Since we had a click, call-back the parent page to let them know the entityID
-                window.xprops.onInstitutionClicked(entityID);
+                ds.do_saml_discovery_response(event.target.data-href, params, function (url) {
+                    window.xprops.onInstitutionClicked(url, event.target.data-href);
+                });
                 window.xchild.close();
 
             }, 100);
