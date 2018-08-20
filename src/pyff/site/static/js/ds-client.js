@@ -10,6 +10,24 @@
        this.mdq_url = mdq_url;
     }
 
+    // a shim layer to regular localstore which can be used to speed up access if called from the same origin
+    DiscoveryService.LocalStoreShim = function (opts) { };
+
+    DiscoveryService.LocalStoreShim.prototype.onConnect = function() {
+        return Promise(this)
+    };
+
+    DiscoveryService.LocalStoreShim.prototype.set = function(key, value) {
+        var storage = window.localStorage;
+        storage.setItem(key, value);
+        return Promise(this)
+    };
+
+    DiscoveryService.LocalStoreShim.prototype.get = function(key) {
+        var storage = window.localStorage;
+        return Promise(storage.getItem(key))
+    };
+
     DiscoveryService._querystring = (function(paramsArray) {
         var params = {};
 
