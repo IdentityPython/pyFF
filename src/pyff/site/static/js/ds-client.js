@@ -157,10 +157,16 @@
     };
 
     DiscoveryService.prototype.saml_discovery_response = function(entity_id) {
+        var params = DiscoveryService._querystring;
+        return this.do_saml_discovery_response(entity_id, params, function (url) {
+            window.location = url;
+        })
+    };
+
+    DiscoveryService.prototype.do_saml_discovery_response = function(entity_id, params, callback) {
         var obj = this;
         return obj.add(entity_id).then(function() {
             console.log("returning discovery response...");
-            var params = DiscoveryService._querystring;
             var qs;
             if (params['return']) {
                 qs = params['return'].indexOf('?') === -1 ? '?' : '&';
@@ -169,7 +175,7 @@
                     returnIDParam = "entityID";
                 }
                 console.log(params['return'] + qs + returnIDParam + '=' + entity_id);
-                window.location = params['return'] + qs + returnIDParam + '=' + entity_id;
+                callback(params['return'] + qs + returnIDParam + '=' + entity_id);
             }
         });
     };
