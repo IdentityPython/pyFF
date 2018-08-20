@@ -46,7 +46,11 @@
     })(window.location.search.substr(1).split('&'));
 
     DiscoveryService.prototype.get_storage = function() {
-        return new CrossStorageClient(this.storage_url)
+        if (this.storage_url == 'local://') {
+            return new DiscoveryService.LocalStoreShim()
+        } else {
+            return new CrossStorageClient(this.storage_url)
+        }
     };
 
     DiscoveryService.prototype.json_mdq_get = function(id) {
