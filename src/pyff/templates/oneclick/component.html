@@ -42,7 +42,7 @@
         var count = 0;
         ds.each(function (entity) {
             console.log(entity);
-            if (++count > 0) {
+            if (count++ == 0) {
                 inst = "<a  class=\"orgNameURL\" href=\"#\" data-href=\"" + entity.entityID + "\">"+ entity.title + "</a>";
             }
         });
