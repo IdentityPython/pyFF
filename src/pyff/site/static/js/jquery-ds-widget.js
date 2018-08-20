@@ -116,7 +116,7 @@ jQuery(function ($) {
             obj.mdq_url = obj.options['mdq_url'] || obj.element.attr('data-mdq');
             obj.input_field_selector = obj.options['input_field_selector'] || obj.element.attr('data-inputfieldselector') || 'input';
             obj.selection_selector = obj.options['selection_selector'];
-            obj._ds = new DiscoveryService(obj.mdq_url, obj.discovery_service_storage_url, obj.sp_entity_id);
+            obj._ds = new DiscoveryService(obj.mdq_url, obj.discovery_service_storage_url);
             obj._count = 0;
             var top_element = obj.element;
 

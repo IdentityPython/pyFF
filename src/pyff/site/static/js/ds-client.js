@@ -3,11 +3,10 @@
     const storage_key = "pyff_discovery_choices";
     const cache_time = 60 * 10 * 1000; // 10 minutes
 
-    function DiscoveryService(mdq_url, storage_url, sp_entity_id, opts) {
+    function DiscoveryService(mdq_url, storage_url, opts) {
        opts = opts || {};
-       this.storage_url = storage_url;
-       this.sp_entity_id = sp_entity_id;
        this.mdq_url = mdq_url;
+       this.storage_url = storage_url;
     }
 
     // a shim layer to regular localstore which can be used to speed up access if called from the same origin

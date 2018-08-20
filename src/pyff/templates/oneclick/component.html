@@ -30,8 +30,6 @@
 
         var mdq_url = "http://localhost/";
         var storage_url = "local://";
-        var sp_entity_id = window.xprops.SPEntityID;
-
         var defaultText = "Check Access";
 		var icon = "/static/icons/ra21/panth2.png";
 
@@ -39,7 +37,7 @@
             storage_url = window.xprops.StorageURL;
         }
 
-        var ds = DiscoveryService(mdq_url, storage_url, sp_entity_id);
+        var ds = DiscoveryService(mdq_url, storage_url);
         var inst = '<a class="orgNameURL" href=\"#\" data-href="">' + defaultText + '</a>';
         var count = 0;
         ds.each(function (entity) {
