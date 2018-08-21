@@ -30,6 +30,9 @@
         var mdq_url = "{{scheme}}://{{vhost}}/metadata/";
         var storage_url = "local://";
         var defaultText = "Check Access";
+        var return_url = window.xprops.returnURL;
+        var on_discovery = function () { window.top.location.href = return_url; };
+        var on_institution_clicked = function(url, entity_id) { window.top.location.href = url; }
 
         if (window.xprops.StorageURL) {
             storage_url = window.xprops.StorageURL;
@@ -39,15 +42,25 @@
             mdq_url = window.xprops.MDQ;
         }
 
+        if (window.xprops.onDiscovery) {
+            on_discovery = window.xprops.onDiscovery;
+        }
+
+        if (window.xprops.onInstitutionClicked) {
+            on_institution_clicked = window.xprops.onInstitutionClicked;
+        }
+
         var ds = new DiscoveryService(mdq_url, storage_url);
         ds.choices().then(function (items) {
             var count = 0;
             console.log(items);
-            if (items && items.length > 0 && items[0].entity) { // or things have gone very wrong...
-                var entity = items[0].entity;
-                document.getElementById('idpbutton').innerText = entity.title;
-                document.getElementById('idpbutton').dataset['href'] = entity.entityID;
-                count += 1;
+            if (items && items.length > 0) { // or things have gone very wrong...
+                var item = items.pop();
+                if (item && item.entity && item.entity.title && item.entity.entityID) { // silly
+                    document.getElementById('idpbutton').innerText = item.entity.title;
+                    document.getElementById('idpbutton').dataset['href'] = item.entity.entityID;
+                    count += 1;
+                }
             }
             return count;
         }).then(function(count) {
@@ -61,14 +74,14 @@
                         setTimeout(function() {
                             var params = {'return': window.xprops.returnURL};
                             var entity_id = event.target.dataset.href; // TODO - this only works if we clicked the <a/>
-                            if (!entity_id) {
-                                entity_id = "";
+                            if (entity_id) { // return the discovery response
+                                ds.do_saml_discovery_response(entity_id, params).then(function (url) {
+                                    on_institution_clicked(url, entity_id);
+                                });
+                            } else { // off to DS
+                                on_discovery();
                             }
-                            // Since we had a click, call-back the parent page to let them know the entityID and the response URL
-                            ds.do_saml_discovery_response(entity_id, params).then(function (url) {
-                                window.xprops.onInstitutionClicked(url, entity_id);
-                                window.xchild.close();
-                            });
+                            window.xchild.close();
 
                         }, 100);
                     })
