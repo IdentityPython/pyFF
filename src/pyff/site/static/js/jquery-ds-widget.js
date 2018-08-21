@@ -142,7 +142,7 @@ jQuery(function ($) {
                 e.preventDefault();
             });
 
-            $('body').on('click', '.remove', function (e) {
+            $('body').on('click', 'div.remove', function (e) {
                 e.stopPropagation();
                 var entity_element = $(this).closest(obj.selection_selector);
                 var entity_id = entity_element.attr('data-href');
