@@ -135,56 +135,11 @@
                 } else {
                     return Promise.resolve(item);
                 }
-            }));
+            })).then(function (items) {
+                storage.set(storage_key, JSON.stringify(items));
+                return items;
+            });
         });
-    };
-
-    DiscoveryService.prototype.each = function(callback) {
-        var obj = this;
-        var storage = this.get_storage();
-        return storage.onConnect().then(function () {
-            return storage.get(storage_key);
-        }).then(function(data) {
-            var lst = JSON.parse(data || '[]') || [];
-            lst.sort(function (a, b) { // decending order - most commonly used stuff on top
-                if (a.use_count < b.use_count) {
-                    return 1;
-                }
-                if (a.use_count > b.use_count) {
-                    return -1;
-                }
-                return 0;
-            });
-
-            for (var i = lst.length-1; i >= 0; i--) {
-                if (!lst[i].entity) {
-                    lst.splice(i, 1);
-                }
-            }
-
-            while (lst.length > 3) {
-                lst.pop();
-            }
-
-            return Promise.all(lst.map(function(item,i) {
-                var last_refresh = item.last_refresh || -1;
-                if (last_refresh == -1 || last_refresh + cache_time < DiscoveryService._now()) {
-                    var id = DiscoveryService._sha1_id(item.entity['entity_id'] || item.entity['entityID']);
-                    return obj.json_mdq_get(id).then(function(entity) {
-                        console.log(entity);
-                        if (entity) {
-                            item.entity = entity;
-                            item.last_refresh = DiscoveryService._now();
-                        }
-                        return callback(item.entity);
-                    });
-                } else {
-                    return Promise.resolve(callback(item.entity));
-                }
-            })).then(function () {
-                return storage.set(storage_key, JSON.stringify(lst));
-            });
-        }).catch(function(err) { console.log(err); });
     };
 
     DiscoveryService.prototype.saml_discovery_response = function(entity_id) {
