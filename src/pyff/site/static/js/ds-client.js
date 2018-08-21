@@ -171,15 +171,14 @@
     };
 
     DiscoveryService._incr_use_count = function (entity_id, list) {
-        list.forEach(function (item) {
-            if (item.entity) {
-                if (item.entity.entity_id == entity_id || item.entity.entityID == entity_id) {
-                    var use_count = item.use_count;
-                    item.use_count += 1;
-                    return use_count;
-                }
+        for (var i = 0; i < list.length; i++) {
+            var item = list[i];
+            if (item.entity.entity_id == entity_id || item.entity.entityID == entity_id) {
+                var use_count = item.use_count;
+                item.use_count += 1;
+                return use_count;
             }
-        });
+        }
         return -1;
     };
 
