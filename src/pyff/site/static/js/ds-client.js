@@ -89,27 +89,27 @@
             data = data || '[]';
             var lst = JSON.parse(data) || [];
 
-            var lst2 = [];
+            var clean = {};
             for (var i = 0; i < lst.length; i++) {
                 if (lst[i].entity && (lst[i].entity.entity_id || lst[i].entity.entityID) && lst[i].entity.title) {
-                    lst2[i] = lst[i];
-                    var entity = lst2[i].entity;
+                    var entity = lst[i].entity;
                     if (entity && entity.entityID && !entity.entity_id) {
                        entity.entity_id = entity.entityID;
                     }
                     if (entity && !entity.entity_icon && entity.icon) {
                        entity.entity_icon = entity.icon;
                     }
+                    clean[entity.entity_id] = lst[i];
                 }
             }
 
-            lst = lst2;
+            lst = Object.values(clean);
 
             while (lst.length > 3) {
                 lst.pop();
             }
 
-            lst.sort(function (a, b) { // decending order - most commonly used stuff on top
+            lst.sort(function (a, b) { // most commonly used last in list
                 if (a.use_count < b.use_count) {
                     return 1;
                 }
@@ -118,7 +118,6 @@
                 }
                 return 0;
             });
-
 
             return Promise.all(lst.map(function(item,i) {
                 var now = DiscoveryService._now();
