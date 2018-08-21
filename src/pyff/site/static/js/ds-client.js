@@ -152,15 +152,18 @@
     DiscoveryService.prototype.do_saml_discovery_response = function(entity_id, params) {
         var obj = this;
         return obj.add(entity_id).then(function() {
-            console.log("returning discovery response...");
             var qs;
             if (params['return']) {
+                console.log("returning discovery response...");
                 qs = params['return'].indexOf('?') === -1 ? '?' : '&';
                 var returnIDParam = params['returnIDParam'];
                 if (!returnIDParam) {
                     returnIDParam = "entityID";
                 }
-                var response = params['return'] + qs + returnIDParam + '=' + entity_id;
+                var response = params['return'];
+                if (entity_id) {
+                    response += qs + returnIDParam + '=' + entity_id;
+                }
                 console.log(response);
                 return response;
             }
