@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{scheme}}://{{vhost}}/static/css/font-awesome.min.css">
 
+    <!--
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-material-design/4.0.2/bootstrap-material-design.css" />
     <link rel="stylesheet" href="{{scheme}}://{{vhost}}/static/css/oneclick.css" />
     <link href="//fonts.googleapis.com/css?family=Roboto:100,200,300,400,500,600,700" type="text/css" rel="stylesheet">
+    -->
     
     <!-- Pull in zoid and the 'oneclick discovery' zoid component -->
     <script src="{{scheme}}://{{vhost}}/static/js/zoid.min.js"></script>
@@ -14,21 +18,29 @@
 </head>
 
 <body>
+    <div class="btn-group" role="group" aria-label="Identity Provider Choice">
+        <button type="button" class="btn btn-primary">
+            <i class="fa fa-university"></i>
+        </button>
+        <button type="button" class="btn btn-outline-primary btn-block" id="idpbutton" class="identityprovider">
+            <i id="spinner" class='fa fa-circle-o-notch fa-spin'></i>
+        </button>
+    </div>
     <!-- Set up Access Through Your institution -->
-    <form id="axButtonForm">
+    <!-- form id="axButtonForm">
     	<div id="CTAcnt" class="CTAcontainer">
     		<div class="logobox"><img id="instLogo" width="32" height="32" src=""></div>
     		<div class="orgNameWidget" id="instWidgetV"></div>
     	</div>
-    </form>
+    </form -->
 
-    <svg id="spinner" class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+    <!-- svg id="spinner" class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
         <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle>
-    </svg>
+    </svg -->
     
     <script>
 
-        var mdq_url = "http://localhost/";
+        var mdq_url = "{{scheme}}://{{vhost}}/metadata/";
         var storage_url = "local://";
         var defaultText = "Check Access";
 		var icon = "/static/icons/ra21/panth2.png";
@@ -37,55 +49,39 @@
             storage_url = window.xprops.StorageURL;
         }
 
-        var ds = DiscoveryService(mdq_url, storage_url);
-        var inst = '<a class="orgNameURL" href=\"#\" data-href="">' + defaultText + '</a>';
+        if (window.xprops.MDQ) {
+            mdq_url = window.xprops.MDQ;
+        }
+
+        var ds = new DiscoveryService(mdq_url, storage_url);
         var count = 0;
         ds.each(function (entity) {
             console.log(entity);
-            if (count++ == 0) {
-                inst = "<a  class=\"orgNameURL\" href=\"#\" data-href=\"" + entity.entityID + "\">"+ entity.title + "</a>";
+            if (count == 0) { // get the first one - probably not the only rendering mode that is useful
+                document.getElementById('#idpbutton').innerText = entity.title;
+                document.getElementById('#idpbutton').dataset['href'] = entity.entityID;
             }
+            count += 1;
+        }).then(function() {
+            if (count == 0) {
+                document.getElementById('#idpbutton').innerText = defaultText;
+            }
+            document.querySelector('.identityprovider').addEventListener('click', function(event) {
+                event.preventDefault();
+                setTimeout(function() {
+                    var params = {'return': window.xprops.returnURL};
+                    var entity_id = event.target.dataset.href; // TODO - this only works if we clicked the <a/>
+                    // Since we had a click, call-back the parent page to let them know the entityID and the response URL
+                    ds.do_saml_discovery_response(entity_id, params).then(function (url) {
+                        window.xprops.onInstitutionClicked(url, entity_id);
+                        window.xchild.close();
+                    });
+
+                }, 100);
+            });
         });
 
-		// Modify the default institutional icon if we're passed the parameter 'defaultIcon'
-	    if (window.xprops.DefaultInstIcon) {
-	 	   icon = window.xprops.DefaultInstIcon;
-	    }
-		// Modify defaultText base on the properties defined in the Zoid component
-		if (window.xprops.DefaultText) {
-			defaultText = window.xprops.DefaultText;
-	    }
-	    document.getElementById('instLogo').src = icon;
-        document.getElementById('instWidgetV').innerHTML = inst;
-		 
-        // Modify the default button background color if we're passed the parameter 'boxColor'
-        if (window.xprops.boxColor) {
-            document.getElementById('instWidgetV').style.backgroundColor = window.xprops.boxColor;
-	      	document.getElementById('CTAcnt').style.backgroundColor = window.xprops.boxColor;
-        }
 
-        // Hide the loading spinner by default
-        document.querySelector('#spinner').style.display = 'none';
-        
-        // Handle the button click to redirect the user to DS service or sign in via the Identity Provider
-        document.querySelector('#instWidgetV').addEventListener('click', function(event) {
-            event.preventDefault();
-
-            // Hide the axButtonForm form and replace it with a spinner
-            document.querySelector('#axButtonForm').style.display = 'none';
-            document.querySelector('#spinner').style.display = 'inline-block';
-
-            // Pretend to make an ajax call - could be re-written more simply? -
-            setTimeout(function() {
-                var params = {'return': window.xprops.returnURL};
-                // Since we had a click, call-back the parent page to let them know the entityID
-                ds.do_saml_discovery_response(event.target.data-href, params, function (url) {
-                    window.xprops.onInstitutionClicked(url, event.target.data-href);
-                });
-                window.xchild.close();
-
-            }, 100);
-        });
     </script>
     
 </body>

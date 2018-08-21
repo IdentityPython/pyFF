@@ -1,7 +1,7 @@
 (function() {
 
-    const storage_key = "pyff_discovery_choices";
-    const cache_time = 60 * 10 * 1000; // 10 minutes
+    var storage_key = "pyff_discovery_choices";
+    var cache_time = 60 * 10 * 1000; // 10 minutes
 
     function DiscoveryService(mdq_url, storage_url, opts) {
        opts = opts || {};
@@ -13,18 +13,18 @@
     DiscoveryService.LocalStoreShim = function (opts) { };
 
     DiscoveryService.LocalStoreShim.prototype.onConnect = function() {
-        return Promise(this)
+        return Promise.resolve(this);
     };
 
     DiscoveryService.LocalStoreShim.prototype.set = function(key, value) {
         var storage = window.localStorage;
         storage.setItem(key, value);
-        return Promise(this)
+        return Promise.resolve(this);
     };
 
     DiscoveryService.LocalStoreShim.prototype.get = function(key) {
         var storage = window.localStorage;
-        return Promise(storage.getItem(key))
+        return Promise.resolve(storage.getItem(key));
     };
 
     DiscoveryService._querystring = (function(paramsArray) {
@@ -53,17 +53,21 @@
     };
 
     DiscoveryService.prototype.json_mdq_get = function(id) {
-        return $.ajax({
-            datatype: 'json',
-            url: this.mdq_url + id + ".json"
-        }).then(function (data) {
-            if ($.isArray(data)) {
+        var opts = {method: 'GET', headers: {}};
+        return fetch(this.mdq_url + id + ".json",opts).then(function (response) {
+            var contentType = response.headers.get("content-type");
+            if(contentType && contentType.includes("application/json")) {
+              return response.json();
+            }
+            throw new TypeError("MDQ didn't provide a JSON response");
+        }).then(function(data) {
+            if (Object.prototype.toString.call(data) === "[object Array]") {
                 data = data[0];
             }
             return data;
-        },function (jqxHR, info, error) {
-            console.log(info);
-            return Promise.reject(error);
+        }).catch(function(error) {
+            console.log(error);
+            Promise.reject(error);
         });
     };
 
@@ -137,7 +141,8 @@
             return Promise.all(lst.map(function(item,i) {
                 var last_refresh = item.last_refresh || -1;
                 if (last_refresh == -1 || last_refresh + cache_time < DiscoveryService._now()) {
-                    var p = obj.json_mdq_get(item.entity.entity_id).then(function(entity) {
+                    var id = DiscoveryService._sha1_id(item.entity['entity_id'] || item.entity['entityID']);
+                    return obj.json_mdq_get(id).then(function(entity) {
                         console.log(entity);
                         if (entity) {
                             item.entity = entity;
@@ -145,24 +150,23 @@
                         }
                         return callback(item.entity);
                     });
-                    return p;
                 } else {
-                    return new Promise(function (resolve, reject) { return callback(item.entity); });
+                    return Promise.resolve(callback(item.entity));
                 }
             })).then(function () {
                 return storage.set(storage_key, JSON.stringify(lst));
             });
-        })['catch'](function(err) { console.log(err); });
+        }).catch(function(err) { console.log(err); });
     };
 
     DiscoveryService.prototype.saml_discovery_response = function(entity_id) {
         var params = DiscoveryService._querystring;
-        return this.do_saml_discovery_response(entity_id, params, function (url) {
+        return this.do_saml_discovery_response(entity_id, params).then(function (url) {
             window.location = url;
-        })
+        });
     };
 
-    DiscoveryService.prototype.do_saml_discovery_response = function(entity_id, params, callback) {
+    DiscoveryService.prototype.do_saml_discovery_response = function(entity_id, params) {
         var obj = this;
         return obj.add(entity_id).then(function() {
             console.log("returning discovery response...");
@@ -173,8 +177,9 @@
                 if (!returnIDParam) {
                     returnIDParam = "entityID";
                 }
-                console.log(params['return'] + qs + returnIDParam + '=' + entity_id);
-                callback(params['return'] + qs + returnIDParam + '=' + entity_id);
+                var response = params['return'] + qs + returnIDParam + '=' + entity_id;
+                console.log(response);
+                return response;
             }
         });
     };
