@@ -88,6 +88,27 @@
         }).then(function(data) {
             data = data || '[]';
             var lst = JSON.parse(data) || [];
+
+            var lst2 = [];
+            for (var i = 0; i < lst.length; i++) {
+                if (lst[i].entity && (lst[i].entity.entity_id || lst[i].entity.entityID) && lst[i].entity.title) {
+                    lst2[i] = lst[i];
+                    var entity = lst2[i].entity;
+                    if (entity && entity.entityID && !entity.entity_id) {
+                       entity.entity_id = entity.entityID;
+                    }
+                    if (entity && !entity.entity_icon && entity.icon) {
+                       entity.entity_icon = entity.icon;
+                    }
+                }
+            }
+
+            lst = lst2;
+
+            while (lst.length > 3) {
+                lst.pop();
+            }
+
             lst.sort(function (a, b) { // decending order - most commonly used stuff on top
                 if (a.use_count < b.use_count) {
                     return 1;
@@ -98,21 +119,24 @@
                 return 0;
             });
 
-            while (lst.length > 3) {
-                lst.pop();
-            }
 
-            lst.forEach(function(item) {
-                var entity = item.entity;
-                if (entity && entity.entityID && !entity.entity_id) {
-                    entity.entity_id = entity.entityID;
+            return Promise.all(lst.map(function(item,i) {
+                var now = DiscoveryService._now();
+                var last_refresh = item.last_refresh || -1;
+                if (last_refresh == -1 || last_refresh + cache_time < now) {
+                    var id = DiscoveryService._sha1_id(item.entity['entity_id'] || item.entity['entityID']);
+                    return obj.json_mdq_get(id).then(function(entity) {
+                        console.log(entity);
+                        if (entity) {
+                            item.entity = entity;
+                            item.last_refresh = now;
+                        }
+                        return item;
+                    });
+                } else {
+                    return Promise.resolve(item);
                 }
-                if (entity && !entity.entity_icon && entity.icon) {
-                    entity.entity_icon = entity.icon;
-                }
-            });
-
-            return lst;
+            }));
         });
     };
 
@@ -120,7 +144,6 @@
         var obj = this;
         var storage = this.get_storage();
         return storage.onConnect().then(function () {
-            console.log(storage_key);
             return storage.get(storage_key);
         }).then(function(data) {
             var lst = JSON.parse(data || '[]') || [];
@@ -133,6 +156,12 @@
                 }
                 return 0;
             });
+
+            for (var i = lst.length-1; i >= 0; i--) {
+                if (!lst[i].entity) {
+                    lst.splice(i, 1);
+                }
+            }
 
             while (lst.length > 3) {
                 lst.pop();
@@ -185,13 +214,15 @@
     };
 
     DiscoveryService._incr_use_count = function (entity_id, list) {
-        for (var i = 0; i < list.length; i++) {
-            if (list[i].entity.entity_id == entity_id || list[i].entity.entityID == entity_id) {
-                var use_count = list[i].use_count;
-                list[i].use_count += 1;
-                return use_count;
+        list.forEach(function (item) {
+            if (item.entity) {
+                if (item.entity.entity_id == entity_id || item.entity.entityID == entity_id) {
+                    var use_count = item.use_count;
+                    item.use_count += 1;
+                    return use_count;
+                }
             }
-        }
+        });
         return -1;
     };
 
@@ -207,8 +238,6 @@
             return storage.get(storage_key);
         }).then(function (data) {
             var lst = JSON.parse(data || '[]') || [];
-            console.log("found current list...")
-            console.log(lst);
             var p;
             if (DiscoveryService._incr_use_count(id,lst) == -1) {
                 p = obj.json_mdq_get(DiscoveryService._sha1_id(id)).then(function (entity) {

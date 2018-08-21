@@ -19,31 +19,17 @@
 
 <body>
     <div class="btn-group" role="group" aria-label="Identity Provider Choice">
-        <button type="button" class="btn btn-primary">
+        <button type="button" class="btn btn-primary identityprovider" data-href="">
             <i class="fa fa-university"></i>
         </button>
-        <button type="button" class="btn btn-outline-primary btn-block" id="idpbutton" class="identityprovider">
+        <button type="button" class="btn btn-outline-primary btn-block identityprovider" id="idpbutton">
             <i id="spinner" class='fa fa-circle-o-notch fa-spin'></i>
         </button>
     </div>
-    <!-- Set up Access Through Your institution -->
-    <!-- form id="axButtonForm">
-    	<div id="CTAcnt" class="CTAcontainer">
-    		<div class="logobox"><img id="instLogo" width="32" height="32" src=""></div>
-    		<div class="orgNameWidget" id="instWidgetV"></div>
-    	</div>
-    </form -->
-
-    <!-- svg id="spinner" class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
-        <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle>
-    </svg -->
-    
     <script>
-
         var mdq_url = "{{scheme}}://{{vhost}}/metadata/";
         var storage_url = "local://";
         var defaultText = "Check Access";
-		var icon = "/static/icons/ra21/panth2.png";
 
         if (window.xprops.StorageURL) {
             storage_url = window.xprops.StorageURL;
@@ -54,31 +40,39 @@
         }
 
         var ds = new DiscoveryService(mdq_url, storage_url);
-        var count = 0;
-        ds.each(function (entity) {
-            console.log(entity);
-            if (count == 0) { // get the first one - probably not the only rendering mode that is useful
-                document.getElementById('#idpbutton').innerText = entity.title;
-                document.getElementById('#idpbutton').dataset['href'] = entity.entityID;
+        ds.choices().then(function (items) {
+            var count = 0;
+            console.log(items);
+            if (items && items.length > 0 && items[0].entity) { // or things have gone very wrong...
+                var entity = items[0].entity;
+                document.getElementById('idpbutton').innerText = entity.title;
+                document.getElementById('idpbutton').dataset['href'] = entity.entityID;
+                count += 1;
             }
-            count += 1;
-        }).then(function() {
+            return count;
+        }).then(function(count) {
             if (count == 0) {
-                document.getElementById('#idpbutton').innerText = defaultText;
+                document.getElementById('idpbutton').innerText = defaultText;
+                document.getElementById('idpbutton').dataset['href'] = "";
             }
-            document.querySelector('.identityprovider').addEventListener('click', function(event) {
-                event.preventDefault();
-                setTimeout(function() {
-                    var params = {'return': window.xprops.returnURL};
-                    var entity_id = event.target.dataset.href; // TODO - this only works if we clicked the <a/>
-                    // Since we had a click, call-back the parent page to let them know the entityID and the response URL
-                    ds.do_saml_discovery_response(entity_id, params).then(function (url) {
-                        window.xprops.onInstitutionClicked(url, entity_id);
-                        window.xchild.close();
-                    });
+            document.querySelectorAll('button.identityprovider').forEach(function (item) {
+                item.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        setTimeout(function() {
+                            var params = {'return': window.xprops.returnURL};
+                            var entity_id = event.target.dataset.href; // TODO - this only works if we clicked the <a/>
+                            if (!entity_id) {
+                                entity_id = "";
+                            }
+                            // Since we had a click, call-back the parent page to let them know the entityID and the response URL
+                            ds.do_saml_discovery_response(entity_id, params).then(function (url) {
+                                window.xprops.onInstitutionClicked(url, entity_id);
+                                window.xchild.close();
+                            });
 
-                }, 100);
-            });
+                        }, 100);
+                    })
+                });
         });
 
 
