@@ -32,7 +32,7 @@
         var defaultText = "Check Access";
         var return_url = window.xprops.returnURL;
         var on_discovery = function () { window.top.location.href = return_url; };
-        var on_institution_clicked = function(url, entity_id) { window.top.location.href = url; }
+        var on_institution_clicked = function(url, entity_id) { window.top.location.href = url; };
 
         if (window.xprops.StorageURL) {
             storage_url = window.xprops.StorageURL;
@@ -53,7 +53,6 @@
         var ds = new DiscoveryService(mdq_url, storage_url);
         ds.choices().then(function (items) {
             var count = 0;
-            console.log(items);
             if (items && items.length > 0) { // or things have gone very wrong...
                 var item = items.pop();
                 if (item && item.entity && item.entity.title && item.entity.entityID) { // silly
@@ -82,8 +81,7 @@
                                 on_discovery();
                             }
                             window.xchild.close();
-
-                        }, 100);
+                        }, 1000);
                     })
                 });
         });
