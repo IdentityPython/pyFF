@@ -32,7 +32,7 @@ window.OneClickDiscoveryComponent = zoid.create({
     prerenderTemplate: function(opts) {
         var div = opts.document.createElement("div");
         div.setAttribute("class","btn-group btn-block");
-        div.innerHTML = '<button type="button" class="btn btn-secondary"><i id="spinner" class="fa fa-circle-o-notch fa-spin"></i></button>';
+        div.innerHTML = '<button type="button" class="btn btn-primary"><i id="spinner" class="fa fa-circle-o-notch fa-spin"></i></button>';
         return div;
     }
 
