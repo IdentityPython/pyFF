@@ -207,7 +207,7 @@
                 console.log(lst);
                 return storage.set(storage_key, JSON.stringify(lst));
             })
-        });
+        }});
     };
 
     DiscoveryService.prototype.remove = function (id) {
