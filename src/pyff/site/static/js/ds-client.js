@@ -125,7 +125,6 @@
                 if (last_refresh == -1 || last_refresh + cache_time < now) {
                     var id = DiscoveryService._sha1_id(item.entity['entity_id'] || item.entity['entityID']);
                     return obj.json_mdq_get(id).then(function(entity) {
-                        console.log(entity);
                         if (entity) {
                             item.entity = entity;
                             item.last_refresh = now;
@@ -203,9 +202,6 @@
                 });
             } else {
                 p = Promise.resolve(lst);
-            }
-            console.log("final promise...");
-            console.log(p);
             return p.then(function(lst) {
                 console.log("setting...");
                 console.log(lst);
