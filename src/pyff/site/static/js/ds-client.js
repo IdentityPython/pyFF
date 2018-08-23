@@ -79,15 +79,21 @@
         return new Date().getTime();
     };
 
-    DiscoveryService.prototype.choices = function() {
+    DiscoveryService.prototype.with_items = function(callback) {
         var obj = this;
         var storage = this.get_storage();
         return storage.onConnect().then(function () {
-            console.log(storage_key);
+            console.log("pyFF ds-client: Listing discovery choices");
             return storage.get(storage_key);
         }).then(function(data) {
             data = data || '[]';
-            var lst = JSON.parse(data) || [];
+            var lst;
+            try {
+                lst = JSON.parse(data) || [];
+            } catch (error) {
+                console.log(error);
+                lst = [];
+            }
 
             var clean = {};
             for (var i = 0; i < lst.length; i++) {
@@ -134,11 +140,8 @@
                 } else {
                     return Promise.resolve(item);
                 }
-            })).then(function (items) {
-                storage.set(storage_key, JSON.stringify(items));
-                return items;
-            });
-        });
+            })).then(callback);
+        }).then(function(items) { storage.set(storage_key, JSON.stringify(items))});
     };
 
     DiscoveryService.prototype.saml_discovery_response = function(entity_id) {
@@ -150,7 +153,18 @@
 
     DiscoveryService.prototype.do_saml_discovery_response = function(entity_id, params) {
         var obj = this;
-        return obj.add(entity_id).then(function() {
+        return obj.with_items(function(items) {
+            if (DiscoveryService._touch(entity_id, items) == -1) {
+                return obj.json_mdq_get(DiscoveryService._sha1_id(entity_id)).then(function (entity) {
+                    console.log("mdq found entity: ",entity);
+                    var now = DiscoveryService._now();
+                    items.push({last_refresh: now, last_use: now, use_count: 1, entity: entity});
+                    return items;
+                });
+            } else {
+                return Promise.resolve(items);
+            }
+        }).then(function() {
             var qs;
             if (params['return']) {
                 console.log("returning discovery response...");
@@ -169,12 +183,14 @@
         });
     };
 
-    DiscoveryService._incr_use_count = function (entity_id, list) {
+    DiscoveryService._touch = function (entity_id, list) {
         for (var i = 0; i < list.length; i++) {
             var item = list[i];
             if (item.entity.entity_id == entity_id || item.entity.entityID == entity_id) {
+                var now = DiscoveryService._now();
                 var use_count = item.use_count;
                 item.use_count += 1;
+                item.last_use = now;
                 return use_count;
             }
         }
@@ -186,43 +202,11 @@
         return "{sha1}"+hex_sha1(s);
     };
 
-    DiscoveryService.prototype.add = function (id) {
-        var storage = this.get_storage();
-        var obj = this;
-        return storage.onConnect().then(function () {
-            return storage.get(storage_key);
-        }).then(function (data) {
-            var lst = JSON.parse(data || '[]') || [];
-            var p;
-            if (DiscoveryService._incr_use_count(id,lst) == -1) {
-                p = obj.json_mdq_get(DiscoveryService._sha1_id(id)).then(function (entity) {
-                    console.log("mdq found entity: ",entity);
-                    lst.push({last_refresh: DiscoveryService._now(), use_count: 1, entity: entity});
-                    return lst;
-                });
-            } else {
-                p = Promise.resolve(lst);
-            return p.then(function(lst) {
-                console.log("setting...");
-                console.log(lst);
-                return storage.set(storage_key, JSON.stringify(lst));
-            })
-        }});
-    };
-
     DiscoveryService.prototype.remove = function (id) {
-        var storage = this.get_storage();
-        var obj = this;
-        return storage.onConnect().then(function () {
-            return storage.get(storage_key);
-        }).then(function (data) {
-            var lst = JSON.parse(data || '[]') || [];
-
-            return lst.filter(function(item) {
+        return this.with_items(function (items) {
+           return items.filter(function(item) {
                 return item.entity.entity_id != id && item.entity.entityID != id;
-            })
-        }).then(function (lst) {
-            return storage.set(storage_key, JSON.stringify(lst));
+           })
         });
     };
 

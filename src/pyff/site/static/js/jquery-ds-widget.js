@@ -156,21 +156,22 @@ jQuery(function ($) {
                 }
             });
 
-            obj._ds.choices().then(function (entities) {
-                return obj.options['before'](entities);
-            }).then(function (entities) {
-                obj._count = 0;
+            obj._ds.with_items(function (items) {
+                items = obj.options['before'](items);
+                var count = 0;
                 var saved_choices_element = $(obj.options['saved_choices_selector']);
-                entities.forEach(function (item) {
-                    var entity_element = obj.options['render_saved_choice'](item.entity);
-                    saved_choices_element.prepend(entity_element);
-                    obj._count++;
-                });
-                return obj._count;
-            }).then(function (count) {
+                console.log(items);
+                if (items && items.length > 0) {
+                    items.forEach(function (item) {
+                        var entity_element = obj.options['render_saved_choice'](item.entity);
+                        saved_choices_element.prepend(entity_element);
+                        count++;
+                    });
+                }
                 obj._after(count);
-            })
+                return items; // needed later by persistence
+            });
         }
 
     })
-})
+});

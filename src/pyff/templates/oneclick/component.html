@@ -51,18 +51,17 @@
         }
 
         var ds = new DiscoveryService(mdq_url, storage_url);
-        ds.choices().then(function (items) {
-            var count = 0;
+        var count = 0;
+        ds.with_items(function (items) {
             if (items && items.length > 0) { // or things have gone very wrong...
-                var item = items.pop();
+                var item = items[items.length-1];
                 if (item && item.entity && item.entity.title && item.entity.entityID) { // silly
                     document.getElementById('idpbutton').innerText = item.entity.title;
                     document.getElementById('idpbutton').dataset['href'] = item.entity.entityID;
                     count += 1;
                 }
             }
-            return count;
-        }).then(function(count) {
+
             if (count == 0) {
                 document.getElementById('idpbutton').innerText = defaultText;
                 document.getElementById('idpbutton').dataset['href'] = "";
@@ -84,6 +83,8 @@
                         }, 1000);
                     })
                 });
+
+            return items;
         });
 
 
