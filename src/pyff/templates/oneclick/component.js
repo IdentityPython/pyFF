@@ -10,7 +10,7 @@ window.OneClickDiscoveryComponent = zoid.create({
 
     // default dimensions for the component
     dimensions: {
-    	width: '300px',
+    	width: '320px',
     	height: '80px'
     },
     

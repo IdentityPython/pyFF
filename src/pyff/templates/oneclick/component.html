@@ -22,14 +22,14 @@
         <button type="button" class="btn btn-primary identityprovider" data-href="">
             <img src="{{scheme}}://{{vhost}}/static/icons/ra21/ra21icon.svg">
         </button>
-        <button type="button" class="btn btn-primary btn-block identityprovider" id="idpbutton">
+        <button type="button" class="btn btn-primary btn-block identityprovider text-truncate" id="idpbutton">
             <i id="spinner" class='fa fa-circle-o-notch fa-spin'></i>
         </button>
     </div>
     <script>
         var mdq_url = "{{scheme}}://{{vhost}}/metadata/";
         var storage_url = "local://";
-        var defaultText = "Check Access";
+        var defaultText = "Access Through Your Institution";
         var return_url = window.xprops.returnURL;
         var on_discovery = function () { window.top.location.href = return_url; };
         var on_institution_clicked = function(url, entity_id) { window.top.location.href = url; };
