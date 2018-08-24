@@ -3,6 +3,7 @@
 <head>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
     <link rel="stylesheet" href="{{scheme}}://{{vhost}}/static/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{{scheme}}://{{vhost}}/static/css/ra21cta.css">
 
     <!--
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-material-design/4.0.2/bootstrap-material-design.css" />
@@ -18,13 +19,18 @@
 </head>
 
 <body>
-    <div class="btn-group btn-block" role="group" aria-label="Identity Provider Choice">
-        <button type="button" class="btn btn-primary identityprovider" data-href="">
-            <img src="{{scheme}}://{{vhost}}/static/icons/ra21/ra21icon.svg">
-        </button>
-        <button type="button" class="btn btn-primary btn-block identityprovider text-truncate" id="idpbutton">
+    <div class="ra21CTAcontainer" role="group">
+        <div class="identityprovider ra21CTAbutton" role="button" data-href="">
+            <img class="ra21CTAicon" src="{{scheme}}://{{vhost}}/static/icons/ra21/ra21icon.svg">
+        </div>
+        <div class="ra21CTAspacer"></div>
+        <div role="button" aria-label="Identity Provider Choice" class="identityprovider ra21CTAbutton text-truncate" id="idpbutton">
             <i id="spinner" class='fa fa-circle-o-notch fa-spin'></i>
-        </button>
+            <div class="ra21CTAbuttonLabel">
+                <div class="ra21CTAheadline" id="headline"></div>
+                <div class="ra21CTAtitle" id="title"></div>
+            </div>
+        </div>
     </div>
     <script>
         var mdq_url = "{{scheme}}://{{vhost}}/metadata/";
@@ -56,13 +62,16 @@
             if (items && items.length > 0) { // or things have gone very wrong...
                 var item = items[items.length-1];
                 if (item && item.entity && item.entity.title && item.entity.entityID) { // silly
-                    document.getElementById('idpbutton').innerText = item.entity.title;
+                    document.getElementById('spinner').display = "none";
+                    document.getElementById('title').innerText = item.entity.title;
                     document.getElementById('idpbutton').dataset['href'] = item.entity.entityID;
+                    document.getElementById('headline').innerText = "Access Through";
                     count += 1;
                 }
             }
 
             if (count == 0) {
+                document.getElementById('spinner').display = "none";
                 document.getElementById('idpbutton').innerText = defaultText;
                 document.getElementById('idpbutton').dataset['href'] = "";
             }
