@@ -10,6 +10,7 @@
 }
 
 .ra21CTAcontainer {
+    cursor: pointer;
   width: 320px;
   height: 60px;
   border-radius: 7px;
@@ -21,13 +22,12 @@
   width: 21.1px;
   height: 22px;
   object-fit: contain;
-  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.15);
 }
 
 .ra21CTAheadline {
   width: 260px;
   height: 16px;
-  font-family: LibreFranklin;
+  font-family: 'Libre Franklin', sans-serif;
   font-size: 13px;
   font-weight: normal;
   font-style: normal;
@@ -42,7 +42,7 @@
 .ra21CTAtitle {
   width: 260px;
   height: 16px;
-  font-family: LibreFranklin;
+  font-family: 'Libre Franklin', sans-serif;
   font-size: 13px;
   font-weight: bold;
   font-style: normal;
@@ -55,19 +55,51 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-transform: uppercase
 }
 
 .ra21CTAspacer {
+    margin-top: 10px;
+    margin-bottom: 10px;
   width: 2px;
   height: 40px;
   border: solid 1px rgba(255, 255, 255, 0.8);
 }
 
-.ra21CTAbuttonLabel {
-    display: flex;
-    align-items: center;
+.ra21CTAiconButton {
+    margin: 19px;
 }
 
-.ra21CTAbutton {
-    display: inline-block;
+.ra21CTAChooseAnother {
+    cursor: pointer;
+   margin-left: 41px;
+    margin-top: 7px;
+  width: 320px;
+  height: 20px;
+  font-family: 'Libre Franklin', sans-serif;
+  font-size: 12px;
+  font-weight: normal;
+  font-style: normal;
+  font-stretch: normal;
+  line-height: 1.67;
+  letter-spacing: normal;
+  text-align: center;
+  color: #0079ff;
+  color: var(--primary-blue);
+}
+
+.ra21CTAPlus {
+    padding: 0;
+    margin: 0;
+}
+
+.ra21CTAPlusWrap {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background-color: rgba(186, 186, 186, 0.33);
+}
+
+.ra21CTAccess {
+  margin-left: 3px;
 }

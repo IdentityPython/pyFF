@@ -2,6 +2,7 @@
 <html>
 <head>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css?family=Libre+Franklin:400,700&amp;subset=latin-ext" rel="stylesheet">
     <link rel="stylesheet" href="{{scheme}}://{{vhost}}/static/css/font-awesome.min.css">
     <link rel="stylesheet" href="{{scheme}}://{{vhost}}/static/css/ra21cta.css">
 
@@ -19,23 +20,27 @@
 </head>
 
 <body>
-    <div class="ra21CTAcontainer" role="group">
-        <div class="identityprovider ra21CTAbutton" role="button" data-href="">
-            <img class="ra21CTAicon" src="{{scheme}}://{{vhost}}/static/icons/ra21/ra21icon.svg">
-        </div>
-        <div class="ra21CTAspacer"></div>
-        <div role="button" aria-label="Identity Provider Choice" class="identityprovider ra21CTAbutton text-truncate" id="idpbutton">
-            <i id="spinner" class='fa fa-circle-o-notch fa-spin'></i>
-            <div class="ra21CTAbuttonLabel">
-                <div class="ra21CTAheadline" id="headline"></div>
-                <div class="ra21CTAtitle" id="title"></div>
+        <div class="d-flex ra21CTAcontainer" role="button" data-href="" id="idpbutton">
+            <div class="identityprovider ra21CTAiconButton ra21CTAbutton justify-content-center align-self-center">
+                <img class="ra21CTAicon" src="{{scheme}}://{{vhost}}/static/icons/ra21/ra21icon.svg">
+            </div>
+            <div class="ra21CTAspacer"></div>
+            <div class="identityprovider d-flex flex-column align-self-center ra21CTAbutton text-truncate">
+                <i id="spinner" class='fa fa-circle-o-notch fa-spin'></i>
+                <div class="ra21CTAbuttonLabel justify-content-center">
+                    <div class="ra21CTAheadline" id="headline"></div>
+                    <div class="ra21CTAtitle" id="title"></div>
+                </div>
             </div>
         </div>
-    </div>
+        <div class="d-flex ra21CTAChooseAnother" id="dsbutton">
+           <div class="ra21CTAPlusWrap"><div class="ra21CTAPlus"><i class="fa fa-plus"></i></div></div><div class="ra21CTAccess">Access through another institution</div>
+        </div>
+
     <script>
         var mdq_url = "{{scheme}}://{{vhost}}/metadata/";
         var storage_url = "local://";
-        var defaultText = "Access Through Your Institution";
+        var defaultText = "Your Institution";
         var return_url = window.xprops.returnURL;
         var on_discovery = function () { window.top.location.href = return_url; };
         var on_institution_clicked = function(url, entity_id) { window.top.location.href = url; };
@@ -59,39 +64,50 @@
         var ds = new DiscoveryService(mdq_url, storage_url);
         var count = 0;
         ds.with_items(function (items) {
+            var button = document.getElementById('idpbutton');
+            var dsbutton = document.getElementById('dsbutton');
+            var entity_id = "";
             if (items && items.length > 0) { // or things have gone very wrong...
                 var item = items[items.length-1];
                 if (item && item.entity && item.entity.title && item.entity.entityID) { // silly
-                    document.getElementById('spinner').display = "none";
+                    document.getElementById('spinner').style.display = "none";
                     document.getElementById('title').innerText = item.entity.title;
-                    document.getElementById('idpbutton').dataset['href'] = item.entity.entityID;
+                    entity_id = item.entity.entityID;
                     document.getElementById('headline').innerText = "Access Through";
                     count += 1;
                 }
             }
 
             if (count == 0) {
-                document.getElementById('spinner').display = "none";
-                document.getElementById('idpbutton').innerText = defaultText;
-                document.getElementById('idpbutton').dataset['href'] = "";
+                document.getElementById('spinner').style.display = "none";
+                document.getElementById('title').innerText = "Institution";
+                document.getElementById('headline').className = "ra21CTAtitle";
+                document.getElementById('headline').innerText = "Access Through Your";
+                button.dataset['href'] = "";
             }
-            document.querySelectorAll('button.identityprovider').forEach(function (item) {
-                item.addEventListener('click', function(event) {
-                        event.preventDefault();
-                        setTimeout(function() {
-                            var params = {'return': window.xprops.returnURL};
-                            var entity_id = event.target.dataset.href; // TODO - this only works if we clicked the <a/>
-                            if (entity_id) { // return the discovery response
-                                ds.do_saml_discovery_response(entity_id, params).then(function (url) {
-                                    on_institution_clicked(url, entity_id);
-                                });
-                            } else { // off to DS
-                                on_discovery();
-                            }
-                            window.xchild.close();
-                        }, 1000);
-                    })
-                });
+
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                setTimeout(function() {
+                    var params = {'return': window.xprops.returnURL};
+                    if (entity_id) { // return the discovery response
+                        ds.do_saml_discovery_response(entity_id, params).then(function (url) {
+                            on_institution_clicked(url, entity_id);
+                        });
+                    } else { // off to DS
+                        on_discovery();
+                    }
+                    window.xchild.close();
+                }, 1000);
+            });
+
+            dsbutton.addEventListener('click', function(event) {
+                event.preventDefault();
+                setTimeout(function() {
+                    on_discovery();
+                    window.xchild.close();
+                }, 1000);
+            });
 
             return items;
         });
