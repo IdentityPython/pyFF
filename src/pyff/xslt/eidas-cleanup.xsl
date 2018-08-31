@@ -114,6 +114,9 @@
 
     <xsl:template match="mdattr:EntityAttributes">
         <xsl:call-template name="eidas-attributes"/>
+        <xsl:copy>
+          <xsl:apply-templates select="node()|@*"/>
+        </xsl:copy>
     </xsl:template>
 
     <!-- just copy everything else -->
