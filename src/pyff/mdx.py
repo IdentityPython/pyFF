@@ -249,7 +249,7 @@ listed using the 'role' attribute to the link elements.
 
         _links('/entities/')
         for a in self.server.md.store.collections():
-            if '://' not in a:
+            if a is not None and '://' not in a:
                 _links(a)
 
         for entity_id in self.server.md.store.entity_ids():
