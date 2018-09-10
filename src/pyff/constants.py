@@ -36,7 +36,7 @@ PLACEHOLDER_ICON = 'data:image/gif;base64,R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALA
 DIGESTS = ['sha1', 'md5', 'null']
 
 class Config(object):
-    google_api_key = pyconfig.setting("pyff.google_api_key", "google+api+key+not+set")
+    google_api_key = pyconfig.setting("pyff.google_api_key", None) # Add your own Google Maps API key
     loglevel = pyconfig.setting("pyff.loglevel", logging.INFO)
     access_log = pyconfig.setting("pyff.access_log", None)
     error_log = pyconfig.setting("pyff.error_log", None)
