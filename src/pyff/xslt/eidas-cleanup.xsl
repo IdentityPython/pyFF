@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-Instance"
                 xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
                 xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
                 xmlns:samla="urn:oasis:names:tc:SAML:2.0:assertion"
@@ -123,6 +125,8 @@
     <xsl:template match="text()|comment()|@*">
         <xsl:copy/>
     </xsl:template>
+
+    <xsl:template match="@type"/>
 
     <xsl:template match="*">
         <xsl:copy>
