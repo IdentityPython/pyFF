@@ -116,11 +116,11 @@
             }
 
             lst.sort(function (a, b) { // most commonly used last in list
-                if (a.use_count < b.use_count) {
-                    return 1;
-                }
-                if (a.use_count > b.use_count) {
+                if (a.last_use < b.last_use) {
                     return -1;
+                }
+                if (a.last_use > b.last_use) {
+                    return 1;
                 }
                 return 0;
             });
