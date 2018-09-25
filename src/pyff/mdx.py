@@ -261,6 +261,7 @@ listed using the 'role' attribute to the link elements.
                 _links('%s/%s' % (a, quote_plus(v)))
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
+        cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
         return dumps(jrd)
 
 
@@ -333,6 +334,7 @@ class MDRoot(object):
             status = "running"
         version = pkg_resources.require("pyFF")[0].version
         cherrypy.response.headers['Content-Type'] = 'application/json'
+        cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
         return dumps({'status': status, 'version': version})
 
     @cherrypy.expose
@@ -430,6 +432,7 @@ Search the active set for matching entities.
         :return: a JSON-formatted search result
         """
         cherrypy.response.headers['Content-Type'] = 'application/json'
+        cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
         if paged:
             res, more, total = self.server.md.store.search(query,
                                                            page=int(page),
@@ -614,6 +617,7 @@ class MDServer(object):
                 related = kwargs.get('related', None)
 
                 cherrypy.response.headers['Content-Type'] = 'application/json'
+                cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
 
                 if query is None:
                     log.debug("empty query - creating one")
@@ -690,6 +694,7 @@ class MDServer(object):
                         log.debug("caching for %d seconds" % cache_ttl)
                         for k, v in state.get('headers', {}).iteritems():
                             cherrypy.response.headers[k] = v
+                        cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
                         caching.expires(secs=cache_ttl)
                         return r
         raise NotFound()
