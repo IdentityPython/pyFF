@@ -62,55 +62,63 @@
         }
 
         var ds = new DiscoveryService(mdq_url, storage_url);
-        var count = 0;
-        ds.with_items(function (items) {
-            var button = document.getElementById('idpbutton');
-            var dsbutton = document.getElementById('dsbutton');
-            var entity_id = "";
-            if (items && items.length > 0) { // or things have gone very wrong...
-                var item = items[items.length-1];
-                if (item && item.entity && item.entity.title && item.entity.entityID) { // silly
-                    document.getElementById('spinner').style.display = "none";
-                    document.getElementById('title').innerText = item.entity.title;
-                    entity_id = item.entity.entityID;
-                    document.getElementById('headline').innerText = "Access Through";
-                    count += 1;
-                }
-            }
 
-            if (count == 0) {
-                document.getElementById('spinner').style.display = "none";
-                document.getElementById('title').innerText = "Institution";
-                document.getElementById('headline').className = "ra21CTAtitle";
-                document.getElementById('headline').innerText = "Access Through Your";
-                button.dataset['href'] = "";
-            }
+        var start = Promise.resolve();
+        if (window.xprops.pinned) {
+            start = ds.pin(window.xprops.pinned);
+        }
 
-            button.addEventListener('click', function(event) {
-                event.preventDefault();
-                setTimeout(function() {
-                    var params = {'return': window.xprops.returnURL};
-                    if (entity_id) { // return the discovery response
-                        ds.do_saml_discovery_response(entity_id, params).then(function (url) {
-                            on_institution_clicked(url, entity_id);
-                        });
-                    } else { // off to DS
-                        on_discovery();
+        start.then(function() {
+            var count = 0;
+            ds.with_items(function (items) {
+                var button = document.getElementById('idpbutton');
+                var dsbutton = document.getElementById('dsbutton');
+                var entity_id = "";
+                if (items && items.length > 0) { // or things have gone very wrong...
+                    var item = items[items.length-1];
+                    if (item && item.entity && item.entity.title && item.entity.entityID) { // silly
+                        document.getElementById('spinner').style.display = "none";
+                        document.getElementById('title').innerText = item.entity.title;
+                        entity_id = item.entity.entityID;
+                        document.getElementById('headline').innerText = "Access Through";
+                        count += 1;
                     }
-                    window.xchild.close();
-                }, 1000);
-            });
+                }
 
-            dsbutton.addEventListener('click', function(event) {
-                event.preventDefault();
-                setTimeout(function() {
-                    on_discovery();
-                    window.xchild.close();
-                }, 1000);
-            });
+                if (count == 0) {
+                    document.getElementById('spinner').style.display = "none";
+                    document.getElementById('title').innerText = "Institution";
+                    document.getElementById('headline').className = "ra21CTAtitle";
+                    document.getElementById('headline').innerText = "Access Through Your";
+                    button.dataset['href'] = "";
+                }
 
-            return items;
-        });
+                button.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    setTimeout(function() {
+                        var params = {'return': window.xprops.returnURL};
+                        if (entity_id) { // return the discovery response
+                            ds.do_saml_discovery_response(entity_id, params).then(function (url) {
+                                on_institution_clicked(url, entity_id);
+                            });
+                        } else { // off to DS
+                            on_discovery();
+                        }
+                        window.xchild.close();
+                    }, 1000);
+                });
+
+                dsbutton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    setTimeout(function() {
+                        on_discovery();
+                        window.xchild.close();
+                    }, 1000);
+                });
+
+                return items;
+            });
+        })
 
 
     </script>

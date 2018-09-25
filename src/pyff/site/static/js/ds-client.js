@@ -151,6 +151,10 @@
         });
     };
 
+    DiscoveryService.prototype.pin = function(entity_id) {
+        return this.do_saml_discovery_response(entity_id, {});
+    };
+
     DiscoveryService.prototype.do_saml_discovery_response = function(entity_id, params) {
         var obj = this;
         return obj.with_items(function(items) {
