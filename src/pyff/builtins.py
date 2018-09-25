@@ -395,13 +395,14 @@ def loadstats(req, *opts):
             yaml.dump(metadata, buf)
             _stats = buf.getvalue()
     except Exception as ex:
+        log.debug(traceback.format_exc())
         log.error(ex)
 
     log.info("pyff loadstats: %s" % _stats)
 
 
 @pipe
-@deprecated
+@deprecated(reason="replaced with load")
 def remote(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
@@ -409,7 +410,7 @@ def remote(req, *opts):
 
 
 @pipe
-@deprecated
+@deprecated(reason="replaced with load")
 def local(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
@@ -417,7 +418,7 @@ def local(req, *opts):
 
 
 @pipe
-@deprecated
+@deprecated(reason="replaced with load")
 def _fetch(req, *opts):
     return load(req, *opts)
 
@@ -907,9 +908,8 @@ user-supplied file. The rest of the keyword arguments are made available as stri
     del params['stylesheet']
     try:
         return xslt_transform(req.t, stylesheet, params)
-        # log.debug(ot)
     except Exception as ex:
-        traceback.print_exc(ex)
+        log.debug(traceback.format_exc())
         raise ex
 
 
@@ -1103,6 +1103,7 @@ HTML.
 
                     req.store.update(entity_elt)
             except Exception as ex:
+                log.debug(traceback.format_exc())
                 log.error(ex)
 
 

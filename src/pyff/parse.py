@@ -1,5 +1,5 @@
 import os
-from .utils import parse_xml, root, first_text, dumptree
+from .utils import parse_xml, root, first_text
 from .constants import NS
 from .logs import log
 from xmlsec.crypto import CertDict
@@ -117,8 +117,8 @@ class MDServiceListParser():
 
                     ep = ml.find("{%s}Endpoint" % NS['ser'])
                     if ep is not None and fp is not None:
-                        log.debug("MetadataServiceList[{}]: {} verified by {}".format(info['SchemeTerritory'],
-                                  location, fp))
+                        log.debug("MetadataServiceList[{}]: {} verified by {} for country {}".format(info['SchemeTerritory'],
+                                  location, fp, mdl.get('Territory')))
                         resource.add_child(location,
                                            verify=fp,
                                            eidas_territory=mdl.get('Territory'),
