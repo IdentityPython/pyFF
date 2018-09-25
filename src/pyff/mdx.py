@@ -48,7 +48,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import importlib
 
 import pkg_resources
-
+import traceback
 from six import StringIO
 from six.moves.urllib_parse import urlparse, quote_plus
 import getopt
@@ -106,7 +106,8 @@ class MDUpdate(Monitor):
 
             self.server.ready = True
         except Exception as ex:
-            log.error(ex.message)
+            log.debug(traceback.format_exc())
+            log.error(ex)
         finally:
             if locked:
                 self.lock.release()
@@ -876,7 +877,7 @@ def main():
 
     if config.access_log is not None:
         if config.access_log.startswith('syslog:'):
-            facility = config.error_log[7:]
+            facility = config.access_log[7:]
             h = SysLogLibHandler(facility=facility)
             app.log.access_log.addHandler(h)
             cherrypy.config.update({'log.access_file': ''})

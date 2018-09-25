@@ -4,13 +4,14 @@ from .utils import parse_xml, check_signature, root, validate_document, xml_erro
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
     has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data
 from .logs import log
-from .constants import config, NS, ATTRS, NF_URI, PLACEHOLDER_ICON
+from .constants import config, NS, ATTRS, NF_URI
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
 from itertools import chain
 from copy import deepcopy
 from .exceptions import *
+import traceback
 from six import StringIO
 from requests import ConnectionError
 
@@ -94,9 +95,11 @@ def parse_saml_metadata(source,
             filter_invalid = False
 
         if validate:
+            log.debug("Filtering invalids from {}".format(base_url))
             if filter_invalid:
                 t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
             else:  # all or nothing
+                log.debug("Validating (one-shot) {}".format(base_url))
                 try:
                     validate_document(t)
                 except DocumentInvalid as ex:
@@ -109,9 +112,11 @@ def parse_saml_metadata(source,
                 t = entitiesdescriptor([t], base_url, copy=False, validate=True, nsmap=t.nsmap)
 
     except Exception as ex:
+        log.debug(traceback.format_exc())
+        log.error(ex)
         if fail_on_error:
             raise ex
-        log.error(ex)
+
         return None, None
 
     log.debug("returning %d valid entities" % len(list(iter_entities(t))))
@@ -250,7 +255,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         try:
             validate_document(t)
         except DocumentInvalid as ex:
-            log.debug(xml_error(ex.error_log))
+            log.error("Validation errors found for {}: {}".format(t.get('Name'),xml_error(ex.error_log)))
             raise MetadataException("XML schema validation failed: %s" % name)
     return t
 
