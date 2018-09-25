@@ -54,16 +54,16 @@ def retry(ex, tries=4, delay=3, backoff=2, logger=log):
     return deco_retry
 
 
-def deprecated(logger=log):
+def deprecated(logger=log, reason="Complain to the developer about unspecified code deprecation"):
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
     when the function is used."""
 
     def decorating(func):
         def new_func(*args, **kwargs):
-            msg = "Call to deprecated function %s at %s:%d" % (func.__name__,
+            msg = "Call to deprecated function %s at %s:%d\nReason: %s" % (func.__name__,
                                                                func.func_code.co_filename,
-                                                               func.func_code.co_firstlineno + 1)
+                                                               func.func_code.co_firstlineno + 1, reason)
             if logger:
                 logger.warn(msg)
             else:

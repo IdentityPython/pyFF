@@ -402,7 +402,7 @@ def loadstats(req, *opts):
 
 
 @pipe
-@deprecated
+@deprecated(reason="replaced with load")
 def remote(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
@@ -410,7 +410,7 @@ def remote(req, *opts):
 
 
 @pipe
-@deprecated
+@deprecated(reason="replaced with load")
 def local(req, *opts):
     """Deprecated. Calls :py:mod:`pyff.pipes.builtins.load`.
     """
@@ -418,7 +418,7 @@ def local(req, *opts):
 
 
 @pipe
-@deprecated
+@deprecated(reason="replaced with load")
 def _fetch(req, *opts):
     return load(req, *opts)
 

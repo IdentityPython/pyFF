@@ -554,6 +554,10 @@ class MemoryStore(SAMLStoreBase):
 
 
 class RedisStore(SAMLStoreBase):
+
+    from .decorators import deprecated
+
+    @deprecated(reason="The RedisStore has seen almost no use and is not able to track API changes")
     def __init__(self, version=ts_now(), default_ttl=3600 * 24 * 4, respect_validity=True):
         self.rc = Redis()
         self.default_ttl = default_ttl
