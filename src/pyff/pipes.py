@@ -123,8 +123,10 @@ A delayed pipeline callback used as a post for parse_saml_metadata
         if t is None:
             raise ValueError("PipelineCallback must be called with a parse-tree argument")
         try:
-            log.debug("Calling {} with args={} and env={}".format(self, args, kwargs))
-            return self.plumbing.process(self.req.md, env=kwargs, store=self.store, state={self.entry_point: True}, t=t)
+            state = kwargs
+            state[self.entry_point] = True
+            log.debug("********* {}".format(repr(state)))
+            return self.plumbing.process(self.req.md, store=self.store, state=state, t=t)
         except Exception as ex:
             log.debug(traceback.format_exc())
             raise ex
