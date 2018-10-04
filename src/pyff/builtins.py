@@ -1217,13 +1217,24 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
     e = root(req.t)
     if e.tag == "{%s}EntitiesDescriptor" % NS['md']:
         name = req.args.get('name', None)
-        if name is None or not len(name):
+        if name is None or 0 == len(name):
             name = req.args.get('Name', None)
-        if name is None or not len(name):
+        if name is None or 0 == len(name):
             name = req.state.get('url', None)
-        if name is None or not len(name):
+            if name and 'baseURL' in req.args:
+
+                try:
+                    name_url = urlparse(name)
+                    base_url = urlparse(req.args.get('baseURL'))
+                    name = "{}://{}{}".format(base_url.scheme,base_url.netloc,name_url.path)
+                    log.debug("-------- using Name: %s" % name)
+                except ValueError as ex:
+                    log.debug(ex)
+                    name = None
+        if name is None or 0 == len(name):
             name = e.get('Name', None)
-        if name is not None and len(name):
+
+        if name:
             e.set('Name', name)
 
     now = datetime.utcnow()
