@@ -60,11 +60,16 @@
     DiscoveryService.prototype.json_mdq_get = function(id) {
         var opts = {method: 'GET', headers: {}};
         return fetch(this.mdq_url + id + ".json",opts).then(function (response) {
+           if (response.status == 404) {
+               throw new URIError("Entity not found in MDQ server");
+           }
+           return response;
+        }).then(function (response) {
             var contentType = response.headers.get("content-type");
             if(contentType && contentType.includes("application/json")) {
-              return response.json();
+                return response.json();
             }
-            throw new TypeError("MDQ didn't provide a JSON response");
+            throw new SyntaxError("MDQ didn't provide a JSON response");
         }).then(function(data) {
             if (Object.prototype.toString.call(data) === "[object Array]") {
                 data = data[0];
@@ -72,7 +77,7 @@
             return data;
         }).catch(function(error) {
             console.log(error);
-            Promise.reject(error);
+            //Promise.reject(error);
         });
     };
 
@@ -141,7 +146,7 @@
                             item.last_refresh = now;
                         }
                         return item;
-                    });
+                    })
                 } else {
                     return Promise.resolve(item);
                 }
