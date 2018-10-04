@@ -3,6 +3,11 @@
     var storage_key = "pyff_discovery_choices";
     var cache_time = 60 * 10 * 1000; // 10 minutes
 
+    // polyfill Object.values()
+    if (!Object.values) Object.values = function (object) {
+        return Object.keys(object).map(function(key) { return object[key] });
+    };
+
     function DiscoveryService(mdq_url, storage_url, opts) {
        opts = opts || {};
        this.mdq_url = mdq_url;
