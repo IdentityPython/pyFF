@@ -68,7 +68,7 @@ class SAMLStoreBase(object):
                 return self.select(src, xp=xp)
 
         log.debug("calling store lookup %s" % member)
-        return self.select(member)
+        return self.lookup(member)
 
     def select(self, member, xp=None):
         """
@@ -108,7 +108,7 @@ class SAMLStoreBase(object):
             return l
         else:
             log.debug("filtering %d entities using xpath %s" % (len(l), xp))
-            t = entitiesdescriptor(l, 'dummy', lookup_fn=self.select)
+            t = entitiesdescriptor(l, 'dummy', lookup_fn=self.lookup)
             if t is None:
                 return []
             l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
