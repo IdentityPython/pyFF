@@ -603,7 +603,7 @@ alias invisible for anything except the corresponding mime type.
             name = opts[1]
             alias = True
 
-    ot = entitiesdescriptor(args, name, lookup_fn=req.md.store.lookup)
+    ot = entitiesdescriptor(args, name, lookup_fn=req.md.store.select)
     if ot is None:
         raise PipeException("empty select - stop")
 
