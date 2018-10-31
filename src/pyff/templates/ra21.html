@@ -1,30 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		
-		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   <head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="description" content="">
+	<meta name="author" content="">
+	<link rel="icon" href="/favicon.ico">
 
-		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-		<meta name="description" content="">
-		<meta name="author" content="">
-		<link rel="icon" href="/favicon.ico">
+	<title>{{ _('Get access to ') }} {% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</title>
 
-		<title>{{ _('Get access to ') }} {% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</title>
+	<!-- Bootstrap core CSS -->
+	<link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
 
-		<!-- Bootstrap core CSS -->
-		<link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+	<!-- Custom styles for this template -->
+	<link href="/static/css/ra21.css" rel="stylesheet"/>
 
-		<!-- Custom styles for this template -->
-		<link href="/static/css/ra21.css" rel="stylesheet"/>
-
-		<script type="text/javascript" src="/static/js/fontawesome-all.min.js"></script>
-		<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+	<script type="text/javascript" src="/static/js/fontawesome-all.min.js"></script>
+	<script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=default,fetch"></script>
         <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
         <script type="text/javascript" src="/static/js/popper.min.js"></script>
         <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
         <script type="text/javascript" src="/static/js/hogan.min.js"></script>
 
-		<script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
         <!-- un-minified -->
         <script type="text/javascript" src="/static/js/sha1.js"></script>
         <script type="text/javascript" src="/static/js/client.min.js"></script>
