@@ -89,6 +89,20 @@
         return new Date().getTime();
     };
 
+    DiscoveryService._clean_item = function(item) {
+        if (item.entity && (item.entity.entity_id || item.entity.entityID) && item.entity.title) {
+            var entity = item.entity;
+            if (entity && entity.entityID && !entity.entity_id) {
+               entity.entity_id = entity.entityID;
+            }
+            if (entity && !entity.entity_icon && entity.icon) {
+               entity.entity_icon = entity.icon;
+            }
+        }
+        
+        return item;
+    }
+
     DiscoveryService.prototype.with_items = function(callback) {
         var obj = this;
         var storage = this.get_storage();
@@ -105,21 +119,13 @@
                 lst = [];
             }
 
-            var clean = {};
+            var cleaned_items = {};
             for (var i = 0; i < lst.length; i++) {
-                if (lst[i].entity && (lst[i].entity.entity_id || lst[i].entity.entityID) && lst[i].entity.title) {
-                    var entity = lst[i].entity;
-                    if (entity && entity.entityID && !entity.entity_id) {
-                       entity.entity_id = entity.entityID;
-                    }
-                    if (entity && !entity.entity_icon && entity.icon) {
-                       entity.entity_icon = entity.icon;
-                    }
-                    clean[entity.entity_id] = lst[i];
-                }
+                var cleaned_item = DiscoveryService._clean_item(lst[i]);
+                cleaned_items[cleaned_item.entity['entity_id']] = cleaned_item;
             }
 
-            lst = Object.values(clean);
+            lst = Object.values(cleaned_items);
 
             while (lst.length > 3) {
                 lst.pop();
@@ -143,6 +149,7 @@
                     return obj.json_mdq_get(id).then(function(entity) {
                         if (entity) {
                             item.entity = entity;
+                            item = DiscoveryService._clean_item(item);
                             item.last_refresh = now;
                         }
                         return item;
