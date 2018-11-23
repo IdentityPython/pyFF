@@ -17,6 +17,7 @@ from .parse import parse_resource
 from itertools import chain
 from .exceptions import ResourceException
 from .utils import url_get
+import cherrypy
 
 requests.packages.urllib3.disable_warnings()
 
@@ -104,6 +105,9 @@ class Resource(object):
         self.opts.setdefault('verify', None)
         self.opts.setdefault('filter_invalid', True)
         self.opts.setdefault('validate', True)
+
+        if config.autoreload and (os.path.isdir(self.url) or os.path.isfile(self.url)):
+            cherrypy.engine.autoreload.files.add(os.path.abspath(self.url))
 
         if "://" not in self.url:
             if os.path.isfile(self.url):
