@@ -728,50 +728,50 @@ def main():
 
     try:  # pragma: nocover
         for o, a in opts:
-            if o in ('-h', '--help'):
+            if o in ['-h', '--help']:
                 print(__doc__)
                 sys.exit(0)
-            elif o == '--loglevel':
+            elif o in ['--loglevel']:
                 config.loglevel = getattr(logging, a.upper(), None)
                 if not isinstance(config.loglevel, int):
                     raise ValueError('Invalid log level: %s' % config.loglevel)
-            elif o in ('--log', '-l'):
+            elif o in ['--log', '-l']:
                 config.error_log = a
                 config.access_log = a
-            elif o in '--error-log':
+            elif o in ['--error-log']:
                 config.error_log = a
-            elif o in '--access-log':
+            elif o in ['--access-log']:
                 config.access_log = a
-            elif o in ('--host', '-H'):
+            elif o in ['--host', '-H']:
                 config.bind_address = a
-            elif o in ('--port', '-P'):
+            elif o in ['--port', '-P']:
                 config.port = int(a)
-            elif o in ('--pidfile', '-p'):
+            elif o in ['--pidfile', '-p']:
                 config.pid_file = a
-            elif o in ('--no-caching', '-C'):
+            elif o in ['--no-caching', '-C']:
                 config.caching_enabled = False
-            elif o in ('--caching-delay', 'D'):
+            elif o in ['--caching-delay', 'D']:
                 config.caching_delay = int(o)
-            elif o in ('--foreground', '-f'):
+            elif o in ['--foreground', '-f']:
                 config.daemonize = False
-            elif o in ('--autoreload', '-a'):
+            elif o in ['--autoreload', '-a']:
                 config.autoreload = True
-            elif o in '--frequency':
+            elif o in ['--frequency']:
                 config.update_frequency = int(a)
-            elif o in ('-A', '--alias'):
+            elif o in ['-A', '--alias']:
                 (a, colon, uri) = a.partition(':')
                 assert (colon == ':')
                 if a and uri:
                     config.aliases[a] = uri
-            elif o in '--dir':
+            elif o in ['--dir']:
                 config.base_dir = a
-            elif o in '--proxy':
+            elif o in ['--proxy']:
                 config.proxy = True
-            elif o in '--allow_shutdown':
+            elif o in ['--allow_shutdown']:
                 config.allow_shutdown = True
-            elif o in ('-m', '--module'):
+            elif o in ['-m', '--module']:
                 config.modules.append(a)
-            elif o in '--version':
+            elif o in ['--version']:
                 print("pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__))
                 sys.exit(0)
             else:
