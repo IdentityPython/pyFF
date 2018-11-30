@@ -1,20 +1,20 @@
 python SAML metadata aggregator
 ===============================
 
-.. image:: https://img.shields.io/travis/leifj/pyFF.svg
-   :target: https://travis-ci.org/leifj/pyFF
+.. image:: https://img.shields.io/travis/IdentityPython/pyFF.svg
+   :target: https://travis-ci.org/IdentityPython/pyFF
    :alt: Travis Build
-.. image:: https://img.shields.io/coveralls/leifj/pyFF.svg
+.. image:: https://img.shields.io/coveralls/IdentityPython/pyFF.svg
    :target: https://coveralls.io/r/leifj/pyFF?branch=master
    :alt: Coverage
-.. image:: https://img.shields.io/requires/github/leifj/pyFF.svg
-   :target: https://requires.io/github/leifj/pyFF/requirements/?branch=master
+.. image:: https://img.shields.io/requires/github/IdentityPython/pyFF.svg
+   :target: https://requires.io/github/IdentityPython/pyFF/requirements/?branch=master
    :alt: Requirements Status
 .. image:: https://img.shields.io/codeclimate/github/leifj/pyFF.svg
-   :target: https://codeclimate.com/github/leifj/pyFF
+   :target: https://codeclimate.com/github/IdentityPython/pyFF
    :alt: Code Climate
 .. image:: https://img.shields.io/pypi/l/pyFF.svg
-   :target: https://github.com/leifj/pyFF/blob/master/LICENSE.txt
+   :target: https://github.com/IdentityPython/pyFF/blob/master/LICENSE.txt
    :alt: License
 .. image:: https://img.shields.io/pypi/format/pyFF.svg
    :target: https://pypi.python.org/pypi/pyFF
@@ -26,7 +26,7 @@ python SAML metadata aggregator
 This is a SAML metadata aggregator written in python. It is based on the model 
 for metadata exchange by Ian Young: http://iay.org.uk/blog/2008/10/metadata_interc.html
 
-* http://github.com/leifj/pyFF
+* http://github.com/IdentityPython/pyFF
 * http://pypi.python.org/pypi/pyFF
 * http://packages.python.org/pyFF
 
