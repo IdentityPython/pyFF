@@ -1,6 +1,9 @@
 python SAML metadata aggregator
 ===============================
 
+.. image:: https://img.shields.io/pypi/l/pyXMLSecurity.svg
+   :target: https://github.com/leifj/pyXMLSecurity/blob/master/LICENSE.txt
+   :alt: License
 .. image:: https://img.shields.io/travis/IdentityPython/pyFF.svg
    :target: https://travis-ci.org/IdentityPython/pyFF
    :alt: Travis Build
@@ -10,12 +13,9 @@ python SAML metadata aggregator
 .. image:: https://img.shields.io/requires/github/IdentityPython/pyFF.svg
    :target: https://requires.io/github/IdentityPython/pyFF/requirements/?branch=master
    :alt: Requirements Status
-.. image:: https://img.shields.io/codeclimate/github/leifj/pyFF.svg
-   :target: https://codeclimate.com/github/IdentityPython/pyFF
-   :alt: Code Climate
-.. image:: https://img.shields.io/pypi/l/pyFF.svg
-   :target: https://github.com/IdentityPython/pyFF/blob/master/LICENSE.txt
-   :alt: License
+.. image:: https://api.codeclimate.com/v1/badges/133c2c109b680c6868c1/maintainability
+   :target: https://codeclimate.com/github/IdentityPython/pyFF/maintainability
+   :alt: Maintainability
 .. image:: https://img.shields.io/pypi/format/pyFF.svg
    :target: https://pypi.python.org/pypi/pyFF
    :alt: Format
