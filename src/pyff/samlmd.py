@@ -95,17 +95,11 @@ def parse_saml_metadata(source,
             filter_invalid = False
 
         if validate:
-            log.debug("Filtering invalids from {}".format(base_url))
-            if filter_invalid:
-                t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
-            else:  # all or nothing
-                log.debug("Validating (one-shot) {}".format(base_url))
-                try:
-                    validate_document(t)
-                except DocumentInvalid as ex:
-                    validation_errors[base_url] = xml_error(ex.error_log, m=base_url)
-                    raise MetadataException("schema validation failed: [{}] '{}': {}"
-                                            .format(base_url, source, xml_error(ex.error_log, m=base_url)))
+            t = filter_or_validate(t,
+                                   filter_invalid=filter_invalid,
+                                   base_url=base_url,
+                                   source=source,
+                                   validation_errors=validation_errors)
 
         if t is not None:
             if t.tag == "{%s}EntityDescriptor" % NS['md']:
@@ -190,6 +184,21 @@ def filter_invalids_from_document(t, base_url, validation_errors):
     return t
 
 
+def filter_or_validate(t, filter_invalid=False, base_url="", source=None, validation_errors=dict()):
+    log.debug("Filtering invalids from {}".format(base_url))
+    if filter_invalid:
+        t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
+    else:  # all or nothing
+        log.debug("Validating (one-shot) {}".format(base_url))
+        try:
+            return validate_document(t)
+        except DocumentInvalid as ex:
+            err = xml_error(ex.error_log, m=base_url)
+            validation_errors[base_url] = err
+            raise MetadataException("Schema validation failed: @ {} (from {}): {}".format(base_url, source, err))
+
+    return t
+
 def entitiesdescriptor(entities,
                        name,
                        lookup_fn=None,
@@ -252,11 +261,16 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             fd.write(dumptree(t))
 
     if validate:
-        try:
-            validate_document(t)
-        except DocumentInvalid as ex:
-            log.error("Validation errors found for {}: {}".format(t.get('Name'),xml_error(ex.error_log)))
-            raise MetadataException("XML schema validation failed: %s" % name)
+        validation_errors = dict()
+        t = filter_or_validate(t,
+                               filter_invalid=True,
+                               base_url=name,
+                               source="request",
+                               validation_errors=validation_errors)
+
+        for base_url,err in validation_errors.items():
+            log.error("Validation error: @ {}: {}".format(base_url, err))
+
     return t
 
 
