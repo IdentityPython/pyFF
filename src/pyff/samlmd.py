@@ -103,7 +103,12 @@ def parse_saml_metadata(source,
 
         if t is not None:
             if t.tag == "{%s}EntityDescriptor" % NS['md']:
-                t = entitiesdescriptor([t], base_url, copy=False, validate=True, nsmap=t.nsmap)
+                t = entitiesdescriptor([t],
+                                       base_url,
+                                       copy=False,
+                                       validate=True,
+                                       filter_invalid=filter_invalid,
+                                       nsmap=t.nsmap)
 
     except Exception as ex:
         log.debug(traceback.format_exc())
@@ -205,6 +210,7 @@ def entitiesdescriptor(entities,
                        cache_duration=None,
                        valid_until=None,
                        validate=True,
+                       filter_invalid=False,
                        copy=True,
                        nsmap=None):
     """
@@ -263,7 +269,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
     if validate:
         validation_errors = dict()
         t = filter_or_validate(t,
-                               filter_invalid=True,
+                               filter_invalid=filter_invalid,
                                base_url=name,
                                source="request",
                                validation_errors=validation_errors)
