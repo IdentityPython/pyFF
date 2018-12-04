@@ -875,7 +875,7 @@ def set_reginfo(e, policy=None, authority=None):
     ext = entity_extensions(e)
     ri = ext.find(".//{%s}RegistrationInfo" % NS['mdrpi'])
     if ri is not None:
-        raise MetadataException("A RegistrationInfo element is already present")
+        ext.remove(ri)
 
     ri = etree.Element("{%s}RegistrationInfo" % NS['mdrpi'])
     ext.append(ri)
