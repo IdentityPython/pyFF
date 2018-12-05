@@ -1,4 +1,5 @@
 redis
+idna==2.5
 ipaddr
 publicsuffix
 lxml==4.1.1

@@ -25,7 +25,7 @@ install_requires = [
     'jinja2',
     'httplib2 >=0.7.7',
     'six>=1.11.0',
-    'idna < 2.8',
+    'idna==2.5',
     'ipaddr',
     'publicsuffix',
     'redis',
