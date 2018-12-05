@@ -16,6 +16,7 @@ README = open(join(here, 'README.rst')).read()
 NEWS = open(join(here, 'NEWS.txt')).read()
 
 install_requires = [
+    'idna==2.5',
     'lxml==4.1.1',
     'pyyaml >=3.10',
     'pyXMLSecurity >=0.15',
@@ -25,7 +26,6 @@ install_requires = [
     'jinja2',
     'httplib2 >=0.7.7',
     'six>=1.11.0',
-    'idna==2.5',
     'ipaddr',
     'publicsuffix',
     'redis',
