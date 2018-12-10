@@ -225,6 +225,10 @@ def request_vhost(request):
     return request.headers.get('X-Forwarded-Host', request.headers.get('Host', request.base))
 
 
+def request_scheme(request):
+    return request.headers.get('X-Forwarded-Proto', request.scheme)
+
+
 def safe_write(fn, data):
     """Safely write data to a file with name fn
     :param fn: a filename
@@ -296,6 +300,7 @@ def render_template(name, **kwargs):
     kwargs.setdefault('http', cherrypy.request)
     vhost = request_vhost(cherrypy.request)
     kwargs.setdefault('vhost', vhost)
+    kwargs.setdefault('scheme', request_scheme(cherrypy.request))
     kwargs.setdefault('brand', "pyFF @ %s" % vhost)
     kwargs.setdefault('google_api_key', config.google_api_key)
     kwargs.setdefault('_', _)
