@@ -16,6 +16,7 @@ README = open(join(here, 'README.rst')).read()
 NEWS = open(join(here, 'NEWS.txt')).read()
 
 install_requires = [
+    'urllib3==1.23',
     'idna==2.5',
     'lxml==4.1.1',
     'pyyaml >=3.10',
