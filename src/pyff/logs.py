@@ -2,7 +2,11 @@ __author__ = 'leifj'
 
 import logging
 import syslog
-import cherrypy
+try:
+    import cherrypy
+except Exception as e:
+    print("cherrypy logging disabled")
+    cherrypy = None
 
 
 def printable(s):
@@ -24,7 +28,7 @@ class PyFFLogger(object):
                          logging.ERROR: logging.error}
 
     def _l(self, severity, msg):
-        if '' in cherrypy.tree.apps:
+        if cherrypy is not None and '' in cherrypy.tree.apps:
             cherrypy.tree.apps[''].log(printable(msg), severity=severity)
         elif severity in self._loggers:
             self._loggers[severity](printable(msg))
