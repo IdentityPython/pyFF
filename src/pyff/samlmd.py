@@ -17,6 +17,7 @@ from requests import ConnectionError
 from .fetch import ResourceManager
 from .parse import add_parser
 
+
 class EntitySet(object):
     def __init__(self, initial=None):
         self._e = dict()
@@ -195,6 +196,8 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
     log.debug("Filtering invalids from {}".format(base_url))
     if filter_invalid:
         t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
+        for entity_id, err in validation_errors:
+            log.error("SAML Metadata Validation Error: {}: {}".format(entity_id, err))
     else:  # all or nothing
         log.debug("Validating (one-shot) {}".format(base_url))
         try:
