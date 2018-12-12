@@ -4,7 +4,6 @@ from .constants import NS
 from .logs import log
 from xmlsec.crypto import CertDict
 from datetime import datetime
-from samlmd import SAMLMetadataResourceParser
 from six import StringIO
 
 __author__ = 'leifj'
@@ -130,8 +129,7 @@ class MDServiceListParser():
         return info
 
 
-_parsers = [SAMLMetadataResourceParser(), XRDParser(), MDServiceListParser(), DirectoryParser('.xml'), NoParser()]
-
+_parsers = [XRDParser(), MDServiceListParser(), DirectoryParser('.xml'), NoParser()]
 
 
 def add_parser(parser):

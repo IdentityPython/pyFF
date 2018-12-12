@@ -10,7 +10,7 @@ import yaml
 from mako.lookup import TemplateLookup
 from mock import patch
 from nose.plugins.skip import Skip
-from pyff.mdrepo import MDRepository
+from pyff.samlmd import MDRepository
 from pyff.exceptions import MetadataException
 from pyff.pipes import plumbing, Plumbing, PipeException
 from pyff.test import ExitException

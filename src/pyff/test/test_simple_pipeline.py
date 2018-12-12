@@ -4,7 +4,7 @@ import os
 from mako.lookup import TemplateLookup
 
 from pyff.constants import NS
-from pyff.mdrepo import MDRepository
+from pyff.samlmd import MDRepository
 from pyff.pipes import plumbing
 from pyff.test import SignerTestCase
 

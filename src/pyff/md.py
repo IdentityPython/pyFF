@@ -13,7 +13,7 @@ import logging
 import sys
 import traceback
 from . import __version__
-from .mdrepo import MDRepository
+from .samlmd import MDRepository
 from .pipes import plumbing
 from .constants import config
 

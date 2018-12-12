@@ -5,11 +5,10 @@ import os
 
 from pyff.constants import NS
 from pyff.store import make_store_instance
-from pyff.mdrepo import MDRepository
 from pyff.utils import resource_filename, parse_xml, root, hash_id, MetadataException
 from pyff.samlmd import set_entity_attributes, is_idp, is_sp, entity_icon_url, \
     entity_domains, entity_extended_display, entity_display_name, entity_simple_summary, \
-    metadata_expiration, annotate_entity, sha1_id
+    metadata_expiration, annotate_entity, sha1_id, MDRepository
 
 class TestRepo(TestCase):
     def setUp(self):

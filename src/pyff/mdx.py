@@ -65,12 +65,11 @@ from cherrypy.lib import caching
 from simplejson import dumps
 from .constants import config
 from .locks import ReadWriteLock
-from .mdrepo import MDRepository
 from .pipes import plumbing
 from .utils import resource_string, xslt_transform, dumptree, duration2timedelta, \
     debug_observer, render_template, hash_id
 from .logs import log, SysLogLibHandler
-from .samlmd import entity_simple_summary, entity_display_name, entity_info
+from .samlmd import entity_simple_summary, entity_display_name, entity_info, MDRepository
 import logging
 from .stats import stats
 from datetime import datetime
