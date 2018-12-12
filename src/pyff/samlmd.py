@@ -206,13 +206,14 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
 
     return t
 
+
 def entitiesdescriptor(entities,
                        name,
                        lookup_fn=None,
                        cache_duration=None,
                        valid_until=None,
                        validate=True,
-                       filter_invalid=False,
+                       filter_invalid=True,
                        copy=True,
                        nsmap=None):
     """
@@ -223,6 +224,8 @@ def entitiesdescriptor(entities,
 :param valid_until: a relative time eg 2w 4d 1h for 2 weeks, 4 days and 1hour from now.
 :param copy: set to False to avoid making a copy of all the entities in list. This may be dangerous.
 :param validate: set to False to skip schema validation of the resulting EntitiesDesciptor element. This is dangerous!
+:param filter_invalid: remove invalid entitiesdescriptor elements from aggregate
+:param nsmap: additional namespace definitions to include in top level entitiesdescriptor element
 
 Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
     """
@@ -230,11 +233,11 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
     if nsmap is None:
         nsmap = dict()
 
-    def _resolve(member, l_fn):
-        if hasattr(member, 'tag'):
-            return [member]
+    def _resolve(m, l_fn):
+        if hasattr(m, 'tag'):
+            return [m]
         else:
-            return l_fn(member)
+            return l_fn(m)
 
     nsmap.update(NS)
     resolved_entities = set()
