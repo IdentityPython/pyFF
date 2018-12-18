@@ -254,6 +254,35 @@ The dict in the list contains three items:
             return res
 
 
+class EmptyStore(SAMLStoreBase):
+
+    def __init__(self):
+        pass
+
+    def update(self, **kwargs):
+        return 0
+
+    def size(self, **kwargs):
+        return 0
+
+    def collections(self):
+        return []
+
+    def reset(self):
+        pass
+
+    def entity_ids(self):
+        return set()
+
+    def select(self, **kwargs):
+        return list()
+
+    def search(self, **kwargs):
+        return list()
+
+    def merge(self, *args, **kwargs):
+        return list()
+
 class WhooshStore(SAMLStoreBase):
 
     def __init__(self):
