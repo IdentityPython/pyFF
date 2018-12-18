@@ -1,13 +1,14 @@
 import os
 from .utils import parse_xml, root, first_text
 from .constants import NS
-from .logs import log
+from .logs import get_log
 from xmlsec.crypto import CertDict
 from datetime import datetime
 from six import StringIO
 
 __author__ = 'leifj'
 
+log = get_log(__name__)
 
 class ParserException(Exception):
     def __init__(self, msg, wrapped=None, data=None):

@@ -5,7 +5,7 @@ An abstraction layer for metadata fetchers. Supports both syncronous and asyncro
 """
 
 from __future__ import absolute_import, unicode_literals
-from .logs import log
+from .logs import get_log
 import os
 import requests
 from .constants import config
@@ -19,6 +19,8 @@ from .exceptions import ResourceException
 from .utils import url_get
 
 requests.packages.urllib3.disable_warnings()
+
+log = get_log(__name__)
 
 class ResourceManager(DictMixin):
     def __init__(self):

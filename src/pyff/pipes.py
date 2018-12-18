@@ -4,11 +4,12 @@ transform, sign or output SAML metadata.
 """
 
 import traceback
-from six import StringIO
 import os
 import yaml
 from .utils import resource_string, PyffException
-from .logs import log
+from .logs import get_log
+
+log = get_log(__name__)
 
 __author__ = 'leifj'
 

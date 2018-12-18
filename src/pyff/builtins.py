@@ -21,7 +21,7 @@ from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
 from .constants import NS
 from .decorators import deprecated
-from .logs import log
+from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .stats import set_metadata_info
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, validate_document
@@ -36,7 +36,7 @@ from .store import make_store_instance
 __author__ = 'leifj'
 
 FILESPEC_REGEX = "([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)"
-
+log = get_log(__name__)
 
 @pipe
 def dump(req, *opts):

@@ -26,7 +26,7 @@ import re
 from jinja2 import Environment, PackageLoader
 from lxml import etree
 from .constants import config, NS
-from .logs import log
+from .logs import get_log
 from .exceptions import *
 from .i18n import language
 import requests
@@ -39,6 +39,8 @@ from . import __version__
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
 __author__ = 'leifj'
+
+log = get_log(__name__)
 
 sentinel = object()
 thread_data = local()

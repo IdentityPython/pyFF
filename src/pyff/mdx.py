@@ -66,9 +66,8 @@ from simplejson import dumps
 from .constants import config
 from .locks import ReadWriteLock
 from .pipes import plumbing
-from .utils import resource_string, xslt_transform, dumptree, duration2timedelta, \
-    debug_observer, render_template, hash_id
-from .logs import log, SysLogLibHandler
+from .utils import resource_string, duration2timedelta, debug_observer, render_template, hash_id
+from .logs import get_log, SysLogLibHandler
 from .samlmd import entity_simple_summary, entity_display_name, entity_info, MDRepository
 import logging
 from .stats import stats
@@ -80,7 +79,7 @@ from .i18n import language
 from . import samlmd
 
 _ = language.ugettext
-
+log = get_log(__name__)
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
 
@@ -527,7 +526,7 @@ class MDServer(object):
         content_type = kwargs.get('content_type', None)
         request_type = kwargs.get('request_type', "negotiate")
 
-        # log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
+        log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
 
         def _d(x, do_split=True):
             if x is not None:

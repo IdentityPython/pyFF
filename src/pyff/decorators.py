@@ -3,11 +3,12 @@ Various decorators used in pyFF.
 """
 import functools
 from collections import namedtuple
+import time
+from .logs import get_log
 
 __author__ = 'leifj'
 
-import time
-from .logs import log
+log = get_log(__name__)
 
 
 def retry(ex, tries=4, delay=3, backoff=2, logger=log):

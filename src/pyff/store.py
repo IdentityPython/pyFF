@@ -5,7 +5,7 @@ import re
 from redis import Redis
 from .constants import NS, ATTRS, ATTRS_INV
 from .decorators import cached
-from .logs import log
+from .logs import get_log
 from .constants import config
 from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, \
     avg_domain_distance, ts_now, load_callable
@@ -17,6 +17,8 @@ from . import merge_strategies
 import ipaddr
 import operator
 import six
+
+log = get_log(__name__)
 
 DINDEX = ('sha1', 'sha256', 'null')
 

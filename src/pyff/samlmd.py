@@ -3,7 +3,7 @@ from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
     has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data
-from .logs import log
+from .logs import get_log
 from .constants import config, NS, ATTRS, NF_URI
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -16,6 +16,8 @@ from six import StringIO
 from requests import ConnectionError
 from .fetch import ResourceManager
 from .parse import add_parser
+
+log = get_log(__name__)
 
 
 class EntitySet(object):
@@ -114,7 +116,7 @@ def parse_saml_metadata(source,
 
     except Exception as ex:
         log.debug(traceback.format_exc())
-        log.error(ex)
+        log.error("Error parsing {}: {}".format(base_url, ex))
         if fail_on_error:
             raise ex
 
@@ -197,7 +199,10 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
     if filter_invalid:
         t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
         for entity_id, err in validation_errors:
-            log.error("SAML Metadata Validation Error: {}: {}".format(entity_id, err))
+            log.error("Validation error while parsing {} (from {}). Removed @entityID='{}': {}".format(base_url,
+                                                                                                       source,
+                                                                                                       entity_id,
+                                                                                                       err))
     else:  # all or nothing
         log.debug("Validating (one-shot) {}".format(base_url))
         try:
@@ -205,7 +210,9 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
         except DocumentInvalid as ex:
             err = xml_error(ex.error_log, m=base_url)
             validation_errors[base_url] = err
-            raise MetadataException("Schema validation failed: @ {} (from {}): {}".format(base_url, source, err))
+            raise MetadataException("Validation error while parsing {}: (from {}): {}".format(base_url,
+                                                                                              source,
+                                                                                              err))
 
     return t
 
