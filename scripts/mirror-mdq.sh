@@ -41,7 +41,7 @@ if [ "x$base" = "x" -o "x$target" = "x" ]; then
    usage
 fi
 
-dir=`mktemp -d`
+dir=`env TMPDIR=/var/tmp mktemp -d` # to be able to use user extended attributes in post.d
 
 relarg=""
 if [ "x$rel" != "x" ]; then
