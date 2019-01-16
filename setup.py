@@ -38,7 +38,9 @@ install_requires = [
     'pyyaml',
     'multiprocess',
     'minify',
-    'whoosh'
+    'whoosh',
+    'pyramid',
+    'accept_types'
 ]
 
 python_implementation_str = python_implementation()
@@ -84,7 +86,13 @@ setup(name='pyFF',
       zip_safe=False,
       install_requires=install_requires,
       entry_points={
-          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main']
+          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main'],
+          'paste.app_factory': [
+             'pyffapp=pyff.wsgi:app_factory'
+          ],
+          'paste.server_runner': [
+             'pyffs=pyff.wsgi:server_runner'
+          ],
       },
       message_extractors={'src': [
           ('**.py', 'python', None),

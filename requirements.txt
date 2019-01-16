@@ -21,3 +21,6 @@ multiprocess
 requests_cache
 requests_file
 whoosh
+accept_types
+pyramid
+six
