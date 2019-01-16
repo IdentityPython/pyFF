@@ -136,8 +136,6 @@ body {
 }
 .sp-thumbnail {width: 100px; margin: 0 0; padding-left: 5px;}
 
-.cpstats td, th { font-size: x-small; }
-
 pre.prettyprint {
     display: block;
     overflow: auto;

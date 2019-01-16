@@ -40,9 +40,6 @@ class SAMLStoreBase(object):
             log.debug("**** yield entityID=%s" % e.get('entityID'))
             yield e
 
-    def periodic(self, stats):
-        pass
-
     def size(self, a=None, v=None):
         raise NotImplementedError()
 
@@ -610,14 +607,6 @@ class RedisStore(SAMLStoreBase):
             if not self.rc.zcard(tn) > 0:
                 log.debug("dropping empty %s %s" % (attr, c))
                 self.rc.srem(an, c)
-
-    def periodic(self, stats):
-        now = ts_now()
-        stats['Last Periodic Maintenance'] = now
-        log.debug("periodic maintentance...")
-        self.rc.zremrangebyscore("members", "-inf", now)
-        self._drop_empty_av("collections", "members", now)
-        self._drop_empty_av("attributes", "values", now)
 
     def update_entity(self, relt, t, tid, ts, p=None):
         if p is None:

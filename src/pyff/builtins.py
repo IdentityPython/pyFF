@@ -23,7 +23,6 @@ from .constants import NS
 from .decorators import deprecated
 from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
-from .stats import set_metadata_info
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, validate_document
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
     discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor
@@ -378,6 +377,7 @@ Publish the working document in XML form.
 
 
 @pipe
+@deprecated(reason="stats subsystem was removed")
 def loadstats(req, *opts):
     """
     Log (INFO) information about the result of the last call to load
@@ -385,20 +385,7 @@ def loadstats(req, *opts):
     :param opts: Options: (none)
     :return: None
     """
-    from .stats import metadata
-    _stats = None
-    try:
-        if 'json' in opts:
-            _stats = json.dumps(metadata)
-        else:
-            buf = StringIO()
-            yaml.dump(metadata, buf)
-            _stats = buf.getvalue()
-    except Exception as ex:
-        log.debug(traceback.format_exc())
-        log.error(ex)
-
-    log.info("pyff loadstats: %s" % _stats)
+    log.info("pyff loadstats has been deprecated")
 
 
 @pipe
@@ -609,10 +596,10 @@ alias invisible for anything except the corresponding mime type.
         raise PipeException("empty select - stop")
 
     if alias:
-        nfo = dict(Status='default', Description="Synthetic collection")
+        #nfo = dict(Status='default', Description="Synthetic collection")
         n = req.store.update(ot, name)
-        nfo['Size'] = str(n)
-        set_metadata_info(name, nfo)
+        #nfo['Size'] = str(n)
+        #set_metadata_info(name, nfo)
 
     return ot
 
@@ -835,6 +822,20 @@ Display statistics about the current working document.
             "           sps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:SPSSODescriptor]", namespaces=NS))))
     print("---")
     return req.t
+
+
+@pipe
+def summary(req, *opts):
+    """
+    Display a summary of the repository
+    :param req:
+    :param opts:
+    :return:
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    return dict(size=req.store.size())
 
 
 @pipe(name='store')
