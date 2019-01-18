@@ -16,6 +16,7 @@ README = open(join(here, 'README.rst')).read()
 NEWS = open(join(here, 'NEWS.txt')).read()
 
 install_requires = [
+    'mako',
     'six',
     'urllib3==1.23',
     'idna==2.5',
