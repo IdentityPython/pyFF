@@ -107,12 +107,6 @@ class PyFFDTest(PipeLineTest):
         assert ("Metadata By Attributes" in r.text)
         assert (r.status_code == 200)
 
-    def test_stats(self):
-        r = requests.get("http://127.0.0.1:%s/stats/" % self.port)
-        assert ("text/html" in r.headers['content-type'])
-        assert ("pyFF Statistics" in r.text)
-        assert (r.status_code == 200)
-
     def test_alias_ndn(self):
         r = requests.get("http://127.0.0.1:%s/ndn.xml" % self.port)
         assert (r.status_code == 200)
@@ -275,7 +269,7 @@ class PyFFTest(PipeLineTest):
     def test_bad_loglevel(self):
         try:
             out, err, exit_code = run_pyff("--loglevel=TRACE")
-        except ValueError, ex:
+        except ValueError as ex:
             assert ('TRACE' in str(ex))
 
     def tear_down(self):

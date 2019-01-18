@@ -43,16 +43,14 @@ An implementation of draft-lajoie-md-query
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import importlib
 
 import pkg_resources
 import traceback
-from six import StringIO
 from six.moves.urllib_parse import urlparse, quote_plus
 import getopt
-from cherrypy.lib.cpstats import StatsPage
 import os
 import sys
 from threading import Lock
@@ -66,21 +64,18 @@ from simplejson import dumps
 from .constants import config
 from .locks import ReadWriteLock
 from .pipes import plumbing
-from .utils import resource_string, xslt_transform, dumptree, duration2timedelta, \
-    debug_observer, render_template, hash_id
-from .logs import log, SysLogLibHandler
+from .utils import resource_string, duration2timedelta, debug_observer, render_template, hash_id
+from .logs import get_log, SysLogLibHandler
 from .samlmd import entity_simple_summary, entity_display_name, entity_info, MDRepository
 import logging
-from .stats import stats
 from datetime import datetime
-from lxml import etree
 from . import __version__ as pyff_version
 from publicsuffix import PublicSuffixList
 from .i18n import language
 from . import samlmd
 
 _ = language.ugettext
-
+log = get_log(__name__)
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
 
@@ -159,32 +154,6 @@ class EncodingDispatcher(object):
                 return self.next_dispatcher(npath.encode('ascii', errors='ignore'))
         return self.next_dispatcher(vpath)
 
-
-class MDStats(StatsPage):
-    """Renders the standard stats page with pyFF style decoration. We use the lxml html parser to locate the
-    body and replace it with a '<div>'. The result is passed as the content using the 'basic' template.
-    """
-
-    @cherrypy.expose
-    def index(self):
-        h = "".join(super(MDStats, self).index())
-        parser = etree.HTMLParser()
-        tree = etree.parse(StringIO(h), parser)
-        body = tree.getroot().find("body")
-        body.tag = 'div'
-        body.set('class', 'cpstats')
-        for h in body.findall("h1"):
-            h.tag = 'h3'
-        for h in body.findall("h2"):
-            h.tag = 'h4'
-        for t in body.findall('table'):
-            t.set('class', 'table table-striped table-bordered table-condensed')
-        for b in body.findall('button'):
-            b.set('class', 'btn btn-small')
-        hstr = etree.tostring(body, pretty_print=True, method="html")
-        return render_template("ui.html", content=hstr, headline="Statistics")
-
-
 class WellKnown(object):
     """Implementation of the .well-known URL namespace for pyFF. In particular this contains the webfinger
     implementation which returns information about up- and downstream metadata.
@@ -233,7 +202,7 @@ listed using the 'role' attribute to the link elements.
         }
 
         if rel is None:
-            rel = _dflt_rels.keys()
+            rel = list(_dflt_rels.keys())
         else:
             rel = [rel]
 
@@ -255,7 +224,7 @@ listed using the 'role' attribute to the link elements.
         for entity_id in self.server.md.store.entity_ids():
             _links("/metadata/%s" % hash_id(entity_id))
 
-        for a in self.server.aliases.keys():
+        for a in list(self.server.aliases.keys()):
             for v in self.server.md.store.attribute(self.server.aliases[a]):
                 _links('%s/%s' % (a, quote_plus(v)))
 
@@ -314,7 +283,6 @@ class MDRoot(object):
         self._well_known.server = server
         self.discovery.server = server
 
-    stats = MDStats()
     discovery = SHIBDiscovery()
 
     if config.devel_memory_profile:
@@ -402,7 +370,6 @@ Disallow: /
                                cversion=cherrypy.__version__,
                                sysinfo=" ".join(os.uname()),
                                cmdline=" ".join(sys.argv),
-                               stats=stats,
                                repo=self.server.md,
                                plumbings=self.server.plumbings)
 
@@ -517,8 +484,7 @@ class MDServer(object):
     def request(self, **kwargs):
         """The main request processor. This code implements all rendering of metadata.
         """
-        stats['MD Requests'] += 1
-
+        
         if not self.ready:
             raise HTTPError(503, _("Service Unavailable (repository loading)"))
 
@@ -527,7 +493,7 @@ class MDServer(object):
         content_type = kwargs.get('content_type', None)
         request_type = kwargs.get('request_type', "negotiate")
 
-        # log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
+        log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
 
         def _d(x, do_split=True):
             if x is not None:
@@ -693,7 +659,7 @@ class MDServer(object):
                     if r is not None:
                         cache_ttl = state.get('cache', 0)
                         log.debug("caching for %d seconds" % cache_ttl)
-                        for k, v in state.get('headers', {}).iteritems():
+                        for k, v in state.get('headers', {}).items():
                             cherrypy.response.headers[k] = v
                         cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
                         caching.expires(secs=cache_ttl)
@@ -819,7 +785,7 @@ def main():
 
     server = MDServer(pipes=args, observers=observers)
 
-    pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
+    pfx = ["/entities", "/metadata"] + ["/" + x for x in list(server.aliases.keys())]
     cfg = {
         'global': {
             'tools.encode.encoding': 'UTF-8',
@@ -832,7 +798,6 @@ def main():
             'tools.caching.maxsize': 1000000000000,
             'tools.caching.antistampede_timeout': 30,
             'tools.caching.delay': 3600,  # this is how long we keep static stuff
-            'tools.cpstats.on': True,
             'checker.on': False,
             'log.screen': True,
             'tools.proxy.on': config.proxy,
@@ -844,13 +809,11 @@ def main():
         },
         '/': {
             'tools.caching.delay': config.caching_delay,
-            'tools.cpstats.on': True,
             'tools.proxy.on': config.proxy,
             'request.dispatch': EncodingDispatcher(pfx, _b64).dispatch,
             'request.dispatpch.debug': True,
         },
         '/static': {
-            'tools.cpstats.on': True,
             'tools.caching.on': config.caching_enabled,
             'tools.caching.delay': config.caching_delay,
             'tools.proxy.on': config.proxy

@@ -89,8 +89,6 @@ class TestRedisStore(TestCase):
         entity_id = root(self.test01).get('entityID')
         assert (entity_id is not None)
         d = dict()
-        store.periodic(d)
-        assert('Last Periodic Maintenance' in d)
 
     def test_load_swamid(self):
         store = self._redis_store()

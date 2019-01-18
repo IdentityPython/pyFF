@@ -1,9 +1,9 @@
-from __future__ import absolute_import, unicode_literals
+
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
     has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data
-from .logs import log
+from .logs import get_log
 from .constants import config, NS, ATTRS, NF_URI
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -16,6 +16,9 @@ from six import StringIO
 from requests import ConnectionError
 from .fetch import ResourceManager
 from .parse import add_parser
+
+log = get_log(__name__)
+
 
 class EntitySet(object):
     def __init__(self, initial=None):
@@ -33,14 +36,14 @@ class EntitySet(object):
             del self._e[entity_id]
 
     def __iter__(self):
-        for e in self._e.values():
+        for e in list(self._e.values()):
             yield e
 
     def __len__(self):
-        return len(self._e.keys())
+        return len(list(self._e.keys()))
 
     def __contains__(self, item):
-        return item.get('entityID') in self._e.keys()
+        return item.get('entityID') in list(self._e.keys())
 
 
 def find_merge_strategy(strategy_name):
@@ -113,7 +116,7 @@ def parse_saml_metadata(source,
 
     except Exception as ex:
         log.debug(traceback.format_exc())
-        log.error(ex)
+        log.error("Error parsing {}: {}".format(base_url, ex))
         if fail_on_error:
             raise ex
 
@@ -195,6 +198,11 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
     log.debug("Filtering invalids from {}".format(base_url))
     if filter_invalid:
         t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
+        for entity_id, err in validation_errors:
+            log.error("Validation error while parsing {} (from {}). Removed @entityID='{}': {}".format(base_url,
+                                                                                                       source,
+                                                                                                       entity_id,
+                                                                                                       err))
     else:  # all or nothing
         log.debug("Validating (one-shot) {}".format(base_url))
         try:
@@ -202,7 +210,9 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
         except DocumentInvalid as ex:
             err = xml_error(ex.error_log, m=base_url)
             validation_errors[base_url] = err
-            raise MetadataException("Schema validation failed: @ {} (from {}): {}".format(base_url, source, err))
+            raise MetadataException("Validation error while parsing {}: (from {}): {}".format(base_url,
+                                                                                              source,
+                                                                                              err))
 
     return t
 
@@ -279,7 +289,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                                source="request",
                                validation_errors=validation_errors)
 
-        for base_url, err in validation_errors.items():
+        for base_url, err in list(validation_errors.items()):
             log.error("Validation error: @ {}: {}".format(base_url, err))
 
     return t
@@ -399,7 +409,7 @@ def with_entity_attributes(entity, cb):
         for a in ea.iter("{%s}Attribute" % NS['saml']):
             an = a.get('Name', None)
             if a is not None:
-                values = filter(lambda x: x is not None, [_stext(v) for v in a.iter("{%s}AttributeValue" % NS['saml'])])
+                values = [x for x in [_stext(v) for v in a.iter("{%s}AttributeValue" % NS['saml'])] if x is not None]
                 cb(an, values)
 
 
@@ -843,7 +853,7 @@ def set_entity_attributes(e, d, nf=NF_URI):
     if e.tag != "{%s}EntityDescriptor" % NS['md']:
         raise MetadataException("I can only add EntityAttribute(s) to EntityDescriptor elements")
 
-    for attr, value in d.items():
+    for attr, value in list(d.items()):
         a = _eattribute(e, attr, nf)
         velt = etree.Element("{%s}AttributeValue" % NS['saml'])
         velt.text = value
@@ -887,7 +897,7 @@ def set_reginfo(e, policy=None, authority=None):
     ri = etree.Element("{%s}RegistrationInfo" % NS['mdrpi'])
     ext.append(ri)
     ri.set('registrationAuthority', authority)
-    for lang, policy_url in policy.items():
+    for lang, policy_url in list(policy.items()):
         rp = etree.Element("{%s}RegistrationPolicy" % NS['mdrpi'])
         rp.text = policy_url
         rp.set('{%s}lang' % NS['xml'], lang)

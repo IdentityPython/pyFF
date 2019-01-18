@@ -2,7 +2,7 @@
 for pyFF.
 """
 
-from __future__ import absolute_import, print_function
+
 
 import base64
 import hashlib
@@ -21,9 +21,8 @@ from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
 from .constants import NS
 from .decorators import deprecated
-from .logs import log
+from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
-from .stats import set_metadata_info
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, validate_document
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
     discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor
@@ -36,7 +35,7 @@ from .store import make_store_instance
 __author__ = 'leifj'
 
 FILESPEC_REGEX = "([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)"
-
+log = get_log(__name__)
 
 @pipe
 def dump(req, *opts):
@@ -318,7 +317,7 @@ Options are put directly after "sort". E.g:
     if req.t is None:
         raise PipeException("Unable to sort empty document.")
 
-    opts = dict(zip(opts[0:1], [" ".join(opts[1:])]))
+    opts = dict(list(zip(opts[0:1], [" ".join(opts[1:])])))
     opts.setdefault('order_by', None)
     sort_entities(req.t, opts['order_by'])
 
@@ -378,6 +377,7 @@ Publish the working document in XML form.
 
 
 @pipe
+@deprecated(reason="stats subsystem was removed")
 def loadstats(req, *opts):
     """
     Log (INFO) information about the result of the last call to load
@@ -385,20 +385,7 @@ def loadstats(req, *opts):
     :param opts: Options: (none)
     :return: None
     """
-    from .stats import metadata
-    _stats = None
-    try:
-        if 'json' in opts:
-            _stats = json.dumps(metadata)
-        else:
-            buf = StringIO()
-            yaml.dump(metadata, buf)
-            _stats = buf.getvalue()
-    except Exception as ex:
-        log.debug(traceback.format_exc())
-        log.error(ex)
-
-    log.info("pyff loadstats: %s" % _stats)
+    log.info("pyff loadstats has been deprecated")
 
 
 @pipe
@@ -459,7 +446,7 @@ Defaults are marked with (*)
                                  fail_on_error controls whether failure to validating the entire MD file will abort
                                  processing of the pipeline.
     """
-    opts = dict(zip(opts[::2], opts[1::2]))
+    opts = dict(list(zip(opts[::2], opts[1::2])))
     opts.setdefault('timeout', 120)
     opts.setdefault('max_workers', 5)
     opts.setdefault('validate', "True")
@@ -609,10 +596,10 @@ alias invisible for anything except the corresponding mime type.
         raise PipeException("empty select - stop")
 
     if alias:
-        nfo = dict(Status='default', Description="Synthetic collection")
+        #nfo = dict(Status='default', Description="Synthetic collection")
         n = req.store.update(ot, name)
-        nfo['Size'] = str(n)
-        set_metadata_info(name, nfo)
+        #nfo['Size'] = str(n)
+        #set_metadata_info(name, nfo)
 
     return ot
 
@@ -654,10 +641,10 @@ def _filter(req, *opts):
 
     ot = entitiesdescriptor(args, name, lookup_fn=lambda member: find_in_document(req.t, member), copy=False)
     if alias:
-        nfo = dict(Status='default', Description="Synthetic collection")
+        #nfo = dict(Status='default', Description="Synthetic collection")
         n = req.store.update(ot, name)
-        nfo['Size'] = str(n)
-        set_metadata_info(name, nfo)
+        #nfo['Size'] = str(n)
+        #set_metadata_info(name, nfo)
 
     req.t = None
 
@@ -837,6 +824,20 @@ Display statistics about the current working document.
     return req.t
 
 
+@pipe
+def summary(req, *opts):
+    """
+    Display a summary of the repository
+    :param req:
+    :param opts:
+    :return:
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    return dict(size=req.store.size())
+
+
 @pipe(name='store')
 def _store(req, *opts):
     """
@@ -905,7 +906,7 @@ user-supplied file. The rest of the keyword arguments are made available as stri
     if stylesheet is None:
         raise PipeException("xslt requires stylesheet")
 
-    params = dict((k, "\'%s\'" % v) for (k, v) in req.args.items())
+    params = dict((k, "\'%s\'" % v) for (k, v) in list(req.args.items()))
     del params['stylesheet']
     try:
         return xslt_transform(req.t, stylesheet, params)
@@ -1174,7 +1175,7 @@ Useful for testing.
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    for fp, pem in xmlsec.crypto.CertDict(req.t).items():
+    for fp, pem in list(xmlsec.crypto.CertDict(req.t).items()):
         log.info("found signing cert with fingerprint %s" % fp)
     return req.t
 

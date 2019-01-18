@@ -1,13 +1,14 @@
 import os
 from .utils import parse_xml, root, first_text
 from .constants import NS
-from .logs import log
+from .logs import get_log
 from xmlsec.crypto import CertDict
 from datetime import datetime
 from six import StringIO
 
 __author__ = 'leifj'
 
+log = get_log(__name__)
 
 class ParserException(Exception):
     def __init__(self, msg, wrapped=None, data=None):
@@ -75,7 +76,7 @@ class XRDParser():
             for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
                 link_href = link.get("href")
                 certs = CertDict(link)
-                fingerprints = certs.keys()
+                fingerprints = list(certs.keys())
                 fp = None
                 if len(fingerprints) > 0:
                     fp = fingerprints[0]
@@ -109,7 +110,7 @@ class MDServiceListParser():
                 location = ml.get('Location')
                 if location:
                     certs = CertDict(ml)
-                    fingerprints = certs.keys()
+                    fingerprints = list(certs.keys())
                     fp = None
                     if len(fingerprints) > 0:
                         fp = fingerprints[0]

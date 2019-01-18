@@ -5,7 +5,7 @@ import re
 from redis import Redis
 from .constants import NS, ATTRS, ATTRS_INV
 from .decorators import cached
-from .logs import log
+from .logs import get_log
 from .constants import config
 from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, \
     avg_domain_distance, ts_now, load_callable
@@ -17,6 +17,8 @@ from . import merge_strategies
 import ipaddr
 import operator
 import six
+
+log = get_log(__name__)
 
 DINDEX = ('sha1', 'sha256', 'null')
 
@@ -37,9 +39,6 @@ class SAMLStoreBase(object):
         for e in self.lookup("entities"):
             log.debug("**** yield entityID=%s" % e.get('entityID'))
             yield e
-
-    def periodic(self, stats):
-        pass
 
     def size(self, a=None, v=None):
         raise NotImplementedError()
@@ -182,7 +181,7 @@ The dict in the list contains three items:
                          '{%s}Scope' % NS['shibmd']]:
                 lst.extend([s.text for s in elt.iter(attr)])
             lst.append(elt.get('entityID'))
-            return filter(lambda item: item is not None, lst)
+            return [item for item in lst if item is not None]
 
         def _ip_networks(elt):
             return [ipaddr.IPNetwork(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
@@ -252,6 +251,35 @@ The dict in the list contains three items:
             return res
 
 
+class EmptyStore(SAMLStoreBase):
+
+    def __init__(self):
+        pass
+
+    def update(self, **kwargs):
+        return 0
+
+    def size(self, **kwargs):
+        return 0
+
+    def collections(self):
+        return []
+
+    def reset(self):
+        pass
+
+    def entity_ids(self):
+        return set()
+
+    def select(self, **kwargs):
+        return list()
+
+    def search(self, **kwargs):
+        return list()
+
+    def merge(self, *args, **kwargs):
+        return list()
+
 class WhooshStore(SAMLStoreBase):
 
     def __init__(self):
@@ -262,7 +290,7 @@ class WhooshStore(SAMLStoreBase):
                              keywords=KEYWORD())
         self.schema.add("object_id", ID(stored=True, unique=True))
         self.schema.add("entity_id", ID(stored=True, unique=True))
-        for a in ATTRS.keys():
+        for a in list(ATTRS.keys()):
             self.schema.add(a, KEYWORD())
         self._collections = set()
         from whoosh.filedb.filestore import RamStorage, FileStorage
@@ -282,20 +310,20 @@ class WhooshStore(SAMLStoreBase):
 
     def _index_prep(self, info):
         if 'entity_attributes' in info:
-            for a,v in info.pop('entity_attributes').items():
+            for a,v in list(info.pop('entity_attributes').items()):
                 info[a] = v
-        for a,v in info.items():
+        for a,v in list(info.items()):
             if type(v) is not list and type(v) is not tuple:
                info[a] = [info.pop(a)]
 
             if a in ATTRS_INV:
                 info[ATTRS_INV[a]] = info.pop(a)
 
-        for a in info.keys():
+        for a in list(info.keys()):
             if not a in self.schema.names():
                 del info[a]
 
-        for a,v in info.items():
+        for a,v in list(info.items()):
             info[a] = [six.text_type(vv) for vv in v]
 
     def _index(self, e, tid=None):
@@ -338,7 +366,7 @@ class WhooshStore(SAMLStoreBase):
 
     def size(self, a=None, v=None):
         if a is None:
-            return len(self.objects.keys())
+            return len(list(self.objects.keys()))
         elif a is not None and v is None:
             return len(self.attribute(a))
         else:
@@ -366,15 +394,15 @@ class WhooshStore(SAMLStoreBase):
     def lookup(self, key, raw=True, field="entity_id"):
         if key == 'entities' or key is None:
             if raw:
-                return self.objects.values()
+                return list(self.objects.values())
             else:
-                return self.infos.values()
+                return list(self.infos.values())
 
         from whoosh.qparser import QueryParser
         #import pdb; pdb.set_trace()
         key = key.strip('+')
         key = key.replace('+', ' AND ')
-        for uri,a in ATTRS_INV.items():
+        for uri,a in list(ATTRS_INV.items()):
             key = key.replace(uri,a)
         key = " {!s} ".format(key)
         key = re.sub("([^=]+)=(\S+)","\\1:\\2",key)
@@ -415,15 +443,15 @@ class MemoryStore(SAMLStoreBase):
         if a is None:
             return len(self.entities)
         elif a is not None and v is None:
-            return len(self.index.setdefault('attr', {}).setdefault(a, {}).keys())
+            return len(list(self.index.setdefault('attr', {}).setdefault(a, {}).keys()))
         else:
             return len(self.index.setdefault('attr', {}).setdefault(a, {}).get(v, []))
 
     def attributes(self):
-        return self.index.setdefault('attr', {}).keys()
+        return list(self.index.setdefault('attr', {}).keys())
 
     def attribute(self, a):
-        return self.index.setdefault('attr', {}).setdefault(a, {}).keys()
+        return list(self.index.setdefault('attr', {}).setdefault(a, {}).keys())
 
     def _modify(self, entity, modifier):
 
@@ -434,7 +462,7 @@ class MemoryStore(SAMLStoreBase):
             _m(self.index[hn], hash_id(entity, hn, False))
 
         attr_idx = self.index.setdefault('attr', {})
-        for attr, values in entity_attribute_dict(entity).items():
+        for attr, values in list(entity_attribute_dict(entity).items()):
             vidx = attr_idx.setdefault(attr, {})
             for v in values:
                 _m(vidx, v)
@@ -462,7 +490,7 @@ class MemoryStore(SAMLStoreBase):
             else:
                 m = re.compile(v)
                 entities = []
-                for value, ents in idx.items():
+                for value, ents in list(idx.items()):
                     if m.match(value):
                         entities.extend(ents)
                 return entities
@@ -471,7 +499,7 @@ class MemoryStore(SAMLStoreBase):
         self.__init__()
 
     def collections(self):
-        return self.md.keys()
+        return list(self.md.keys())
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):
         # log.debug("memory store update: %s: %s" % (repr(t), tid))
@@ -505,7 +533,7 @@ class MemoryStore(SAMLStoreBase):
 
     def _lookup(self, key):
         if key == 'entities' or key is None:
-            return self.entities.values()
+            return list(self.entities.values())
         if '+' in key:
             key = key.strip('+')
             # log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
@@ -580,14 +608,6 @@ class RedisStore(SAMLStoreBase):
                 log.debug("dropping empty %s %s" % (attr, c))
                 self.rc.srem(an, c)
 
-    def periodic(self, stats):
-        now = ts_now()
-        stats['Last Periodic Maintenance'] = now
-        log.debug("periodic maintentance...")
-        self.rc.zremrangebyscore("members", "-inf", now)
-        self._drop_empty_av("collections", "members", now)
-        self._drop_empty_av("attributes", "values", now)
-
     def update_entity(self, relt, t, tid, ts, p=None):
         if p is None:
             p = self.rc
@@ -631,7 +651,7 @@ class RedisStore(SAMLStoreBase):
                 entity_id = relt.get("entityID")
                 if entity_id is not None:
                     self.membership("entities", entity_id, ts, p)
-                for ea, eav in entity_attribute_dict(relt).items():
+                for ea, eav in list(entity_attribute_dict(relt).items()):
                     for v in eav:
                         # log.debug("%s=%s" % (ea, v))
                         self.membership("{%s}%s" % (ea, v), tid, ts, p)

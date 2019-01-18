@@ -39,7 +39,7 @@ class TestRetry(TestCase):
         try:
             fails()
             assert False
-        except ValueError, ex:
+        except ValueError as ex:
             assert(len(_logger.messages) == 3)
             pass
         assert(not status[0])
@@ -54,7 +54,7 @@ class TestRetry(TestCase):
             try:
                 fails()
                 assert False
-            except ValueError, ex:
+            except ValueError as ex:
                 assert(len(mock_stdout.getvalue().split("\n")) == 4)
                 pass
             assert(not status[0])
@@ -115,7 +115,7 @@ class TestCached(TestCase):
     def test_cached_timeout(self):
         assert (self.counter == 0)
         assert (self.next_counter() == 1)
-        print "sleeping for 5 seconds..."
+        print("sleeping for 5 seconds...")
         sleep(5)
         assert (self.counter == 1)
         assert (self.next_counter() == 2)
