@@ -43,7 +43,7 @@ An implementation of draft-lajoie-md-query
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import importlib
 
@@ -202,7 +202,7 @@ listed using the 'role' attribute to the link elements.
         }
 
         if rel is None:
-            rel = _dflt_rels.keys()
+            rel = list(_dflt_rels.keys())
         else:
             rel = [rel]
 
@@ -224,7 +224,7 @@ listed using the 'role' attribute to the link elements.
         for entity_id in self.server.md.store.entity_ids():
             _links("/metadata/%s" % hash_id(entity_id))
 
-        for a in self.server.aliases.keys():
+        for a in list(self.server.aliases.keys()):
             for v in self.server.md.store.attribute(self.server.aliases[a]):
                 _links('%s/%s' % (a, quote_plus(v)))
 
@@ -659,7 +659,7 @@ class MDServer(object):
                     if r is not None:
                         cache_ttl = state.get('cache', 0)
                         log.debug("caching for %d seconds" % cache_ttl)
-                        for k, v in state.get('headers', {}).iteritems():
+                        for k, v in state.get('headers', {}).items():
                             cherrypy.response.headers[k] = v
                         cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
                         caching.expires(secs=cache_ttl)
@@ -785,7 +785,7 @@ def main():
 
     server = MDServer(pipes=args, observers=observers)
 
-    pfx = ["/entities", "/metadata"] + ["/" + x for x in server.aliases.keys()]
+    pfx = ["/entities", "/metadata"] + ["/" + x for x in list(server.aliases.keys())]
     cfg = {
         'global': {
             'tools.encode.encoding': 'UTF-8',

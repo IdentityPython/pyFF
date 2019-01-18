@@ -2,7 +2,7 @@
 for pyFF.
 """
 
-from __future__ import absolute_import, print_function
+
 
 import base64
 import hashlib
@@ -317,7 +317,7 @@ Options are put directly after "sort". E.g:
     if req.t is None:
         raise PipeException("Unable to sort empty document.")
 
-    opts = dict(zip(opts[0:1], [" ".join(opts[1:])]))
+    opts = dict(list(zip(opts[0:1], [" ".join(opts[1:])])))
     opts.setdefault('order_by', None)
     sort_entities(req.t, opts['order_by'])
 
@@ -446,7 +446,7 @@ Defaults are marked with (*)
                                  fail_on_error controls whether failure to validating the entire MD file will abort
                                  processing of the pipeline.
     """
-    opts = dict(zip(opts[::2], opts[1::2]))
+    opts = dict(list(zip(opts[::2], opts[1::2])))
     opts.setdefault('timeout', 120)
     opts.setdefault('max_workers', 5)
     opts.setdefault('validate', "True")
@@ -906,7 +906,7 @@ user-supplied file. The rest of the keyword arguments are made available as stri
     if stylesheet is None:
         raise PipeException("xslt requires stylesheet")
 
-    params = dict((k, "\'%s\'" % v) for (k, v) in req.args.items())
+    params = dict((k, "\'%s\'" % v) for (k, v) in list(req.args.items()))
     del params['stylesheet']
     try:
         return xslt_transform(req.t, stylesheet, params)
@@ -1175,7 +1175,7 @@ Useful for testing.
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    for fp, pem in xmlsec.crypto.CertDict(req.t).items():
+    for fp, pem in list(xmlsec.crypto.CertDict(req.t).items()):
         log.info("found signing cert with fingerprint %s" % fp)
     return req.t
 

@@ -114,7 +114,7 @@ def _make_key(args, kwds, typed,
     key = args
     sorted_items = dict()
     if kwds:
-        sorted_items = thesorted(kwds.items())
+        sorted_items = thesorted(list(kwds.items()))
         key += kwd_mark
         for item in sorted_items:
             key += item

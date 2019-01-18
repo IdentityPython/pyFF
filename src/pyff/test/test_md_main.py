@@ -269,7 +269,7 @@ class PyFFTest(PipeLineTest):
     def test_bad_loglevel(self):
         try:
             out, err, exit_code = run_pyff("--loglevel=TRACE")
-        except ValueError, ex:
+        except ValueError as ex:
             assert ('TRACE' in str(ex))
 
     def tear_down(self):

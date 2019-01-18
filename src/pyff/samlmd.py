@@ -1,4 +1,4 @@
-from __future__ import absolute_import, unicode_literals
+
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
@@ -36,14 +36,14 @@ class EntitySet(object):
             del self._e[entity_id]
 
     def __iter__(self):
-        for e in self._e.values():
+        for e in list(self._e.values()):
             yield e
 
     def __len__(self):
-        return len(self._e.keys())
+        return len(list(self._e.keys()))
 
     def __contains__(self, item):
-        return item.get('entityID') in self._e.keys()
+        return item.get('entityID') in list(self._e.keys())
 
 
 def find_merge_strategy(strategy_name):
@@ -289,7 +289,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                                source="request",
                                validation_errors=validation_errors)
 
-        for base_url, err in validation_errors.items():
+        for base_url, err in list(validation_errors.items()):
             log.error("Validation error: @ {}: {}".format(base_url, err))
 
     return t
@@ -409,7 +409,7 @@ def with_entity_attributes(entity, cb):
         for a in ea.iter("{%s}Attribute" % NS['saml']):
             an = a.get('Name', None)
             if a is not None:
-                values = filter(lambda x: x is not None, [_stext(v) for v in a.iter("{%s}AttributeValue" % NS['saml'])])
+                values = [x for x in [_stext(v) for v in a.iter("{%s}AttributeValue" % NS['saml'])] if x is not None]
                 cb(an, values)
 
 
@@ -853,7 +853,7 @@ def set_entity_attributes(e, d, nf=NF_URI):
     if e.tag != "{%s}EntityDescriptor" % NS['md']:
         raise MetadataException("I can only add EntityAttribute(s) to EntityDescriptor elements")
 
-    for attr, value in d.items():
+    for attr, value in list(d.items()):
         a = _eattribute(e, attr, nf)
         velt = etree.Element("{%s}AttributeValue" % NS['saml'])
         velt.text = value
@@ -897,7 +897,7 @@ def set_reginfo(e, policy=None, authority=None):
     ri = etree.Element("{%s}RegistrationInfo" % NS['mdrpi'])
     ext.append(ri)
     ri.set('registrationAuthority', authority)
-    for lang, policy_url in policy.items():
+    for lang, policy_url in list(policy.items()):
         rp = etree.Element("{%s}RegistrationPolicy" % NS['mdrpi'])
         rp.text = policy_url
         rp.set('{%s}lang' % NS['xml'], lang)

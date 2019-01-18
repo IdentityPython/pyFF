@@ -76,7 +76,7 @@ class XRDParser():
             for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
                 link_href = link.get("href")
                 certs = CertDict(link)
-                fingerprints = certs.keys()
+                fingerprints = list(certs.keys())
                 fp = None
                 if len(fingerprints) > 0:
                     fp = fingerprints[0]
@@ -110,7 +110,7 @@ class MDServiceListParser():
                 location = ml.get('Location')
                 if location:
                     certs = CertDict(ml)
-                    fingerprints = certs.keys()
+                    fingerprints = list(certs.keys())
                     fp = None
                     if len(fingerprints) > 0:
                         fp = fingerprints[0]
