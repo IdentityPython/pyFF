@@ -10,6 +10,7 @@ __author__ = 'leifj'
 
 log = get_log(__name__)
 
+
 class ParserException(Exception):
     def __init__(self, msg, wrapped=None, data=None):
         self._wraped = wrapped
@@ -117,8 +118,10 @@ class MDServiceListParser():
 
                     ep = ml.find("{%s}Endpoint" % NS['ser'])
                     if ep is not None and fp is not None:
-                        log.debug("MetadataServiceList[{}]: {} verified by {} for country {}".format(info['SchemeTerritory'],
-                                  location, fp, mdl.get('Territory')))
+                        log.debug(
+                            "MetadataServiceList[{}]: {} verified by {} for country {}".format(info['SchemeTerritory'],
+                                                                                               location, fp,
+                                                                                               mdl.get('Territory')))
                         resource.add_child(location,
                                            verify=fp,
                                            eidas_territory=mdl.get('Territory'),

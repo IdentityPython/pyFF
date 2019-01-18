@@ -43,10 +43,7 @@ An implementation of draft-lajoie-md-query
 
 """
 
-
-
 import importlib
-
 import pkg_resources
 import traceback
 from six.moves.urllib_parse import urlparse, quote_plus
@@ -153,6 +150,7 @@ class EncodingDispatcher(object):
                 # log.debug("EncodingDispatcher %s" % npath)
                 return self.next_dispatcher(npath.encode('ascii', errors='ignore'))
         return self.next_dispatcher(vpath)
+
 
 class WellKnown(object):
     """Implementation of the .well-known URL namespace for pyFF. In particular this contains the webfinger
@@ -484,7 +482,7 @@ class MDServer(object):
     def request(self, **kwargs):
         """The main request processor. This code implements all rendering of metadata.
         """
-        
+
         if not self.ready:
             raise HTTPError(503, _("Service Unavailable (repository loading)"))
 

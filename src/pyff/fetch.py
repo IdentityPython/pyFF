@@ -4,7 +4,6 @@ An abstraction layer for metadata fetchers. Supports both syncronous and asyncro
 
 """
 
-
 from .logs import get_log
 import os
 import requests
@@ -21,6 +20,7 @@ from .utils import url_get
 requests.packages.urllib3.disable_warnings()
 
 log = get_log(__name__)
+
 
 class ResourceManager(DictMixin):
     def __init__(self):
@@ -196,7 +196,7 @@ class Resource(object):
 
             if self.is_expired():
                 info['Expired'] = True
-                raise ResourceException("Resource at {} expired on {}".format(self.url,self.expire_time))
+                raise ResourceException("Resource at {} expired on {}".format(self.url, self.expire_time))
             else:
                 info['Expired'] = False
 
