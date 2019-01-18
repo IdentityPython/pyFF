@@ -10,19 +10,26 @@ import requests
 from .constants import config
 from datetime import datetime
 from collections import deque
-from UserDict import DictMixin
+import six
 from concurrent import futures
 from .parse import parse_resource
 from itertools import chain
 from .exceptions import ResourceException
 from .utils import url_get
 
+if six.PY2:
+    from UserDict import DictMixin as ResourceManagerBase
+elif six.PY3:
+    from collections import MutableMapping as ResourceManagerBase
+
+
 requests.packages.urllib3.disable_warnings()
 
 log = get_log(__name__)
 
 
-class ResourceManager(DictMixin):
+class ResourceManager(ResourceManagerBase):
+
     def __init__(self):
         self._resources = dict()
         self.shutdown = False
@@ -59,6 +66,12 @@ class ResourceManager(DictMixin):
 
     def __contains__(self, item):
         return item in self._resources
+
+    def __len__(self):
+        return len(self.values())
+
+    def __iter__(self):
+        return self.walk()
 
     def reload(self, url=None, fail_on_error=False, store=None):
         # type: (object, basestring) -> None
