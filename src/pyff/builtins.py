@@ -582,20 +582,18 @@ alias invisible for anything except the corresponding mime type.
     """
     args = _select_args(req)
     name = req.plumbing.id
-    alias = False
     if len(opts) > 0:
         if opts[0] != 'as' and len(opts) == 1:
             name = opts[0]
-            alias = True
         if opts[0] == 'as' and len(opts) == 2:
             name = opts[1]
-            alias = True
 
     ot = entitiesdescriptor(args, name, lookup_fn=req.md.store.select)
     if ot is None:
         raise PipeException("empty select - stop")
 
-    if alias:
+    if req.plumbing.id != name:
+        log.debug("storing synthentic collection {}".format(name))
         n = req.store.update(ot, name)
 
     return ot
