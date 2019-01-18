@@ -58,11 +58,12 @@ if __name__ == '__main__':
     out, err = proc.communicate()
     rv = proc.wait()
     os.unlink(starter)
-    print("---")
+    print(">> STDOUT ---")
     print(out)
+    print(">> STDERR ---")
     print(err)
     print("rv=%d" % rv)
-    print("---")
+    print("<< EOF")
 
     return out, err, rv
 

@@ -201,6 +201,9 @@ class PyFFDTest(PipeLineTest):
         SignerTestCase.tearDownClass()
         try:
             requests.get("http://127.0.0.1:%s/shutdown" % cls.port)
+            with open(cls.logfile) as fd:
+                print ("+++ DEBUG log +++")
+                print("\n".join(fd.readlines()))
         except Exception as ex:
             from traceback import print_exc
             print_exc(ex)
@@ -235,20 +238,17 @@ class PyFFTest(PipeLineTest):
 
     def test_run_signer(self):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", self.signer)
-        assert (not out)
         assert err
         assert (exit_code == 0)
 
     def test_run_bad(self):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", self.bad)
-        assert (not out)
         assert 'Traceback' in err
         assert 'No pipe named snartibartifast is installed' in err
         assert (exit_code == 255)
 
     def test_run_signer_logfile(self):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", "--logfile=%s" % self.logfile, self.signer)
-        assert (not out)
         assert (exit_code == 0)
 
     def test_help(self):

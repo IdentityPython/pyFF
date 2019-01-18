@@ -4,7 +4,6 @@ from __future__ import print_function
 import shutil
 import sys
 import tempfile
-from six import StringIO
 import os
 import yaml
 from mako.lookup import TemplateLookup
@@ -18,7 +17,9 @@ from pyff.test import SignerTestCase
 from pyff.utils import hash_id, parse_xml, resource_filename, root
 from pyff.parse import ParserException
 from pyff.fetch import ResourceException
-import pyff.builtins
+import six
+# don't remove this - it only appears unused to static analysis
+from pyff import builtins
 
 __author__ = 'leifj'
 
@@ -42,7 +43,7 @@ class PipeLineTest(SignerTestCase):
 
     def exec_pipeline(self, pstr):
         md = MDRepository()
-        p = yaml.load(StringIO(pstr))
+        p = yaml.load(six.StringIO(pstr))
         print(p)
         res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}})
         return res, md
@@ -262,7 +263,7 @@ class LoadErrorTest(PipeLineTest):
     """ % (self.datadir, self.datadir))
                 except MetadataException as ex:
                     print(ex)
-                    assert ("schema validation failed" in str(ex))
+                    assert (":SCHEMASV:" in str(ex))
                     assert ("/metadata/test03-invalid.xml" in str(ex))
                     return True
                 finally:
@@ -289,8 +290,6 @@ class LoadErrorTest(PipeLineTest):
                 print(sys.stderr.captured)
                 if os.path.isfile(self.output):
                     os.unlink(self.output)
-
-
 
     # A directory with a file with invalid metadata must not throw by default:
     def test_no_fail_on_error_invalid_dir(self):
@@ -328,23 +327,27 @@ class SortTest(PipeLineTest):
                         keygen_fail_str = ("Sort pipe: unable to sort entity by '%s'. "
                                            "Entity '%s' has no such value" % (sxp, e[0]))
                         try:
-                            assert (keygen_fail_str in unicode(l))
+                            assert (keygen_fail_str in str(l))
                         except AssertionError:
                             print("Test failed on expecting missing sort value from: '%s'.\nCould not find string "
-                                  "on the output: '%s'.\nOutput was:\n %s" % (e[0], keygen_fail_str,unicode(l)))
+                                  "on the output: '%s'.\nOutput was:\n %s" % (e[0], keygen_fail_str,six.u(l)))
                             raise
                 except (IndexError, TypeError):
                     print("Test failed  for: '%s' due to 'order_by' xpath supplied without proper expectation tuple." %
-                          "".join(e))
+                          "".join(str(e)))
                     raise
 
         # Verify order
+        from pyff.samlmd import iter_entities
+        elts = list(iter_entities(res))
+        print("elts: {}".format(elts))
         for i, me in enumerate(expected_order):
+            print("{}: {}".format(i, me))
             try:
-                assert res[i].attrib.get("entityID") == me[0]
+                assert elts[i].attrib.get("entityID") == me[0]
             except AssertionError:
                 print(("Test failed on verifying sort position %i.\nExpected: %s; Found: %s " %
-                       (i, me[0], res[i].attrib.get("entityID"))))
+                       (i, me[0], elts[i].attrib.get("entityID"))))
                 raise
 
     # Test sort by entityID only
@@ -362,6 +365,7 @@ class SortTest(PipeLineTest):
     - select:
         - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - sort
+    - dump
     - stats
     """ % (self.datadir, self.datadir))
             print(sys.stdout.captured)

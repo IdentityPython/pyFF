@@ -168,7 +168,7 @@ The dict in the list contains three items:
 
         match_query = bool(len(query) > 0)
 
-        if isinstance(query, basestring):
+        if isinstance(query, six.string_types):
             query = [query.lower()]
 
         def _strings(elt):

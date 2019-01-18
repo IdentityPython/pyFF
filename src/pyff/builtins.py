@@ -28,6 +28,7 @@ from .fetch import Resource
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
 from .store import make_store_instance
+import six
 
 __author__ = 'leifj'
 
@@ -581,20 +582,18 @@ alias invisible for anything except the corresponding mime type.
     """
     args = _select_args(req)
     name = req.plumbing.id
-    alias = False
     if len(opts) > 0:
         if opts[0] != 'as' and len(opts) == 1:
             name = opts[0]
-            alias = True
         if opts[0] == 'as' and len(opts) == 2:
             name = opts[1]
-            alias = True
 
     ot = entitiesdescriptor(args, name, lookup_fn=req.md.store.select)
     if ot is None:
         raise PipeException("empty select - stop")
 
-    if alias:
+    if req.plumbing.id != name:
+        log.debug("storing synthentic collection {}".format(name))
         n = req.store.update(ot, name)
 
     return ot
@@ -980,7 +979,7 @@ def check_xml_namespaces(req, *opts):
         raise PipeException("Your pipeline is missing a select statement.")
 
     def _verify(elt):
-        if isinstance(elt.tag, basestring):
+        if isinstance(elt.tag, six.string_types):
             for prefix, uri in elt.nsmap.items():
                 if not uri.startswith('urn:'):
                     u = urlparse(uri)
@@ -1148,7 +1147,10 @@ Content-Type HTTP response header.
         raise PipeException("Empty")
 
     req.state['headers']['Content-Type'] = ctype
-    return unicode(d.decode('utf-8')).encode("utf-8")
+    if six.PY2:
+        return unicode(d.decode('utf-8')).encode("utf-8")
+    else:
+        return str(d)
 
 
 @pipe

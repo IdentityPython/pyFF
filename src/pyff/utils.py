@@ -13,9 +13,9 @@ from datetime import timedelta, datetime
 from email.utils import parsedate
 from threading import local
 from time import gmtime, strftime
-from urlparse import urlparse
+from six.moves.urllib_parse import urlparse
 from itertools import chain
-from StringIO import StringIO
+from six import StringIO
 import yaml
 import xmlsec
 import cherrypy
@@ -324,7 +324,7 @@ def root(t):
 
 def with_tree(elt, cb):
     cb(elt)
-    if isinstance(elt.tag, basestring):
+    if isinstance(elt.tag, six.string_types):
         for child in list(elt):
             with_tree(child, cb)
 
