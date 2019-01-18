@@ -263,7 +263,7 @@ class LoadErrorTest(PipeLineTest):
     """ % (self.datadir, self.datadir))
                 except MetadataException as ex:
                     print(ex)
-                    assert ("schema validation failed" in str(ex))
+                    assert (":SCHEMASV:" in str(ex))
                     assert ("/metadata/test03-invalid.xml" in str(ex))
                     return True
                 finally:
@@ -290,8 +290,6 @@ class LoadErrorTest(PipeLineTest):
                 print(sys.stderr.captured)
                 if os.path.isfile(self.output):
                     os.unlink(self.output)
-
-
 
     # A directory with a file with invalid metadata must not throw by default:
     def test_no_fail_on_error_invalid_dir(self):
@@ -367,6 +365,7 @@ class SortTest(PipeLineTest):
     - select:
         - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - sort
+    - dump
     - stats
     """ % (self.datadir, self.datadir))
             print(sys.stdout.captured)
