@@ -3,7 +3,6 @@ pyFF is a SAML metadata aggregator.
 """
 
 import pkg_resources
-#from . import builtins
 
 __author__ = 'Leif Johansson'
 __copyright__ = "Copyright 2009-2018 SUNET and the IdentityPython Project"

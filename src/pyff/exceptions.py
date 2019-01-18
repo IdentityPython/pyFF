@@ -1,4 +1,3 @@
-
 __author__ = 'leifj'
 
 
@@ -12,6 +11,7 @@ class MetadataExpiredException(MetadataException):
 
 class PyffException(Exception):
     pass
+
 
 class ResourceException(Exception):
     def __init__(self, msg, wrapped=None, data=None):

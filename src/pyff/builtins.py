@@ -2,8 +2,6 @@
 for pyFF.
 """
 
-
-
 import base64
 import hashlib
 import json
@@ -16,18 +14,17 @@ import operator
 import os
 import re
 import xmlsec
-import yaml
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
 from .constants import NS
 from .decorators import deprecated
 from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
-from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, validate_document
+from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
+    validate_document
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
     discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor
 from .fetch import Resource
-from six import StringIO
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
 from .store import make_store_instance
@@ -36,6 +33,7 @@ __author__ = 'leifj'
 
 FILESPEC_REGEX = "([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)"
 log = get_log(__name__)
+
 
 @pipe
 def dump(req, *opts):
@@ -476,7 +474,8 @@ Defaults are marked with (*)
                 if len(r) > 0:
                     params[elt] = r.pop(0)
                 else:
-                    raise PipeException("Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
+                    raise PipeException(
+                        "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
             else:
                 params['verify'] = elt
 
@@ -596,10 +595,7 @@ alias invisible for anything except the corresponding mime type.
         raise PipeException("empty select - stop")
 
     if alias:
-        #nfo = dict(Status='default', Description="Synthetic collection")
         n = req.store.update(ot, name)
-        #nfo['Size'] = str(n)
-        #set_metadata_info(name, nfo)
 
     return ot
 
@@ -641,10 +637,7 @@ def _filter(req, *opts):
 
     ot = entitiesdescriptor(args, name, lookup_fn=lambda member: find_in_document(req.t, member), copy=False)
     if alias:
-        #nfo = dict(Status='default', Description="Synthetic collection")
         n = req.store.update(ot, name)
-        #nfo['Size'] = str(n)
-        #set_metadata_info(name, nfo)
 
     req.t = None
 
@@ -974,6 +967,7 @@ This example would drop the first Signature element only.
 
     return req.t
 
+
 @pipe
 def check_xml_namespaces(req, *opts):
     """
@@ -990,11 +984,13 @@ def check_xml_namespaces(req, *opts):
             for prefix, uri in elt.nsmap.items():
                 if not uri.startswith('urn:'):
                     u = urlparse(uri)
-                    if u.scheme not in ('http','https'):
-                        raise MetadataException("Namespace URIs must be be http(s) URIs ('{}' declared on {})".format(uri,elt.tag))
+                    if u.scheme not in ('http', 'https'):
+                        raise MetadataException(
+                            "Namespace URIs must be be http(s) URIs ('{}' declared on {})".format(uri, elt.tag))
 
     with_tree(root(req.t), _verify)
     return req.t
+
 
 @pipe
 def certreport(req, *opts):
@@ -1228,7 +1224,7 @@ If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyf
                 try:
                     name_url = urlparse(name)
                     base_url = urlparse(req.args.get('baseURL'))
-                    name = "{}://{}{}".format(base_url.scheme,base_url.netloc,name_url.path)
+                    name = "{}://{}{}".format(base_url.scheme, base_url.netloc, name_url.path)
                     log.debug("-------- using Name: %s" % name)
                 except ValueError as ex:
                     log.debug(ex)
