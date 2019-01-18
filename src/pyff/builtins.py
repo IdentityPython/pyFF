@@ -980,7 +980,7 @@ def check_xml_namespaces(req, *opts):
 
     def _verify(elt):
         if isinstance(elt.tag, six.string_types):
-            for prefix, uri in elt.nsmap.items():
+            for prefix, uri in list(elt.nsmap.items()):
                 if not uri.startswith('urn:'):
                     u = urlparse(uri)
                     if u.scheme not in ('http', 'https'):

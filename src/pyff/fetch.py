@@ -68,7 +68,7 @@ class ResourceManager(ResourceManagerBase):
         return item in self._resources
 
     def __len__(self):
-        return len(self.values())
+        return len(list(self.values()))
 
     def __iter__(self):
         return self.walk()

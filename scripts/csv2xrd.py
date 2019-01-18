@@ -25,4 +25,4 @@ with io.open(sys.argv[1]) as fd:
       title.text = e[1]
       link.append(title)
 
-print etree.tostring(xrds, pretty_print=True)
+print(etree.tostring(xrds, pretty_print=True))
