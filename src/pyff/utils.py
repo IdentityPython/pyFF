@@ -1,5 +1,5 @@
 # coding=utf-8
-from __future__ import print_function, unicode_literals, absolute_import
+
 
 """
 
@@ -362,7 +362,7 @@ def filter_lang(elts, langs=None):
     if elts is None:
         return []
 
-    lst = filter(_l, elts)
+    lst = list(filter(_l, elts))
     if lst:
         return lst
     else:
@@ -627,8 +627,8 @@ def url_get(url):
 
 def img_to_data(data, mime_type):
     """Convert a file (specified by a path) into a data URI."""
-    data64 = u''.join(base64.encodestring(data).splitlines())
-    return u'data:%s;base64,%s' % (mime_type, data64)
+    data64 = ''.join(base64.encodestring(data).splitlines())
+    return 'data:%s;base64,%s' % (mime_type, data64)
 
 
 def short_id(data):

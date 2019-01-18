@@ -567,8 +567,8 @@ class MDServer(object):
                     pdict['search'] = "/search/"
                     pdict['list'] = "/role/idp.json"
                 else:
-                    pdict['search'] = u"{}.s".format(path)
-                    pdict['list'] = u"{}.json".format(path)
+                    pdict['search'] = "{}.s".format(path)
+                    pdict['list'] = "{}.json".format(path)
 
                 pdict['storage'] = "/storage/"
                 cherrypy.response.headers['Content-Type'] = 'text/html'
@@ -657,7 +657,7 @@ class MDServer(object):
                     if r is not None:
                         cache_ttl = state.get('cache', 0)
                         log.debug("caching for %d seconds" % cache_ttl)
-                        for k, v in state.get('headers', {}).items():
+                        for k, v in list(state.get('headers', {}).items()):
                             cherrypy.response.headers[k] = v
                         cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
                         caching.expires(secs=cache_ttl)

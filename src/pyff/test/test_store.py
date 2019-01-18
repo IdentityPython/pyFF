@@ -154,7 +154,7 @@ class TestWhooshStore(TestCase):
         store = WhooshStore()
         store.update(self.test01)
         entity_id = root(self.test01).get('entityID')
-        e = store.lookup("%s=%s+%s=%s" % (ATTRS['domain'], u'example.com', ATTRS['role'], u'idp'))
+        e = store.lookup("%s=%s+%s=%s" % (ATTRS['domain'], 'example.com', ATTRS['role'], 'idp'))
         assert (len(e) == 1)
         assert (e[0] is not None)
         assert (e[0].get('entityID') is not None)
