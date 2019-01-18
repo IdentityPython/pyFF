@@ -641,10 +641,10 @@ def _filter(req, *opts):
 
     ot = entitiesdescriptor(args, name, lookup_fn=lambda member: find_in_document(req.t, member), copy=False)
     if alias:
-        nfo = dict(Status='default', Description="Synthetic collection")
+        #nfo = dict(Status='default', Description="Synthetic collection")
         n = req.store.update(ot, name)
-        nfo['Size'] = str(n)
-        set_metadata_info(name, nfo)
+        #nfo['Size'] = str(n)
+        #set_metadata_info(name, nfo)
 
     req.t = None
 
