@@ -6,7 +6,7 @@ transform, sign or output SAML metadata.
 import traceback
 import os
 import yaml
-from .utils import resource_string, PyffException
+from .utils import resource_string, PyffException, is_text
 from .logs import get_log
 
 log = get_log(__name__)
@@ -81,14 +81,14 @@ def load_pipe(d):
     name = None
     args = None
     opts = []
-    if type(d) is str or type(d) is unicode:
+    if is_text(d):
         name, opts = _n(d)
     elif hasattr(d, '__iter__') and not type(d) is dict:
         if not len(d):
             raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
         name, opts = _n(d[0])
     elif type(d) is dict:
-        k = d.keys()[0]
+        k = list(d.keys())[0]
         name, opts = _n(k)
         args = d[k]
     else:
@@ -130,6 +130,7 @@ A delayed pipeline callback used as a post for parse_saml_metadata
             return self.plumbing.process(self.req.md, store=self.store, state=state, t=t)
         except Exception as ex:
             log.debug(traceback.format_exc())
+            log.error(ex)
             raise ex
 
 
@@ -214,7 +215,7 @@ may modify any of the fields.
             for p in pl.pipeline:
                 cb, opts, name, args = load_pipe(p)
                 log.debug("{!s}: calling '{}' using args: {} and opts: {}".format(pl, name, repr(args), repr(opts)))
-                if type(args) is str or type(args) is unicode:
+                if is_text(args):
                     args = [args]
                 if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
                     raise PipeException("Unknown argument type %s" % repr(args))
@@ -253,7 +254,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
             try:
                 pipefn, opts, name, args = load_pipe(p)
                 # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
-                if type(args) is str or type(args) is unicode:
+                if is_text(args):
                     args = [args]
                 if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
                     raise PipeException("Unknown argument type %s" % repr(args))

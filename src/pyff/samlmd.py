@@ -2,7 +2,7 @@
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
-    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data
+    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data, is_text, unicode_stream
 from .logs import get_log
 from .constants import config, NS, ATTRS, NF_URI
 from lxml import etree
@@ -137,7 +137,7 @@ class SAMLMetadataResourceParser:
     def parse(self, resource, content):
         info = dict()
         info['Validation Errors'] = dict()
-        t, expire_time_offset = parse_saml_metadata(StringIO(content.encode('utf8')),
+        t, expire_time_offset = parse_saml_metadata(unicode_stream(content),
                                                     key=resource.opts['verify'],
                                                     base_url=resource.url,
                                                     cleanup=resource.opts['cleanup'],
@@ -438,7 +438,7 @@ def entity_attributes(entity):
 
 def find_in_document(t, member):
     relt = root(t)
-    if type(member) is str or type(member) is unicode:
+    if is_text(member):
         if '!' in member:
             (src, xp) = member.split("!")
             return relt.xpath(xp, namespaces=NS, smart_strings=False)
@@ -972,7 +972,7 @@ class MDRepository():
         if member is None:
             member = "entities"
 
-        if type(member) is str or type(member) is unicode:
+        if is_text(member):
             if '!' in member:
                 (src, xp) = member.split("!")
                 if len(src) == 0:

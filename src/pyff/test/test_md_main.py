@@ -1,9 +1,9 @@
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
+
+
+
 import unittest
-import urllib
 from six import StringIO
+from six.moves.urllib_parse import quote_plus
 import tempfile
 from threading import Thread
 from time import sleep
@@ -140,7 +140,7 @@ class PyFFDTest(PipeLineTest):
         assert ('nordu.net' in info['scope'])
 
     def test_md_query_single(self):
-        q = urllib.quote_plus('https://idp.nordu.net/idp/shibboleth')
+        q = quote_plus('https://idp.nordu.net/idp/shibboleth')
         r = requests.get("http://127.0.0.1:%s/entities/%s" % (self.port, q))
         assert (r.status_code == 200)
         assert ('application/xml' in r.headers['Content-Type'])
@@ -170,7 +170,7 @@ class PyFFDTest(PipeLineTest):
 
     def test_parse_robots(self):
         try:
-            import robotparser
+            import six.moves.urllib_robotparser as robotparser
         except ImportError as ex:
             raise unittest.SkipTest()
 

@@ -8,7 +8,7 @@ from .decorators import cached
 from .logs import get_log
 from .constants import config
 from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, \
-    avg_domain_distance, ts_now, load_callable
+    avg_domain_distance, ts_now, load_callable, is_text
 from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_info, \
     object_id, find_merge_strategy, find_entity, entity_simple_summary, entitiesdescriptor
 from whoosh.fields import Schema, TEXT, ID, KEYWORD, STORED, BOOLEAN
@@ -59,7 +59,7 @@ class SAMLStoreBase(object):
         if member is None:
             member = "entities"
 
-        if type(member) is str or type(member) is unicode:
+        if is_text(member):
             if '!' in member:
                 (src, xp) = member.split("!")
                 if len(src) == 0:

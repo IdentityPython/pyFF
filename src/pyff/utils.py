@@ -13,7 +13,7 @@ from datetime import timedelta, datetime
 from email.utils import parsedate
 from threading import local
 from time import gmtime, strftime
-from six.moves.urllib_parse import urlparse
+from six.moves.urllib_parse import urlparse, quote_plus
 from itertools import chain
 from six import StringIO
 import yaml
@@ -34,6 +34,8 @@ from requests_file import FileAdapter
 from requests_cache import CachedSession
 import base64
 import time
+from markupsafe import Markup
+import six
 from . import __version__
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
@@ -262,15 +264,11 @@ site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 env = Environment(loader=PackageLoader(__package__, 'templates'), extensions=['jinja2.ext.i18n'])
 getattr(env, 'install_gettext_callables')(language.gettext, language.ngettext, newstyle=True)
 
-import urllib
-from markupsafe import Markup
-
-
 def urlencode_filter(s):
     if type(s) == 'Markup':
         s = s.unescape()
     s = s.encode('utf8')
-    s = urllib.quote_plus(s)
+    s = quote_plus(s)
     return Markup(s)
 
 
@@ -426,7 +424,7 @@ def hash_id(entity, hn='sha1', prefix=True):
     if hasattr(entity, 'get'):
         entity_id = entity.get('entityID')
 
-    hstr = hex_digest(entity_id, hn)
+    hstr = hex_digest(entity_id.encode('UTF-8'), hn)
     if prefix:
         return "{%s}%s" % (hn, hstr)
     else:
@@ -576,12 +574,8 @@ def guess_entity_software(e):
     return 'other'
 
 
-def printable(s):
-    if type(s) is unicode:
-        return s.encode('ascii', errors='ignore').decode()
-    else:
-        return s.decode("ascii", errors="ignore").encode()
-
+def is_text(x):
+    return isinstance(x, six.string_types) or isinstance(x, six.text_type)
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -634,3 +628,7 @@ def img_to_data(data, mime_type):
 def short_id(data):
     hasher = hashlib.sha1(data)
     return base64.urlsafe_b64encode(hasher.digest()[0:10]).rstrip('=')
+
+
+def unicode_stream(data):
+    return six.BytesIO(data.encode('UTF-8'))

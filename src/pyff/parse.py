@@ -1,5 +1,5 @@
 import os
-from .utils import parse_xml, root, first_text
+from .utils import parse_xml, root, first_text, unicode_stream
 from .constants import NS
 from .logs import get_log
 from xmlsec.crypto import CertDict
@@ -71,7 +71,8 @@ class XRDParser():
     def parse(self, resource, content):
         info = dict()
         info['Description'] = "XRD links from {}".format(resource.url)
-        t = parse_xml(StringIO(content.encode('utf8')))
+        t = parse_xml(unicode_stream(content))
+
         relt = root(t)
         for xrd in t.iter("{%s}XRD" % NS['xrd']):
             for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
