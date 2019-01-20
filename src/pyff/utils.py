@@ -612,7 +612,13 @@ def url_get(url):
                           expire_after=config.request_cache_time,
                           old_data_on_error=True)
     headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
-    r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+    try:
+        r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+    except Exception as ex:
+        log.warn(ex)
+        s = requests.Session()
+        r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+
     if config.request_override_encoding is not None:
         r.encoding = config.request_override_encoding
 
