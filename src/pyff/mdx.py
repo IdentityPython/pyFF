@@ -70,8 +70,14 @@ from . import __version__ as pyff_version
 from publicsuffix import PublicSuffixList
 from .i18n import language
 from . import samlmd
+import six
+import base64
 
-_ = language.ugettext
+if six.PY2:
+    _ = language.ugettext
+else:
+    _ = language.gettext
+
 log = get_log(__name__)
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
@@ -147,8 +153,10 @@ class EncodingDispatcher(object):
                 plen = len(prefix)
                 vpath = vpath[plen + 1:]
                 npath = "%s/%s" % (prefix, self.enc(vpath))
-                # log.debug("EncodingDispatcher %s" % npath)
-                return self.next_dispatcher(npath.encode('ascii', errors='ignore'))
+                # log.debug("EncodingDispatcher %s" % npath.encode('ascii', errors='ignore'))
+                if six.PY2:
+                    npath = npath.encode('ascii', errors='ignore')
+                return self.next_dispatcher(npath)
         return self.next_dispatcher(vpath)
 
 
@@ -494,6 +502,7 @@ class MDServer(object):
         log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
 
         def _d(x, do_split=True):
+            dot = six.u('.')
             if x is not None:
                 x = x.strip()
             # log.debug("_d(%s,%s)" % (x, do_split))
@@ -501,11 +510,10 @@ class MDServer(object):
                 return None, None
 
             if x.startswith("{base64}"):
-                x = x[8:].decode('base64')
+                x = base64.decodestring(x[8:].encode('ascii')).decode('ascii')
 
-            if do_split and '.' in x:
-                (pth, dot, extn) = x.rpartition('.')
-                assert (dot == '.')
+            if do_split and dot in x:
+                (pth, _, extn) = x.rpartition(dot)
                 if extn in _ctypes:
                     return pth, extn
 
@@ -587,11 +595,10 @@ class MDServer(object):
                 if query is None:
                     log.debug("empty query - creating one")
                     query = [cherrypy.request.remote.ip]
-                    # XXX fix this - urlparse is not 3.x and also this way to handle extra info sucks
                     referrer = cherrypy.request.headers.get('referrer', None)
                     if referrer is not None:
                         log.debug("including referrer: %s" % referrer)
-                        url = urlparse.urlparse(referrer)
+                        url = urlparse(referrer)
                         host = url.netloc
                         if ':' in url.netloc:
                             (host, port) = url.netloc.split(':')
@@ -765,7 +772,8 @@ def main():
 
     def _b64(p):
         if p:
-            return "{base64}%s" % p.encode('base64')
+            print(base64.encodestring(p.encode('UTF-8')).decode('ascii'))
+            return "".join(("{base64}", base64.encodestring(p.encode('UTF-8')).decode('ascii')))
         else:
             return ""
 
