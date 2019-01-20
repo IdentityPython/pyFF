@@ -62,6 +62,8 @@ class PyFFDTest(PipeLineTest):
         cls.logfile = tempfile.NamedTemporaryFile('w').name
         with open(cls.mdx, "w") as fd:
             fd.write(cls.mdx_template.render(ctx=cls))
+        with open(cls.mdx, 'r') as r:
+            print("".join(r.readlines()))
         cls.curdir = os.getcwd()
         cls.port = find_unbound_port()
         print("Using port {:d}, logging to {}".format(cls.port, cls.logfile))
@@ -89,7 +91,7 @@ class PyFFDTest(PipeLineTest):
                 sleep(1)
             except Exception as ex:
                 from traceback import print_exc
-                print(print_exc(ex))
+                print(print_exc(ex, limit=0))
                 pass
             sleep(1)
         raise ValueError("unable to start test pyffd server on port %d" % cls.port)

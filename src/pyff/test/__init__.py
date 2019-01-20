@@ -82,10 +82,10 @@ def _p(args, outf=None, ignore_exit=False):
         logging.error(err)
     if outf is not None:
         with open(outf, "w") as fd:
-            fd.write(out)
+            fd.write(out.decode('UTF-8'))
     else:
         if out is not None and len(out) > 0:
-            logging.debug(out)
+            logging.debug(out.decode('UTF-8'))
     rv = proc.wait()
     if rv and not ignore_exit:
         raise RuntimeError("command exited with code != 0: %d" % rv)

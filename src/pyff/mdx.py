@@ -855,6 +855,7 @@ def main():
     try:
         engine.start()
     except Exception as ex:
+        logging.debug(traceback.format_exc())
         logging.error(ex)
         sys.exit(1)
     else:

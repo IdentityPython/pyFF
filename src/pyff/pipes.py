@@ -265,6 +265,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
                 if req.done:
                     break
             except PipeException as ex:
+                log.debug(traceback.format_exc())
                 log.error(ex)
                 break
         return req.t
