@@ -42,7 +42,7 @@ if __name__ == '__main__':
     rv = 0
     try:
         rv = load_entry_point('pyFF==%s', 'console_scripts', '%s')()
-    except Exception, ex:
+    except Exception as ex:
         raise ex
     finally:
         cov.stop()
@@ -59,9 +59,9 @@ if __name__ == '__main__':
     rv = proc.wait()
     os.unlink(starter)
     print(">> STDOUT ---")
-    print(out)
+    print(out.decode('UTF-8'))
     print(">> STDERR ---")
-    print(err)
+    print(err.decode('UTF-8'))
     print("rv=%d" % rv)
     print("<< EOF")
 

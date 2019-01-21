@@ -237,6 +237,7 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
 :param state: The active request state
 :param t: The active working document
 :param store: The store object to operate on
+:param args: Pipeline arguments
 :return: The result of applying the processing pipeline to t.
         """
         if not state:

@@ -21,7 +21,10 @@ class ParserException(Exception):
         raise self._wraped
 
 
-class NoParser():
+class NoParser(object):
+    def __init__(self):
+        pass
+
     def magic(self, content):
         return True
 
@@ -29,7 +32,7 @@ class NoParser():
         raise ParserException("No matching parser found for %s" % resource.url)
 
 
-class DirectoryParser():
+class DirectoryParser(object):
     def __init__(self, ext):
         self.ext = ext
 
@@ -61,7 +64,7 @@ class DirectoryParser():
         return dict()
 
 
-class XRDParser():
+class XRDParser(object):
     def __init__(self):
         pass
 
@@ -89,7 +92,7 @@ class XRDParser():
         return info
 
 
-class MDServiceListParser():
+class MDServiceListParser(object):
     def __init__(self):
         pass
 

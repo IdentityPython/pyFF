@@ -1,4 +1,3 @@
-
 from six import StringIO
 from copy import deepcopy
 import re
@@ -280,6 +279,7 @@ class EmptyStore(SAMLStoreBase):
     def merge(self, *args, **kwargs):
         return list()
 
+
 class WhooshStore(SAMLStoreBase):
 
     def __init__(self):
@@ -310,20 +310,20 @@ class WhooshStore(SAMLStoreBase):
 
     def _index_prep(self, info):
         if 'entity_attributes' in info:
-            for a,v in list(info.pop('entity_attributes').items()):
+            for a, v in list(info.pop('entity_attributes').items()):
                 info[a] = v
-        for a,v in list(info.items()):
+        for a, v in list(info.items()):
             if type(v) is not list and type(v) is not tuple:
-               info[a] = [info.pop(a)]
+                info[a] = [info.pop(a)]
 
             if a in ATTRS_INV:
                 info[ATTRS_INV[a]] = info.pop(a)
 
         for a in list(info.keys()):
-            if not a in self.schema.names():
+            if a not in self.schema.names():
                 del info[a]
 
-        for a,v in list(info.items()):
+        for a, v in list(info.items()):
             info[a] = [six.text_type(vv) for vv in v]
 
     def _index(self, e, tid=None):
@@ -370,7 +370,7 @@ class WhooshStore(SAMLStoreBase):
         elif a is not None and v is None:
             return len(self.attribute(a))
         else:
-            return len(self.lookup("{!s}={!s}".format(a,v)))
+            return len(self.lookup("{!s}={!s}".format(a, v)))
 
     def _attributes(self):
         ix = self.storage.open_index()
@@ -399,13 +399,13 @@ class WhooshStore(SAMLStoreBase):
                 return list(self.infos.values())
 
         from whoosh.qparser import QueryParser
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         key = key.strip('+')
         key = key.replace('+', ' AND ')
-        for uri,a in list(ATTRS_INV.items()):
-            key = key.replace(uri,a)
+        for uri, a in list(ATTRS_INV.items()):
+            key = key.replace(uri, a)
         key = " {!s} ".format(key)
-        key = re.sub("([^=]+)=(\S+)","\\1:\\2",key)
+        key = re.sub("([^=]+)=(\S+)", "\\1:\\2", key)
         key = re.sub("{([^}]+)}(\S+)", "\\1:\\2", key)
         key = key.strip()
 
@@ -413,7 +413,7 @@ class WhooshStore(SAMLStoreBase):
         q = qp.parse(key)
         lst = set()
         with self.index.searcher() as searcher:
-            results = searcher.search(q,limit=None)
+            results = searcher.search(q, limit=None)
             for result in results:
                 if raw:
                     lst.add(self.objects[result['object_id']])
@@ -502,7 +502,7 @@ class MemoryStore(SAMLStoreBase):
         return list(self.md.keys())
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):
-        # log.debug("memory store update: %s: %s" % (repr(t), tid))
+        #log.debug("memory store update: %s: %s" % (repr(t), tid))
         relt = root(t)
         assert (relt is not None)
         ne = 0
@@ -528,7 +528,7 @@ class MemoryStore(SAMLStoreBase):
         return ne
 
     def lookup(self, key):
-        # log.debug("memory store lookup: %s" % key)
+        #log.debug("memory store lookup: %s" % key)
         return self._lookup(key)
 
     def _lookup(self, key):
@@ -547,7 +547,7 @@ class MemoryStore(SAMLStoreBase):
                     hits.intersection_update(other)
 
                 if not hits:
-                    log.debug("empty intersection")
+                    #log.debug("empty intersection")
                     return []
 
             if hits is not None and hits:
@@ -567,22 +567,21 @@ class MemoryStore(SAMLStoreBase):
                 res.update(self._get_index(m.group(1), v))
             return list(res)
 
-        l = self._get_index("null", key)
-        if l:
-            return list(l)
+        if key in self.entities:
+            return [self.entities[key]]
 
         if key in self.md:
-            # log.debug("entities list %s: %s" % (key, self.md[key]))
+            log.debug("entities list %s: %d" % (key, len(self.md[key])))
             lst = []
             for entityID in self.md[key]:
                 lst.extend(self.lookup(entityID))
+            log.debug("returning {} entities".format(len(lst)))
             return lst
 
         return []
 
 
 class RedisStore(SAMLStoreBase):
-
     from .decorators import deprecated
 
     @deprecated(reason="The RedisStore has seen almost no use and is not able to track API changes")

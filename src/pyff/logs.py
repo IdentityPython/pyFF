@@ -6,7 +6,7 @@ import six
 
 try:
     import cherrypy
-except Exception as e:
+except ImportError as e:
     print("cherrypy logging disabled")
     cherrypy = None
 
