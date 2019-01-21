@@ -1141,6 +1141,8 @@ Content-Type HTTP response header.
 
     if d is not None:
         m = hashlib.sha1()
+        if not isinstance(d, six.binary_type):
+            d = d.encode("utf-8")
         m.update(d)
         req.state['headers']['ETag'] = m.hexdigest()
     else:
@@ -1148,9 +1150,8 @@ Content-Type HTTP response header.
 
     req.state['headers']['Content-Type'] = ctype
     if six.PY2:
-        return unicode(d.decode('utf-8')).encode("utf-8")
-    else:
-        return str(d)
+        d = six.u(d.decode('utf-8')).encode("utf-8")
+    return d
 
 
 @pipe

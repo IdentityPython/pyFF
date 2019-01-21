@@ -424,7 +424,9 @@ def hash_id(entity, hn='sha1', prefix=True):
     if hasattr(entity, 'get'):
         entity_id = entity.get('entityID')
 
-    hstr = hex_digest(entity_id.encode('UTF-8'), hn)
+    if not isinstance(entity_id, six.binary_type):
+        entity_id = entity_id.encode("utf-8")
+    hstr = hex_digest(entity_id, hn)
     if prefix:
         return "{%s}%s" % (hn, hstr)
     else:
@@ -625,9 +627,19 @@ def url_get(url):
     return r
 
 
+def safe_b64e(data):
+    if not isinstance(data, six.binary_type):
+        data = data.encode("utf-8")
+    return base64.b64encode(data).decode('ascii')
+
+
+def safe_b64d(s):
+    return base64.b64decode(s)
+
+
 def img_to_data(data, mime_type):
     """Convert a file (specified by a path) into a data URI."""
-    data64 = ''.join(base64.encodestring(data).splitlines())
+    data64 = safe_b64e(data)
     return 'data:%s;base64,%s' % (mime_type, data64)
 
 

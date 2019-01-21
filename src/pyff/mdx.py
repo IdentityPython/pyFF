@@ -61,7 +61,7 @@ from simplejson import dumps
 from .constants import config
 from .locks import ReadWriteLock
 from .pipes import plumbing
-from .utils import resource_string, duration2timedelta, debug_observer, render_template, hash_id
+from .utils import resource_string, duration2timedelta, debug_observer, render_template, hash_id, safe_b64e, safe_b64d
 from .logs import get_log, SysLogLibHandler
 from .samlmd import entity_simple_summary, entity_display_name, entity_info, MDRepository
 import logging
@@ -71,7 +71,6 @@ from publicsuffix import PublicSuffixList
 from .i18n import language
 from . import samlmd
 import six
-import base64
 
 if six.PY2:
     _ = language.ugettext
@@ -510,7 +509,9 @@ class MDServer(object):
                 return None, None
 
             if x.startswith("{base64}"):
-                x = base64.decodestring(x[8:].encode('ascii')).decode('ascii')
+                x = safe_b64d(x[8:])
+                if isinstance(x, six.binary_type):
+                    x = x.decode()
 
             if do_split and dot in x:
                 (pth, _, extn) = x.rpartition(dot)
@@ -772,8 +773,7 @@ def main():
 
     def _b64(p):
         if p:
-            print(base64.encodestring(p.encode('UTF-8')).decode('ascii'))
-            return "".join(("{base64}", base64.encodestring(p.encode('UTF-8')).decode('ascii')))
+            return "{base64}%s" % safe_b64e(p)
         else:
             return ""
 
@@ -794,6 +794,8 @@ def main():
     pfx = ["/entities", "/metadata"] + ["/" + x for x in list(server.aliases.keys())]
     cfg = {
         'global': {
+            'tools.encode.on': True,
+            'tools.encode.text_only': False,
             'tools.encode.encoding': 'UTF-8',
             'server.socket_port': config.port,
             'server.socket_host': config.bind_address,
@@ -814,6 +816,8 @@ def main():
             'error_page.400': lambda **kwargs: error_page(400, _=_, **kwargs)
         },
         '/': {
+            'tools.encode.on': True,
+            'tools.encode.encoding': 'UTF-8',
             'tools.caching.delay': config.caching_delay,
             'tools.proxy.on': config.proxy,
             'request.dispatch': EncodingDispatcher(pfx, _b64).dispatch,
