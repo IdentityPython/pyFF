@@ -21,7 +21,7 @@ from .decorators import deprecated
 from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
-    validate_document
+    validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
     discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor
 from .fetch import Resource
@@ -370,7 +370,11 @@ Publish the working document in XML form.
         out = output_file
         if os.path.isdir(output_file):
             out = "{}.xml".format(os.path.join(output_file, req.id))
-        safe_write(out, dumptree(req.t))
+
+        data = dumptree(req.t)
+        if six.PY3:
+            data = data.decode('utf-8')
+        safe_write(out, data)
         req.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
 
@@ -859,13 +863,8 @@ before you call store.
         if not os.path.isdir(target_dir):
             os.makedirs(target_dir)
         for e in iter_entities(req.t):
-            eid = e.get('entityID')
-            if eid is None or len(eid) == 0:
-                raise PipeException("Missing entityID in %s" % e)
-            m = hashlib.sha1()
-            m.update(eid)
-            d = m.hexdigest()
-            safe_write("%s.xml" % os.path.join(target_dir, d), dumptree(e, pretty_print=True))
+            fn = hash_id(e, prefix=False)
+            safe_write("%s.xml" % os.path.join(target_dir, fn), dumptree(e, pretty_print=True))
     return req.t
 
 

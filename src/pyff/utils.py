@@ -236,14 +236,17 @@ def request_scheme(request):
 def safe_write(fn, data):
     """Safely write data to a file with name fn
     :param fn: a filename
-    :param data: some data to write
+    :param data: some string data to write
     :return: True or False depending on the outcome of the write
     """
     tmpn = None
     try:
+        log.debug("writing {} chrs into {}".format(len(data), fn))
         fn = os.path.expanduser(fn)
         dirname, basename = os.path.split(fn)
         with tempfile.NamedTemporaryFile('w', delete=False, prefix=".%s" % basename, dir=dirname) as tmp:
+            if isinstance(data, six.binary_type):
+                data = data.decode('utf-8')
             tmp.write(data)
             tmpn = tmp.name
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
