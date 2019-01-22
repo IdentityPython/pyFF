@@ -6,6 +6,7 @@ import tempfile
 from unittest import TestCase
 import os
 import pkg_resources
+import six
 
 from pyff import __version__ as pyffversion
 
@@ -58,10 +59,15 @@ if __name__ == '__main__':
     out, err = proc.communicate()
     rv = proc.wait()
     os.unlink(starter)
+    if isinstance(out, six.binary_type):
+        out = out.decode('utf-8')
+    if isinstance(err, six.binary_type):
+        err = err.decode('utf-8')
+
     print(">> STDOUT ---")
-    print(out.decode('UTF-8'))
+    print(out)
     print(">> STDERR ---")
-    print(err.decode('UTF-8'))
+    print(err)
     print("rv=%d" % rv)
     print("<< EOF")
 
