@@ -13,7 +13,6 @@ from copy import deepcopy
 from .exceptions import *
 import traceback
 from six import StringIO
-from requests import ConnectionError
 from .fetch import ResourceManager
 from .parse import add_parser
 
@@ -625,7 +624,7 @@ def discojson(e, langs=None):
         if '://' in url:
             try:
                 r = url_get(url)
-            except ConnectionError:
+            except IOError:
                 continue
             if r.ok and r.content:
                 d['entity_icon'] = img_to_data(r.content, r.headers.get('Content-Type'))
