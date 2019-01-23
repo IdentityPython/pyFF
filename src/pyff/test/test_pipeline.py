@@ -522,7 +522,7 @@ class SigningTest(PipeLineTest):
                 self.exec_pipeline("""
 - load:
    - file://%s/metadata/test01.xml
-- select as FOO
+- select as FOO:
 - first
 - publish: %s
 """ % (self.datadir, tmpfile))
@@ -536,11 +536,11 @@ class SigningTest(PipeLineTest):
             except PipeException:
                 pass
             except IOError:
-                raise Skip
+                pass
             finally:
                 try:
                     os.unlink(tmpfile)
-                except:
+                except (IOError, OSError):
                     pass
 
     def test_prune(self):
