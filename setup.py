@@ -20,7 +20,7 @@ install_requires = [
     'six',
     'urllib3',
     'idna',
-    'lxml==4.1.1',
+    'lxml >=4.1.1',
     'pyyaml >=3.10',
     'pyXMLSecurity >=0.15',
     'cherrypy',
