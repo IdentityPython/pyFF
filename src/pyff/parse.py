@@ -102,7 +102,7 @@ class MDServiceListParser(object):
     def parse(self, resource, content):
         info = dict()
         info['Description'] = "eIDAS MetadataServiceList from {}".format(resource.url)
-        t = parse_xml(StringIO(content.encode('utf8')))
+        t = parse_xml(unicode_stream(content))
         t.xinclude()
         relt = root(t)
         info['Version'] = relt.get('Version', '0')
