@@ -360,20 +360,17 @@ Publish the working document in XML form.
         output_file = req.args[0]
     if output_file is not None:
         output_file = output_file.strip()
-        log.debug("publish {}".format(output_file))
         resource_name = output_file
         m = re.match(FILESPEC_REGEX, output_file)
         if m:
             output_file = m.group(1)
             resource_name = m.group(2)
-        log.debug("output_file={}, resource_name={}".format(output_file, resource_name))
         out = output_file
         if os.path.isdir(output_file):
             out = "{}.xml".format(os.path.join(output_file, req.id))
 
         data = dumptree(req.t)
-        if six.PY3:
-            data = data.decode('utf-8')
+
         safe_write(out, data)
         req.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
@@ -1149,7 +1146,7 @@ Content-Type HTTP response header.
 
     req.state['headers']['Content-Type'] = ctype
     if six.PY2:
-        d = six.u(d.decode('utf-8')).encode("utf-8")
+        d = six.u(d)
     return d
 
 

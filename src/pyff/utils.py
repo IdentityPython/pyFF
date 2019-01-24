@@ -36,6 +36,7 @@ import base64
 import time
 from markupsafe import Markup
 import six
+import traceback
 from . import __version__
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
@@ -241,18 +242,30 @@ def safe_write(fn, data):
     """
     tmpn = None
     try:
-        log.debug("writing {} chrs into {}".format(len(data), fn))
         fn = os.path.expanduser(fn)
         dirname, basename = os.path.split(fn)
-        with tempfile.NamedTemporaryFile('w', delete=False, prefix=".%s" % basename, dir=dirname) as tmp:
-            if isinstance(data, six.binary_type):
-                data = data.decode('utf-8')
+        kwargs = dict(delete=False, prefix=".%s" % basename, dir=dirname)
+        if six.PY3:
+            kwargs['encoding'] = "utf-8"
+            mode = 'w+'
+        else:
+            mode = 'w+b'
+
+        if isinstance(data, six.binary_type):
+            data = data.decode('utf-8')
+
+        with tempfile.NamedTemporaryFile(mode, **kwargs) as tmp:
+            if six.PY2:
+                data = data.encode('utf-8')
+
+            log.debug("safe writing {} chrs into {}".format(len(data), fn))
             tmp.write(data)
             tmpn = tmp.name
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
             os.rename(tmpn, fn)
             return True
     except Exception as ex:
+        log.debug(traceback.format_exc())
         log.error(ex)
     finally:
         if tmpn is not None and os.path.exists(tmpn):
@@ -266,6 +279,7 @@ def safe_write(fn, data):
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 env = Environment(loader=PackageLoader(__package__, 'templates'), extensions=['jinja2.ext.i18n'])
 getattr(env, 'install_gettext_callables')(language.gettext, language.ngettext, newstyle=True)
+
 
 def urlencode_filter(s):
     if type(s) == 'Markup':
@@ -606,8 +620,6 @@ def url_get(url):
     s = None
     info = dict()
 
-    log.debug("GET URL {!s}".format(url))
-
     if 'file://' in url:
         s = requests.session()
         s.mount('file://', FileAdapter())
@@ -623,6 +635,11 @@ def url_get(url):
         log.warn(ex)
         s = requests.Session()
         r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+
+    if six.PY2:
+        r.encoding = "utf-8"
+
+    log.debug("url_get({}) returns {} chrs encoded as {}".format(url, len(r.content), r.encoding))
 
     if config.request_override_encoding is not None:
         r.encoding = config.request_override_encoding
