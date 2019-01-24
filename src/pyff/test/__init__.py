@@ -38,7 +38,7 @@ import coverage
 import os
 from pkg_resources import load_entry_point
 if __name__ == '__main__':
-    cov = coverage.coverage(cover_pylib=False, source=['pyff'], omit=['test'], include=['*.py'])
+    cov = coverage.coverage(cover_pylib=False, source=['pyff'], omit=['test'])
     cov.start()
     rv = 0
     try:
