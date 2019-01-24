@@ -86,18 +86,19 @@ This includes certain XSLT and XSD files.
 
     """
     name = os.path.expanduser(name)
+    data = None
     if os.path.exists(name):
         with io.open(name) as fd:
-            return fd.read()
+            data = fd.read()
     elif pfx and os.path.exists(os.path.join(pfx, name)):
         with io.open(os.path.join(pfx, name)) as fd:
-            return fd.read()
+            data = fd.read()
     elif pkg_resources.resource_exists(__name__, name):
-        return pkg_resources.resource_string(__name__, name)
+        data = pkg_resources.resource_string(__name__, name)
     elif pfx and pkg_resources.resource_exists(__name__, "%s/%s" % (pfx, name)):
-        return pkg_resources.resource_string(__name__, "%s/%s" % (pfx, name))
+        data = pkg_resources.resource_string(__name__, "%s/%s" % (pfx, name))
 
-    return None
+    return data
 
 
 def resource_filename(name, pfx=None):
@@ -433,7 +434,7 @@ def total_seconds(dt):
 
 
 def etag(s):
-    return hex_digest('sha1', s)
+    return hex_digest(s, hn="sha256")
 
 
 def hash_id(entity, hn='sha1', prefix=True):
@@ -441,8 +442,6 @@ def hash_id(entity, hn='sha1', prefix=True):
     if hasattr(entity, 'get'):
         entity_id = entity.get('entityID')
 
-    if not isinstance(entity_id, six.binary_type):
-        entity_id = entity_id.encode("utf-8")
     hstr = hex_digest(entity_id, hn)
     if prefix:
         return "{%s}%s" % (hn, hstr)
@@ -456,6 +455,9 @@ def hex_digest(data, hn='sha1'):
 
     if not hasattr(hashlib, hn):
         raise ValueError("Unknown digest '%s'" % hn)
+
+    if not isinstance(data, six.binary_type):
+        data = data.encode("utf-8")
 
     m = getattr(hashlib, hn)()
     m.update(data)
@@ -670,3 +672,15 @@ def short_id(data):
 
 def unicode_stream(data):
     return six.BytesIO(data.encode('UTF-8'))
+
+
+def b2u(data):
+    if is_text(data):
+        return data
+    elif isinstance(data, six.binary_type):
+        return data.decode("utf-8")
+    elif isinstance(data, tuple) or isinstance(data, list):
+        return [b2u(item) for item in data]
+    elif isinstance(data, set):
+        return set([b2u(item) for item in data])
+    return data

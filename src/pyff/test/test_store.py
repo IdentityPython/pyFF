@@ -45,6 +45,7 @@ class TestRedisStore(TestCase):
     def test_store_attributes_test01(self):
         store = self._redis_store()
         store.update(self.test01)
+        print(store.attributes())
         assert (ATTRS['domain'] in store.attributes())
         assert (ATTRS['role'] in store.attributes())
         assert (ATTRS['collection'] not in store.attributes())
@@ -96,6 +97,7 @@ class TestRedisStore(TestCase):
         assert (store.size() == 990)
         assert (len(store.lookup("{%s}idp" % ATTRS['role'])) == 534)
 
+
 class TestWhooshStore(TestCase):
     def setUp(self):
         self.datadir = resource_filename('metadata', 'test/data')
@@ -127,6 +129,7 @@ class TestWhooshStore(TestCase):
     def test_store_attributes_test01(self):
         store = WhooshStore()
         store.update(self.test01)
+        print(store.attributes())
         assert (ATTRS['domain'] in store.attributes())
         assert (ATTRS['role'] in store.attributes())
         assert (ATTRS['collection'] not in store.attributes())
