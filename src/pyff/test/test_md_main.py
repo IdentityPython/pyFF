@@ -1,9 +1,6 @@
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
+
 import unittest
-import urllib
-from six import StringIO
+from six.moves.urllib_parse import quote_plus
 import tempfile
 from threading import Thread
 from time import sleep
@@ -17,6 +14,7 @@ from pyff import __version__ as pyffversion
 from pyff.utils import parse_xml, root, validate_document
 import random
 import socket
+import six
 
 # range of ports where available ports can be found
 PORT_RANGE = [33000, 60000]
@@ -62,6 +60,8 @@ class PyFFDTest(PipeLineTest):
         cls.logfile = tempfile.NamedTemporaryFile('w').name
         with open(cls.mdx, "w") as fd:
             fd.write(cls.mdx_template.render(ctx=cls))
+        with open(cls.mdx, 'r') as r:
+            print("".join(r.readlines()))
         cls.curdir = os.getcwd()
         cls.port = find_unbound_port()
         print("Using port {:d}, logging to {}".format(cls.port, cls.logfile))
@@ -88,8 +88,7 @@ class PyFFDTest(PipeLineTest):
                 print(r.json())
                 sleep(1)
             except Exception as ex:
-                from traceback import print_exc
-                print(print_exc(ex))
+                print(ex)
                 pass
             sleep(1)
         raise ValueError("unable to start test pyffd server on port %d" % cls.port)
@@ -111,7 +110,7 @@ class PyFFDTest(PipeLineTest):
         r = requests.get("http://127.0.0.1:%s/ndn.xml" % self.port)
         assert (r.status_code == 200)
         # assert (r.encoding == 'utf8')
-        t = parse_xml(StringIO(r.content))
+        t = parse_xml(six.BytesIO(r.content))
         assert (t is not None)
         assert (root(t).get('entityID') == 'https://idp.nordu.net/idp/shibboleth')
         validate_document(t)
@@ -138,11 +137,11 @@ class PyFFDTest(PipeLineTest):
         assert ('nordu.net' in info['scope'])
 
     def test_md_query_single(self):
-        q = urllib.quote_plus('https://idp.nordu.net/idp/shibboleth')
+        q = quote_plus('https://idp.nordu.net/idp/shibboleth')
         r = requests.get("http://127.0.0.1:%s/entities/%s" % (self.port, q))
         assert (r.status_code == 200)
         assert ('application/xml' in r.headers['Content-Type'])
-        t = parse_xml(StringIO(r.content))
+        t = parse_xml(six.BytesIO(r.content))
         assert (t is not None)
         e = root(t)
         assert (e.get('entityID') == 'https://idp.nordu.net/idp/shibboleth')
@@ -151,7 +150,7 @@ class PyFFDTest(PipeLineTest):
         r = requests.get("http://127.0.0.1:%s/entities" % self.port)
         assert (r.status_code == 200)
         # assert (r.encoding == 'utf8')
-        t = parse_xml(StringIO(r.content))
+        t = parse_xml(six.BytesIO(r.content))
         assert (t is not None)
         validate_document(t)
 
@@ -168,7 +167,7 @@ class PyFFDTest(PipeLineTest):
 
     def test_parse_robots(self):
         try:
-            import robotparser
+            import six.moves.urllib_robotparser as robotparser
         except ImportError as ex:
             raise unittest.SkipTest()
 
@@ -180,7 +179,7 @@ class PyFFDTest(PipeLineTest):
     def test_favicon(self):
         r = requests.get("http://127.0.0.1:%s/favicon.ico" % self.port)
         assert (r.status_code == 200)
-        assert (r.headers['Content-Type'] == 'image/x-icon')
+        assert ('image/x-icon' in r.headers['Content-Type'])
 
     def test_ds_bad_request(self):
         r = requests.get("http://127.0.0.1:%s/role/idp.ds" % self.port)

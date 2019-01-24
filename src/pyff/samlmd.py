@@ -2,7 +2,7 @@
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
-    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data
+    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data, is_text, unicode_stream
 from .logs import get_log
 from .constants import config, NS, ATTRS, NF_URI
 from lxml import etree
@@ -13,7 +13,6 @@ from copy import deepcopy
 from .exceptions import *
 import traceback
 from six import StringIO
-from requests import ConnectionError
 from .fetch import ResourceManager
 from .parse import add_parser
 
@@ -137,7 +136,7 @@ class SAMLMetadataResourceParser:
     def parse(self, resource, content):
         info = dict()
         info['Validation Errors'] = dict()
-        t, expire_time_offset = parse_saml_metadata(StringIO(content.encode('utf8')),
+        t, expire_time_offset = parse_saml_metadata(unicode_stream(content),
                                                     key=resource.opts['verify'],
                                                     base_url=resource.url,
                                                     cleanup=resource.opts['cleanup'],
@@ -438,7 +437,7 @@ def entity_attributes(entity):
 
 def find_in_document(t, member):
     relt = root(t)
-    if type(member) is str or type(member) is unicode:
+    if is_text(member):
         if '!' in member:
             (src, xp) = member.split("!")
             return relt.xpath(xp, namespaces=NS, smart_strings=False)
@@ -625,7 +624,7 @@ def discojson(e, langs=None):
         if '://' in url:
             try:
                 r = url_get(url)
-            except ConnectionError:
+            except IOError:
                 continue
             if r.ok and r.content:
                 d['entity_icon'] = img_to_data(r.content, r.headers.get('Content-Type'))
@@ -972,7 +971,7 @@ class MDRepository():
         if member is None:
             member = "entities"
 
-        if type(member) is str or type(member) is unicode:
+        if is_text(member):
             if '!' in member:
                 (src, xp) = member.split("!")
                 if len(src) == 0:

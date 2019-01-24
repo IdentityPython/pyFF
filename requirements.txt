@@ -1,11 +1,11 @@
 mako
 six
 redis
-urllib3==1.23
-idna==2.5
+urllib3
+idna
 ipaddr
 publicsuffix
-lxml==4.1.1
+lxml
 cherrypy
 sphinx-pypi-upload
 sphinx

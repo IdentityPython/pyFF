@@ -1,5 +1,5 @@
 # coding=utf-8
-from __future__ import print_function, unicode_literals, absolute_import
+
 
 """
 
@@ -13,7 +13,7 @@ from datetime import timedelta, datetime
 from email.utils import parsedate
 from threading import local
 from time import gmtime, strftime
-from six.moves.urllib_parse import urlparse
+from six.moves.urllib_parse import urlparse, quote_plus
 from itertools import chain
 from six import StringIO
 import yaml
@@ -34,6 +34,9 @@ from requests_file import FileAdapter
 from requests_cache import CachedSession
 import base64
 import time
+from markupsafe import Markup
+import six
+import traceback
 from . import __version__
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
@@ -83,18 +86,19 @@ This includes certain XSLT and XSD files.
 
     """
     name = os.path.expanduser(name)
+    data = None
     if os.path.exists(name):
         with io.open(name) as fd:
-            return fd.read()
+            data = fd.read()
     elif pfx and os.path.exists(os.path.join(pfx, name)):
         with io.open(os.path.join(pfx, name)) as fd:
-            return fd.read()
+            data = fd.read()
     elif pkg_resources.resource_exists(__name__, name):
-        return pkg_resources.resource_string(__name__, name)
+        data = pkg_resources.resource_string(__name__, name)
     elif pfx and pkg_resources.resource_exists(__name__, "%s/%s" % (pfx, name)):
-        return pkg_resources.resource_string(__name__, "%s/%s" % (pfx, name))
+        data = pkg_resources.resource_string(__name__, "%s/%s" % (pfx, name))
 
-    return None
+    return data
 
 
 def resource_filename(name, pfx=None):
@@ -234,20 +238,35 @@ def request_scheme(request):
 def safe_write(fn, data):
     """Safely write data to a file with name fn
     :param fn: a filename
-    :param data: some data to write
+    :param data: some string data to write
     :return: True or False depending on the outcome of the write
     """
     tmpn = None
     try:
         fn = os.path.expanduser(fn)
         dirname, basename = os.path.split(fn)
-        with tempfile.NamedTemporaryFile('w', delete=False, prefix=".%s" % basename, dir=dirname) as tmp:
+        kwargs = dict(delete=False, prefix=".%s" % basename, dir=dirname)
+        if six.PY3:
+            kwargs['encoding'] = "utf-8"
+            mode = 'w+'
+        else:
+            mode = 'w+b'
+
+        if isinstance(data, six.binary_type):
+            data = data.decode('utf-8')
+
+        with tempfile.NamedTemporaryFile(mode, **kwargs) as tmp:
+            if six.PY2:
+                data = data.encode('utf-8')
+
+            log.debug("safe writing {} chrs into {}".format(len(data), fn))
             tmp.write(data)
             tmpn = tmp.name
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
             os.rename(tmpn, fn)
             return True
     except Exception as ex:
+        log.debug(traceback.format_exc())
         log.error(ex)
     finally:
         if tmpn is not None and os.path.exists(tmpn):
@@ -262,15 +281,12 @@ site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 env = Environment(loader=PackageLoader(__package__, 'templates'), extensions=['jinja2.ext.i18n'])
 getattr(env, 'install_gettext_callables')(language.gettext, language.ngettext, newstyle=True)
 
-import urllib
-from markupsafe import Markup
-
 
 def urlencode_filter(s):
     if type(s) == 'Markup':
         s = s.unescape()
     s = s.encode('utf8')
-    s = urllib.quote_plus(s)
+    s = quote_plus(s)
     return Markup(s)
 
 
@@ -362,7 +378,7 @@ def filter_lang(elts, langs=None):
     if elts is None:
         return []
 
-    lst = filter(_l, elts)
+    lst = list(filter(_l, elts))
     if lst:
         return lst
     else:
@@ -418,7 +434,7 @@ def total_seconds(dt):
 
 
 def etag(s):
-    return hex_digest('sha1', s)
+    return hex_digest(s, hn="sha256")
 
 
 def hash_id(entity, hn='sha1', prefix=True):
@@ -439,6 +455,9 @@ def hex_digest(data, hn='sha1'):
 
     if not hasattr(hashlib, hn):
         raise ValueError("Unknown digest '%s'" % hn)
+
+    if not isinstance(data, six.binary_type):
+        data = data.encode("utf-8")
 
     m = getattr(hashlib, hn)()
     m.update(data)
@@ -576,12 +595,8 @@ def guess_entity_software(e):
     return 'other'
 
 
-def printable(s):
-    if type(s) is unicode:
-        return s.encode('ascii', errors='ignore').decode()
-    else:
-        return s.decode("ascii", errors="ignore").encode()
-
+def is_text(x):
+    return isinstance(x, six.string_types) or isinstance(x, six.text_type)
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -607,8 +622,6 @@ def url_get(url):
     s = None
     info = dict()
 
-    log.debug("GET URL {!s}".format(url))
-
     if 'file://' in url:
         s = requests.session()
         s.mount('file://', FileAdapter())
@@ -618,19 +631,56 @@ def url_get(url):
                           expire_after=config.request_cache_time,
                           old_data_on_error=True)
     headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
-    r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+    try:
+        r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+    except Exception as ex:
+        log.warn(ex)
+        s = requests.Session()
+        r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+
+    if six.PY2:
+        r.encoding = "utf-8"
+
+    log.debug("url_get({}) returns {} chrs encoded as {}".format(url, len(r.content), r.encoding))
+
     if config.request_override_encoding is not None:
         r.encoding = config.request_override_encoding
 
     return r
 
 
+def safe_b64e(data):
+    if not isinstance(data, six.binary_type):
+        data = data.encode("utf-8")
+    return base64.b64encode(data).decode('ascii')
+
+
+def safe_b64d(s):
+    return base64.b64decode(s)
+
+
 def img_to_data(data, mime_type):
     """Convert a file (specified by a path) into a data URI."""
-    data64 = u''.join(base64.encodestring(data).splitlines())
-    return u'data:%s;base64,%s' % (mime_type, data64)
+    data64 = safe_b64e(data)
+    return 'data:%s;base64,%s' % (mime_type, data64)
 
 
 def short_id(data):
     hasher = hashlib.sha1(data)
     return base64.urlsafe_b64encode(hasher.digest()[0:10]).rstrip('=')
+
+
+def unicode_stream(data):
+    return six.BytesIO(data.encode('UTF-8'))
+
+
+def b2u(data):
+    if is_text(data):
+        return data
+    elif isinstance(data, six.binary_type):
+        return data.decode("utf-8")
+    elif isinstance(data, tuple) or isinstance(data, list):
+        return [b2u(item) for item in data]
+    elif isinstance(data, set):
+        return set([b2u(item) for item in data])
+    return data

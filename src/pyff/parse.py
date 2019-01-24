@@ -1,5 +1,5 @@
 import os
-from .utils import parse_xml, root, first_text
+from .utils import parse_xml, root, first_text, unicode_stream
 from .constants import NS
 from .logs import get_log
 from xmlsec.crypto import CertDict
@@ -21,7 +21,10 @@ class ParserException(Exception):
         raise self._wraped
 
 
-class NoParser():
+class NoParser(object):
+    def __init__(self):
+        pass
+
     def magic(self, content):
         return True
 
@@ -29,7 +32,7 @@ class NoParser():
         raise ParserException("No matching parser found for %s" % resource.url)
 
 
-class DirectoryParser():
+class DirectoryParser(object):
     def __init__(self, ext):
         self.ext = ext
 
@@ -61,7 +64,7 @@ class DirectoryParser():
         return dict()
 
 
-class XRDParser():
+class XRDParser(object):
     def __init__(self):
         pass
 
@@ -71,7 +74,8 @@ class XRDParser():
     def parse(self, resource, content):
         info = dict()
         info['Description'] = "XRD links from {}".format(resource.url)
-        t = parse_xml(StringIO(content.encode('utf8')))
+        t = parse_xml(unicode_stream(content))
+
         relt = root(t)
         for xrd in t.iter("{%s}XRD" % NS['xrd']):
             for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
@@ -88,7 +92,7 @@ class XRDParser():
         return info
 
 
-class MDServiceListParser():
+class MDServiceListParser(object):
     def __init__(self):
         pass
 
@@ -98,7 +102,7 @@ class MDServiceListParser():
     def parse(self, resource, content):
         info = dict()
         info['Description'] = "eIDAS MetadataServiceList from {}".format(resource.url)
-        t = parse_xml(StringIO(content.encode('utf8')))
+        t = parse_xml(unicode_stream(content))
         t.xinclude()
         relt = root(t)
         info['Version'] = relt.get('Version', '0')

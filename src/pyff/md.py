@@ -69,8 +69,7 @@ def main():
             plumbing(p).process(md, state={'batch': True, 'stats': {}})
         sys.exit(0)
     except Exception as ex:
-        if logging.getLogger().isEnabledFor(logging.DEBUG):
-            traceback.print_exc()
+        logging.debug(traceback.format_exc())
         logging.error(ex)
         sys.exit(-1)
 

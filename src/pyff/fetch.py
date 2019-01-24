@@ -12,6 +12,7 @@ from datetime import datetime
 from collections import deque
 import six
 from concurrent import futures
+import traceback
 from .parse import parse_resource
 from itertools import chain
 from .exceptions import ResourceException
@@ -68,7 +69,7 @@ class ResourceManager(ResourceManagerBase):
         return item in self._resources
 
     def __len__(self):
-        return len(self.values())
+        return len(list(self.values()))
 
     def __iter__(self):
         return self.walk()
@@ -92,7 +93,8 @@ class ResourceManager(ResourceManagerBase):
                             for nr in res:
                                 new_resources.append(nr)
                     except Exception as ex:
-                        log.error(str(ex))
+                        log.debug(traceback.format_exc())
+                        log.error(ex)
                         if fail_on_error:
                             raise ex
                 resources = new_resources

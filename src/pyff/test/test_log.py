@@ -41,6 +41,7 @@ class TestLog(TestCase):
             for hdl in old_handlers:
                 logger.addHandler(hdl)
 
+
 class TestSyslog(TestCase):
 
     def setUp(self):

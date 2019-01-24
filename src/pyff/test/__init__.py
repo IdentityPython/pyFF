@@ -6,6 +6,7 @@ import tempfile
 from unittest import TestCase
 import os
 import pkg_resources
+import six
 
 from pyff import __version__ as pyffversion
 
@@ -37,12 +38,12 @@ import coverage
 import os
 from pkg_resources import load_entry_point
 if __name__ == '__main__':
-    cov = coverage.coverage(cover_pylib=False, source=['pyff'], omit=['test'], include=['*.py'])
+    cov = coverage.coverage(cover_pylib=False, source=['pyff'], omit=['test'])
     cov.start()
     rv = 0
     try:
         rv = load_entry_point('pyFF==%s', 'console_scripts', '%s')()
-    except Exception, ex:
+    except Exception as ex:
         raise ex
     finally:
         cov.stop()
@@ -58,6 +59,11 @@ if __name__ == '__main__':
     out, err = proc.communicate()
     rv = proc.wait()
     os.unlink(starter)
+    if isinstance(out, six.binary_type):
+        out = out.decode('utf-8')
+    if isinstance(err, six.binary_type):
+        err = err.decode('utf-8')
+
     print(">> STDOUT ---")
     print(out)
     print(">> STDERR ---")
@@ -82,10 +88,10 @@ def _p(args, outf=None, ignore_exit=False):
         logging.error(err)
     if outf is not None:
         with open(outf, "w") as fd:
-            fd.write(out)
+            fd.write(out.decode('UTF-8'))
     else:
         if out is not None and len(out) > 0:
-            logging.debug(out)
+            logging.debug(out.decode('UTF-8'))
     rv = proc.wait()
     if rv and not ignore_exit:
         raise RuntimeError("command exited with code != 0: %d" % rv)
