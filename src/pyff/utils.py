@@ -633,8 +633,7 @@ def url_get(url):
     headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
     try:
         r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
-    except Exception as ex:
-        log.warn(ex)
+    except IOError as ex:
         s = requests.Session()
         r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
 
