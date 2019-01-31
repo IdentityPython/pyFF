@@ -17,6 +17,7 @@ from .parse import parse_resource
 from itertools import chain
 from .exceptions import ResourceException
 from .utils import url_get
+from copy import deepcopy, copy
 
 if six.PY2:
     from UserDict import DictMixin as ResourceManagerBase
@@ -114,8 +115,8 @@ class Resource(object):
         def _null(t):
             return t
 
-        self.opts.setdefault('cleanup', _null)
-        self.opts.setdefault('via', _null)
+        self.opts.setdefault('cleanup', [])
+        self.opts.setdefault('via', [])
         self.opts.setdefault('fail_on_error', False)
         self.opts.setdefault('as', None)
         self.opts.setdefault('verify', None)
@@ -129,6 +130,9 @@ class Resource(object):
     @property
     def post(self):
         return self.opts['via']
+
+    def add_via(self, callback):
+        self.opts['via'].append(callback)
 
     @property
     def cleanup(self):
@@ -155,11 +159,12 @@ class Resource(object):
         self._infos.append(info)
 
     def add_child(self, url, **kwargs):
-        opts = dict()
-        opts.update(self.opts)
+        opts = deepcopy(self.opts)
         del opts['as']
         opts.update(kwargs)
-        self.children.append(Resource(url, **opts))
+        r = Resource(url, **opts)
+        self.children.append(r)
+        return r
 
     @property
     def name(self):
@@ -206,8 +211,10 @@ class Resource(object):
 
         if self.t is not None:
             self.last_seen = datetime.now()
-            if self.post is not None:
-                self.t = self.post(self.t, **self.opts)
+            if self.post and isinstance(self.post, list):
+                for cb in self.post:
+                    if self.t is not None:
+                        self.t = cb(self.t, **self.opts)
 
             if self.is_expired():
                 info['Expired'] = True

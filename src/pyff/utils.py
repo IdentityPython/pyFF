@@ -684,3 +684,16 @@ def b2u(data):
     elif isinstance(data, set):
         return set([b2u(item) for item in data])
     return data
+
+
+class Lambda(object):
+
+    def __init__(self, cb, *args, **kwargs):
+        self._cb = cb
+        self._args = args
+        self._kwargs = kwargs
+
+    def __call__(self, *args, **kwargs):
+        list(args).append(list(self._args))
+        kwargs.update(self._kwargs)
+        return self._cb(*args, **kwargs)

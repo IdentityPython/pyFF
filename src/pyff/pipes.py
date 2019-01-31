@@ -118,6 +118,12 @@ A delayed pipeline callback used as a post for parse_saml_metadata
         self.req = req
         self.store = store
 
+    def __copy__(self):
+        return self
+
+    def __deepcopy__(self, memo):
+        return self
+
     def __call__(self, *args, **kwargs):
         log.debug("{!s}: called".format(self.plumbing))
         t = args[0]

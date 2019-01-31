@@ -1,8 +1,8 @@
-
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
-    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data, is_text, unicode_stream
+    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data, is_text, unicode_stream, \
+    Lambda
 from .logs import get_log
 from .constants import config, NS, ATTRS, NF_URI
 from lxml import etree
@@ -70,7 +70,7 @@ def parse_saml_metadata(source,
 :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
 :param validate: (default: True) set to False to turn off all XML schema validation
 :param validation_errors: A dict that will be used to return validation errors to the caller
-:param cleanup: A callable that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
+:param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
 (but after xinclude processing and signature validation)
     """
 
@@ -85,8 +85,9 @@ def parse_saml_metadata(source,
 
         t = check_signature(t, key)
 
-        if cleanup is not None:
-            t = cleanup(t)
+        if cleanup is not None and isinstance(cleanup, list):
+            for cb in cleanup:
+                t = cb(t)
         else:  # at least get rid of ID attribute
             for e in iter_entities(t):
                 if e.get('ID') is not None:
@@ -156,7 +157,70 @@ class SAMLMetadataResourceParser:
 
         return info
 
+
 add_parser(SAMLMetadataResourceParser())
+
+
+class MDServiceListParser(object):
+    def __init__(self):
+        pass
+
+    def magic(self, content):
+        return 'MetadataServiceList' in content
+
+    def parse(self, resource, content):
+        info = dict()
+        info['Description'] = "eIDAS MetadataServiceList from {}".format(resource.url)
+        t = parse_xml(unicode_stream(content))
+        t.xinclude()
+        relt = root(t)
+        info['Version'] = relt.get('Version', '0')
+        info['IssueDate'] = relt.get('IssueDate')
+        info['IssuerName'] = first_text(relt, "{%s}IssuerName" % NS['ser'])
+        info['SchemeIdentifier'] = first_text(relt, "{%s}SchemeIdentifier" % NS['ser'])
+        info['SchemeTerritory'] = first_text(relt, "{%s}SchemeTerritory" % NS['ser'])
+        for mdl in relt.iter("{%s}MetadataList" % NS['ser']):
+            for ml in mdl.iter("{%s}MetadataLocation" % NS['ser']):
+                location = ml.get('Location')
+                if location:
+                    certs = CertDict(ml)
+                    fingerprints = list(certs.keys())
+                    fp = None
+                    if len(fingerprints) > 0:
+                        fp = fingerprints[0]
+
+                    ep = ml.find("{%s}Endpoint" % NS['ser'])
+                    if ep is not None and fp is not None:
+                        args = dict(country_code=mdl.get('Territory'),
+                                    hide_from_discovery=strtobool(ep.get('HideFromDiscovery', 'false')))
+                        log.debug("MDSL[{}]: {} verified by {} for country {}".format(info['SchemeTerritory'],
+                                                                                      location,
+                                                                                      fp,
+                                                                                      args.get('country_code')))
+                        r = resource.add_child(location, verify=fp)
+
+                        # this is specific post-processing for MDSL files
+                        def _update_entities(_t, **kwargs):
+                            _country_code = kwargs.get('country_code')
+                            _hide_from_discovery = kwargs.get('hide_from_discovery')
+                            for e in iter_entities(_t):
+                                if _country_code:
+                                    set_nodecountry(e, _country_code)
+                                if bool(_hide_from_discovery) and is_idp(e):
+                                    set_entity_attributes(e, {ATTRS['entity-category']:
+                                                              'http://refeds.org/category/hide-from-discovery'})
+                            return _t
+
+                        r.add_via(Lambda(_update_entities, **args))
+
+        log.debug("Done parsing eIDAS MetadataServiceList")
+        resource.last_seen = datetime.now
+        resource.expire_time = None
+        return info
+
+
+add_parser(MDServiceListParser())
+
 
 def metadata_expiration(t):
     relt = root(t)

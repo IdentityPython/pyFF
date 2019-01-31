@@ -468,29 +468,27 @@ Defaults are marked with (*)
             "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
 
         url = r.pop(0)
-        params = dict()
+        params = {"via": [],"cleanup": [],"verify": None, "as": url}
 
         while len(r) > 0:
             elt = r.pop(0)
             if elt in ("as", "verify", "via", "cleanup"):
                 if len(r) > 0:
-                    params[elt] = r.pop(0)
+                    if elt in ("via", "cleanup"):
+                        params[elt].append(r.pop(0))
+                    else:
+                        params[elt] = r.pop(0)
                 else:
                     raise PipeException(
-                        "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
+                        "Usage: load resource [as url] [[verify] verification] [via pipeline]* [cleanup pipeline]*")
             else:
                 params['verify'] = elt
 
-        for elt in ("verify", "via", "cleanup"):
-            params.setdefault(elt, None)
-
-        params.setdefault('as', url)
-
         if params['via'] is not None:
-            params['via'] = PipelineCallback(params['via'], req, store=store)
+            params['via'] = [PipelineCallback(pipe, req, store=store) for pipe in params['via']]
 
         if params['cleanup'] is not None:
-            params['cleanup'] = PipelineCallback(params['cleanup'], req, store=store)
+            params['cleanup'] = [PipelineCallback(pipe, req, store=store) for pipe in params['cleanup']]
 
         params.update(opts)
 
