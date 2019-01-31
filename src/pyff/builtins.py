@@ -21,9 +21,9 @@ from .decorators import deprecated
 from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
-    validate_document
+    validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
-    discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor
+    discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry
 from .fetch import Resource
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
@@ -360,17 +360,18 @@ Publish the working document in XML form.
         output_file = req.args[0]
     if output_file is not None:
         output_file = output_file.strip()
-        log.debug("publish {}".format(output_file))
         resource_name = output_file
         m = re.match(FILESPEC_REGEX, output_file)
         if m:
             output_file = m.group(1)
             resource_name = m.group(2)
-        log.debug("output_file={}, resource_name={}".format(output_file, resource_name))
         out = output_file
         if os.path.isdir(output_file):
             out = "{}.xml".format(os.path.join(output_file, req.id))
-        safe_write(out, dumptree(req.t))
+
+        data = dumptree(req.t)
+
+        safe_write(out, data)
         req.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
 
@@ -467,29 +468,27 @@ Defaults are marked with (*)
             "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
 
         url = r.pop(0)
-        params = dict()
+        params = {"via": [],"cleanup": [],"verify": None, "as": url}
 
         while len(r) > 0:
             elt = r.pop(0)
             if elt in ("as", "verify", "via", "cleanup"):
                 if len(r) > 0:
-                    params[elt] = r.pop(0)
+                    if elt in ("via", "cleanup"):
+                        params[elt].append(r.pop(0))
+                    else:
+                        params[elt] = r.pop(0)
                 else:
                     raise PipeException(
-                        "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
+                        "Usage: load resource [as url] [[verify] verification] [via pipeline]* [cleanup pipeline]*")
             else:
                 params['verify'] = elt
 
-        for elt in ("verify", "via", "cleanup"):
-            params.setdefault(elt, None)
-
-        params.setdefault('as', url)
-
         if params['via'] is not None:
-            params['via'] = PipelineCallback(params['via'], req, store=store)
+            params['via'] = [PipelineCallback(pipe, req, store=store) for pipe in params['via']]
 
         if params['cleanup'] is not None:
-            params['cleanup'] = PipelineCallback(params['cleanup'], req, store=store)
+            params['cleanup'] = [PipelineCallback(pipe, req, store=store) for pipe in params['cleanup']]
 
         params.update(opts)
 
@@ -859,13 +858,8 @@ before you call store.
         if not os.path.isdir(target_dir):
             os.makedirs(target_dir)
         for e in iter_entities(req.t):
-            eid = e.get('entityID')
-            if eid is None or len(eid) == 0:
-                raise PipeException("Missing entityID in %s" % e)
-            m = hashlib.sha1()
-            m.update(eid)
-            d = m.hexdigest()
-            safe_write("%s.xml" % os.path.join(target_dir, d), dumptree(e, pretty_print=True))
+            fn = hash_id(e, prefix=False)
+            safe_write("%s.xml" % os.path.join(target_dir, fn), dumptree(e, pretty_print=True))
     return req.t
 
 
@@ -980,7 +974,7 @@ def check_xml_namespaces(req, *opts):
 
     def _verify(elt):
         if isinstance(elt.tag, six.string_types):
-            for prefix, uri in elt.nsmap.items():
+            for prefix, uri in list(elt.nsmap.items()):
                 if not uri.startswith('urn:'):
                     u = urlparse(uri)
                     if u.scheme not in ('http', 'https'):
@@ -1141,6 +1135,8 @@ Content-Type HTTP response header.
 
     if d is not None:
         m = hashlib.sha1()
+        if not isinstance(d, six.binary_type):
+            d = d.encode("utf-8")
         m.update(d)
         req.state['headers']['ETag'] = m.hexdigest()
     else:
@@ -1148,9 +1144,8 @@ Content-Type HTTP response header.
 
     req.state['headers']['Content-Type'] = ctype
     if six.PY2:
-        return unicode(d.decode('utf-8')).encode("utf-8")
-    else:
-        return str(d)
+        d = six.u(d)
+    return d
 
 
 @pipe
@@ -1368,5 +1363,39 @@ document for later processing.
         # log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         set_entity_attributes(e, req.args)
         req.store.update(e)
+
+    return req.t
+
+
+@pipe(name='nodecountry')
+def _nodecountry(req, *opts):
+    """
+Sets eidas:NodeCountry
+
+:param req: The request
+:param opts: Options (not used)
+:return: A modified working document
+
+Transforms the working document by setting NodeCountry
+
+**Examples**
+
+.. code-block:: yaml
+
+    - nodecountry:
+        country: XX
+
+Normally this would be combined with the 'merge' feature of fork or in a cleanup pipline to add attributes to
+the working document for later processing.
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    for e in iter_entities(req.t):
+        if req.args is not None and 'country' in req.args:
+            set_nodecountry(e, country_code=req.args['country'])
+            req.store.update(e)
+        else:
+            log.error("No country found in arguments to nodecountry")
 
     return req.t

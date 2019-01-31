@@ -21,7 +21,8 @@ NS = dict(md="urn:oasis:names:tc:SAML:2.0:metadata",
           saml="urn:oasis:names:tc:SAML:2.0:assertion",
           xs="http://www.w3.org/2001/XMLSchema",
           xsi="http://www.w3.org/2001/XMLSchema-instance",
-          ser="http://eidas.europa.eu/metadata/servicelist")
+          ser="http://eidas.europa.eu/metadata/servicelist",
+          eidas="http://eidas.europa.eu/saml-extensions")
 
 ATTRS = {'collection': 'http://pyff.io/collection',
          'entity-category': 'http://macedir.org/entity-category',

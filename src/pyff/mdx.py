@@ -61,7 +61,7 @@ from simplejson import dumps
 from .constants import config
 from .locks import ReadWriteLock
 from .pipes import plumbing
-from .utils import resource_string, duration2timedelta, debug_observer, render_template, hash_id
+from .utils import resource_string, duration2timedelta, debug_observer, render_template, hash_id, safe_b64e, safe_b64d
 from .logs import get_log, SysLogLibHandler
 from .samlmd import entity_simple_summary, entity_display_name, entity_info, MDRepository
 import logging
@@ -70,8 +70,13 @@ from . import __version__ as pyff_version
 from publicsuffix import PublicSuffixList
 from .i18n import language
 from . import samlmd
+import six
 
-_ = language.ugettext
+if six.PY2:
+    _ = language.ugettext
+else:
+    _ = language.gettext
+
 log = get_log(__name__)
 site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
@@ -147,8 +152,10 @@ class EncodingDispatcher(object):
                 plen = len(prefix)
                 vpath = vpath[plen + 1:]
                 npath = "%s/%s" % (prefix, self.enc(vpath))
-                # log.debug("EncodingDispatcher %s" % npath)
-                return self.next_dispatcher(npath.encode('ascii', errors='ignore'))
+                # log.debug("EncodingDispatcher %s" % npath.encode('ascii', errors='ignore'))
+                if six.PY2:
+                    npath = npath.encode('ascii', errors='ignore')
+                return self.next_dispatcher(npath)
         return self.next_dispatcher(vpath)
 
 
@@ -494,6 +501,7 @@ class MDServer(object):
         log.debug("MDServer pfx=%s, path=%s, content_type=%s" % (pfx, path, content_type))
 
         def _d(x, do_split=True):
+            dot = six.u('.')
             if x is not None:
                 x = x.strip()
             # log.debug("_d(%s,%s)" % (x, do_split))
@@ -501,11 +509,12 @@ class MDServer(object):
                 return None, None
 
             if x.startswith("{base64}"):
-                x = x[8:].decode('base64')
+                x = safe_b64d(x[8:])
+                if isinstance(x, six.binary_type):
+                    x = x.decode()
 
-            if do_split and '.' in x:
-                (pth, dot, extn) = x.rpartition('.')
-                assert (dot == '.')
+            if do_split and dot in x:
+                (pth, _, extn) = x.rpartition(dot)
                 if extn in _ctypes:
                     return pth, extn
 
@@ -567,8 +576,8 @@ class MDServer(object):
                     pdict['search'] = "/search/"
                     pdict['list'] = "/role/idp.json"
                 else:
-                    pdict['search'] = u"{}.s".format(path)
-                    pdict['list'] = u"{}.json".format(path)
+                    pdict['search'] = "{}.s".format(path)
+                    pdict['list'] = "{}.json".format(path)
 
                 pdict['storage'] = "/storage/"
                 cherrypy.response.headers['Content-Type'] = 'text/html'
@@ -587,11 +596,10 @@ class MDServer(object):
                 if query is None:
                     log.debug("empty query - creating one")
                     query = [cherrypy.request.remote.ip]
-                    # XXX fix this - urlparse is not 3.x and also this way to handle extra info sucks
                     referrer = cherrypy.request.headers.get('referrer', None)
                     if referrer is not None:
                         log.debug("including referrer: %s" % referrer)
-                        url = urlparse.urlparse(referrer)
+                        url = urlparse(referrer)
                         host = url.netloc
                         if ':' in url.netloc:
                             (host, port) = url.netloc.split(':')
@@ -657,7 +665,7 @@ class MDServer(object):
                     if r is not None:
                         cache_ttl = state.get('cache', 0)
                         log.debug("caching for %d seconds" % cache_ttl)
-                        for k, v in state.get('headers', {}).items():
+                        for k, v in list(state.get('headers', {}).items()):
                             cherrypy.response.headers[k] = v
                         cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
                         caching.expires(secs=cache_ttl)
@@ -765,7 +773,7 @@ def main():
 
     def _b64(p):
         if p:
-            return "{base64}%s" % p.encode('base64')
+            return "{base64}%s" % safe_b64e(p)
         else:
             return ""
 
@@ -786,6 +794,8 @@ def main():
     pfx = ["/entities", "/metadata"] + ["/" + x for x in list(server.aliases.keys())]
     cfg = {
         'global': {
+            'tools.encode.on': True,
+            'tools.encode.text_only': False,
             'tools.encode.encoding': 'UTF-8',
             'server.socket_port': config.port,
             'server.socket_host': config.bind_address,
@@ -806,6 +816,8 @@ def main():
             'error_page.400': lambda **kwargs: error_page(400, _=_, **kwargs)
         },
         '/': {
+            'tools.encode.on': True,
+            'tools.encode.encoding': 'UTF-8',
             'tools.caching.delay': config.caching_delay,
             'tools.proxy.on': config.proxy,
             'request.dispatch': EncodingDispatcher(pfx, _b64).dispatch,
@@ -855,6 +867,7 @@ def main():
     try:
         engine.start()
     except Exception as ex:
+        logging.debug(traceback.format_exc())
         logging.error(ex)
         sys.exit(1)
     else:

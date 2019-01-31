@@ -63,8 +63,8 @@ def deprecated(logger=log, reason="Complain to the developer about unspecified c
     def decorating(func):
         def new_func(*args, **kwargs):
             msg = "Call to deprecated function %s at %s:%d\nReason: %s" % (func.__name__,
-                                                                           func.func_code.co_filename,
-                                                                           func.func_code.co_firstlineno + 1, reason)
+                                                                           func.__code__.co_filename,
+                                                                           func.__code__.co_firstlineno + 1, reason)
             if logger:
                 logger.warn(msg)
             else:

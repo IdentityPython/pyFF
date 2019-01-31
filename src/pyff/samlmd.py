@@ -1,8 +1,8 @@
-
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
-    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data
+    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data, is_text, unicode_stream, \
+    Lambda
 from .logs import get_log
 from .constants import config, NS, ATTRS, NF_URI
 from lxml import etree
@@ -12,10 +12,10 @@ from itertools import chain
 from copy import deepcopy
 from .exceptions import *
 import traceback
-from six import StringIO
-from requests import ConnectionError
+from distutils.util import strtobool
 from .fetch import ResourceManager
 from .parse import add_parser
+from xmlsec.crypto import CertDict
 
 log = get_log(__name__)
 
@@ -71,7 +71,7 @@ def parse_saml_metadata(source,
 :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
 :param validate: (default: True) set to False to turn off all XML schema validation
 :param validation_errors: A dict that will be used to return validation errors to the caller
-:param cleanup: A callable that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
+:param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
 (but after xinclude processing and signature validation)
     """
 
@@ -86,8 +86,9 @@ def parse_saml_metadata(source,
 
         t = check_signature(t, key)
 
-        if cleanup is not None:
-            t = cleanup(t)
+        if cleanup is not None and isinstance(cleanup, list):
+            for cb in cleanup:
+                t = cb(t)
         else:  # at least get rid of ID attribute
             for e in iter_entities(t):
                 if e.get('ID') is not None:
@@ -137,7 +138,7 @@ class SAMLMetadataResourceParser:
     def parse(self, resource, content):
         info = dict()
         info['Validation Errors'] = dict()
-        t, expire_time_offset = parse_saml_metadata(StringIO(content.encode('utf8')),
+        t, expire_time_offset = parse_saml_metadata(unicode_stream(content),
                                                     key=resource.opts['verify'],
                                                     base_url=resource.url,
                                                     cleanup=resource.opts['cleanup'],
@@ -157,7 +158,70 @@ class SAMLMetadataResourceParser:
 
         return info
 
+
 add_parser(SAMLMetadataResourceParser())
+
+
+class MDServiceListParser(object):
+    def __init__(self):
+        pass
+
+    def magic(self, content):
+        return 'MetadataServiceList' in content
+
+    def parse(self, resource, content):
+        info = dict()
+        info['Description'] = "eIDAS MetadataServiceList from {}".format(resource.url)
+        t = parse_xml(unicode_stream(content))
+        t.xinclude()
+        relt = root(t)
+        info['Version'] = relt.get('Version', '0')
+        info['IssueDate'] = relt.get('IssueDate')
+        info['IssuerName'] = first_text(relt, "{%s}IssuerName" % NS['ser'])
+        info['SchemeIdentifier'] = first_text(relt, "{%s}SchemeIdentifier" % NS['ser'])
+        info['SchemeTerritory'] = first_text(relt, "{%s}SchemeTerritory" % NS['ser'])
+        for mdl in relt.iter("{%s}MetadataList" % NS['ser']):
+            for ml in mdl.iter("{%s}MetadataLocation" % NS['ser']):
+                location = ml.get('Location')
+                if location:
+                    certs = CertDict(ml)
+                    fingerprints = list(certs.keys())
+                    fp = None
+                    if len(fingerprints) > 0:
+                        fp = fingerprints[0]
+
+                    ep = ml.find("{%s}Endpoint" % NS['ser'])
+                    if ep is not None and fp is not None:
+                        args = dict(country_code=mdl.get('Territory'),
+                                    hide_from_discovery=strtobool(ep.get('HideFromDiscovery', 'false')))
+                        log.debug("MDSL[{}]: {} verified by {} for country {}".format(info['SchemeTerritory'],
+                                                                                      location,
+                                                                                      fp,
+                                                                                      args.get('country_code')))
+                        r = resource.add_child(location, verify=fp)
+
+                        # this is specific post-processing for MDSL files
+                        def _update_entities(_t, **kwargs):
+                            _country_code = kwargs.get('country_code')
+                            _hide_from_discovery = kwargs.get('hide_from_discovery')
+                            for e in iter_entities(_t):
+                                if _country_code:
+                                    set_nodecountry(e, _country_code)
+                                if bool(_hide_from_discovery) and is_idp(e):
+                                    set_entity_attributes(e, {ATTRS['entity-category']:
+                                                              'http://refeds.org/category/hide-from-discovery'})
+                            return _t
+
+                        r.add_via(Lambda(_update_entities, **args))
+
+        log.debug("Done parsing eIDAS MetadataServiceList")
+        resource.last_seen = datetime.now
+        resource.expire_time = None
+        return info
+
+
+add_parser(MDServiceListParser())
+
 
 def metadata_expiration(t):
     relt = root(t)
@@ -198,7 +262,7 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
     log.debug("Filtering invalids from {}".format(base_url))
     if filter_invalid:
         t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
-        for entity_id, err in validation_errors:
+        for entity_id, err in validation_errors.items():
             log.error("Validation error while parsing {} (from {}). Removed @entityID='{}': {}".format(base_url,
                                                                                                        source,
                                                                                                        entity_id,
@@ -289,7 +353,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                                source="request",
                                validation_errors=validation_errors)
 
-        for base_url, err in list(validation_errors.items()):
+        for base_url, err in validation_errors.items():
             log.error("Validation error: @ {}: {}".format(base_url, err))
 
     return t
@@ -438,7 +502,7 @@ def entity_attributes(entity):
 
 def find_in_document(t, member):
     relt = root(t)
-    if type(member) is str or type(member) is unicode:
+    if is_text(member):
         if '!' in member:
             (src, xp) = member.split("!")
             return relt.xpath(xp, namespaces=NS, smart_strings=False)
@@ -625,7 +689,7 @@ def discojson(e, langs=None):
         if '://' in url:
             try:
                 r = url_get(url)
-            except ConnectionError:
+            except IOError:
                 continue
             if r.ok and r.content:
                 d['entity_icon'] = img_to_data(r.content, r.headers.get('Content-Type'))
@@ -853,7 +917,7 @@ def set_entity_attributes(e, d, nf=NF_URI):
     if e.tag != "{%s}EntityDescriptor" % NS['md']:
         raise MetadataException("I can only add EntityAttribute(s) to EntityDescriptor elements")
 
-    for attr, value in list(d.items()):
+    for attr, value in d.items():
         a = _eattribute(e, attr, nf)
         velt = etree.Element("{%s}AttributeValue" % NS['saml'])
         velt.text = value
@@ -897,7 +961,7 @@ def set_reginfo(e, policy=None, authority=None):
     ri = etree.Element("{%s}RegistrationInfo" % NS['mdrpi'])
     ext.append(ri)
     ri.set('registrationAuthority', authority)
-    for lang, policy_url in list(policy.items()):
+    for lang, policy_url in policy.items():
         rp = etree.Element("{%s}RegistrationPolicy" % NS['mdrpi'])
         rp.text = policy_url
         rp.set('{%s}lang' % NS['xml'], lang)
@@ -972,7 +1036,7 @@ class MDRepository():
         if member is None:
             member = "entities"
 
-        if type(member) is str or type(member) is unicode:
+        if is_text(member):
             if '!' in member:
                 (src, xp) = member.split("!")
                 if len(src) == 0:
@@ -1031,3 +1095,31 @@ fails an empty list is returned.
             l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
             log.debug("got %d entities after filtering" % len(l))
             return l
+
+
+def set_nodecountry(e, country_code):
+    """Set eidas:NodeCountry on an EntityDescriptor
+
+:param e: The EntityDescriptor element
+:param country_code: An ISO country code
+:raise: MetadataException unless e is an EntityDescriptor element
+    """
+    if e.tag != "{%s}EntityDescriptor" % NS['md']:
+        raise MetadataException("I can only add NodeCountry to EntityDescriptor elements")
+
+    def _set_nodecountry_in_ext(ext_elt, iso_cc):
+        if ext_elt is not None and not ext_elt.find("{%s}NodeCountry" % NS['eidas']):
+            velt = etree.Element("{%s}NodeCountry" % NS['eidas'])
+            velt.text = iso_cc
+            ext_elt.append(velt)
+
+    ext = None
+    idp = e.find("./{%s}IDPSSODescriptor" % NS['md'])
+    if idp is not None and len(idp) > 0:
+        ext = entity_extensions(idp)
+        _set_nodecountry_in_ext(ext, country_code)
+
+    sp = e.find("./{%s}SPSSODescriptor" % NS['md'])
+    if sp is not None and len(sp) > 0:
+        ext = entity_extensions(sp)
+        _set_nodecountry_in_ext(ext, country_code)

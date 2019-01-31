@@ -1,0 +1,49 @@
+- when normalize:
+    - xslt:
+       stylesheet: tidy.xsl
+    - break
+- when swamid:
+    - xslt:
+       stylesheet: tidy.xsl
+    - break
+- when update:
+    - load:
+       - http://mds.swamid.se/md/swamid-2.0.xml via swamid as SWAMID
+    - select:
+    - fork:
+        - select as /md/foo-2.0:
+            - http://pyff.io/collection=swamid-2.0
+        - break
+    - fork:
+        - select as /ndn:
+           - https://idp.nordu.net/idp/shibboleth
+        - break
+    - fork:
+        - select as /md/swamid-kalmar-1.0:
+            - https://connect.sunet.se/shibboleth
+            - https://www.diva-portal.org/shibboleth
+    - break
+- when request:
+    - select
+    - pipe:
+        - when accept application/xml:
+             - pipe:
+                 - when path /md/swamid-kalmar-1.0:
+                     - xslt:
+                        stylesheet: kalmar2.xsl
+                     - break
+             - xslt:
+                 stylesheet: tidy.xsl
+             - first
+             - finalize:
+                cacheDuration: PT5H
+                validUntil: P10D
+             - sign:
+                key: sign.key
+                cert: sign.crt
+             - emit application/xml
+             - break
+        - when accept application/json:
+             - discojson
+             - emit application/json
+             - break

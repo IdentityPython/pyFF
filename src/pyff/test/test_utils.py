@@ -3,7 +3,7 @@ import tempfile
 from unittest import TestCase
 
 import os
-
+import six
 from pyff import utils
 from pyff.constants import NS
 from pyff.samlmd import find_entity, entities_list
@@ -85,16 +85,17 @@ class TestResources(TestCase):
     def test_resource_string(self):
         assert(resource_string("missing") is None)
         assert(resource_string("missing", "gone") is None)
-        assert(resource_string('test/data/empty.txt') == 'empty')
-        assert(resource_string('empty.txt', 'test/data') == 'empty')
+        assert(resource_string('test/data/empty.txt') == six.b('empty'))
+        assert(resource_string('empty.txt', 'test/data') == six.b('empty'))
         tmp = tempfile.NamedTemporaryFile('w').name
         with open(tmp, "w") as fd:
             fd.write("test")
 
         try:
-            assert(resource_string(tmp) == "test")
+            print(resource_string(tmp))
+            assert(resource_string(tmp) == 'test')
             (d, fn) = os.path.split(tmp)
-            assert(resource_string(fn, d) == "test")
+            assert(resource_string(fn, d) == 'test')
         except IOError as ex:
             raise ex
         finally:
