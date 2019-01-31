@@ -262,7 +262,7 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
     log.debug("Filtering invalids from {}".format(base_url))
     if filter_invalid:
         t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
-        for entity_id, err in validation_errors:
+        for entity_id, err in validation_errors.items():
             log.error("Validation error while parsing {} (from {}). Removed @entityID='{}': {}".format(base_url,
                                                                                                        source,
                                                                                                        entity_id,
@@ -353,7 +353,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
                                source="request",
                                validation_errors=validation_errors)
 
-        for base_url, err in list(validation_errors.items()):
+        for base_url, err in validation_errors.items():
             log.error("Validation error: @ {}: {}".format(base_url, err))
 
     return t
@@ -917,7 +917,7 @@ def set_entity_attributes(e, d, nf=NF_URI):
     if e.tag != "{%s}EntityDescriptor" % NS['md']:
         raise MetadataException("I can only add EntityAttribute(s) to EntityDescriptor elements")
 
-    for attr, value in list(d.items()):
+    for attr, value in d.items():
         a = _eattribute(e, attr, nf)
         velt = etree.Element("{%s}AttributeValue" % NS['saml'])
         velt.text = value
@@ -961,7 +961,7 @@ def set_reginfo(e, policy=None, authority=None):
     ri = etree.Element("{%s}RegistrationInfo" % NS['mdrpi'])
     ext.append(ri)
     ri.set('registrationAuthority', authority)
-    for lang, policy_url in list(policy.items()):
+    for lang, policy_url in policy.items():
         rp = etree.Element("{%s}RegistrationPolicy" % NS['mdrpi'])
         rp.text = policy_url
         rp.set('{%s}lang' % NS['xml'], lang)
