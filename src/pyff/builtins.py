@@ -23,7 +23,7 @@ from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
     validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
-    discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor
+    discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry
 from .fetch import Resource
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
@@ -1363,5 +1363,39 @@ document for later processing.
         # log.debug("setting %s on %s" % (req.args,e.get('entityID')))
         set_entity_attributes(e, req.args)
         req.store.update(e)
+
+    return req.t
+
+
+@pipe(name='nodecountry')
+def _nodecountry(req, *opts):
+    """
+Sets eidas:NodeCountry
+
+:param req: The request
+:param opts: Options (not used)
+:return: A modified working document
+
+Transforms the working document by setting NodeCountry
+
+**Examples**
+
+.. code-block:: yaml
+
+    - nodecountry:
+        country: XX
+
+Normally this would be combined with the 'merge' feature of fork or in a cleanup pipline to add attributes to
+the working document for later processing.
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    for e in iter_entities(req.t):
+        if req.args is not None and 'country' in req.args:
+            set_nodecountry(e, country_code=req.args['country'])
+            req.store.update(e)
+        else:
+            log.error("No country found in arguments to nodecountry")
 
     return req.t

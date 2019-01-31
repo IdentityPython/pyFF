@@ -12,9 +12,10 @@ from itertools import chain
 from copy import deepcopy
 from .exceptions import *
 import traceback
-from six import StringIO
+from distutils.util import strtobool
 from .fetch import ResourceManager
 from .parse import add_parser
+from xmlsec.crypto import CertDict
 
 log = get_log(__name__)
 
@@ -1094,3 +1095,31 @@ fails an empty list is returned.
             l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
             log.debug("got %d entities after filtering" % len(l))
             return l
+
+
+def set_nodecountry(e, country_code):
+    """Set eidas:NodeCountry on an EntityDescriptor
+
+:param e: The EntityDescriptor element
+:param country_code: An ISO country code
+:raise: MetadataException unless e is an EntityDescriptor element
+    """
+    if e.tag != "{%s}EntityDescriptor" % NS['md']:
+        raise MetadataException("I can only add NodeCountry to EntityDescriptor elements")
+
+    def _set_nodecountry_in_ext(ext_elt, iso_cc):
+        if ext_elt is not None and not ext_elt.find("{%s}NodeCountry" % NS['eidas']):
+            velt = etree.Element("{%s}NodeCountry" % NS['eidas'])
+            velt.text = iso_cc
+            ext_elt.append(velt)
+
+    ext = None
+    idp = e.find("./{%s}IDPSSODescriptor" % NS['md'])
+    if idp is not None and len(idp) > 0:
+        ext = entity_extensions(idp)
+        _set_nodecountry_in_ext(ext, country_code)
+
+    sp = e.find("./{%s}SPSSODescriptor" % NS['md'])
+    if sp is not None and len(sp) > 0:
+        ext = entity_extensions(sp)
+        _set_nodecountry_in_ext(ext, country_code)

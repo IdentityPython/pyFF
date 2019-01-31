@@ -4,7 +4,6 @@ from .constants import NS
 from .logs import get_log
 from xmlsec.crypto import CertDict
 from datetime import datetime
-from six import StringIO
 
 __author__ = 'leifj'
 
@@ -92,52 +91,8 @@ class XRDParser(object):
         return info
 
 
-class MDServiceListParser(object):
-    def __init__(self):
-        pass
 
-    def magic(self, content):
-        return 'MetadataServiceList' in content
-
-    def parse(self, resource, content):
-        info = dict()
-        info['Description'] = "eIDAS MetadataServiceList from {}".format(resource.url)
-        t = parse_xml(unicode_stream(content))
-        t.xinclude()
-        relt = root(t)
-        info['Version'] = relt.get('Version', '0')
-        info['IssueDate'] = relt.get('IssueDate')
-        info['IssuerName'] = first_text(relt, "{%s}IssuerName" % NS['ser'])
-        info['SchemeIdentifier'] = first_text(relt, "{%s}SchemeIdentifier" % NS['ser'])
-        info['SchemeTerritory'] = first_text(relt, "{%s}SchemeTerritory" % NS['ser'])
-        for mdl in relt.iter("{%s}MetadataList" % NS['ser']):
-            for ml in mdl.iter("{%s}MetadataLocation" % NS['ser']):
-                location = ml.get('Location')
-                if location:
-                    certs = CertDict(ml)
-                    fingerprints = list(certs.keys())
-                    fp = None
-                    if len(fingerprints) > 0:
-                        fp = fingerprints[0]
-
-                    ep = ml.find("{%s}Endpoint" % NS['ser'])
-                    if ep is not None and fp is not None:
-                        log.debug(
-                            "MetadataServiceList[{}]: {} verified by {} for country {}".format(info['SchemeTerritory'],
-                                                                                               location, fp,
-                                                                                               mdl.get('Territory')))
-                        resource.add_child(location,
-                                           verify=fp,
-                                           eidas_territory=mdl.get('Territory'),
-                                           eidas_endpoint_type=ep.get('EndpointType'))
-
-        log.debug("Done parsing eIDAS MetadataServiceList")
-        resource.last_seen = datetime.now
-        resource.expire_time = None
-        return info
-
-
-_parsers = [XRDParser(), MDServiceListParser(), DirectoryParser('.xml'), NoParser()]
+_parsers = [XRDParser(), DirectoryParser('.xml'), NoParser()]
 
 
 def add_parser(parser):
