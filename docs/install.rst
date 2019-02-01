@@ -4,8 +4,8 @@ Installation
 Before you install
 ------------------
 
-Make sure you have a reasonably modern python. pyFF is developed using 2.7 but 2.6
-should work just fine. It is recommended that you install pyFF into a virtualenv
+Make sure you have a reasonably modern python. pyFF is developed using 3.6.
+It is recommended that you install pyFF into a virtualenv
 but there are two ways: with or without site packages.
 
 For both methods start by installing a few basic OS packages. Here we illustrate
@@ -26,9 +26,6 @@ and if you're on a centos system (or other yum-based systems):
 If you want to use OS packages instead of python packages from pypi then
 consider also installing the following packages before you begin:
 
-.. code-block:: bash
-
-  # apt-get install python-lxml python-yaml python-eventlet python-setuptools
 
 With Sitepackages
 ~~~~~~~~~~~~~~~~~
@@ -53,12 +50,29 @@ are developing pyFF or want to run multiple python-based applications in
 parallell without having to worry about conflicts between packages.
 
 .. code-block:: bash
-
+  
+  # cd $HOME
   # apt-get install python-virtualenv
-  # mkdir -p /opt/pyff
-  # virtualenv /opt/pyff --no-site-packages
+  # mkdir python-pyff
+  # /opt/rh/rh-python36/root/usr/bin/virtualenv python-pyff --no-site-packages
 
 Choose this method for maximum control - ideal for development setups.
+
+
+Verifying
+----------
+
+To verify that python 3.6 is the default python in the pyFF environment run
+.. code-block:: bash
+
+  # python --version
+
+The result should be Python 3.6
+
+To verify that the version of pip you have is the latest run
+.. code-block:: bash
+  
+ # pip install --upgrade pip
 
 Installing 
 ----------
@@ -68,17 +82,29 @@ activating your virtualenv:
 
 .. code-block:: bash
 
-  # . /opt/pyff/bin/activate
+  # source python-pyff/bin/activate
 
 Next install pyFF:
 
 .. code-block:: bash
 
-  # pip install pyFF
+  # cd pyFF
+  # LANG=en_US.UTF-8 pip install -e .
 
 This will install a bunch of dependencies and compile bindings for both lxml, pyyaml
 aswell as pyXMLSecurity. This may take some time to complete. If there are no errors and if
 you have the *pyff* binary in your **$PATH** you should be done.
+
+.. code-block:: bash
+
+ # cd $HOME
+ # mkdir pyff-config
+ # cd pyff-config
+
+pyFF requires five files which you should copy into the pyff-config directory
+
+- A stylesheet in the .xsl format
+
 
 Upgrading
 ---------
