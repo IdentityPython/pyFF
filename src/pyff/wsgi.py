@@ -85,8 +85,11 @@ def query(request):
     if request.matchdict is None:
         raise exc.exception_response(404)
 
-    if request.json_body:
-        request.matchdict.update(request.json_body)
+    if request.body:
+        try:
+            request.matchdict.update(request.json_body)
+        except ValueError as ex:
+            pass
 
     entry = request.matchdict.get('entry', 'request')
     path = list(request.matchdict.get('path', []))
