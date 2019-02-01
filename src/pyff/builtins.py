@@ -468,7 +468,7 @@ Defaults are marked with (*)
             "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
 
         url = r.pop(0)
-        params = {"via": [],"cleanup": [],"verify": None, "as": url}
+        params = {"via": [], "cleanup": [], "verify": None, "as": url}
 
         while len(r) > 0:
             elt = r.pop(0)
