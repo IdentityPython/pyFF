@@ -1108,7 +1108,8 @@ def set_nodecountry(e, country_code):
         raise MetadataException("I can only add NodeCountry to EntityDescriptor elements")
 
     def _set_nodecountry_in_ext(ext_elt, iso_cc):
-        if ext_elt is not None and not ext_elt.find("{%s}NodeCountry" % NS['eidas']):
+        nc_elt = ext_elt.find("./{%s}NodeCountry" % NS['eidas'])
+        if ext_elt is not None and nc_elt is None:
             velt = etree.Element("{%s}NodeCountry" % NS['eidas'])
             velt.text = iso_cc
             ext_elt.append(velt)
