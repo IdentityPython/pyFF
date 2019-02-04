@@ -277,8 +277,17 @@ select.
 Now start pyffd:
 
 .. code-block:: bash
+  
+  # CACHE=-C
+  # PYFF_LOGLEVEL=DEBUG
+  # PYFF_UPDATE_FREQUENCY=28800
+  # PYFF_HOST=0.0.0.0
+  # PYFF_PORT=8080
+  # PYFF_PIDFILE=/tmp/pyff.pid
 
-  # pyffd -f --loglevel=DEBUG -p /var/run/pyffd.pid mdx.fd
+  # pyffd -f ${CACHE} --loglevel=${PYFF_LOGLEVEL} --frequency=${PYFF_UPDATE_FREQUENCY} --host=${PYFF_HOST} --port=${PYFF_PORT} -p ${PYFF_PIDFILE} --proxy test_mdx.yaml
+  
+  
 
 This should start pyffd in the foreground. If you remove the ``-f`` pyFF should daemonize. For running
 pyFF in production I suggest something like this:
