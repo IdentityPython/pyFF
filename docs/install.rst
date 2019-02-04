@@ -93,7 +93,7 @@ Next install pyFF:
 
 This will install a bunch of dependencies and compile bindings for both lxml, pyyaml
 aswell as pyXMLSecurity. This may take some time to complete. If there are no errors and if
-you have the *pyff* binary in your **$PATH** you should be done.
+you have the *python-pyff* binary in your **$PATH** you should be done.
 
 .. code-block:: bash
 
@@ -104,7 +104,9 @@ you have the *pyff* binary in your **$PATH** you should be done.
 pyFF requires five files which you should copy into the pyff-config directory
 
 - A stylesheet in the .xsl format
-
+- A certficate
+- A key 
+-
 
 Upgrading
 ---------
@@ -113,7 +115,7 @@ Unless you've made modifications, upgrading should be as simple as running
 
 .. code-block:: bash
 
-  # . /opt/pyff/bin/activate
+  # source python-pyff/bin/activate
   # pip install -U pyff
 
 This should bring your virtualenv up to the latest version of pyff and its
