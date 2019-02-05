@@ -23,12 +23,13 @@ from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
     validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
-    discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry
+    discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
 from .fetch import Resource
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
 from .store import make_store_instance
 import six
+import ipaddr
 
 __author__ = 'leifj'
 
@@ -587,7 +588,55 @@ alias invisible for anything except the corresponding mime type.
         if opts[0] == 'as' and len(opts) == 2:
             name = opts[1]
 
-    ot = entitiesdescriptor(args, name, lookup_fn=req.md.store.select)
+    entities = resolve_entities(args, lookup_fn=req.md.store.select)
+
+    if 'match' in req.state:  # TODO - allow this to be passed in via normal arguments
+
+        match = req.state['match']
+
+        if isinstance(match, six.string_types):
+            query = [match.lower()]
+
+        def _strings(elt):
+            lst = []
+            for attr in ['{%s}DisplayName' % NS['mdui'],
+                         '{%s}ServiceName' % NS['md'],
+                         '{%s}OrganizationDisplayName' % NS['md'],
+                         '{%s}OrganizationName' % NS['md'],
+                         '{%s}Keywords' % NS['mdui'],
+                         '{%s}Scope' % NS['shibmd']]:
+                lst.extend([s.text for s in elt.iter(attr)])
+            lst.append(elt.get('entityID'))
+            return [item for item in lst if item is not None]
+
+        def _ip_networks(elt):
+            return [ipaddr.IPNetwork(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
+
+        def _match(qq, elt):
+            for q in qq:
+                q = q.strip()
+                if ':' in q or '.' in q:
+                    try:
+                        nets = _ip_networks(elt)
+                        for net in nets:
+                            if ':' in q and ipaddr.IPv6Address(q) in net:
+                                return net
+                            if '.' in q and ipaddr.IPv4Address(q) in net:
+                                return net
+                    except ValueError:
+                        pass
+
+                if q is not None and len(q) > 0:
+                    tokens = _strings(elt)
+                    for tstr in tokens:
+                        for tpart in tstr.split():
+                            if tpart.lower().startswith(q):
+                                return tstr
+            return None
+
+        entities = filter(lambda e: _match(match, e) is not None, entities)
+
+    ot = entitiesdescriptor(entities, name)
     if ot is None:
         raise PipeException("empty select - stop")
 

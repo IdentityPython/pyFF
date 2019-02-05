@@ -281,6 +281,28 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
     return t
 
 
+def resolve_entities(entities, lookup_fn=None):
+    """
+
+    :param entities: a set of entities specifiers (lookup is used to find entities from this set)
+    :param lookup_fn:  a function used to lookup entities by name
+    :return: a set of entities
+    """
+
+    def _resolve(m, l_fn):
+        if hasattr(m, 'tag'):
+            return [m]
+        else:
+            return l_fn(m)
+
+    resolved_entities = set()
+    for member in entities:
+        for entity in _resolve(member, lookup_fn):
+            resolved_entities.add(entity)
+
+    return resolved_entities
+
+
 def entitiesdescriptor(entities,
                        name,
                        lookup_fn=None,
@@ -291,7 +313,7 @@ def entitiesdescriptor(entities,
                        copy=True,
                        nsmap=None):
     """
-:param lookup_fn: a function used to lookup entities by name
+:param lookup_fn: a function used to lookup entities by name - set to None to skip resolving
 :param entities: a set of entities specifiers (lookup is used to find entities from this set)
 :param name: the @Name attribute
 :param cache_duration: an XML timedelta expression, eg PT1H for 1hr
@@ -307,25 +329,15 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
     if nsmap is None:
         nsmap = dict()
 
-    def _resolve(m, l_fn):
-        if hasattr(m, 'tag'):
-            return [m]
-        else:
-            return l_fn(m)
-
     nsmap.update(NS)
-    resolved_entities = set()
-    for member in entities:
-        for entity in _resolve(member, lookup_fn):
-            resolved_entities.add(entity)
 
-    if not resolved_entities:
-        return None
+    if lookup_fn is not None:
+        entities = resolve_entities(entities, lookup_fn=lookup_fn)
 
-    for entity in resolved_entities:
+    for entity in entities:
         nsmap.update(entity.nsmap)
 
-    log.debug("selecting %d entities before validation" % len(resolved_entities))
+    log.debug("selecting %d entities before validation" % len(entities))
 
     attrs = dict(Name=name, nsmap=nsmap)
     if cache_duration is not None:
@@ -333,7 +345,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
     if valid_until is not None:
         attrs['validUntil'] = valid_until
     t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], **attrs)
-    for entity in resolved_entities:
+    for entity in entities:
         entity_id = entity.get('entityID', None)
         if (entity is not None) and (entity_id is not None):
             ent_insert = entity

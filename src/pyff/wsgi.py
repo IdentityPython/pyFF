@@ -93,6 +93,7 @@ def query(request):
 
     entry = request.matchdict.get('entry', 'request')
     path = list(request.matchdict.get('path', []))
+    match = request.params.get('query', None)
     if 0 == len(path):
         path = ['entities']
 
@@ -127,6 +128,7 @@ def query(request):
                      'accept': accepter,
                      'url': request.current_route_url(),
                      'select': q,
+                     'match': match,
                      'path': path,
                      'stats': {}}
 
