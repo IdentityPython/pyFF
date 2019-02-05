@@ -71,11 +71,12 @@ from publicsuffix import PublicSuffixList
 from .i18n import language
 from . import samlmd
 import six
-from cgi import escape
 
 if six.PY2:
+    from cgi import escape
     _ = language.ugettext
 else:
+    from html import escape
     _ = language.gettext
 
 log = get_log(__name__)
