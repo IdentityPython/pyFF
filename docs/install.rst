@@ -94,7 +94,7 @@ Next install pyFF:
   # LANG=en_US.UTF-8 pip install -e .
 
 This will install a bunch of dependencies and compile bindings for both lxml, pyyaml
-aswell as pyXMLSecurity. This may take some time to complete. If there are no errors and if
+as well as pyXMLSecurity. This may take some time to complete. If there are no errors and if
 you have the *python-pyff* binary in your **$PATH** you should be done.
 
 .. code-block:: bash
@@ -105,10 +105,11 @@ you have the *python-pyff* binary in your **$PATH** you should be done.
 
 pyFF requires five files which you should copy into the pyff-config directory
 
-- A stylesheet in the .xsl format
+- A stylesheet in the *xsl* format
 - A metadata signer certficate
 - A metadata signer key 
-- 
+- A pipeline file in the *yaml* format
+- A *xrd* file 
 
 Upgrading
 ---------
