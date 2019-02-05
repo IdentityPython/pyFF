@@ -28,7 +28,7 @@ To start the pyFF daemon
   # PYFF_PORT=8080
   # PYFF_PIDFILE=/tmp/pyff.pid
 
-  # pyffd -f ${CACHE} --loglevel=${PYFF_LOGLEVEL} --frequency=${PYFF_UPDATE_FREQUENCY} --host=${PYFF_HOST} --port=${PYFF_PORT} -p ${PYFF_PIDFILE} --proxy test_mdx.yam
+  # pyffd -f ${CACHE} --loglevel=${PYFF_LOGLEVEL} --frequency=${PYFF_UPDATE_FREQUENCY} --host=${PYFF_HOST} --port=${PYFF_PORT} -p ${PYFF_PIDFILE} --proxy test_mdx.yaml
 
 Pipeline files are *yaml* documents representing a list of processing steps:
 
