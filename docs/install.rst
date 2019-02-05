@@ -104,9 +104,9 @@ you have the *python-pyff* binary in your **$PATH** you should be done.
 pyFF requires five files which you should copy into the pyff-config directory
 
 - A stylesheet in the .xsl format
-- A certficate
-- A key 
--
+- A metadata signer certficate
+- A metadata signer key 
+- 
 
 Upgrading
 ---------
