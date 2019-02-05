@@ -63,13 +63,15 @@ Verifying
 ----------
 
 To verify that python 3.6 is the default python in the pyFF environment run
+
 .. code-block:: bash
 
   # python --version
 
 The result should be Python 3.6
 
-To verify that the version of pip you have is the latest run
+To verify that the version of pip you have is the latest run.
+
 .. code-block:: bash
   
  # pip install --upgrade pip
