@@ -73,8 +73,10 @@ from . import samlmd
 import six
 
 if six.PY2:
+    from cgi import escape
     _ = language.ugettext
 else:
+    from html import escape
     _ = language.gettext
 
 log = get_log(__name__)
@@ -576,8 +578,8 @@ class MDServer(object):
                     pdict['search'] = "/search/"
                     pdict['list'] = "/role/idp.json"
                 else:
-                    pdict['search'] = "{}.s".format(path)
-                    pdict['list'] = "{}.json".format(path)
+                    pdict['search'] = "{}.s".format(escape(path, quote=True))
+                    pdict['list'] = "{}.json".format(escape(path, quote=True))
 
                 pdict['storage'] = "/storage/"
                 cherrypy.response.headers['Content-Type'] = 'text/html'
