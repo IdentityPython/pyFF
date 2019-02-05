@@ -71,6 +71,7 @@ from publicsuffix import PublicSuffixList
 from .i18n import language
 from . import samlmd
 import six
+from cgi import escape
 
 if six.PY2:
     _ = language.ugettext
@@ -576,8 +577,8 @@ class MDServer(object):
                     pdict['search'] = "/search/"
                     pdict['list'] = "/role/idp.json"
                 else:
-                    pdict['search'] = "{}.s".format(path)
-                    pdict['list'] = "{}.json".format(path)
+                    pdict['search'] = "{}.s".format(escape(path, quote=True))
+                    pdict['list'] = "{}.json".format(escape(path, quote=True))
 
                 pdict['storage'] = "/storage/"
                 cherrypy.response.headers['Content-Type'] = 'text/html'
