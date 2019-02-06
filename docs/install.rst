@@ -36,8 +36,7 @@ fewer worries keeping your python environment in sync with OS-level libraries.
 .. code-block:: bash
 
   # apt-get install python-virtualenv
-  # mkdir -p /opt/pyff
-  # virtualenv /opt/pyff
+  # virtualenv python-pyff
 
 Choose this method if you want the OS to keep as many of your packages up to
 date for you.
@@ -53,8 +52,7 @@ parallell without having to worry about conflicts between packages.
   
   # cd $HOME
   # apt-get install python-virtualenv
-  # mkdir python-pyff
-  # /opt/rh/rh-python36/root/usr/bin/virtualenv python-pyff --no-site-packages
+  # virtualenv -p python3 python-pyff --no-site-packages
 
 Choose this method for maximum control - ideal for development setups.
 
@@ -68,7 +66,7 @@ To verify that python 3.6 is the default python in the pyFF environment run
 
   # python --version
 
-The result should be Python 3.6
+The result should be Python 3.6 or later.
 
 To verify that the version of pip you have is the latest run.
 
@@ -90,12 +88,13 @@ Next install pyFF:
 
 .. code-block:: bash
 
+  # cd $HOME
   # cd pyFF
   # LANG=en_US.UTF-8 pip install -e .
 
 This will install a bunch of dependencies and compile bindings for both lxml, pyyaml
 as well as pyXMLSecurity. This may take some time to complete. If there are no errors and if
-you have the *python-pyff* binary in your **$PATH** you should be done.
+you have the *pyff* binary in your **$PATH** you should be done.
 
 .. code-block:: bash
 
@@ -103,13 +102,10 @@ you have the *python-pyff* binary in your **$PATH** you should be done.
  # mkdir pyff-config
  # cd pyff-config
 
-pyFF requires five files which you should copy into the pyff-config directory
-
-- A stylesheet in the *xsl* format
-- A metadata signer certficate
-- A metadata signer key 
+pyFF requires the following files which you should copy into the pyff-config directory
+ 
 - A pipeline file in the *yaml* format
-- A *xrd* file 
+- Generate a signing key pair from the 
 
 Upgrading
 ---------
