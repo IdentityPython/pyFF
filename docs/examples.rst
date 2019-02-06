@@ -62,16 +62,21 @@ For reference the 'tidy' xsl is included with pyFF and looks like this:
     <?xml version="1.0"?>
     <xsl:stylesheet version="1.0"
                     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                    xmlns:shibmeta="urn:mace:shibboleth:metadata:1.0"
-                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                     xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
-                    xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
-            xmlns:xi="http://www.w3.org/2001/XInclude"
-                    xmlns:shibmd="urn:mace:shibboleth:metadata:1.0">
+                    xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
 
       <xsl:template match="@ID"/>
+      <xsl:template match="@Id"/>
+      <xsl:template match="@xml:id"/>
       <xsl:template match="@validUntil"/>
       <xsl:template match="@cacheDuration"/>
+      <xsl:template match="@xml:base"/>
+      <xsl:template match="ds:Signature"/>
+      <xsl:template match="md:OrganizationName|md:OrganizationURL|md:OrganizationDisplayName">
+        <xsl:if test="normalize-space(text(()) != ''">
+                <xsl:copy><xsl:apply-templates select="node()|@*"/></xsl:copy>
+        </xsl:if>
+      </xsl:template>
 
       <xsl:template match="text()|comment()|@*">
         <xsl:copy/>
@@ -289,7 +294,7 @@ Now start pyffd:
   
   
 
-This should start pyffd in the foreground. If you remove the ``-f`` pyFF should daemonize. For running
+This should start pyffd in the foreground. If you remove the ``-f`` pyFF should daemonize. Setting the cache to ``-c`` will turn it off. For running
 pyFF in production I suggest something like this:
 
 .. code-block:: bash
