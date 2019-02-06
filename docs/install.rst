@@ -105,7 +105,7 @@ you have the *pyff* binary in your **$PATH** you should be done.
 pyFF requires the following files which you should copy into the pyff-config directory
  
 - A pipeline file in the *yaml* format
-- Generate a signing key pair from the 
+- Generate a signing key pair from the *genkey* script in the scripts directory 
 
 Upgrading
 ---------
