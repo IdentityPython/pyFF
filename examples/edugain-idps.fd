@@ -7,3 +7,4 @@
 - certreport
 - publish:
     - output /tmp/edugain-annotated.xml
+- stats
