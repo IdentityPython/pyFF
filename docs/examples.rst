@@ -6,7 +6,7 @@ Examples are king.
 Example 1 - A simple pull
 -------------------------
 
-Fetch SWAMID metadata, split it up into EntityDescriptor elements and store each as a separate file in /tmp/swamid.
+Fetch SWAMID metadata, split it up into EntityDescriptor elements and store each as a separate file in /tmp/swamid-2.0.xml.
 
 .. code-block:: yaml
 
@@ -19,7 +19,7 @@ Fetch SWAMID metadata, split it up into EntityDescriptor elements and store each
 This is a simple example in 3 steps: load, select, store and stats. Each of these commands operate on a metadata
 repository that starts out as empty. The first command (load) causes a URL to be downloaded and the SAML metadata
 found there is stored in the metadata repository. The next command (select) creates an active document (which in
-this case consists of all EntityDescriptors in the metadata repository). Next, publish is called which causes
+this case consists of all EntityDescriptors in the metadata repository). Next, (publish) is called which causes
 the active document to be stored in an XML file. Finally the stats command prints out some information about
 the metadata repository.
 
@@ -36,8 +36,10 @@ stylesheet (cf below) which cleans up some known problems, sign the result and w
 .. code-block:: yaml
 
     - load:
-       - http://mds.edugain.org edugain-signer.crt
-    - select: "http://mds.edugain.org!//md:EntityDescriptor[md:IDPSSODescriptor]"
+       - http://mds.edugain.org 
+       - edugain-signer.crt
+    - select:
+       - "http://mds.edugain.org!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - xslt:
         stylesheet: tidy.xsl
     - finalize:
@@ -282,16 +284,8 @@ select.
 Now start pyffd:
 
 .. code-block:: bash
-  
-  # CACHE=-C
-  # PYFF_LOGLEVEL=DEBUG
-  # PYFF_UPDATE_FREQUENCY=28800
-  # PYFF_HOST=0.0.0.0
-  # PYFF_PORT=8080
-  # PYFF_PIDFILE=/tmp/pyff.pid
 
-  # pyffd -f ${CACHE} --loglevel=${PYFF_LOGLEVEL} --frequency=${PYFF_UPDATE_FREQUENCY} --host=${PYFF_HOST} --port=${PYFF_PORT} -p ${PYFF_PIDFILE} --proxy test_mdx.yaml
-  
+  # pyffd -f -C -p /tmp/pyffd.pid --loglevel=DEBUG --host=0.0.0.0 --port=8080 test.yaml
   
 
 This should start pyffd in the foreground. If you remove the ``-f`` pyFF should daemonize. Setting the cache to ``-c`` will turn it off. For running
