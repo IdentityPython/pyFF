@@ -1,23 +1,23 @@
 - load:
-  - https://idp.kirei.se/saml2/idp/metadata.php
+  - https://www.sso.uni-erlangen.de/simplesaml/saml2/idp/metadata.php
 - select
 - store:
-    directory: pyFFstore
+    - directory pyFFstore
 - fork:
   - select:
     - "!//md:EntityDescriptor[md:SPSSODescriptor]"
   - sign:
-      key:  sign.key
-      cert: sign.crt
+      key:  test-metadata-signer.key
+      cert: test-metadata-signer.crt
   - publish:
-     output: idfed-sp.xml
+     - output idfed-sp.xml
 - fork:
   - select:
     - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
   - sign:
-      key:  sign.key
-      cert: sign.crt
+      key: test-metadata-signer.key
+      cert: test-metadata-signer.crt
   - publish:
-     output: idfed-xml.xml
+     - output idfed-xml.xml
 - certreport
 - stats
