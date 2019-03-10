@@ -214,7 +214,7 @@ listed using the 'role' attribute to the link elements.
             if not url.endswith('/'):
                 suffix = _dflt_rels[r]
             links.append(dict(rel=r,
-                              href='%s/api/request/%s%s' % (request.host_url, url, suffix)))
+                              href='%s/%s%s' % (request.host_url, url, suffix)))
 
     _links('/entities/')
     for a in request.registry.md.store.collections():
