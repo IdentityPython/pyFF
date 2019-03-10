@@ -649,7 +649,7 @@ def entity_scopes(e):
     return [s.text for s in elt]
 
 
-def discojson(e, langs=None):
+def discojson(e, langs=None, fallback_to_favicon=False):
     if e is None:
         return dict()
 
@@ -676,7 +676,7 @@ def discojson(e, langs=None):
     if icon_info is not None and 'url' in icon_info:
         url = icon_info['url']
         urls.append(url)
-        if scopes is not None and len(scopes) == 1:
+        if scopes is not None and len(scopes) == 1 and fallback_to_favicon:
             urls.append("https://{}/favico.ico".format(scopes[0]))
             urls.append("https://www.{}/favico.ico".format(scopes[0]))
 
