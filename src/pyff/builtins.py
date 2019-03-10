@@ -64,8 +64,7 @@ def _print_t(req, *opts):
     """
     fn = req.args.get('output', None)
     if fn is not None:
-        with open(fn,"w") as fd:
-            fd.write(req.t)
+        safe_write(fn, req.t)
     else:
         print(req.t)
 
