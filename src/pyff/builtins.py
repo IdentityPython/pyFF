@@ -51,6 +51,23 @@ Print a representation of the entities set on stdout. Useful for testing.
         print("<EntitiesDescriptor xmlns=\"{}\"/>".format(NS['md']))
 
 
+@pipe(name="print")
+def _print_t(req, *opts):
+    """
+
+    Print whatever is in the active tree without transformation
+
+    :param req: The request
+    :param opts: Options (unused)
+    :return:
+    """
+    fn = req.args.get('output', None)
+    if fn is not None:
+        with open(fn,"w") as fd:
+            fd.write(req.t)
+    else:
+        print(req.t)
+
 @pipe
 def end(req, *opts):
     """
@@ -861,6 +878,7 @@ before you call store.
             fn = hash_id(e, prefix=False)
             safe_write("%s.xml" % os.path.join(target_dir, fn), dumptree(e, pretty_print=True))
     return req.t
+
 
 
 @pipe
