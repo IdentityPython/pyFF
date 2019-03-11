@@ -16,7 +16,7 @@ import re
 import xmlsec
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-from .constants import NS
+from .constants import NS, config
 from .decorators import deprecated
 from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
@@ -29,6 +29,8 @@ from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
 from .store import make_store_instance
 import six
+import ipaddr
+import multiprocessing
 
 __author__ = 'leifj'
 
@@ -721,7 +723,8 @@ Return a discojuice-compatible json representation of the tree
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    res = [discojson(e) for e in iter_entities(req.t)]
+    pool = multiprocessing.Pool(config.worker_pool_size)
+    res = pool.map(discojson, iter_entities(req.t))
     res.sort(key=operator.itemgetter('title'))
 
     return json.dumps(res)
