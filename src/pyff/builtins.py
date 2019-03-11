@@ -23,14 +23,12 @@ from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
     validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
-    discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry
+    discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry
 from .fetch import Resource
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
 from .store import make_store_instance
 import six
-import ipaddr
-import multiprocessing
 
 __author__ = 'leifj'
 
@@ -723,8 +721,7 @@ Return a discojuice-compatible json representation of the tree
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    pool = multiprocessing.Pool(config.worker_pool_size)
-    res = pool.map(discojson, iter_entities(req.t))
+    res = discojson_t(req.t)
     res.sort(key=operator.itemgetter('title'))
 
     return json.dumps(res)

@@ -16,6 +16,7 @@ from distutils.util import strtobool
 from .fetch import ResourceManager
 from .parse import add_parser
 from xmlsec.crypto import CertDict
+from concurrent import futures
 
 log = get_log(__name__)
 
@@ -649,7 +650,47 @@ def entity_scopes(e):
     return [s.text for s in elt]
 
 
-def discojson(e, langs=None, fallback_to_favicon=False):
+def discojson_load_icon(d, fallback_to_favicon=False):
+    try:
+        if 'entity_icon_url' in d:
+            icon_info = d['entity_icon_url']
+        else:
+            icon_info = {}
+        urls = []
+        if icon_info and 'url' in icon_info:
+            url = icon_info['url']
+            urls.append(url)
+
+            if 'scope' in d and fallback_to_favicon:
+                scopes = d['scope'].split(',')
+                for scope in scopes:
+                    urls.append("https://{}/favico.ico".format(scope))
+                    urls.append("https://www.{}/favico.ico".format(scope))
+                    urls.append("http://{}/favico.ico".format(scope))
+                    urls.append("http://www.{}/favico.ico".format(scope))
+
+        d['entity_icon'] = None
+        for url in urls:
+            if url.startswith("data:"):
+                d['entity_icon'] = url
+                break
+
+            if '://' in url:
+                try:
+                    r = url_get(url)
+                except IOError:
+                    continue
+                if r.ok and r.content:
+                    d['entity_icon'] = img_to_data(r.content, r.headers.get('Content-Type'))
+                    break
+    except Exception as ex:
+        log.debug(traceback.format_exc())
+        log.error(ex)
+
+    return d
+
+
+def discojson(e, langs=None, fallback_to_favicon=False, load_icon=True):
     if e is None:
         return dict()
 
@@ -671,35 +712,17 @@ def discojson(e, langs=None, fallback_to_favicon=False):
         d['type'] = 'sp'
 
     scopes = entity_scopes(e)
-    icon_info = entity_icon_url(e)
-    urls = []
-    if icon_info is not None and 'url' in icon_info:
-        url = icon_info['url']
-        urls.append(url)
-        if scopes is not None and len(scopes) == 1 and fallback_to_favicon:
-            urls.append("https://{}/favico.ico".format(scopes[0]))
-            urls.append("https://www.{}/favico.ico".format(scopes[0]))
-
-    d['entity_icon'] = None
-    for url in urls:
-        if url.startswith("data:"):
-            d['entity_icon'] = url
-            break
-
-        if '://' in url:
-            try:
-                r = url_get(url)
-            except IOError:
-                continue
-            if r.ok and r.content:
-                d['entity_icon'] = img_to_data(r.content, r.headers.get('Content-Type'))
-                break
-
     if scopes is not None and len(scopes) > 0:
         d['scope'] = ",".join(scopes)
         if len(scopes) == 1:
             d['domain'] = scopes[0]
             d['name_tag'] = (scopes[0].split('.'))[0].upper()
+
+    icon_info = entity_icon_url(e)
+    d['entity_icon_url'] = entity_icon_url(e)
+
+    if load_icon:
+        discojson_load_icon(d, fallback_to_favicon=fallback_to_favicon)
 
     keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
     if keywords is not None:
@@ -714,6 +737,12 @@ def discojson(e, langs=None, fallback_to_favicon=False):
         d['geo'] = geo
 
     return d
+
+
+def discojson_t(t):
+    lst = [discojson(en, load_icon=False) for en in iter_entities(t)]
+    with futures.ThreadPoolExecutor(max_workers=config.worker_pool_size) as executor:
+        return list(executor.map(discojson_load_icon, lst))
 
 
 def sha1_id(e):
