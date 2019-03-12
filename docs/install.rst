@@ -102,10 +102,11 @@ you have the *pyff* binary in your **$PATH** you should be done.
  # mkdir pyff-config
  # cd pyff-config
 
-pyFF requires the following files which you should copy into the pyff-config directory
- 
-- A pipeline file in the *yaml* format
-- Generate a signing key pair from the *genkey* script in the scripts directory 
+pyFF should be run in the same directory that contains the pipeline in the *yaml*, *mdx* or *fd* format.Depending 
+on the nature of the pipeline the additional files can be added.
+
+- A list of metadata URLs in the *xrd* format.
+- A *key*  and *crt* signing key pair which can be generated from *genkey.sh* in the scripts directory. 
 
 Upgrading
 ---------
