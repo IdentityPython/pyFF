@@ -1,5 +1,5 @@
 - load:
-  - https://www.sso.uni-erlangen.de/simplesaml/saml2/idp/metadata.php
+  - https://mds.edugain.org
 - select
 - store:
     - directory pyFFstore
@@ -7,16 +7,16 @@
   - select:
     - "!//md:EntityDescriptor[md:SPSSODescriptor]"
   - sign:
-      key:  test-metadata-signer.key
-      cert: test-metadata-signer.crt
+      key:  signer.key
+      cert: signer.crt
   - publish:
      - output idfed-sp.xml
 - fork:
   - select:
     - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
   - sign:
-      key: test-metadata-signer.key
-      cert: test-metadata-signer.crt
+      key: signer.key
+      cert: signer.crt
   - publish:
      - output idfed-xml.xml
 - certreport
