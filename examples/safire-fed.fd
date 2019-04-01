@@ -1,0 +1,15 @@
+- load:
+   - https://metadata.safire.ac.za/safire-edugain.xml BB:89:BA:97:E5:D8:DA:4F:7C:75:41:7B:14:6A:E6:EC:4A:01:C5:D8:51:2E:09:2D:7C:75:A8:2B:47:7F:00:4C 
+   - https://metadata.safire.ac.za/safire-hub-metadata.xml
+   - https://metadata.safire.ac.za/safire-idp-proxy-metadata.xml
+   - https://metadata.safire.ac.za/safire-edugain.xml
+   - https://metadata.safire.ac.za/edugain-sirtfi-consuming.xml 
+- select
+- sign:
+   key: sign.key    
+   cert: sign.crt
+- store:
+    directory: /tmp/safirefed
+- publish:
+    output: /tmp/safire.xml
+- stats
