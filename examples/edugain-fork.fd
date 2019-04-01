@@ -1,0 +1,23 @@
+- load:
+  - https://mds.edugain.org
+- select
+- store:
+     directory: pyFFstore
+- fork:
+  - select:
+    - "!//md:EntityDescriptor[md:SPSSODescriptor]"
+  - sign:
+      key:  signer.key
+      cert: signer.crt
+  - publish:
+      output: idfed-sp.xml
+- fork:
+  - select:
+    - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+  - sign:
+      key: signer.key
+      cert: signer.crt
+  - publish:
+      output: idfed-xml.xml
+- certreport
+- stats
