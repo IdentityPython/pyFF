@@ -3,8 +3,8 @@
     - examples/edugain.crt
 - select: "/tmp/edugain!md:EntityDescriptor[md:IDPSSODescriptor]"
 - store:
-    - directory /tmp/edugain
+    directory: /tmp/edugain
 - certreport
 - publish:
-    - output /tmp/edugain-annotated.xml
+    output: /tmp/edugain-annotated.xml
 - stats
