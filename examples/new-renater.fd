@@ -1,10 +1,6 @@
 - when update:
     - load:
-       - https://metadata.federation.renater.fr/renater/main/main-sps-renater-metadata.xml
-       - https://metadata.federation.renater.fr/renater/main/main-idps-renater-metadata.xml
-       - https://metadata.federation.renater.fr/renater/main/main-all-renater-metadata.xml
-       - https://metadata.federation.renater.fr/renater/main/main-sps-edugain-metadata.xml
-       - https://metadata.federation.renater.fr/renater/main/main-idps-edugain-metadata.xml
+       - https://metadata.federation.renater.fr/renater/main/main-all-renater-metadata.xmll
        - https://metadata.federation.renater.fr/renater/main/main-all-edugain-metadata.xml
     - break
 - when request:
