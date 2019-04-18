@@ -86,7 +86,7 @@ class Config(object):
 config = Config()
 
 
-def parse_options(docs, short_args, long_args):
+def parse_options(program, docs, short_args, long_args):
     try:
         opts, args = getopt.getopt(sys.argv[1:], short_args, long_args)
     except getopt.error as msg:
@@ -106,12 +106,14 @@ def parse_options(docs, short_args, long_args):
     try:  # pragma: nocover
         for o, a in opts:
             if o in ('-h', '--help'):
-                print(__doc__)
+                print(docs)
                 sys.exit(0)
             elif o == '--loglevel':
                 config.loglevel = getattr(logging, a.upper(), None)
                 if not isinstance(config.loglevel, int):
                     raise ValueError('Invalid log level: %s' % config.loglevel)
+            elif o == '--logfile':
+                config.logfile = a
             elif o in ('--log', '-l'):
                 config.error_log = a
                 config.access_log = a
@@ -149,14 +151,14 @@ def parse_options(docs, short_args, long_args):
             elif o in ('-m', '--module'):
                 config.modules.append(a)
             elif o in '--version':
-                print("pyffd version %s" % (pyff_version))
+                print("{} version {}".format(program, pyff_version))
                 sys.exit(0)
             else:
                 raise ValueError("Unknown option '%s'" % o)
 
     except Exception as ex:
         print(ex)
-        print(__doc__)
+        print(docs)
         sys.exit(3)
 
     return args

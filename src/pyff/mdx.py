@@ -677,7 +677,8 @@ def main():
     """
     The main entrypoint for the pyffd command.
     """
-    args = parse_options(__doc__,
+    args = parse_options("pyffd",
+                         __doc__,
                          'hP:p:H:CfaA:l:Rm:',
                          ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
                           'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
