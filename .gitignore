@@ -15,8 +15,8 @@ build
 dist
 .idea
 
-sign.crt
-sign.key
+*.crt
+*.key
 .cache
 _site
 profile.out*
