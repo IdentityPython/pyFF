@@ -751,11 +751,12 @@ def discojson(e, langs=None, fallback_to_favicon=False, load_icon=True):
     return d
 
 
-def discojson_t(t):
+def discojson_t(t, load_icons=False):
     lst = [discojson(en, load_icon=False) for en in iter_entities(t)]
-    with futures.ThreadPoolExecutor(max_workers=config.worker_pool_size) as executor:
-        return list(executor.map(discojson_load_icon, lst))
-
+    if load_icons:
+        with futures.ThreadPoolExecutor(max_workers=config.worker_pool_size) as executor:
+            lst = list(executor.map(discojson_load_icon, lst))
+    return lst
 
 def sha1_id(e):
     return hash_id(e, 'sha1')
