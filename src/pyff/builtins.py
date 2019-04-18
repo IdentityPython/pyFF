@@ -23,7 +23,7 @@ from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
     validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
-    discojson, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
+    discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
 from .fetch import Resource
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
@@ -606,7 +606,7 @@ alias invisible for anything except the corresponding mime type.
 
     entities = resolve_entities(args, lookup_fn=req.md.store.select)
 
-    if 'match' in req.state:  # TODO - allow this to be passed in via normal arguments
+    if req.state.get('match', None) is not None:  # TODO - allow this to be passed in via normal arguments
 
         match = req.state['match']
 
@@ -762,6 +762,12 @@ def _discojson(req, *opts):
     """
 Return a discojuice-compatible json representation of the tree
 
+.. code-block:: yaml
+  discojson:
+      - load_icons: True
+
+This would return a json representation of the active tree with data: URI version of the icons
+
 :param req: The request
 :param opts: Options (unusued)
 :return: returns a JSON array
@@ -770,7 +776,11 @@ Return a discojuice-compatible json representation of the tree
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    res = discojson_t(req.t)
+    load_icons = False
+    if req.args:
+        load_icons = bool(req.args.get('load_icons', False))
+
+    res = discojson_t(req.t, load_icons=load_icons)
     res.sort(key=operator.itemgetter('title'))
 
     return json.dumps(res)
