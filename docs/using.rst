@@ -5,8 +5,8 @@ pyFF has two command-line tools: pyff and pyffd.
 
 .. code-block:: bash
 
-  # pyff --loglevel=INFO pipeline.fd [pipeline2.fd]
-  # pyffd --loglevel=INFO pipeline.fd [pipeline2.fd]
+  # pyff --loglevel=INFO [pipeline.fd]+
+  # pyffd --loglevel=INFO [pipeline.fd]+
 
 
 pyFF operates by setting up and running "pipelines". Each pipeline starts with an empty "active repository" - an
