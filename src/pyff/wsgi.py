@@ -301,5 +301,7 @@ def main():
     server_runner(mkapp(), bind_address='0.0.0.0', port=8080)
 
 
+app = mkapp()
+
 if __name__ == '__main__':
     main()
