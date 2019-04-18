@@ -50,10 +50,11 @@ class MediaAccept(object):
         return self._type.matches(item)
 
 
-def _output(data, accepter):
+def _fmt(data, accepter):
     if data is None or len(data) == 0:
         return ""
-    if isinstance(data, (etree._Element, etree._ElementTree)) and (accepter.get('text/xml') or accepter.get('application/xml')):
+    if isinstance(data, (etree._Element, etree._ElementTree)) and (
+            accepter.get('text/xml') or accepter.get('application/xml')):
         return dumptree(data)
     if isinstance(data, (dict, list)) and accepter.get('application/json'):
         return dumps(data)
@@ -61,7 +62,7 @@ def _output(data, accepter):
     raise exc.exception_response(406)
 
 
-def query(request):
+def process(request):
     _ctypes = {'xml': 'application/xml',
                'json': 'application/json'}
 
@@ -93,14 +94,14 @@ def query(request):
 
     entry = request.matchdict.get('entry', 'request')
     path = list(request.matchdict.get('path', []))
-    match = request.params.get('query', None)
+    match = request.params.get('q', request.params.get('query', None))
     if 0 == len(path):
         path = ['entities']
 
     alias = path.pop(0)
     path = '/'.join(path)
 
-    log.debug("handling entry={}, alias={}, path={}".format(entry,alias,path))
+    log.debug("handling entry={}, alias={}, path={}".format(entry, alias, path))
 
     pfx = None
     if 'entities' not in alias:
@@ -140,7 +141,7 @@ def query(request):
             response.headers.update(state.get('headers', {}))
             ctype = state.get('headers').get('Content-Type', None)
             if not ctype:
-                r = _output(r, accepter)
+                r = _fmt(r, accepter)
                 ctype = accept
 
             response.body = r
@@ -235,10 +236,6 @@ listed using the 'role' attribute to the link elements.
     return response
 
 
-def search(request):
-    pass
-
-
 def app_factory(global_config, **local_config):
     with Configurator(debug_logger=log) as ctx:
         if config.aliases is None:
@@ -252,7 +249,7 @@ def app_factory(global_config, **local_config):
         for mn in config.modules:
             importlib.import_module(mn)
 
-        pipeline = global_config.get('pyff_pipeline', os.environ.get('PYFF_PIPELINE')).split(' ')
+        pipeline = global_config.get('pyff_pipeline', os.environ.get('PYFF_PIPELINE', "mdx.fd")).split(' ')
         ctx.registry.plumbings = [plumbing(v) for v in pipeline]
         ctx.registry.aliases = config.aliases
         ctx.registry.psl = PublicSuffixList()
@@ -268,11 +265,11 @@ def app_factory(global_config, **local_config):
         ctx.add_route('status', '/api/status', request_method='GET')
         ctx.add_view(status, route_name='status')
 
-        ctx.add_route('request', '/api/call/{entry}', request_method=['POST','PUT'])
-        ctx.add_view(query, route_name='request')
+        ctx.add_route('call', '/api/call/{entry}', request_method=['POST', 'PUT'])
+        ctx.add_view(process, route_name='call')
 
-        ctx.add_route('query', '/*path', request_method='GET')
-        ctx.add_view(query, route_name='query')
+        ctx.add_route('request', '/*path', request_method='GET')
+        ctx.add_view(process, route_name='request')
 
         return ctx.make_wsgi_app()
 
