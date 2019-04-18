@@ -598,6 +598,7 @@ def guess_entity_software(e):
 def is_text(x):
     return isinstance(x, six.string_types) or isinstance(x, six.text_type)
 
+
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):

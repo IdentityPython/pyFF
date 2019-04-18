@@ -9,7 +9,7 @@ from publicsuffix import PublicSuffixList
 from .samlmd import MDRepository
 from .store import make_store_instance
 from six.moves.urllib_parse import quote_plus
-from .logs import log
+from .logs import get_log, SysLogLibHandler
 from json import dumps
 from datetime import datetime, timedelta
 from .utils import dumptree, duration2timedelta, hash_id
@@ -17,6 +17,13 @@ import os
 import pkg_resources
 from accept_types import AcceptableType
 from lxml import etree
+import sys
+import getopt
+import logging
+from . import __version__ as pyff_version
+
+
+log = get_log(__name__)
 
 
 def robots(request):
@@ -237,6 +244,10 @@ listed using the 'role' attribute to the link elements.
 
 
 def app_factory(global_config, **local_config):
+    return mkapp(global_config, **local_config)
+
+
+def mkapp(*args, **kwargs):
     with Configurator(debug_logger=log) as ctx:
         if config.aliases is None:
             config.aliases = dict()
@@ -249,7 +260,10 @@ def app_factory(global_config, **local_config):
         for mn in config.modules:
             importlib.import_module(mn)
 
-        pipeline = global_config.get('pyff_pipeline', os.environ.get('PYFF_PIPELINE', "mdx.fd")).split(' ')
+        pipeline = args
+        if not len(pipeline) > 0:
+            pipeline = [config.pipeline]
+
         ctx.registry.plumbings = [plumbing(v) for v in pipeline]
         ctx.registry.aliases = config.aliases
         ctx.registry.psl = PublicSuffixList()
@@ -277,14 +291,14 @@ def app_factory(global_config, **local_config):
 def server_runner(*args):
     app = args[0]
     local_config = args[1]
-    port = int(local_config.get('http_port', 8080))
-    host = local_config.get('http_host', '0.0.0.0')
+    port = int(local_config.get('bind_address', 8080))
+    host = local_config.get('port', '0.0.0.0')
     s = make_server(host, port, app)
     s.serve_forever()
 
 
 def main():
-    server_runner(app_factory(None), '0.0.0.0', 8080)
+    server_runner(mkapp(), bind_address='0.0.0.0', port=8080)
 
 
 if __name__ == '__main__':

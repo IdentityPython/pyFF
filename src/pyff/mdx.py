@@ -47,7 +47,6 @@ import importlib
 import pkg_resources
 import traceback
 from six.moves.urllib_parse import urlparse, quote_plus
-import getopt
 import os
 import sys
 from threading import Lock
@@ -58,7 +57,7 @@ from cherrypy.lib import cptools
 from cherrypy.process.plugins import Monitor, SimplePlugin
 from cherrypy.lib import caching
 from simplejson import dumps
-from .constants import config
+from .constants import config, parse_options
 from .locks import ReadWriteLock
 from .pipes import plumbing
 from .utils import resource_string, duration2timedelta, debug_observer, render_template, hash_id, safe_b64e, safe_b64d
@@ -66,7 +65,6 @@ from .logs import get_log, SysLogLibHandler
 from .samlmd import entity_simple_summary, entity_display_name, entity_info, MDRepository
 import logging
 from datetime import datetime
-from . import __version__ as pyff_version
 from publicsuffix import PublicSuffixList
 from .i18n import language
 from . import samlmd
@@ -679,81 +677,11 @@ def main():
     """
     The main entrypoint for the pyffd command.
     """
-    try:
-        opts, args = getopt.getopt(sys.argv[1:],
-                                   'hP:p:H:CfaA:l:Rm:',
-                                   ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
-                                    'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
-                                    'alias=', 'dir=', 'version', 'proxy', 'allow_shutdown'])
-    except getopt.error as msg:
-        print(msg)
-        print(__doc__)
-        sys.exit(2)
-
-    if config.loglevel is None:
-        config.loglevel = logging.INFO
-
-    if config.aliases is None:
-        config.aliases = dict()
-
-    if config.modules is None:
-        config.modules = []
-
-    try:  # pragma: nocover
-        for o, a in opts:
-            if o in ('-h', '--help'):
-                print(__doc__)
-                sys.exit(0)
-            elif o == '--loglevel':
-                config.loglevel = getattr(logging, a.upper(), None)
-                if not isinstance(config.loglevel, int):
-                    raise ValueError('Invalid log level: %s' % config.loglevel)
-            elif o in ('--log', '-l'):
-                config.error_log = a
-                config.access_log = a
-            elif o in '--error-log':
-                config.error_log = a
-            elif o in '--access-log':
-                config.access_log = a
-            elif o in ('--host', '-H'):
-                config.bind_address = a
-            elif o in ('--port', '-P'):
-                config.port = int(a)
-            elif o in ('--pidfile', '-p'):
-                config.pid_file = a
-            elif o in ('--no-caching', '-C'):
-                config.caching_enabled = False
-            elif o in ('--caching-delay', 'D'):
-                config.caching_delay = int(o)
-            elif o in ('--foreground', '-f'):
-                config.daemonize = False
-            elif o in ('--autoreload', '-a'):
-                config.autoreload = True
-            elif o in '--frequency':
-                config.update_frequency = int(a)
-            elif o in ('-A', '--alias'):
-                (a, colon, uri) = a.partition(':')
-                assert (colon == ':')
-                if a and uri:
-                    config.aliases[a] = uri
-            elif o in '--dir':
-                config.base_dir = a
-            elif o in '--proxy':
-                config.proxy = True
-            elif o in '--allow_shutdown':
-                config.allow_shutdown = True
-            elif o in ('-m', '--module'):
-                config.modules.append(a)
-            elif o in '--version':
-                print("pyffd version %s (cherrypy version %s)" % (pyff_version, cherrypy.__version__))
-                sys.exit(0)
-            else:
-                raise ValueError("Unknown option '%s'" % o)
-
-    except Exception as ex:
-        print(ex)
-        print(__doc__)
-        sys.exit(3)
+    args = parse_options(__doc__,
+                         'hP:p:H:CfaA:l:Rm:',
+                         ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
+                          'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
+                          'alias=', 'dir=', 'version', 'proxy', 'allow_shutdown'])
 
     engine = cherrypy.engine
     plugins = cherrypy.process.plugins

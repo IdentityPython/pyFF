@@ -4,6 +4,11 @@ Useful constants for pyFF. Mostly XML namespace declarations.
 
 import pyconfig
 import logging
+import getopt
+import sys
+import os
+from . import __version__ as pyff_version
+
 
 __author__ = 'leifj'
 
@@ -75,6 +80,83 @@ class Config(object):
     redis_port = pyconfig.setting("pyff.redis_port", 6379)
     rq_queue = pyconfig.setting("pyff.rq_queue", "pyff")
     cache_chunks = pyconfig.setting("pyff.cache_chunks", 10)
+    pipeline = pyconfig.setting("pyff.pipeline", os.environ.get("PYFF_PIPELINE"))
 
 
 config = Config()
+
+
+def parse_options(docs, short_args, long_args):
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], short_args, long_args)
+    except getopt.error as msg:
+        print(msg)
+        print(docs)
+        sys.exit(2)
+
+    if config.loglevel is None:
+        config.loglevel = logging.INFO
+
+    if config.aliases is None:
+        config.aliases = dict()
+
+    if config.modules is None:
+        config.modules = []
+
+    try:  # pragma: nocover
+        for o, a in opts:
+            if o in ('-h', '--help'):
+                print(__doc__)
+                sys.exit(0)
+            elif o == '--loglevel':
+                config.loglevel = getattr(logging, a.upper(), None)
+                if not isinstance(config.loglevel, int):
+                    raise ValueError('Invalid log level: %s' % config.loglevel)
+            elif o in ('--log', '-l'):
+                config.error_log = a
+                config.access_log = a
+            elif o in '--error-log':
+                config.error_log = a
+            elif o in '--access-log':
+                config.access_log = a
+            elif o in ('--host', '-H'):
+                config.bind_address = a
+            elif o in ('--port', '-P'):
+                config.port = int(a)
+            elif o in ('--pidfile', '-p'):
+                config.pid_file = a
+            elif o in ('--no-caching', '-C'):
+                config.caching_enabled = False
+            elif o in ('--caching-delay', 'D'):
+                config.caching_delay = int(o)
+            elif o in ('--foreground', '-f'):
+                config.daemonize = False
+            elif o in ('--autoreload', '-a'):
+                config.autoreload = True
+            elif o in '--frequency':
+                config.update_frequency = int(a)
+            elif o in ('-A', '--alias'):
+                (a, colon, uri) = a.partition(':')
+                assert (colon == ':')
+                if a and uri:
+                    config.aliases[a] = uri
+            elif o in '--dir':
+                config.base_dir = a
+            elif o in '--proxy':
+                config.proxy = True
+            elif o in '--allow_shutdown':
+                config.allow_shutdown = True
+            elif o in ('-m', '--module'):
+                config.modules.append(a)
+            elif o in '--version':
+                print("pyffd version %s" % (pyff_version))
+                sys.exit(0)
+            else:
+                raise ValueError("Unknown option '%s'" % o)
+
+    except Exception as ex:
+        print(ex)
+        print(__doc__)
+        sys.exit(3)
+
+    return args
