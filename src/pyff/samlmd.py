@@ -758,6 +758,7 @@ def discojson_t(t, load_icons=False):
             lst = list(executor.map(discojson_load_icon, lst))
     return lst
 
+
 def sha1_id(e):
     return hash_id(e, 'sha1')
 

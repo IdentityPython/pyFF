@@ -690,10 +690,11 @@ class Lambda(object):
 
     def __init__(self, cb, *args, **kwargs):
         self._cb = cb
-        self._args = args
-        self._kwargs = kwargs
+        self._args = [a for a in args]
+        self._kwargs = kwargs or {}
 
     def __call__(self, *args, **kwargs):
-        list(args).append(list(self._args))
+        args = [a for a in args]
+        args.extend(self._args)
         kwargs.update(self._kwargs)
         return self._cb(*args, **kwargs)
