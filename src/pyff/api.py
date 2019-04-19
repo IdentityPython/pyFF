@@ -53,12 +53,12 @@ class MediaAccept(object):
 
 def _fmt(data, accepter):
     if data is None or len(data) == 0:
-        return ""
+        return 'text/plain', ''
     if isinstance(data, (etree._Element, etree._ElementTree)) and (
             accepter.get('text/xml') or accepter.get('application/xml')):
-        return dumptree(data)
+        return dumptree(data), 'application/xml'
     if isinstance(data, (dict, list)) and accepter.get('application/json'):
-        return dumps(data)
+        return dumps(data), 'application/json'
 
     raise exc.exception_response(406)
 
@@ -118,7 +118,7 @@ def process(request):
         q = path
 
     accept = str(request.accept)
-    if (not accept or '*/*' in accept) and ext is not None:
+    if (not accept or '*/*' in accept) and ext:
         accept = _ctypes[ext]
 
     try:
@@ -142,8 +142,8 @@ def process(request):
             response.headers.update(state.get('headers', {}))
             ctype = state.get('headers').get('Content-Type', None)
             if not ctype:
-                r = _fmt(r, accepter)
-                ctype = accept
+                r, t = _fmt(r, accepter)
+                ctype = t
 
             response.body = r
             response.size = len(r)
@@ -185,8 +185,8 @@ Depending on which version of pyFF your're running and the configuration you may
 listed using the 'role' attribute to the link elements.
         """
 
-    resource = request.matchdict.get('resource', None)
-    rel = request.matchdict.get('rel', None)
+    resource = request.params.get('resource', None)
+    rel = request.params.get('rel', None)
 
     if resource is None:
         resource = request.host_url
@@ -203,7 +203,7 @@ listed using the 'role' attribute to the link elements.
         'disco-json': '.json'
     }
 
-    if rel is None:
+    if rel is None or len(rel) == 0:
         rel = _dflt_rels.keys()
     else:
         rel = [rel]
@@ -263,7 +263,7 @@ def mkapp(*args, **kwargs):
         ctx.add_route('robots', '/robots.txt')
         ctx.add_view(robots, route_name='robots')
 
-        ctx.add_route('webfinger', '/.wellknown/webfinger', request_method='GET')
+        ctx.add_route('webfinger', '/.well-known/webfinger', request_method='GET')
         ctx.add_view(webfinger, route_name='webfinger')
 
         ctx.add_route('status', '/api/status', request_method='GET')
