@@ -26,3 +26,5 @@ whoosh
 accept_types
 pyramid
 six
+wsgi-intercept
+gunicorn

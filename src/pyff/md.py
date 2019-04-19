@@ -7,12 +7,10 @@ Usage: [-h|--help]
        [--logfile=<file>]
        [--version]
 """
-import getopt
 import importlib
 import logging
 import sys
 import traceback
-from . import __version__
 from .samlmd import MDRepository
 from .pipes import plumbing
 from .constants import config, parse_options
