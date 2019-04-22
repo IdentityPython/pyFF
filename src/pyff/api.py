@@ -15,7 +15,7 @@ from .utils import dumptree, duration2timedelta, hash_id
 import pkg_resources
 from accept_types import AcceptableType
 from lxml import etree
-
+from pyramid.events import NewRequest
 
 log = get_log(__name__)
 
@@ -32,7 +32,6 @@ def status(request):
                    store=dict(size=request.registry.md.store.size()))
     response = Response(dumps(_status))
     response.headers['Content-Type'] = 'application/json'
-    response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
 
@@ -150,7 +149,6 @@ def process(request):
             response.content_type = ctype
             cache_ttl = int(state.get('cache', 0))
             response.expires = datetime.now() + timedelta(seconds=cache_ttl)
-            response.headers['Access-Control-Allow-Origin'] = '*'
 
             return response
     except Exception as ex:
@@ -232,13 +230,27 @@ listed using the 'role' attribute to the link elements.
 
     response = Response(dumps(jrd))
     response.headers['Content-Type'] = 'application/json'
-    response.headers['Access-Control-Allow-Origin'] = '*'
 
     return response
 
 
+def add_cors_headers_response_callback(event):
+    def cors_headers(request, response):
+        response.headers.update({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST,GET,DELETE,PUT,OPTIONS',
+            'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization',
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Max-Age': '1728000',
+        })
+
+    event.request.add_response_callback(cors_headers)
+
+
 def mkapp(*args, **kwargs):
     with Configurator(debug_logger=log) as ctx:
+        ctx.add_subscriber(add_cors_headers_response_callback, NewRequest)
+
         if config.aliases is None:
             config.aliases = dict()
 
@@ -276,4 +288,3 @@ def mkapp(*args, **kwargs):
         ctx.add_view(process, route_name='request')
 
         return ctx.make_wsgi_app()
-

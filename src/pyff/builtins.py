@@ -606,7 +606,7 @@ alias invisible for anything except the corresponding mime type.
 
     entities = resolve_entities(args, lookup_fn=req.md.store.select)
 
-    if req.state.get('match', None) is not None:  # TODO - allow this to be passed in via normal arguments
+    if req.state.get('match', None):  # TODO - allow this to be passed in via normal arguments
 
         match = req.state['match']
 
