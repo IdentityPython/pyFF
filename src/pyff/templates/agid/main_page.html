@@ -1,19 +1,30 @@
-<!doctype html>
-<html>
+<!DOCTYPE HTML>
+<!--[if lt IE 7]><html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="it"><![endif]-->
+<!--[if IE 7]><html class="no-js lt-ie9 lt-ie8" lang="it"><![endif]-->
+<!--[if IE 8]><html class="no-js lt-ie9" lang="it"><![endif]-->
+<!--[if gt IE 8]><!--><html class="no-js" lang="it"><!--<![endif]-->
 <head>
-    <title>{% block title %}{{brand}}{% endblock %}</title>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=1">
+    <title>
+        {% block title %}{{brand}}{% endblock %}
+    </title>
 
-    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
-    <link href="/static/css/font-awesome.min.css" rel="stylesheet">
-    <link href="/static/css/style.css" rel="stylesheet"/>
-    <link href="/static/css/nav.css" rel="stylesheet"/>
-    <link href="/static/css/icon.css" rel="stylesheet"/>
-    {% block css %}
-    {% endblock %}
-    {% block script %}
-    {% endblock %}
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="icon" type="image/png" href="/static/agid/favicon/favicon-32x32.png">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/agid/css/bootstrap-italia.css">
+    <link rel="stylesheet" type="text/css" href="/static/agid/css/italia-web-toolkit.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/agid/css/idp-login.css">
+
+
+    <!--[if lt IE 9]>
+    <script src="/static/agid/js/selectivizr.min.js'"></script>
+    <script src="/static/agid/js/respond.min.js'"></script>
+    <script src="/static/agid/js/rem.min.js'"></script>
+    <![endif]-->
 </head>
 <body>
     <div class="container">
@@ -47,8 +58,12 @@
 
         <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
         <script type="text/javascript" src="/static/js/popper.min.js"></script>
-        <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
         <script type="text/javascript" src="/static/js/hogan.min.js"></script>
+
+        {% block bottom_scripts %}
+            <script src="/static/agid/js/bootstrap-italia.bundle.min.js"></script>
+        {% endblock bottom_scripts %}
+
         {% block endscripts %}
         {% endblock %}
         {% block final %}
@@ -56,4 +71,5 @@
 
     </div>
 </body>
+
 </html>

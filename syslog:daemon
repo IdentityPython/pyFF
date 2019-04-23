@@ -1,0 +1,54 @@
+INFO:cherrypy.error:[11/Apr/2019:16:40:11] ENGINE Listening for SIGTERM.
+INFO:cherrypy.error:[11/Apr/2019:16:40:11] ENGINE Listening for SIGHUP.
+INFO:cherrypy.error:[11/Apr/2019:16:40:11] ENGINE Listening for SIGUSR1.
+INFO:cherrypy.error:[11/Apr/2019:16:40:11] ENGINE Bus STARTING
+INFO:cherrypy.error:[11/Apr/2019:16:40:11] ENGINE Forking once.
+INFO:cherrypy.error:[11/Apr/2019:16:40:11] ENGINE Forking twice.
+INFO:cherrypy.error:[11/Apr/2019:16:40:11] ENGINE Daemonized to PID: 3641
+ERROR:cherrypy.error:[11/Apr/2019:16:40:11] ENGINE Error in 'start' listener <bound method PIDFile.start of <cherrypy.process.plugins.PIDFile object at 0x7fab5b01f320>>
+Traceback (most recent call last):
+  File "/home/wert/django-saml2-idp.env/lib/python3.7/site-packages/cherrypy/process/wspbus.py", line 230, in publish
+    output.append(listener(*args, **kwargs))
+  File "/home/wert/django-saml2-idp.env/lib/python3.7/site-packages/cherrypy/process/plugins.py", line 439, in start
+    open(self.pidfile, 'wb').write(ntob('%s\n' % pid, 'utf8'))
+PermissionError: [Errno 13] Permission denied: '/var/run/pyff.pid'
+
+INFO:cherrypy.error:[11/Apr/2019:16:40:11] ENGINE Serving on http://127.0.0.1:8080
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  PL[id=examples/mdx]: calling 'when' using args: [{'xslt': {'stylesheet': 'tidy.xsl'}}, 'break'] and opts: ['normalize']
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  PL[id=examples/mdx]: calling 'when' using args: [{'xslt': {'stylesheet': 'tidy.xsl'}}, 'break'] and opts: ['edugain']
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  PL[id=examples/mdx]: calling 'when' using args: [{'load': ['examples/links.xrd as links via normalize', 'http://mds.edugain.org via edugain']}, 'select', {'fork and merge': [{'select': "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"}, {'setattr': {'http://pyff.io/collection': 'swamid-2.0'}}]}, {'fork and merge': [{'select': ['http://pyff.io/collection=swamid-2.0+http://pyff.io/role=idp']}, {'setattr': {'http://pyff.io/collection': 'swamid-idp'}}]}, {'fork': [{'select as /md/foo-2.0': ['http://pyff.io/collection=swamid-2.0']}, 'break']}, {'fork': [{'select as /md/skolfederation-2.0': ['http://meta01.skolfederation.se/skolfederation-2_0.xml']}, 'break']}, {'fork': [{'select as /ndn': ['https://idp.nordu.net/idp/shibboleth']}, 'break']}, {'fork': [{'select as /md/swamid-kalmar-1.0': ['https://connect.sunet.se/shibboleth', 'https://www.diva-portal.org/shibboleth']}]}, 'break'] and opts: ['update']
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  Processing [{'load': ['examples/links.xrd as links via normalize', 'http://mds.edugain.org via edugain']}, 'select', {'fork and merge': [{'select': "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"}, {'setattr': {'http://pyff.io/collection': 'swamid-2.0'}}]}, {'fork and merge': [{'select': ['http://pyff.io/collection=swamid-2.0+http://pyff.io/role=idp']}, {'setattr': {'http://pyff.io/collection': 'swamid-idp'}}]}, {'fork': [{'select as /md/foo-2.0': ['http://pyff.io/collection=swamid-2.0']}, 'break']}, {'fork': [{'select as /md/skolfederation-2.0': ['http://meta01.skolfederation.se/skolfederation-2_0.xml']}, 'break']}, {'fork': [{'select as /ndn': ['https://idp.nordu.net/idp/shibboleth']}, 'break']}, {'fork': [{'select as /md/swamid-kalmar-1.0': ['https://connect.sunet.se/shibboleth', 'https://www.diva-portal.org/shibboleth']}]}, 'break']
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  load parsing 'examples/links.xrd as links via normalize'
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  load parsing 'http://mds.edugain.org via edugain'
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  Refreshing all resources
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  url_get(file:///home/wert/django-saml2-idp-sp/apps/pyFF/examples/links.xrd) returns 4336 chrs encoded as None
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  got status_code=200, encoding=utf8 from_cache=False from file:///home/wert/django-saml2-idp-sp/apps/pyFF/examples/links.xrd
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:11]  XRD: https://mds.swamid.se/md/swamid-2.0.xml verified by 40:a3:68:47:50:f3:86:43:36:0c:79:75:0f:87:0d:38:8c:f8:3e:44
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): mds.edugain.org:80
+DEBUG:urllib3.connectionpool:http://mds.edugain.org:80 "GET / HTTP/1.1" 200 46232531
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:41]  url_get(http://mds.edugain.org) returns 46232531 chrs encoded as None
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:41]  got status_code=200, encoding=utf8 from_cache=False from http://mds.edugain.org
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:42]  Filtering invalids from http://mds.edugain.org
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:43]  returning 5475 valid entities
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:43]  PL[id=examples/mdx-via-edugain]: called
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:43]  ********* {'via': [<pyff.pipes.PipelineCallback object at 0x7fab572741d0>], 'cleanup': [], 'verify': None, 'as': 'http://mds.edugain.org', 'timeout': 120, 'max_workers': 5, 'validate': True, 'fail_on_error': False, 'filter_invalid': True, 'edugain': True}
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:43]  PL[id=examples/mdx-via-edugain]: calling 'when' using args: [{'xslt': {'stylesheet': 'tidy.xsl'}}, 'break'] and opts: ['normalize']
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:43]  PL[id=examples/mdx-via-edugain]: calling 'when' using args: [{'xslt': {'stylesheet': 'tidy.xsl'}}, 'break'] and opts: ['edugain']
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:43]  Processing [{'xslt': {'stylesheet': 'tidy.xsl'}}, 'break']
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): mds.swamid.se:443
+DEBUG:urllib3.connectionpool:https://mds.swamid.se:443 "GET /md/swamid-2.0.xml HTTP/1.1" 200 None
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:50]  url_get(https://mds.swamid.se/md/swamid-2.0.xml) returns 49981080 chrs encoded as None
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:50]  got status_code=200, encoding=utf8 from_cache=False from https://mds.swamid.se/md/swamid-2.0.xml
+DEBUG:cherrypy.error.140373878644632:[11/Apr/2019:16:40:51]  verifying signature using 40:a3:68:47:50:f3:86:43:36:0c:79:75:0f:87:0d:38:8c:f8:3e:44
+DEBUG:xmlsec:SignatureValue: z0x3x6SPM1/+PNoHbpweccATTJEDmswW+F58K/SpksrAAIMVeNlt0SfaE7rDH0Bq1ImqltmVzNItzAt5YaqFvw9RIz+sY091f68j/JvKV8JbNalB1+wvKtqowV0qj2F09M+TmL0DbGSkR7wlzX8kgixYqvmHt8X/S2xY+RxIE1Uh7j7fVq/RPgdNC2w25lkpKb7nz8+WA9LRVe7J/+hG93r6DUWQad3X7KZAXPcIE+QNZ58JMwM8d5yb9SjE575jk3IuXuNBA9Lgwglqh6+OlG/pWLgvxfw2hpt3TjnqFexFUE7/e6uSzQmBl/VZnSSGV/4R8zdOeNunsP3e5I+JxX5QkW3I+KXwhScQef8JJ5OrW1gGo4wcaeckjTEmkW8A+jUMfgzOBsPE/jRIdhL8hVT8n4QNWNNV8OqQxCsRM0iagRZiVxh7UIcSBfVaErLX+KN1nsLJWF5WUo5xQieOcoLu2U7ArWOiz/PPtgi4GlyHAI/75XvjSDu8/qDBaVEhvwaCbraFaf7kQkPtkqCuX50THMRw9QzhcCWFGxsYNpqAoGRzuf40yha4ug8rkQzILy6PPy7nTGQMDXvjdR92P9X3CqUWNn8L7Py4f6sPlsGS3VmYIyVDBp429yqeD9y3fnyDzI9kNasyXrCJq0UNez1drY1fezHXaFXz8BAmwCc=
+DEBUG:xmlsec:key size: 4096 bits
+DEBUG:xmlsec:Found signedinfo b'<ds:SignedInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:mdrpi="urn:oasis:names:tc:SAML:metadata:rpi" xmlns:shibmd="urn:mace:shibboleth:metadata:1.0"><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/><ds:Reference URI="#swamid20190411T143505Z"><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>fwaCT1KDJfBZpIgISskPFkB9AldF7TE581lLUwRqaLo=</ds:DigestValue></ds:Reference></ds:SignedInfo>'
+DEBUG:xmlsec:Looking for #swamid20190411T143505Z using id attribute 'ID'
+DEBUG:xmlsec:using hash algorithm SHA256
+INFO:cherrypy.error:[11/Apr/2019:16:40:56] ENGINE Caught signal SIGTERM.
+INFO:cherrypy.error:[11/Apr/2019:16:40:56] ENGINE Bus STOPPING
+INFO:cherrypy.error:[11/Apr/2019:16:40:56] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('127.0.0.1', 8080)) shut down
+INFO:cherrypy.error:[11/Apr/2019:16:40:56] ENGINE No thread running for None.
+INFO:cherrypy.error:[11/Apr/2019:16:40:56] ENGINE Bus STOPPED
+INFO:cherrypy.error:[11/Apr/2019:16:40:56] ENGINE Bus EXITING
+INFO:cherrypy.error:[11/Apr/2019:16:40:56] ENGINE Bus EXITED

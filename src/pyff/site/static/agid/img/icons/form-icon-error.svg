@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="14px" height="15px" viewBox="0 0 14 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.2 (47327) - http://www.bohemiancoding.com/sketch -->
+    <title>🎨icon</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <path d="M7,5.37867966 L11.5961941,0.782485579 L13.7175144,2.90380592 L9.12132034,7.5 L13.7175144,12.0961941 L11.5961941,14.2175144 L7,9.62132034 L2.40380592,14.2175144 L0.282485579,12.0961941 L4.87867966,7.5 L0.282485579,2.90380592 L2.40380592,0.782485579 L7,5.37867966 Z" id="path-1"></path>
+    </defs>
+    <g id="Icons/Alert/error" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-4.000000, -4.000000)">
+        <g id="🎨icon" transform="translate(4.000000, 4.000000)">
+            <mask id="mask-2" fill="white">
+                <use xlink:href="#path-1"></use>
+            </mask>
+            <use id="Mask" fill="#D8D8D8" xlink:href="#path-1"></use>
+            <g id="Colors/Light_bg/secondary-351/A-006-base" mask="url(#mask-2)" fill="#F83E5A">
+                <g transform="translate(-4.000000, -4.000000)" id="Rectangle-3-Copy-20">
+                    <rect x="0" y="0" width="22" height="22"></rect>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

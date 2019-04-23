@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="18px" height="14px" viewBox="0 0 18 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.2 (47327) - http://www.bohemiancoding.com/sketch -->
+    <title>⚠️❌✅</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <path d="M6.55535973,9.28574764 L15.8411074,1.77635684e-15 L17.9624277,2.12132034 L6.54980983,13.5339382 L5.19168162,12.17581 L-3.01980663e-14,7.16226136 L2.10219413,4.98537561 L6.55535973,9.28574764 Z" id="path-1"></path>
+    </defs>
+    <g id="Data-entry/input-field-[m]/Input-text/-focus-icon" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-291.000000, -51.000000)">
+        <g id="Icons/Alert/success" transform="translate(289.000000, 47.000000)">
+            <g id="🎨icon" transform="translate(2.000000, 4.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <use id="Mask" fill="#00C5CA" xlink:href="#path-1"></use>
+                <g id="Colors/Light_bg/secondary-159/A-007-base" mask="url(#mask-2)" fill="#00CF86">
+                    <g transform="translate(-3.000000, -5.000000)" id="Rectangle-3-Copy-35">
+                        <rect x="0" y="0" width="24" height="24"></rect>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

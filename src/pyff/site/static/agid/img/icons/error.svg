@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="206px" height="206px" viewBox="0 0 206 206" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.2 (47327) - http://www.bohemiancoding.com/sketch -->
+    <title>Icon-Error</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Login---Error" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-617.000000, -127.000000)">
+        <g id="Icon-Error" transform="translate(617.000000, 127.000000)">
+            <circle id="Oval-3" fill="#F6FAFC" cx="103" cy="103" r="103"></circle>
+            <path d="M120,96 L160,96 C161.104569,96 162,96.8954305 162,98 L162,118 C162,119.104569 161.104569,120 160,120 L120,120 L120,160 C120,161.104569 119.104569,162 118,162 L98,162 C96.8954305,162 96,161.104569 96,160 L96,120 L56,120 C54.8954305,120 54,119.104569 54,118 L54,98 C54,96.8954305 54.8954305,96 56,96 L96,96 L96,56 C96,54.8954305 96.8954305,54 98,54 L118,54 C119.104569,54 120,54.8954305 120,56 L120,96 Z" id="Combined-Shape" fill="#CBF1F2" transform="translate(108.000000, 108.000000) rotate(45.000000) translate(-108.000000, -108.000000) "></path>
+            <path d="M115,91 L155,91 C156.104569,91 157,91.8954305 157,93 L157,113 C157,114.104569 156.104569,115 155,115 L115,115 L115,155 C115,156.104569 114.104569,157 113,157 L93,157 C91.8954305,157 91,156.104569 91,155 L91,115 L51,115 C49.8954305,115 49,114.104569 49,113 L49,93 C49,91.8954305 49.8954305,91 51,91 L91,91 L91,51 C91,49.8954305 91.8954305,49 93,49 L113,49 C114.104569,49 115,49.8954305 115,51 L115,91 Z" id="Combined-Shape" stroke="#00C5CA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" transform="translate(103.000000, 103.000000) rotate(45.000000) translate(-103.000000, -103.000000) "></path>
+        </g>
+    </g>
+</svg>

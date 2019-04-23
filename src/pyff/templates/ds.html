@@ -1,13 +1,30 @@
-{% extends "common.html" %}
+{% extends "agid/main_page.html" %}
 
-{% block title %}{{ gettext('Please login...') }}{% endblock %}
+{% block title %}{{ gettext('Discovery Service') }}{% endblock %}
 
 {% block header %}
-    <div class="row discovery">
-        <div class="col-md-12">
-            <div class="media">
-                <div class="media-body">
-                    <h1 class="mt-0 mb-1">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</h1>
+    <section class="main-wrapper u-layout u-layout-wide u-layoutCenter">
+        <header class="main-header u-padding-all-l">
+        </header>
+    </section>
+{% endblock %}
+
+{% block content %}
+<main class="main u-layout u-layout-extrasmall u-layoutCenter">
+    <article class="main-bodytext u-padding-all-xl">
+
+        <div class="main-header__inner Grid Grid--fill Grid--withGutter Grid--equalHeight Grid--alignMiddle mb-2">
+                <div class="u-size2of2">
+                    <div class="it-brand-wrapper">
+                        <img src="/static/agid/img/logo_header_tracciato.svg" class="img-fluid" style="max-width: 100%;" alt="IDP Logo" >
+                    </div>
+                </div>
+        </div>
+
+        <div class="row discovery">
+            <div class="col-md-12">
+
+                <!--
                     {% if entity.descr and entity.descr != entity.title %}
                     <span class="small">{{ entity.descr }}</span>
                     {% endif %}
@@ -16,26 +33,21 @@
                         <a title="Privacy Statement" href="{{ entity.psu }}">Privacy Statement</a>
                     </span>
                     {% endif %}
-                </div>
-                <div class="d-flex ml-3 sp-icon">
-                    {% if entity.entity_icon %}
-                    <img class="img-thumbnail fallback" src="{{entity.entity_icon}}"/>
-                    {% endif %}
+                -->
+
+                <div class="pt-4">
+                    <p style="font-size: 1.2em;" class="">Discovery Service</p>
                 </div>
 
-            </div>
-        </div>
-    </div>
-{% endblock %}
+                <div class="mb-4 mt-4">
+                    <p class="">
+                        "<i>{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</i>"
+                        {{ gettext(' requests that you login. Please select your IDentity Provider from the list below ...') }}
+                    </p>
+                </div>
 
-{% block content %}
-        <div class="row discovery">
-            <div class="col-md-12">
-                <p class="text-info">
-                    {{ gettext('This service requests that you login. Select your preferred method below...') }}
-                </p>
                 <div id="ds-saved-choices" class="list-group"></div>
-                <br/>
+
                 <div id="dsclient"
                      data-href="{{ entity['entity_id'] }}"
                      data-mdq="/metadata/"
@@ -49,13 +61,18 @@
                             <input id="searchinput"
                                    placeholder="{{ gettext('Start typing to search for your login provider or home organization ...') }}"
                                    class="form-control"
-                                   type="search"/>
+                                   type="search"
+                                   autocomplete="off"/>
                         </div>
                     </form>
                     <div id="ds-search-list" class="list-group"></div>
                 </div>
             </div>
         </div>
+
+
+    </article>
+</main>
 {% endblock %}
 
 {% block endscripts %}
@@ -83,6 +100,10 @@
                 $(this).fadeIn(300);
             });
         </script>
+
+        <style>
+            .identityprovider:hover {
+                cursor: pointer;
+            }
+        </style>
 {% endblock %}
-</body>
-</html>
