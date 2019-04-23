@@ -203,7 +203,7 @@ The dict in the list contains three items:
                     tokens = _strings(elt)
                     for tstr in tokens:
                         for tpart in tstr.split():
-                            if tpart.lower().startswith(q):
+                            if q in tpart.lower():
                                 return tstr
             return None
 
