@@ -402,7 +402,6 @@ class WhooshStore(SAMLStoreBase):
                 return b2u(list(self.infos.values()))
 
         from whoosh.qparser import QueryParser
-        # import pdb; pdb.set_trace()
         key = key.strip('+')
         key = key.replace('+', ' AND ')
         for uri, a in list(ATTRS_INV.items()):

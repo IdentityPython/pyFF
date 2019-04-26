@@ -752,8 +752,8 @@ def sha1_id(e):
 def entity_simple_summary(e):
     if e is None:
         return dict()
-
     title, descr = entity_extended_display(e)
+    logo = entity_icon_url(e)
     entity_id = e.get('entityID')
     d = dict(title=title,
              descr=descr,
@@ -761,6 +761,8 @@ def entity_simple_summary(e):
              entityID=entity_id,
              domains=";".join(sub_domains(e)),
              id=hash_id(e, 'sha1'))
+    if logo:
+        d['icon'] = logo.get('url')
 
     scopes = entity_scopes(e)
     if scopes is not None and len(scopes) > 0:
