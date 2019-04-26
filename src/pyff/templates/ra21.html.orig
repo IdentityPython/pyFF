@@ -37,12 +37,13 @@
 
 <body class="site">
 
+
+
     <main>
-        <h2 class="accessHeader pt-1">
-            <img src="/static/agid/img/logo_header_tracciato.svg" style="width:21%;" class="img-fluid" alt="IDP Logo" >
-<!--
+
+        <h2 class="accessHeader">
+            <img alt="" src="/static/icons/ra21/ra_icon_2.png"/><span class="light">{{ _('Get access to') }}</span>
             <span class="default-label">{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</span>
--->
         </h2>
 
     <div class="col-md-10 offset-md-1 col-lg-6 offset-lg-3">
@@ -69,6 +70,7 @@
                      data-inputfieldselector="#searchinput">
               <ul class="card-links" id="ds-saved-choices">
                   <div class="collapse" id="addwidget">
+
                       <a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
                           <li><span class="label">Choose another</span><i id="add_circle" class="float-right far fa-plus-circle"></i></li>
                       </a>
@@ -76,12 +78,12 @@
               </ul>
               <div class="collapse" id="searchwidget">
                   <div class="input-group" role="button">
-                    <input type="text" id="searchinput" type="search" class="form-control" autocomplete="off" placeholder="" aria-label="input group" aria-describedby="btnGroupAddon" autofocus>
+                    <input type="text" id="searchinput" type="search" class="form-control" placeholder="" aria-label="input group" aria-describedby="btnGroupAddon" autofocus>
                     <div class="input-group-append">
                         <button type="button" id="findbutton" class="btn btn-primary" aria-describedby="btnGroupAddon"><i class="fas fa-search"></i></button>
                     </div>
                   </div>
-                  <p id="examples" class="detailtextRA21">{{ _('Examples: unical, xxx@YourInstitution.edu, spid') }}</p>
+                  <p id="examples" class="detailtextRA21">{{ _('Examples: Science Institute, xxx@YourInstitution.edu, UCLA') }}</p>
               </div>
 
               <div class="collapse" id="resultwidget">
@@ -111,7 +113,9 @@
 
     <footer>
         <div class="row">
+
                 <h2 class="padding-left">How It Works</h2>
+
             </div>
 
             <div class="row">
@@ -174,6 +178,8 @@
                         </div>
                     </div>
                 </div>
+
+
             </div>
         </footer>
 
@@ -183,11 +189,7 @@
 
             {% raw %}
             var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}">\
-                <li><div class="d-block">\
-                     {{#icon}}\
-                     <img src="{{icon}}" onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="d-md-inline-block d-lg-inline-block img-thumbnail logo" style="padding: 3px;">\
-                     {{/icon}}\
-                     <div class="d-inline-block text-truncate label">{{title}}</div>\
+                <li><div class="d-block"><div class="d-inline-block text-truncate label">{{title}}</div>\
                      {{#scopes}}<div class="d-none d-md-inline-block text-truncate label-url">{{scopes}}</div>{{/scopes}}\
                      <div class="external float-right"><i class="far fa-external-link"></i></div></div>\
                     {{#descr}}<div class="d-none d-sm-block d-md-block d-lg-block searchaux">{{descr}}</div>{{/descr}}\
@@ -197,7 +199,7 @@
                 <li class="known-inst">\
                 <div class="d-block">\
                 {{#entity_icon}}\
-                <img src="{{entity_icon}}" onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="d-md-inline-block d-lg-inline-block img-thumbnail logo" style="padding: 3px;">\
+                <img src="{{entity_icon}}" onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="d-md-inline-block d-lg-inline-block img-thumbnail rounded-circle logo">\
                 {{/entity_icon}}\
                 {{^entity_icon}}\
                 <svg class="d-md-inline-block d-lg-inline-block logo" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#aeaeae" />\

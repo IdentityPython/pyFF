@@ -1,0 +1,154 @@
+{% extends "agid/main_page.html" %}
+
+{% block title %}{{ gettext('Discovery Service') }}{% endblock %}
+
+{% block header %}
+    <section class="main-wrapper u-layout u-layout-wide u-layoutCenter">
+        <header class="main-header u-padding-all-l">
+        </header>
+    </section>
+{% endblock %}
+
+{% block content %}
+<main class="main u-layout u-layout-extrasmall u-layoutCenter">
+    <article class="main-bodytext u-padding-all-xl">
+
+        <div class="main-header__inner Grid Grid--fill Grid--withGutter Grid--equalHeight Grid--alignMiddle mb-2">
+                <div class="u-size2of2">
+                    <div class="it-brand-wrapper">
+                        <img src="/static/agid/img/logo_header_tracciato.svg" class="img-fluid" style="max-width: 100%;" alt="IDP Logo" >
+                    </div>
+                </div>
+        </div>
+
+        <div class="row discovery">
+            <div class="col-md-12">
+
+                <!--
+                    {% if entity.descr and entity.descr != entity.title %}
+                    <span class="small">{{ entity.descr }}</span>
+                    {% endif %}
+                    {% if entity.psu %}
+                    <span class="small">
+                        <a title="Privacy Statement" href="{{ entity.psu }}">Privacy Statement</a>
+                    </span>
+                    {% endif %}
+                -->
+
+                <div class="pt-4">
+                    <p style="font-size: 1.2em;" class="">Discovery Service</p>
+                </div>
+
+                <div class="mb-4 mt-4">
+                    <p class="">
+                        "<i>{% if entity.title %}{{entity.title}}{% else %}{{ entity.entity_id }}{% endif %}</i>"
+                        {{ gettext(' requests that you login. Please select your IDentity Provider from the list below ...') }}
+                    </p>
+                </div>
+
+                <div id="ds-saved-choices" class="list-group"></div>
+
+<!--
+                <div id="jselect" class="bootstrap-select">
+-->
+<!--
+                  <label>{{ gettext('Seleziona da una lista') }}</label>
+-->
+                </div>
+
+                <div id="dsclient"
+                     data-href="{{ entity['entity_id'] }}"
+                     data-mdq="/metadata/"
+                     data-store="{{storage}}"
+                     data-search="{{search}}"
+                     data-list="{{list}}"
+                     data-related="{{ entity['domains'] }}"
+                     data-inputfieldselector=".searchinput">
+                    <form id="dsform">
+
+
+                        <div class="form-group">
+                            <input class="searchinput form-control"
+                                   placeholder="{{ gettext('Unical or Spid or other ...') }}"
+                                   type="search"
+                                   autocomplete="off"/>
+                            <small class="text-muted">{{ gettext('Start typing to search for your login provider or home organization ...') }}</small>
+                        </div>
+
+                    </form>
+                    <div id="ds-search-list" class="list-group"></div>
+                </div>
+
+            </div>
+        </div>
+
+
+    </article>
+</main>
+{% endblock %}
+
+{% block endscripts %}
+        <script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
+        <!-- un-minified -->
+        <script type="text/javascript" src="/static/js/sha1.js"></script>
+        <script type="text/javascript" src="/static/js/client.min.js"></script>
+        <script type="text/javascript" src="/static/js/ds-client.js"></script>
+        <script type="text/javascript" src="/static/js/jquery-ds-widget.js"></script>
+        <!-- eof -->
+        <!-- script type="text/javascript" src="/static/js/ds-widget.min.js"></script -->
+        <script type="text/javascript" src="/static/js/bootstrap-list-filter.src.js"></script>
+        <script type="text/javascript" src="/static/js/imgload.js"></script>
+{% endblock %}
+
+{% block final %}
+
+<!--
+        <script  type="text/javascript">
+            $(document).ready(function() {
+
+                select_ele = "<select id='select_entityid' class='' title=\"{{ gettext('Scegli una opzione') }}\" \
+                                  data-live-search='true' \
+                                  data-live-search-placeholder='{{ gettext('Search here...') }}'> \
+                               <option select='selected'>{{ gettext('Select Location') }}</option> \
+                             </select>";
+
+
+
+                // select option fill
+                url = "/role/idp.json?query=&entity_filter={http://macedir.org/entity-category}http://pyff.io/category/discoverable";
+                dropdown = $(select_ele);
+                $.getJSON(url, function (data) {
+                  $.each(data, function (key, entry) {
+                    op = $('<option></option>').attr('value', entry.entityID).text(entry.title);
+                    console.log(op);
+                    dropdown.append(op);
+                  })
+                });
+                // end fill select
+
+                jselect = $('#jselect');
+                jselect.append(dropdown);
+
+            });
+        </script>
+-->
+
+
+        <script type="text/javascript">
+            $(document).ready(function() {
+                $("#dsclient").discovery_client();
+            });
+            $('img.fallback').bind('error', function () {
+                   $(this).unbind('error');
+                   $(this).attr('src', "/static/icons/1x1t.png").removeClass('img-thumbnail');
+            }).imgLoad(function() {
+                $(this).fadeIn(300);
+            });
+        </script>
+
+        <style>
+            .identityprovider:hover {
+                cursor: pointer;
+            }
+        </style>
+{% endblock %}

@@ -82,6 +82,7 @@
                 if (entity && entity.entityID && !entity.entity_id) {
                     entity.entity_id = entity.entityID;
                 }
+
                 if (entity && !entity.entity_icon && entity.icon) {
                     entity.entity_icon = entity.icon;
                 }
