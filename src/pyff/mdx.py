@@ -300,7 +300,10 @@ class MDRoot(object):
             memory = NotImplementedFunction('Memory profiling needs dowser')
 
     _well_known = WellKnown()
+
     static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
+
+
 
     @cherrypy.expose
     def status(self):
@@ -347,7 +350,8 @@ Disallow: /
         """Returns the pyff icon (the alchemic symbol for sublimation).
         """
         cherrypy.response.headers['Content-Type'] = 'image/x-icon'
-        return resource_string('favicon.ico', "site/static/icons")
+        # return resource_string('favicon.ico', "site/static/icons")
+        return resource_string('favicon-32x32.png', "site/static/agid/img/favicon")
 
     @cherrypy.expose
     def entities(self, path=None):
@@ -448,7 +452,6 @@ class MDServer(object):
     """
 
     def __init__(self, pipes=None, observers=None):
-
         if not observers:
             observers = []
         if not pipes:
