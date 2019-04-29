@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <meta name="description" content="">
         <meta name="author" content="">
@@ -32,7 +30,6 @@
         <script type="text/javascript" src="/static/js/jquery-ds-widget.js"></script>
         <!-- eof -->
         <script type="text/javascript" src="/static/js/bootstrap-list-filter.src.js"></script>
-
     </head>
 
 <body class="site">
@@ -70,7 +67,7 @@
               <ul class="card-links" id="ds-saved-choices">
                   <div class="collapse" id="addwidget">
                       <a data-toggle="collapse" href="#searchwidget" role="button" aria-expanded="false" aria-controls="searchwidget">
-                          <li><span class="label">Choose another</span><i id="add_circle" class="float-right far fa-plus-circle"></i></li>
+                          <li><span class="label">{{ _('Choose another') }}</span><i id="add_circle" class="float-right far fa-plus-circle"></i></li>
                       </a>
                   </div>
               </ul>
@@ -81,7 +78,7 @@
                         <button type="button" id="findbutton" class="btn btn-primary" aria-describedby="btnGroupAddon"><i class="fas fa-search"></i></button>
                     </div>
                   </div>
-                  <p id="examples" class="detailtextRA21">{{ _('Examples: unical, xxx@YourInstitution.edu, spid') }}</p>
+                  <p id="examples" class="detailtextRA21">{{ _('Examples: unical, mailbox@institution.edu, spid') }}</p>
               </div>
 
               <div class="collapse" id="resultwidget">
@@ -92,10 +89,10 @@
                     <li class="collapse" id="searching"><i class="far fa-spinner fa-spin"></i></li>
                     <li>
                         <div class="collapse alert alert-info mt-3" id="no_results" role="alert">
-                            <h3>No matching institution found</h3>
+                            <h3>{{ _('No matching institution found') }}</h3>
                             <ul>
-                                <li>Try institution name, your institution email, or an abbreviation</li>
-                                <li>Contact your institution librarian</li>
+                                <li>{{ _('Try institution name, your institution email, or an abbreviation') }}</li>
+                                <li>{{ _('Contact your institution librarian') }}</li>
                             </ul>
                         </div>
                     </li>
@@ -105,27 +102,25 @@
 
         </div><!-- /card-container -->
     </div>
-
     </main>
-
 
     <footer>
         <div class="row">
-                <h2 class="padding-left">How It Works</h2>
+                <h2 class="padding-left">{{ _('How It Works') }}</h2>
             </div>
 
             <div class="row">
 
                 <div class="col-sm-6 col-md-6 col-lg-3 step">
                     <div class="row">
-                        <h3>1. Find your institution</h3>
+                        <h3>1. {{ _('Find your institution') }}</h3>
                     </div>
                     <div class="row">
                         <div class="col-4 no-left">
                             <img class="img-fluid" src="/static/icons/ra21/ra_1.png" alt="Card image cap">
                         </div>
                         <div class="col-7 no-left">
-                            <p>Search by institution name, email to find your institution. </p>
+                            <p>{{ _('Search by institution name, email to find your institution.') }}</p>
                         </div>
 
                     </div>
@@ -133,14 +128,14 @@
 
                 <div class="col-sm-6 col-md-6 col-lg-3 step">
                     <div class="row">
-                        <h3>2. Log-in</h3>
+                        <h3>2. {{ _('Log-in') }}</h3>
                     </div>
                     <div class="row">
                         <div class="col-4 no-left">
                             <img class="img-fluid" src="/static/icons/ra21/ra_2.png" alt="Card image cap">
                         </div>
                         <div class="col-7 no-left">
-                            <p>Use your institutional credentials to log in as you normally do.</p>
+                            <p>{{ _('Use your institutional credentials to log in as you normally do.') }}</p>
                         </div>
 
                     </div>
@@ -148,14 +143,14 @@
 
                 <div class="col-sm-6 col-md-6 col-lg-3 step">
                     <div class="row">
-                        <h3>3. Enjoy</h3>
+                        <h3>3. {{ _('Enjoy') }}</h3>
                     </div>
                     <div class="row">
                         <div class="col-4 no-left">
                             <img class="img-fluid" src="/static/icons/ra21/ra_3.png" alt="Card image cap">
                         </div>
                         <div class="col-7 no-left">
-                            <p>Access the content and features provided by your institution.</p>
+                            <p>{{ _('Access the content and features provided by your institution.') }}</p>
                         </div>
 
                     </div>
@@ -170,7 +165,7 @@
                             <img class="img-fluid" src="/static/icons/ra21/ra_4.png" alt="Card image cap">
                         </div>
                         <div class="col-7 no-left">
-                            <p>Continue to work seamlessly with your institutional access. </p>
+                            <p>{{ _('Continue to work seamlessly with your institutional access.') }}</p>
                         </div>
                     </div>
                 </div>
@@ -185,9 +180,9 @@
             var search = Hogan.compile('<a class="institution identityprovider" data-href="{{entity_id}}">\
                 <li><div class="d-block">\
                      {{#icon}}\
-                     <img src="{{icon}}" onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="d-md-inline-block d-lg-inline-block img-thumbnail logo" style="padding: 3px;">\
+                     <img src="{{icon}}" onError="$(this).attr(\'src\',\'/static/icons/1x1t.png\');" class="d-md-inline-block d-lg-inline-block img-thumbnail logo float-left" style="padding: 3px;">\
                      {{/icon}}\
-                     <div class="d-inline-block text-truncate label">{{title}}</div>\
+                     <div class="">{{title}}</div>\
                      {{#scopes}}<div class="d-none d-md-inline-block text-truncate label-url">{{scopes}}</div>{{/scopes}}\
                      <div class="external float-right"><i class="far fa-external-link"></i></div></div>\
                     {{#descr}}<div class="d-none d-sm-block d-md-block d-lg-block searchaux">{{descr}}</div>{{/descr}}\
@@ -204,7 +199,7 @@
                 <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="12px" font-family="Arial" dy=".3em">{{name_tag}}</text></svg>\
                 {{/entity_icon}}\
                 <div class="d-inline-block">{{title}}</div>\
-                <div class="cancel float-right"><i class="far fa-times-circle"></i></div>\
+                <button type="button" alt="" data-toggle="tooltip" data-placement="left" class="close pr-3" style="cursor: pointer;">×</button>\
                 </div></li></a>');
             {% endraw %}
 
