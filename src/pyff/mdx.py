@@ -5,7 +5,7 @@ An implementation of draft-lajoie-md-query
 
     Usage: pyffd <options> {pipeline-files}+
 
-    -C|--no-cache
+    -C|--no-caching
             Turn off caching
     -p <pidfile>
             Write a pidfile at the specified location
