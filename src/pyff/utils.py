@@ -38,6 +38,7 @@ from markupsafe import Markup
 import six
 import traceback
 from . import __version__
+from requests.structures import CaseInsensitiveDict
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -684,6 +685,17 @@ def b2u(data):
     elif isinstance(data, set):
         return set([b2u(item) for item in data])
     return data
+
+
+def json_serializer(o):
+    if isinstance(o, datetime):
+        return o.__str__()
+    if isinstance(o, CaseInsensitiveDict):
+        return dict(o.items())
+    if hasattr(o,'to_json') and hasattr(o.to_json,'__call__'):
+        return o.to_json()
+
+    raise ValueError("Object {} of type {} is not JSON-serializable via this function".format(repr(o), type(o)))
 
 
 class Lambda(object):

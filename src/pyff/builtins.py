@@ -512,7 +512,7 @@ Defaults are marked with (*)
         req.md.rm.add(Resource(url, **params))
 
     log.debug("Refreshing all resources")
-    req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']), store=store)
+    req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']), store=store, scheduler=req.scheduler)
     req._store = None
     req.md.store = store  # commit the store
 
@@ -628,29 +628,30 @@ alias invisible for anything except the corresponding mime type.
         def _ip_networks(elt):
             return [ipaddr.IPNetwork(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
 
-        def _match(qq, elt):
-            for q in qq:
-                q = q.strip()
-                if ':' in q or '.' in q:
-                    try:
-                        nets = _ip_networks(elt)
-                        for net in nets:
-                            if ':' in q and ipaddr.IPv6Address(q) in net:
-                                return net
-                            if '.' in q and ipaddr.IPv4Address(q) in net:
-                                return net
-                    except ValueError:
-                        pass
+        def _match(q, elt):
+            q = q.strip()
+            if ':' in q or '.' in q:
+                try:
+                    nets = _ip_networks(elt)
+                    for net in nets:
+                        if ':' in q and ipaddr.IPv6Address(q) in net:
+                            return net
+                        if '.' in q and ipaddr.IPv4Address(q) in net:
+                            return net
+                except ValueError:
+                    pass
 
-                if q is not None and len(q) > 0:
-                    tokens = _strings(elt)
-                    for tstr in tokens:
-                        for tpart in tstr.split():
-                            if tpart.lower().startswith(q):
-                                return tstr
+            if q is not None and len(q) > 0:
+                tokens = _strings(elt)
+                for tstr in tokens:
+                    for tpart in tstr.split():
+                        if tpart.lower().startswith(q):
+                            return tstr
             return None
 
-        entities = filter(lambda e: _match(match, e) is not None, entities)
+        log.debug("matching {} in {} entities".format(match, len(entities)))
+        entities = list(filter(lambda e: _match(match, e) is not None, entities))
+        log.debug("returning {} entities after match".format(len(entities)))
 
     ot = entitiesdescriptor(entities, name)
     if ot is None:

@@ -18,6 +18,10 @@ from itertools import chain
 from .exceptions import ResourceException
 from .utils import url_get
 from copy import deepcopy, copy
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
+from apscheduler.schedulers.base import STATE_RUNNING
 
 if six.PY2:
     from UserDict import DictMixin as ResourceManagerBase
@@ -30,11 +34,53 @@ requests.packages.urllib3.disable_warnings()
 log = get_log(__name__)
 
 
+def fetch(r, store=None, tries=0, backoff=0):
+    return r.fetch(store=store)
+
+
+def is_idle(scheduler):
+    return len(scheduler.get_jobs(pending=True)) == 0 and scheduler.state == STATE_RUNNING
+
+
+class Fetcher(object):
+    def __init__(self, rm, scheduler, store, stop_when_done=False):
+        self.scheduler = scheduler
+        self.store = store
+        self.rm = rm
+        self.stop_when_done = stop_when_done
+
+    def schedule(self, resources):
+        for r in resources:
+            self.scheduler.add_job(fetch,
+                                   coalesce=True,
+                                   id="fetch {}".format(r.url),
+                                   args=[r],
+                                   kwargs=dict(store=self.store, tries=0, backoff=0))
+
+    def __call__(self, *args, **kwargs):
+        event = args[0]
+        if event.exception:
+            job = self.scheduler.get_job(event.job_id)
+            if job is not None and job.callable == fetch:
+                tries = int(job.kwargs.get('tries', 0))
+                if tries < self.rm.max_tries:
+                    self.scheduler.add_job(job.callable, job.args, job.kwargs)
+        else:
+            log.debug("event returned {}".format(event.retval))
+            if event.retval and hasattr(event.retval, '__iter__'):
+                self.schedule(event.retval)
+            elif is_idle(self.scheduler):
+                self.scheduler.remove_listener(self)
+                if self.stop_when_done:
+                    self.scheduler.shutdown(wait=False)
+
+
 class ResourceManager(ResourceManagerBase):
 
-    def __init__(self):
+    def __init__(self, max_tries=10):
         self._resources = dict()
         self.shutdown = False
+        self.max_tries = max_tries
 
     def __setitem__(self, key, value):
         if not isinstance(value, Resource):
@@ -75,7 +121,29 @@ class ResourceManager(ResourceManagerBase):
     def __iter__(self):
         return self.walk()
 
-    def reload(self, url=None, fail_on_error=False, store=None):
+    def reload(self, url=None, fail_on_error=False, store=None, scheduler=None):
+        # type: (object, basestring) -> None
+        if url is not None:
+            resources = deque([self[url]])
+        else:
+            resources = deque(list(self.values()))
+
+        stop_when_done = False
+        if scheduler is None:
+            scheduler = BlockingScheduler()
+            stop_when_done = True
+
+        fetcher = Fetcher(rm=self,
+                          scheduler=scheduler,
+                          store=store,
+                          stop_when_done=stop_when_done)
+        scheduler.add_listener(fetcher, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+        fetcher.schedule(resources)
+
+        if scheduler.state != STATE_RUNNING:
+            scheduler.start()
+
+    def reload_old(self, url=None, fail_on_error=False, store=None):
         # type: (object, basestring) -> None
         if url is not None:
             resources = deque([self[url]])

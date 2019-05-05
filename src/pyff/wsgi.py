@@ -8,11 +8,11 @@ def app_factory(global_config, **local_config):
 
 
 def server_runner(*args):
-    app = args[0]
+    _app = args[0]
     local_config = args[1]
     port = int(local_config.get('bind_address', 8080))
     host = local_config.get('port', '0.0.0.0')
-    s = make_server(host, port, app)
+    s = make_server(host, port, _app)
     s.serve_forever()
 
 

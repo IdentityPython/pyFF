@@ -5,32 +5,40 @@ from .constants import config
 import importlib
 from .pipes import plumbing
 from publicsuffix import PublicSuffixList
-from .samlmd import MDRepository
+from .samlmd import MDRepository, entity_display_name
 from .store import make_store_instance
 from six.moves.urllib_parse import quote_plus
 from .logs import get_log
 from json import dumps
 from datetime import datetime, timedelta
-from .utils import dumptree, duration2timedelta, hash_id
+from .utils import dumptree, duration2timedelta, hash_id, json_serializer, b2u
 import pkg_resources
 from accept_types import AcceptableType
 from lxml import etree
 from pyramid.events import NewRequest
+import requests
+from apscheduler.schedulers.background import BackgroundScheduler
 
 log = get_log(__name__)
 
 
-def robots(request):
+def robots_handler(request):
     return Response("""
 User-agent: *
 Disallow: /
 """)
 
 
-def status(request):
+def status_handler(request):
+    d = {}
+    for r in request.registry.md.rm.walk():
+        if 'Validation Errors' in r.info and r.info['Validation Errors']:
+            d[r.url] = r.info['Validation Errors']
     _status = dict(version=pkg_resources.require("pyFF")[0].version,
+                   invalids=d,
+                   jobs=[dict(id=j.id, next_run_time=j.next_run_time) for j in request.registry.scheduler.get_jobs()],
                    store=dict(size=request.registry.md.store.size()))
-    response = Response(dumps(_status))
+    response = Response(dumps(_status, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
     return response
 
@@ -57,12 +65,16 @@ def _fmt(data, accepter):
             accepter.get('text/xml') or accepter.get('application/xml')):
         return dumptree(data), 'application/xml'
     if isinstance(data, (dict, list)) and accepter.get('application/json'):
-        return dumps(data), 'application/json'
+        return dumps(data, default=json_serializer), 'application/json'
 
     raise exc.exception_response(406)
 
 
-def process(request):
+def call(entry):
+    r = requests.post('http://localhost:8000/api/call/{}'.format(entry))
+
+
+def process_handler(request):
     _ctypes = {'xml': 'application/xml',
                'json': 'application/json'}
 
@@ -100,6 +112,7 @@ def process(request):
 
     alias = path.pop(0)
     path = '/'.join(path)
+    path = path.replace(':/', '://')  # ugly workaround bc WSGI drops double-slashes
 
     log.debug("handling entry={}, alias={}, path={}".format(entry, alias, path))
 
@@ -116,7 +129,7 @@ def process(request):
     else:
         q = path
 
-    accept = str(request.accept)
+    accept = str(request.accept).split(',')[0]  # TODO - sometimes the client sends > 1 accept header value with ','
     if (not accept or '*/*' in accept) and ext:
         accept = _ctypes[ext]
 
@@ -144,7 +157,7 @@ def process(request):
                 r, t = _fmt(r, accepter)
                 ctype = t
 
-            response.body = r
+            response.text = b2u(r)
             response.size = len(r)
             response.content_type = ctype
             cache_ttl = int(state.get('cache', 0))
@@ -159,7 +172,7 @@ def process(request):
     raise exc.exception_response(404)
 
 
-def webfinger(request):
+def webfinger_handler(request):
     """An implementation the webfinger protocol (http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-12)
         in order to provide information about up and downstream metadata available at this pyFF instance.
 
@@ -197,8 +210,8 @@ listed using the 'role' attribute to the link elements.
     jrd['links'] = links
 
     _dflt_rels = {
-        'urn:oasis:names:tc:SAML:2.0:metadata': '.xml',
-        'disco-json': '.json'
+        'urn:oasis:names:tc:SAML:2.0:metadata': ['.xml', 'application/xml'],
+        'disco-json': ['.json', 'application/json']
     }
 
     if rel is None or len(rel) == 0:
@@ -206,14 +219,15 @@ listed using the 'role' attribute to the link elements.
     else:
         rel = [rel]
 
-    def _links(url):
+    def _links(url, title=None):
         if url.startswith('/'):
             url = url.lstrip('/')
         for r in rel:
             suffix = ""
             if not url.endswith('/'):
-                suffix = _dflt_rels[r]
+                suffix = _dflt_rels[r][0]
             links.append(dict(rel=r,
+                              type=_dflt_rels[r][1],
                               href='%s/%s%s' % (request.host_url, url, suffix)))
 
     _links('/entities/')
@@ -221,14 +235,30 @@ listed using the 'role' attribute to the link elements.
         if a is not None and '://' not in a:
             _links(a)
 
-    for entity_id in request.registry.md.store.entity_ids():
-        _links("/entities/%s" % hash_id(entity_id))
+    for entity in request.registry.md.store.lookup('entities'):
+        entity_display = entity_display_name(entity)
+        _links("/entities/%s" % hash_id(entity.get('entityID')), title=entity_display)
 
     for a in request.registry.aliases.keys():
         for v in request.registry.md.store.attribute(request.registry.aliases[a]):
             _links('%s/%s' % (a, quote_plus(v)))
 
-    response = Response(dumps(jrd))
+    response = Response(dumps(jrd, default=json_serializer))
+    response.headers['Content-Type'] = 'application/json'
+
+    return response
+
+
+def resources_handler(request):
+    _resources = [dict(url=r.url, last_seen=r.last_seen, info=r.info) for r in request.registry.md.rm.walk()]
+    response = Response(dumps(_resources, default=json_serializer))
+    response.headers['Content-Type'] = 'application/json'
+
+    return response
+
+
+def pipeline_handler(request):
+    response = Response(dumps(request.registry.plumbings, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
 
     return response
@@ -266,6 +296,15 @@ def mkapp(*args, **kwargs):
         if not len(pipeline) > 0:
             pipeline = [config.pipeline]
 
+        ctx.registry.scheduler = BackgroundScheduler({
+            'apscheduler.executors.default': {
+                'class': 'apscheduler.executors.pool:ThreadPoolExecutor',
+                'max_workers': '20'
+            },
+            'apscheduler.timezone': 'UTC',
+        })
+
+        ctx.registry.pipeline = pipeline
         ctx.registry.plumbings = [plumbing(v) for v in pipeline]
         ctx.registry.aliases = config.aliases
         ctx.registry.psl = PublicSuffixList()
@@ -273,18 +312,35 @@ def mkapp(*args, **kwargs):
         ctx.registry.md.store = make_store_instance()
 
         ctx.add_route('robots', '/robots.txt')
-        ctx.add_view(robots, route_name='robots')
+        ctx.add_view(robots_handler, route_name='robots')
 
         ctx.add_route('webfinger', '/.well-known/webfinger', request_method='GET')
-        ctx.add_view(webfinger, route_name='webfinger')
+        ctx.add_view(webfinger_handler, route_name='webfinger')
 
         ctx.add_route('status', '/api/status', request_method='GET')
-        ctx.add_view(status, route_name='status')
+        ctx.add_view(status_handler, route_name='status')
+
+        ctx.add_route('resources', '/api/resources', request_method='GET')
+        ctx.add_view(resources_handler, route_name='resources')
+
+        ctx.add_route('pipeline', '/api/pipeline', request_method='GET')
+        ctx.add_view(pipeline_handler, route_name='pipeline')
 
         ctx.add_route('call', '/api/call/{entry}', request_method=['POST', 'PUT'])
-        ctx.add_view(process, route_name='call')
+        ctx.add_view(process_handler, route_name='call')
 
         ctx.add_route('request', '/*path', request_method='GET')
-        ctx.add_view(process, route_name='request')
+        ctx.add_view(process_handler, route_name='request')
 
+        start = datetime.utcnow()+timedelta(seconds=1)
+        log.debug(start)
+        ctx.registry.scheduler.add_job(call,
+                                       'interval',
+                                       id="call/update",
+                                       args=['update'],
+                                       start_date=start,
+                                       seconds=config.update_frequency,
+                                       max_instances=1)
+
+        ctx.registry.scheduler.start()
         return ctx.make_wsgi_app()

@@ -42,7 +42,8 @@ install_requires = [
     'minify',
     'whoosh',
     'pyramid',
-    'accept_types'
+    'accept_types',
+    'apscheduler'
 ]
 
 python_implementation_str = python_implementation()

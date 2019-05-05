@@ -28,3 +28,4 @@ pyramid
 six
 wsgi-intercept
 gunicorn
+apscheduler

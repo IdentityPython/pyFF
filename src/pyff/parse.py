@@ -86,7 +86,7 @@ class XRDParser(object):
                     fp = fingerprints[0]
                 log.debug("XRD: {} verified by {}".format(link_href, fp))
                 resource.add_child(link_href, verify=fp)
-        resource.last_seen = datetime.now
+        resource.last_seen = datetime.now()
         resource.expire_time = None
         return info
 
