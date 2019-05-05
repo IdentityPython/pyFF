@@ -681,7 +681,7 @@ def main():
                          __doc__,
                          'hP:p:H:CfaA:l:Rm:',
                          ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=',
-                          'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'modules=',
+                          'port=', 'host=', 'no-caching', 'autoreload', 'frequency=', 'module=',
                           'alias=', 'dir=', 'version', 'proxy', 'allow_shutdown'])
 
     engine = cherrypy.engine

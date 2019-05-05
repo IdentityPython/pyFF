@@ -20,7 +20,7 @@ def main():
     """
     The main entrypoint for the pyFF cmdline tool.
     """
-    args = parse_options("pyff", __doc__, 'hm', ['help', 'loglevel=', 'logfile=', 'version', 'module'])
+    args = parse_options("pyff", __doc__, 'hm:', ['help', 'loglevel=', 'logfile=', 'version', 'module='])
 
     log_args = {'level': config.loglevel}
     if config.logfile is not None:
