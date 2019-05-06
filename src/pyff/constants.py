@@ -118,9 +118,9 @@ def parse_options(program, docs, short_args, long_args):
             elif o in ('--log', '-l'):
                 config.error_log = a
                 config.access_log = a
-            elif o in '--error-log':
+            elif o in ('--error-log', ):
                 config.error_log = a
-            elif o in '--access-log':
+            elif o in ('--access-log', ):
                 config.access_log = a
             elif o in ('--host', '-H'):
                 config.bind_address = a
@@ -136,22 +136,22 @@ def parse_options(program, docs, short_args, long_args):
                 config.daemonize = False
             elif o in ('--autoreload', '-a'):
                 config.autoreload = True
-            elif o in '--frequency':
+            elif o in ('--frequency', ):
                 config.update_frequency = int(a)
             elif o in ('-A', '--alias'):
                 (a, colon, uri) = a.partition(':')
                 assert (colon == ':')
                 if a and uri:
                     config.aliases[a] = uri
-            elif o in '--dir':
+            elif o in ('--dir', ):
                 config.base_dir = a
-            elif o in '--proxy':
+            elif o in ('--proxy', ):
                 config.proxy = True
-            elif o in '--allow_shutdown':
+            elif o in ('--allow_shutdown', ):
                 config.allow_shutdown = True
             elif o in ('-m', '--module'):
                 config.modules.append(a)
-            elif o in '--version':
+            elif o in ('--version', ):
                 print("{} version {}".format(program, pyff_version))
                 sys.exit(0)
             else:
