@@ -44,7 +44,7 @@ class PipeLineTest(SignerTestCase):
     def exec_pipeline(self, pstr):
         md = MDRepository()
         p = yaml.load(six.StringIO(pstr))
-        print(p)
+        print("\n{}".format(yaml.dump(p)))
         res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}})
         return res, md
 
@@ -603,7 +603,7 @@ class SigningTest(PipeLineTest):
             with LogCapture() as l:
                 try:
                     self.exec_pipeline("""
-- load:
+- load fail_on_error True:
    - %s/empty
 """ % self.datadir)
                 except IOError:
@@ -681,7 +681,6 @@ class SigningTest(PipeLineTest):
 - when batch:
     - load:
         - %s/metadata via blacklist_example
-    - loadstats
 - when blacklist_example:
     - fork merge remove:
         - filter:
@@ -700,7 +699,6 @@ class SigningTest(PipeLineTest):
 - when batch:
     - load:
         - %s/bad_metadata cleanup bad
-    - loadstats
 - when bad:
     - check_xml_namespaces
 """ % self.datadir)
