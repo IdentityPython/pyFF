@@ -222,7 +222,7 @@ may modify any of the fields.
 
             :param pl: The plumbing to run this request through
             """
-            return pl.iprocess(self)
+            return pl.iprocess(self, raise_exceptions=True)
 
 #            for p in pl.pipeline:
 #                cb, opts, name, args = load_pipe(p)
@@ -240,7 +240,7 @@ may modify any of the fields.
 #                    break
 #            return self.t
 
-    def iprocess(self, req):
+    def iprocess(self, req, raise_exceptions=False):
         """The inner request pipeline processor.
 
         :param req: The request to run through the pipeline
@@ -261,9 +261,11 @@ may modify any of the fields.
                     req.t = ot
                 if req.done:
                     break
-            except PipeException as ex:
-                log.debug(traceback.format_exc())
-                log.error(ex)
+            except Exception as ex:
+                #log.debug(traceback.format_exc())
+                #log.error(ex)
+                if raise_exceptions:
+                    raise ex
                 break
         return req.t
 
