@@ -1,8 +1,6 @@
 mako
 six
 redis
-urllib3
-idna
 ipaddr
 publicsuffix2
 lxml
