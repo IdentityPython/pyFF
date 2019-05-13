@@ -30,7 +30,7 @@ install_requires = [
     'httplib2 >=0.7.7',
     'six>=1.11.0',
     'ipaddr',
-    'publicsuffix',
+    'publicsuffix2',
     'redis',
     'futures',
     'requests',

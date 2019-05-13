@@ -4,7 +4,7 @@ import pyramid.httpexceptions as exc
 from .constants import config
 import importlib
 from .pipes import plumbing
-from publicsuffix import PublicSuffixList
+from publicsuffix2 import get_public_suffix
 from .samlmd import MDRepository, entity_display_name
 from .store import make_store_instance
 from six.moves.urllib_parse import quote_plus
@@ -307,7 +307,6 @@ def mkapp(*args, **kwargs):
         ctx.registry.pipeline = pipeline
         ctx.registry.plumbings = [plumbing(v) for v in pipeline]
         ctx.registry.aliases = config.aliases
-        ctx.registry.psl = PublicSuffixList()
         ctx.registry.md = MDRepository()
         ctx.registry.md.store = make_store_instance()
 

@@ -4,7 +4,7 @@ redis
 urllib3
 idna
 ipaddr
-publicsuffix
+publicsuffix2
 lxml
 cherrypy
 sphinx-pypi-upload

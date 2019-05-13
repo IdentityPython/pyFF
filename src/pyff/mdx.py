@@ -65,7 +65,7 @@ from .logs import get_log, SysLogLibHandler
 from .samlmd import entity_simple_summary, entity_display_name, entity_info, MDRepository
 import logging
 from datetime import datetime
-from publicsuffix import PublicSuffixList
+from publicsuffix2 import get_public_suffix
 from .i18n import language
 from . import samlmd
 import six
@@ -457,7 +457,6 @@ class MDServer(object):
         self.refresh = MDUpdate(cherrypy.engine, server=self, frequency=config.update_frequency)
         self.refresh.subscribe()
         self.aliases = config.aliases
-        self.psl = PublicSuffixList()
         self.md = MDRepository()
         self.ready = False
 
@@ -603,7 +602,7 @@ class MDServer(object):
                         host = url.netloc
                         if ':' in url.netloc:
                             (host, port) = url.netloc.split(':')
-                        for host_part in host.rstrip(self.psl.get_public_suffix(host)).split('.'):
+                        for host_part in host.rstrip(get_public_suffix(host)).split('.'):
                             if host_part is not None and len(host_part) > 0:
                                 query.append(host_part)
                     log.debug("created query: %s" % ",".join(query))
