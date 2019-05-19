@@ -53,6 +53,7 @@ class Fetcher(object):
             self.count += 1
             self.scheduler.add_job(fetch,
                                    coalesce=True,
+                                   name="fetch {}".format(r.url),
                                    id="fetch {}".format(r.url),
                                    args=[r],
                                    kwargs=dict(store=self.store))
@@ -68,12 +69,15 @@ class Fetcher(object):
         if event.retval is not None and hasattr(event.retval, '__iter__'):
             self.schedule(event.retval)
 
+        log.debug("waiting for {} jobs to finish...".format(self.count-len(self.ok)-len(self.fail)))
+
         if self.is_done():
             log.debug("this fetcher is done!")
             if self.stop_when_done:
                 log.debug("shutting down...")
                 self.scheduler.shutdown(wait=False)
             self.scheduler.remove_listener(self)
+
 
 class ResourceManager(ResourceManagerBase):
 
