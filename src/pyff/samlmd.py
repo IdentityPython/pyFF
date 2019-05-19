@@ -216,7 +216,7 @@ class MDServiceListParser(object):
                         r.add_via(Lambda(_update_entities, **args))
 
         log.debug("Done parsing eIDAS MetadataServiceList")
-        resource.last_seen = datetime.now
+        resource.last_seen = datetime.now()
         resource.expire_time = None
         return info
 
