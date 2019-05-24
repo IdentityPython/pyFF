@@ -11,50 +11,6 @@ __author__ = 'leifj'
 log = get_log(__name__)
 
 
-def retry(ex, tries=4, delay=3, backoff=2, logger=log):
-    """Retry calling the decorated function using exponential backoff based on
-
-    * http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
-    * http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
-
-    :param ex: the exception to check. may be a tuple of
-        excpetions to check
-    :type ex: Exception or tuple
-    :param tries: number of times to try (not retry) before giving up
-    :type tries: int
-    :param delay: initial delay between retries in seconds
-    :type delay: int
-    :param backoff: backoff multiplier e.g. value of 2 will double the delay
-        each retry
-    :type backoff: int
-    :param logger: logger to use. If None, print
-    :type logger: logging.Logger instance
-    """
-
-    def deco_retry(f):
-        def f_retry(*args, **kwargs):
-            mtries, mdelay = tries, delay
-
-            while mtries > 1:
-                try:
-                    return f(*args, **kwargs)
-                except ex as e:
-                    msg = "%s, Retrying in %d seconds..." % (str(e), mdelay)
-                    if logger:
-                        logger.warn(msg)
-                    else:
-                        print(msg)
-                    time.sleep(mdelay)
-                    mtries -= 1
-                    mdelay *= backoff
-
-            return f(*args, **kwargs)
-
-        return f_retry  # true decorator
-
-    return deco_retry
-
-
 def deprecated(logger=log, reason="Complain to the developer about unspecified code deprecation"):
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted

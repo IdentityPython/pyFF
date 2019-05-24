@@ -5,7 +5,7 @@ from unittest import TestCase, skip
 
 from mock import patch
 
-from pyff.decorators import retry, deprecated, cached
+from pyff.decorators import deprecated, cached
 
 
 class Logger():
@@ -14,50 +14,6 @@ class Logger():
 
     def warn(self, message):
         self.messages.append((logging.WARNING, message))
-
-
-class TestRetry(TestCase):
-
-    def test_retry_nop(self):
-        status = [False]
-        _logger = Logger()
-
-        @retry(None, delay=1, backoff=1, logger=_logger)
-        def runs_ok():
-            status[0] = True
-        runs_ok()
-        assert(status[0])
-        assert(len(_logger.messages) == 0)
-
-    def test_retry_fail(self):
-        status = [False]
-        _logger = Logger()
-        @retry(ValueError, delay=1, backoff=1, logger=_logger)
-        def fails():
-            raise ValueError("nope")
-
-        try:
-            fails()
-            assert False
-        except ValueError as ex:
-            assert(len(_logger.messages) == 3)
-            pass
-        assert(not status[0])
-
-    def test_retry_fail_stdout(self):
-        status = [False]
-        @retry(ValueError, delay=1, backoff=1, logger=None)
-        def fails():
-            raise ValueError("nope")
-
-        with patch('sys.stdout', new=StringIO()) as mock_stdout:
-            try:
-                fails()
-                assert False
-            except ValueError as ex:
-                assert(len(mock_stdout.getvalue().split("\n")) == 4)
-                pass
-            assert(not status[0])
 
 
 class TestDeprecated(TestCase):
