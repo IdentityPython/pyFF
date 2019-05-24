@@ -14,17 +14,18 @@ import six
 from .parse import parse_resource
 from itertools import chain
 from .exceptions import ResourceException
-from .utils import url_get
+from .utils import url_get, non_blocking_lock
 from copy import deepcopy
 from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
-from apscheduler.schedulers.base import STATE_RUNNING, STATE_STOPPED
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED
+from apscheduler.schedulers.base import STATE_RUNNING
+from threading import Lock
+from singleton_decorator import singleton
 
 if six.PY2:
     from UserDict import DictMixin as ResourceManagerBase
 elif six.PY3:
     from collections import MutableMapping as ResourceManagerBase
-
 
 requests.packages.urllib3.disable_warnings()
 
@@ -43,33 +44,46 @@ class Fetcher(object):
         self.stop_when_done = stop_when_done
         self.fail = []
         self.ok = []
-        self.count = 0
+        self.pending = {}
+
+    @property
+    def count(self):
+        return len(self.pending)
 
     def is_done(self):
-        return self.count == len(self.fail) + len(self.ok)
+        return self.count == 0
 
     def schedule(self, resources):
         for r in resources:
-            self.count += 1
-            self.scheduler.add_job(fetch,
-                                   coalesce=True,
-                                   name="fetch {}".format(r.url),
-                                   id="fetch {}".format(r.url),
-                                   args=[r],
-                                   kwargs=dict(store=self.store))
+            job = self.scheduler.add_job(fetch,
+                                         coalesce=True,
+                                         misfire_grace_time=2*config.update_frequency,
+                                         name="fetch {}".format(r.url),
+                                         id="fetch {}".format(r.url),
+                                         args=[r],
+                                         kwargs=dict(store=self.store))
+            self.pending[job.id] = r
 
     def __call__(self, *args, **kwargs):
         event = args[0]
-        log.debug("event returned {} threw {}".format(event.retval, event.exception))
-        if event.exception:
+        log.debug("event {} returned {} threw {}".format(repr(event), event.retval, event.exception))
+
+        if event.code == EVENT_JOB_ERROR:
             self.fail.append(event)
-        else:
+            r = self.pending.pop(event.job_id)
+            r.info['Exception'] = event.exception
+        elif event.code == EVENT_JOB_EXECUTED:
             self.ok.append(event)
+            del self.pending[event.job_id]
+        elif event.code == EVENT_JOB_MISSED:
+            r = self.pending.get(event.job_id)
+            self.schedule([r])
+            del self.pending[event.job_id]
 
         if event.retval is not None and hasattr(event.retval, '__iter__'):
             self.schedule(event.retval)
 
-        log.debug("waiting for {} jobs to finish...".format(self.count-len(self.ok)-len(self.fail)))
+        log.debug("waiting for {} jobs to finish...".format(self.count))
 
         if self.is_done():
             log.debug("this fetcher is done!")
@@ -85,6 +99,7 @@ class ResourceManager(ResourceManagerBase):
         self._resources = dict()
         self.shutdown = False
         self.max_tries = max_tries
+        self.lock = Lock()
 
     def __setitem__(self, key, value):
         if not isinstance(value, Resource):
@@ -127,31 +142,33 @@ class ResourceManager(ResourceManagerBase):
 
     def reload(self, url=None, fail_on_error=False, store=None, scheduler=None):
         # type: (object, basestring) -> None
-        if url is not None:
-            resources = deque([self[url]])
-        else:
-            resources = deque(list(self.values()))
+        with non_blocking_lock(self.lock):
+            if url is not None:
+                resources = deque([self[url]])
+            else:
+                resources = deque(list(self.values()))
 
-        if fail_on_error:
-            for r in resources:
-                r.fetch(store=store)
-                for c in r.walk():
-                    c.fetch(store=store)
-        else:
-            stop_when_done = False
-            if scheduler is None:
-                scheduler = BlockingScheduler()
-                stop_when_done = True
+            if fail_on_error:
+                for r in resources:
+                    r.fetch(store=store)
+                    for c in r.walk():
+                        c.fetch(store=store)
+            else:
+                stop_when_done = False
+                if scheduler is None:
+                    scheduler = BlockingScheduler()
+                    stop_when_done = True
 
-            fetcher = Fetcher(rm=self,
-                              scheduler=scheduler,
-                              store=store,
-                              stop_when_done=stop_when_done)
-            scheduler.add_listener(fetcher, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
-            fetcher.schedule(resources)
+                fetcher = Fetcher(rm=self,
+                                  scheduler=scheduler,
+                                  store=store,
+                                  stop_when_done=stop_when_done)
+                scheduler.add_listener(fetcher,
+                                       EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
+                fetcher.schedule(resources)
 
-            if scheduler.state != STATE_RUNNING:
-                scheduler.start()
+                if scheduler.state != STATE_RUNNING:
+                    scheduler.start()
 
 
 class Resource(object):
@@ -183,6 +200,10 @@ class Resource(object):
 
         if self.url.startswith('file://'):
             self.never_expires = True
+
+    @property
+    def ok(self):
+        return self.last_seen is not None and not self.is_expired() and self.t
 
     @property
     def post(self):
