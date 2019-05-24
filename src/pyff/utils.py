@@ -39,6 +39,10 @@ import six
 import traceback
 from . import __version__
 from requests.structures import CaseInsensitiveDict
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+import contextlib
+import threading
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -628,10 +632,15 @@ def url_get(url):
         s = requests.session()
         s.mount('file://', FileAdapter())
     else:
+        retry = Retry(connect=3, backoff_factor=0.5)
+        adapter = HTTPAdapter(max_retries=retry)
         s = CachedSession(cache_name="pyff_cache",
                           backend=config.request_cache_backend,
                           expire_after=config.request_cache_time,
                           old_data_on_error=True)
+        s.mount('http://', adapter)
+        s.mount('https://', adapter)
+
     headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
     try:
         r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
@@ -710,3 +719,13 @@ class Lambda(object):
         args.extend(self._args)
         kwargs.update(self._kwargs)
         return self._cb(*args, **kwargs)
+
+
+@contextlib.contextmanager
+def non_blocking_lock(lock=threading.Lock(), exception_class=ResourceException, args=("Resource is busy",)):
+    if not lock.acquire(blocking=False):
+        raise exception_class(*args)
+    try:
+        yield lock
+    finally:
+        lock.release()
