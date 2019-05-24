@@ -701,6 +701,8 @@ def json_serializer(o):
         return o.__str__()
     if isinstance(o, CaseInsensitiveDict):
         return dict(o.items())
+    if isinstance(o, BaseException):
+        return str(o)
     if hasattr(o,'to_json') and hasattr(o.to_json,'__call__'):
         return o.to_json()
 
