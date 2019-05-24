@@ -1,10 +1,10 @@
 from pyramid.config import Configurator
 from pyramid.response import Response
 import pyramid.httpexceptions as exc
+from .exceptions import ResourceException
 from .constants import config
 import importlib
 from .pipes import plumbing
-from publicsuffix2 import get_public_suffix
 from .samlmd import MDRepository, entity_display_name
 from .store import make_store_instance
 from six.moves.urllib_parse import quote_plus
@@ -134,7 +134,6 @@ def process_handler(request):
         accept = _ctypes[ext]
 
     try:
-        request.registry.activity = entry
         accepter = MediaAccept(accept)
         for p in request.registry.plumbings:
             state = {entry: True,
@@ -146,28 +145,32 @@ def process_handler(request):
                      'path': path,
                      'stats': {}}
 
-            r = p.process(request.registry.md, state=state)
-            if r is None:
-                raise exc.exception_response(404)
+            r = p.process(request.registry.md, state=state, raise_exceptions=True)
+            if r is not None:
+                response = Response()
+                response.headers.update(state.get('headers', {}))
+                ctype = state.get('headers').get('Content-Type', None)
+                if not ctype:
+                    r, t = _fmt(r, accepter)
+                    ctype = t
 
-            response = Response()
-            response.headers.update(state.get('headers', {}))
-            ctype = state.get('headers').get('Content-Type', None)
-            if not ctype:
-                r, t = _fmt(r, accepter)
-                ctype = t
+                response.text = b2u(r)
+                response.size = len(r)
+                response.content_type = ctype
+                cache_ttl = int(state.get('cache', 0))
+                response.expires = datetime.now() + timedelta(seconds=cache_ttl)
 
-            response.text = b2u(r)
-            response.size = len(r)
-            response.content_type = ctype
-            cache_ttl = int(state.get('cache', 0))
-            response.expires = datetime.now() + timedelta(seconds=cache_ttl)
-
-            return response
-    except Exception as ex:
-        request.registry.activity = 'idle'
+                return response
+    except ResourceException as ex:
+        import traceback
+        log.debug(traceback.format_exc())
+        log.warn(ex)
+        raise exc.exception_response(409)
+    except BaseException as ex:
+        import traceback
+        log.debug(traceback.format_exc())
         log.error(ex)
-        raise ex
+        raise exc.exception_response(500)
 
     raise exc.exception_response(404)
 

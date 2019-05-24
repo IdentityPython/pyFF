@@ -164,7 +164,7 @@ active document. To avoid this do a select before your fork, thus:
         nt = deepcopy(req.t)
 
     ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
-    ireq = Plumbing.Request(ip, req.md, nt)
+    ireq = Plumbing.Request(ip, req.md, t=nt)
     ip.iprocess(ireq)
 
     if req.t is not None and ireq.t is not None and len(root(ireq.t)) > 0:

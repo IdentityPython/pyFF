@@ -196,7 +196,7 @@ Represents a single request. When processing a set of pipelines a single request
 may modify any of the fields.
         """
 
-        def __init__(self, pl, md, t, name=None, args=None, state=None, store=None, scheduler=None):
+        def __init__(self, pl, md, t=None, name=None, args=None, state=None, store=None, scheduler=None, raise_exceptions=True):
             if not state:
                 state = dict()
             if not args:
@@ -210,6 +210,8 @@ may modify any of the fields.
             self.done = False
             self._store = store
             self.scheduler = scheduler
+            self.raise_exceptions = raise_exceptions
+            self.exception = None
 
         @property
         def store(self):
@@ -222,7 +224,7 @@ may modify any of the fields.
 
             :param pl: The plumbing to run this request through
             """
-            return pl.iprocess(self, raise_exceptions=True)
+            return pl.iprocess(self)
 
 #            for p in pl.pipeline:
 #                cb, opts, name, args = load_pipe(p)
@@ -240,12 +242,12 @@ may modify any of the fields.
 #                    break
 #            return self.t
 
-    def iprocess(self, req, raise_exceptions=False):
+    def iprocess(self, req):
         """The inner request pipeline processor.
 
         :param req: The request to run through the pipeline
         """
-        log.debug("Processing {}".format(self.pipeline))
+        #log.debug("Processing {}".format(self.pipeline))
         for p in self.pipeline:
             try:
                 pipefn, opts, name, args = load_pipe(p)
@@ -261,30 +263,32 @@ may modify any of the fields.
                     req.t = ot
                 if req.done:
                     break
-            except Exception as ex:
-                #log.debug(traceback.format_exc())
-                #log.error(ex)
-                if raise_exceptions:
+            except BaseException as ex:
+                log.debug(traceback.format_exc())
+                log.error(ex)
+                req.exception = ex
+                if req.raise_exceptions:
                     raise ex
                 break
         return req.t
 
-    def process(self, md, args=None, state=None, t=None, store=None):
+    def process(self, md, args=None, state=None, t=None, store=None, raise_exceptions=True):
         """
-The main entrypoint for processing a request pipeline. Calls the inner processor.
+        The main entrypoint for processing a request pipeline. Calls the inner processor.
 
 
-:param md: The current metadata repository
-:param state: The active request state
-:param t: The active working document
-:param store: The store object to operate on
-:param args: Pipeline arguments
-:return: The result of applying the processing pipeline to t.
+        :param raise_exceptions: weather to raise or just log exceptions in the process
+        :param md: The current metadata repository
+        :param state: The active request state
+        :param t: The active working document
+        :param store: The store object to operate on
+        :param args: Pipeline arguments
+        :return: The result of applying the processing pipeline to t.
         """
         if not state:
             state = dict()
 
-        return Plumbing.Request(self, md, t, args=args, state=state, store=store).process(self)
+        return Plumbing.Request(self, md, t=t, args=args, state=state, store=store, raise_exceptions=raise_exceptions).process(self)
 
 
 def plumbing(fn):
