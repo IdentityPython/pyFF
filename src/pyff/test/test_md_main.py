@@ -227,7 +227,8 @@ class PyFFTest(PipeLineTest):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", self.bad)
         assert 'Traceback' in err
         assert 'No pipe named snartibartifast is installed' in err
-        assert (exit_code == 255)
+        print(exit_code)
+        assert (exit_code == 1)
 
     def test_run_signer_logfile(self):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", "--logfile=%s" % self.logfile, self.signer)
