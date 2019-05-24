@@ -253,7 +253,16 @@ listed using the 'role' attribute to the link elements.
 
 
 def resources_handler(request):
-    _resources = [dict(url=r.url, last_seen=r.last_seen, info=r.info) for r in request.registry.md.rm.walk()]
+    def _info(r):
+        nfo = r.info
+        nfo['OK'] = bool(r.ok)
+        if r.last_seen is not None:
+            nfo['Last Seen'] = r.last_seen
+        if len(r.children) > 0:
+            nfo['Children'] = [_info(cr) for cr in r.children]
+        return nfo
+
+    _resources = [_info(r) for r in request.registry.md.rm.values()]
     response = Response(dumps(_resources, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
 
