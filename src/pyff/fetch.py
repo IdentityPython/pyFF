@@ -63,6 +63,7 @@ class Fetcher(object):
                                          args=[r],
                                          kwargs=dict(store=self.store))
             self.pending[job.id] = r
+            r.current_job = job.id
 
     def __call__(self, *args, **kwargs):
         event = args[0]
@@ -71,12 +72,14 @@ class Fetcher(object):
         if event.code == EVENT_JOB_ERROR:
             self.fail.append(event)
             r = self.pending.pop(event.job_id)
+            r.current_job = None
             r.info['Exception'] = event.exception
         elif event.code == EVENT_JOB_EXECUTED:
             self.ok.append(event)
-            del self.pending[event.job_id]
+            r = self.pending.pop(event.job_id)
+            r.current_job = None
         elif event.code == EVENT_JOB_MISSED:
-            r = self.pending.get(event.job_id)
+            r = self.pending.get(event.job_id)  # avoid a race on count
             self.schedule([r])
             del self.pending[event.job_id]
 
@@ -180,6 +183,8 @@ class Resource(object):
         self.expire_time = None
         self.never_expires = False
         self.last_seen = None
+        self.last_parser = None
+        self.current_job = None
         self._infos = deque(maxlen=config.info_buffer_size)
         self.children = deque()
 
@@ -200,10 +205,6 @@ class Resource(object):
 
         if self.url.startswith('file://'):
             self.never_expires = True
-
-    @property
-    def ok(self):
-        return self.last_seen is not None and not self.is_expired() and self.t
 
     @property
     def post(self):
@@ -233,7 +234,7 @@ class Resource(object):
         return self.expire_time is not None and self.expire_time < now
 
     def is_valid(self):
-        return self.t is not None and not self.is_expired()
+        return not self.is_expired() and self.last_seen is not None and self.last_parser is not None
 
     def add_info(self, info):
         self._infos.append(info)

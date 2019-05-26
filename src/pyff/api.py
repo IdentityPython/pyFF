@@ -255,7 +255,9 @@ listed using the 'role' attribute to the link elements.
 def resources_handler(request):
     def _info(r):
         nfo = r.info
-        nfo['OK'] = bool(r.ok)
+        nfo['Valid'] = r.is_valid()
+        nfo['Parser'] = r.last_parser
+        nfo['Job'] = r.current_job
         if r.last_seen is not None:
             nfo['Last Seen'] = r.last_seen
         if len(r.children) > 0:

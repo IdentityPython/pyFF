@@ -14,7 +14,7 @@ from .exceptions import *
 import traceback
 from distutils.util import strtobool
 from .fetch import ResourceManager
-from .parse import add_parser
+from .parse import add_parser, PyffParser
 from xmlsec.crypto import CertDict
 from concurrent import futures
 
@@ -122,16 +122,19 @@ def parse_saml_metadata(source,
         if fail_on_error:
             raise ex
 
-        return None, None
+        return None, None, ex
 
     log.debug("returning %d valid entities" % len(list(iter_entities(t))))
 
-    return t, expire_time_offset
+    return t, expire_time_offset, None
 
 
-class SAMLMetadataResourceParser:
+class SAMLMetadataResourceParser(PyffParser):
     def __init__(self):
         pass
+
+    def __str__(self):
+        return "SAML"
 
     def magic(self, content):
         return "EntitiesDescriptor" in content or "EntityDescriptor" in content
@@ -139,14 +142,14 @@ class SAMLMetadataResourceParser:
     def parse(self, resource, content):
         info = dict()
         info['Validation Errors'] = dict()
-        t, expire_time_offset = parse_saml_metadata(unicode_stream(content),
-                                                    key=resource.opts['verify'],
-                                                    base_url=resource.url,
-                                                    cleanup=resource.opts['cleanup'],
-                                                    fail_on_error=resource.opts['fail_on_error'],
-                                                    filter_invalid=resource.opts['filter_invalid'],
-                                                    validate=resource.opts['validate'],
-                                                    validation_errors=info['Validation Errors'])
+        t, expire_time_offset, exception = parse_saml_metadata(unicode_stream(content),
+                                                               key=resource.opts['verify'],
+                                                               base_url=resource.url,
+                                                               cleanup=resource.opts['cleanup'],
+                                                               fail_on_error=resource.opts['fail_on_error'],
+                                                               filter_invalid=resource.opts['filter_invalid'],
+                                                               validate=resource.opts['validate'],
+                                                               validation_errors=info['Validation Errors'])
 
         if expire_time_offset is not None:
             expire_time = datetime.now() + expire_time_offset
@@ -157,27 +160,36 @@ class SAMLMetadataResourceParser:
             resource.t = t
             resource.type = "application/samlmetadata+xml"
 
+        if exception is not None:
+            resource.info['Exception'] = exception
+
         return info
 
 
 add_parser(SAMLMetadataResourceParser())
 
 
-class MDServiceListParser(object):
+class MDServiceListParser(PyffParser):
     def __init__(self):
         pass
+
+    def __str__(self):
+        return "MDSL"
 
     def magic(self, content):
         return 'MetadataServiceList' in content
 
     def parse(self, resource, content):
         info = dict()
-        info['Description'] = "eIDAS MetadataServiceList from {}".format(resource.url)
+        info['Description'] = "eIDAS MetadataServiceList"
         t = parse_xml(unicode_stream(content))
         t.xinclude()
         relt = root(t)
         info['Version'] = relt.get('Version', '0')
         info['IssueDate'] = relt.get('IssueDate')
+        info['NextUpdate'] = relt.get('NextUpdate')
+        resource.expire_time = iso2datetime(relt.get('NextUpdate'))
+        info['Expiration Time'] = str(resource.expire_time)
         info['IssuerName'] = first_text(relt, "{%s}IssuerName" % NS['ser'])
         info['SchemeIdentifier'] = first_text(relt, "{%s}SchemeIdentifier" % NS['ser'])
         info['SchemeTerritory'] = first_text(relt, "{%s}SchemeTerritory" % NS['ser'])
@@ -210,7 +222,7 @@ class MDServiceListParser(object):
                                     set_nodecountry(e, _country_code)
                                 if bool(_hide_from_discovery) and is_idp(e):
                                     set_entity_attributes(e, {ATTRS['entity-category']:
-                                                              'http://refeds.org/category/hide-from-discovery'})
+                                                                  'http://refeds.org/category/hide-from-discovery'})
                             return _t
 
                         r.add_via(Lambda(_update_entities, **args))
