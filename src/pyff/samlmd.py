@@ -160,6 +160,10 @@ class SAMLMetadataResourceParser(PyffParser):
             resource.t = t
             resource.type = "application/samlmetadata+xml"
 
+            resource.info['Entities'] = []
+            for e in iter_entities(t):
+                resource.info['Entities'].append(e.get('entityID'))
+
         if exception is not None:
             resource.info['Exception'] = exception
 
