@@ -170,6 +170,27 @@ class TestWhooshStore(TestCase):
         e = store.lookup("%s=%s+%s=%s" % (ATTRS['domain'], 'example.com', ATTRS['role'], 'sp'))
         assert (len(e) == 0)
 
+    def test_search_test01(self):
+        store = WhooshStore()
+        store.update(self.test01)
+        entity_id = root(self.test01).get('entityID')
+        for q in ('example', 'Example', 'university'):
+            e = list(store.search(q))
+            assert(len(e) == 1)
+            assert (e[0] is not None)
+            assert (e[0].get('entityID') is not None)
+            assert (e[0].get('entityID') == entity_id)
+
+    def test_search_swamid(self):
+        store = WhooshStore()
+        store.update(self.swamid)
+        for q in ('sunet', 'sunet.se', 'nordunet', 'miun'):
+            e = list(store.search(q))
+            assert (len(e) != 0)
+            assert (e[0] is not None)
+            assert (e[0].get('entityID') is not None)
+
+
 class TestMemoryStore(TestCase):
     def setUp(self):
         self.datadir = resource_filename('metadata', 'test/data')

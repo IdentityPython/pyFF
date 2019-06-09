@@ -8,10 +8,12 @@ from .logs import get_log
 from .constants import config
 from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, \
     avg_domain_distance, ts_now, load_callable, is_text, b2u
-from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_info, \
-    object_id, find_merge_strategy, find_entity, entity_simple_summary, entitiesdescriptor
-from whoosh.fields import Schema, TEXT, ID, KEYWORD, STORED, BOOLEAN
+from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_simple_info, \
+    object_id, find_merge_strategy, find_entity, entity_simple_summary, entitiesdescriptor, discojson
+from whoosh.fields import Schema, TEXT, ID, KEYWORD, NGRAMWORDS, NGRAM
 from whoosh import writing
+from whoosh.query import FuzzyTerm
+from whoosh.qparser import MultifieldParser, QueryParser
 from . import merge_strategies
 import ipaddr
 import operator
@@ -145,12 +147,10 @@ replace old_e in t.
             if new is not None:
                 self.update(new)
 
-    def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None, related=None):
+    def search(self, query=None, path=None, entity_filter=None, related=None):
         """
 :param query: A string to search for.
 :param path: The repository collection (@Name) to search in - None for search in all collections
-:param page:  When using paged search, the page index
-:param page_limit: When using paged search, the maximum entry per page
 :param entity_filter: An optional lookup expression used to filter the entries before search is done.
 :param related: an optional '+'-separated list of related domain names for prioritizing search results
 
@@ -240,14 +240,7 @@ The dict in the list contains three items:
         res.sort(key=operator.itemgetter('title'))
         res.sort(key=operator.itemgetter('ddist'), reverse=True)
 
-        if page is not None:
-            total = len(res)
-            begin = (page - 1) * page_limit
-            end = begin + page_limit
-            more = (end < total)
-            return res[begin:end], more, total
-        else:
-            return res
+        return res
 
 
 class EmptyStore(SAMLStoreBase):
@@ -284,23 +277,21 @@ class EmptyStore(SAMLStoreBase):
 
 
 class WhooshStore(SAMLStoreBase):
+    search_terms = ["service_name", "scopes", "domain", "descr", "service_descr", "keywords"]
 
     def __init__(self):
-        self.schema = Schema(scopes=KEYWORD(),
-                             descr=TEXT(),
-                             service_name=TEXT(),
-                             service_descr=TEXT(),
-                             keywords=KEYWORD())
+        self.schema = Schema(content=NGRAMWORDS(stored=False))
         self.schema.add("object_id", ID(stored=True, unique=True))
         self.schema.add("entity_id", ID(stored=True, unique=True))
         for a in list(ATTRS.keys()):
             self.schema.add(a, KEYWORD())
         self._collections = set()
-        from whoosh.filedb.filestore import RamStorage, FileStorage
-        self.storage = RamStorage()
+        from whoosh.filedb.filestore import FileStorage
+        self.storage = FileStorage('.whoosh')
         self.storage.create()
         self.index = self.storage.create_index(self.schema)
         self.objects = dict()
+        self.dj = dict()
         self.infos = dict()
 
     def dump(self):
@@ -312,52 +303,62 @@ class WhooshStore(SAMLStoreBase):
                 print(result)
 
     def _index_prep(self, info):
+        res = dict()
         if 'entity_attributes' in info:
             for a, v in list(info.pop('entity_attributes').items()):
                 info[a] = v
-        for a, v in list(info.items()):
-            if type(v) is not list and type(v) is not tuple:
-                info[a] = [info.pop(a)]
 
+        content = " ".join(filter(lambda x: x is not None,
+                                  [info.get(x, '') for x in ('service_name', 'title', 'domain', 'keywords', 'scopes')]))
+        res['content'] = content.strip()
+        for a, v in info.items():
+            k = a
             if a in ATTRS_INV:
-                info[ATTRS_INV[a]] = info.pop(a)
+                k = ATTRS_INV[a]
 
-        for a in list(info.keys()):
-            if a not in self.schema.names():
-                del info[a]
+            if k in self.schema.names():
+                if type(v) in (list, tuple):
+                    res[k] = " ".join([vv.lower() for vv in v])
+                elif type(v) in six.string_types:
+                    res[k] = info[a].lower()
 
-        for a, v in list(info.items()):
-            info[a] = [six.text_type(vv) for vv in v]
+        return res
 
-    def _index(self, e, tid=None):
-        info = entity_info(e)
+    def _index(self, e, tid=None, writer=None):
+        info = entity_simple_info(e)
         if tid is not None:
             info['collection_id'] = tid
-        self._index_prep(info)
+        info = self._index_prep(info)
         id = six.text_type(object_id(e))
         # mix in tid here
+        writer.add_document(object_id=id, **info)
         self.infos[id] = info
         self.objects[id] = e
-        ix = self.storage.open_index()
-        with ix.writer() as writer:
-            writer.add_document(object_id=id, **info)
-            writer.mergetype = writing.CLEAR
+        self.dj[id] = discojson(e, load_icon=False)
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):
         relt = root(t)
         assert (relt is not None)
         ne = 0
 
-        if relt.tag == "{%s}EntityDescriptor" % NS['md']:
-            self._index(relt)
-            ne += 1
-        elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
-            if tid is None:
-                tid = relt.get('Name')
-            self._collections.add(tid)
-            for e in iter_entities(t):
-                self._index(e, tid=tid)
-                ne += 1
+        ix = self.storage.open_index()
+        lock = ix.lock('update')
+        try:
+            lock.acquire(True)
+            with ix.writer() as writer:
+                if relt.tag == "{%s}EntityDescriptor" % NS['md']:
+                    self._index(relt, writer=writer)
+                    ne += 1
+                elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
+                    if tid is None:
+                        tid = relt.get('Name')
+                    self._collections.add(tid)
+                    for e in iter_entities(t):
+                        self._index(e, tid=tid, writer=writer)
+                        ne += 1
+                writer.mergetype = writing.OPTIMIZE
+        finally:
+            lock.release()
 
         return ne
 
@@ -394,14 +395,7 @@ class WhooshStore(SAMLStoreBase):
         else:
             return []
 
-    def lookup(self, key, raw=True, field="entity_id"):
-        if key == 'entities' or key is None:
-            if raw:
-                return b2u(list(self.objects.values()))
-            else:
-                return b2u(list(self.infos.values()))
-
-        from whoosh.qparser import QueryParser
+    def _prep_key(self, key):
         # import pdb; pdb.set_trace()
         key = key.strip('+')
         key = key.replace('+', ' AND ')
@@ -412,6 +406,17 @@ class WhooshStore(SAMLStoreBase):
         key = re.sub("{([^}]+)}(\S+)", "\\1:\\2", key)
         key = key.strip()
 
+        return key
+
+    def lookup(self, key, raw=True, field="entity_id"):
+        if key == 'entities' or key is None:
+            if raw:
+                return b2u(list(self.objects.values()))
+            else:
+                return b2u(list(self.infos.values()))
+
+        # import pdb; pdb.set_trace()
+        key = self._prep_key(key)
         qp = QueryParser("object_id", schema=self.schema)
         q = qp.parse(key)
         lst = set()
@@ -424,6 +429,21 @@ class WhooshStore(SAMLStoreBase):
                     lst.add(self.infos[result['object_id']])
 
         return b2u(list(lst))
+
+    def search(self, query=None, path=None, entity_filter=None, related=None):
+        if entity_filter:
+            query = "{!s} AND {!s}".format(query, entity_filter)
+        query = self._prep_key(query)
+        qp = MultifieldParser(['content', 'domain'], schema=self.schema)
+        q = qp.parse(query)
+        lst = set()
+        with self.index.searcher() as searcher:
+            results = searcher.search(q, limit=None)
+            log.debug(results)
+            for result in results:
+                lst.add(result['object_id'])
+
+        return [self.dj[x] for x in lst]
 
 
 class MemoryStore(SAMLStoreBase):
@@ -505,7 +525,7 @@ class MemoryStore(SAMLStoreBase):
         return list(self.md.keys())
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):
-        #log.debug("memory store update: %s: %s" % (repr(t), tid))
+        # log.debug("memory store update: %s: %s" % (repr(t), tid))
         relt = root(t)
         assert (relt is not None)
         ne = 0
@@ -531,7 +551,7 @@ class MemoryStore(SAMLStoreBase):
         return ne
 
     def lookup(self, key):
-        #log.debug("memory store lookup: %s" % key)
+        # log.debug("memory store lookup: %s" % key)
         return self._lookup(key)
 
     def _lookup(self, key):
@@ -550,7 +570,7 @@ class MemoryStore(SAMLStoreBase):
                     hits.intersection_update(other)
 
                 if not hits:
-                    #log.debug("empty intersection")
+                    # log.debug("empty intersection")
                     return []
 
             if hits is not None and hits:
@@ -640,7 +660,7 @@ class RedisStore(SAMLStoreBase):
         return b2u(self.rc.smembers("#collections"))
 
     def update(self, t, tid=None, ts=None, merge_strategy=None):  # TODO: merge ?
-        #log.debug("redis store update: %s: %s" % (t, tid))
+        # log.debug("redis store update: %s: %s" % (t, tid))
         relt = root(t)
         ne = 0
         if ts is None:

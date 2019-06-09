@@ -870,6 +870,19 @@ def object_id(e):
     return e.get('entityID')
 
 
+def entity_simple_info(e, langs=None):
+    d = entity_simple_summary(e)
+    d['service_name'] = entity_service_name(e, langs)
+    d['service_descr'] = entity_service_description(e, langs)
+    d['entity_attributes'] = entity_attribute_dict(e)
+    keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
+    if keywords is not None:
+        lst = [elt.text for elt in keywords]
+        if len(lst) > 0:
+            d['keywords'] = ",".join(lst)
+    return d
+
+
 def entity_info(e, langs=None):
     d = entity_simple_summary(e)
     keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
