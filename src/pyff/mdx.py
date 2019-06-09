@@ -392,30 +392,19 @@ Disallow: /
         return render_template("settings.html")
 
     @cherrypy.expose
-    def search(self, paged=False, query=None, page=0, page_limit=10, entity_filter=None, related=None):
+    def search(self, query=None, entity_filter=None, related=None):
         """
 Search the active set for matching entities.
-        :param paged: page the result when True
         :param query: the string query
-        :param page: the page to return of the paged result
-        :param page_limit: the number of result per page
         :param entity_filter: an optional filter to apply to the active set before searching
         :param related: an optional '+'-separated list of related domain names for prioritizing search results
         :return: a JSON-formatted search result
         """
         cherrypy.response.headers['Content-Type'] = 'application/json'
         cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
-        if paged:
-            res, more, total = self.server.md.store.search(query,
-                                                           page=int(page),
-                                                           page_limit=int(page_limit),
-                                                           entity_filter=entity_filter,
-                                                           related=related)
-            return dumps({'entities': res, 'more': more, 'total': total})
-        else:
-            return dumps(self.server.md.store.search(query,
-                                                     entity_filter=entity_filter,
-                                                     related=related))
+        return dumps(self.server.md.store.search(query,
+                                                 entity_filter=entity_filter,
+                                                 related=related))
 
     @cherrypy.expose
     def index(self):
@@ -582,10 +571,7 @@ class MDServer(object):
                 cherrypy.response.headers['Content-Type'] = 'text/html'
                 return render_template(config.ds_template, **pdict)
             elif ext == 's':
-                paged = bool(kwargs.get('paged', False))
                 query = kwargs.get('query', None)
-                page = kwargs.get('page', 0)
-                page_limit = kwargs.get('page_limit', 10)
                 entity_filter = kwargs.get('entity_filter', None)
                 related = kwargs.get('related', None)
 
@@ -607,20 +593,10 @@ class MDServer(object):
                                 query.append(host_part)
                     log.debug("created query: %s" % ",".join(query))
 
-                if paged:
-                    res, more, total = self.md.store.search(query,
-                                                            path=q,
-                                                            page=int(page),
-                                                            page_limit=int(page_limit),
-                                                            entity_filter=entity_filter,
-                                                            related=related)
-                    # log.debug(dumps({'entities': res, 'more': more, 'total': total}))
-                    return dumps({'entities': res, 'more': more, 'total': total})
-                else:
-                    return dumps(self.md.store.search(query,
-                                                      path=q,
-                                                      entity_filter=entity_filter,
-                                                      related=related))
+                return dumps(self.md.store.search(query,
+                                                  path=q,
+                                                  entity_filter=entity_filter,
+                                                  related=related))
             elif accept.get('text/html'):
                 if not q:
                     if pfx:
