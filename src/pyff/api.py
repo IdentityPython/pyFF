@@ -5,9 +5,10 @@ from .exceptions import ResourceException
 from .constants import config
 import importlib
 from .pipes import plumbing
-from .samlmd import MDRepository, entity_display_name
+from .samlmd import MDRepository, entity_display_name, discojson
 from .store import make_store_instance
 from six.moves.urllib_parse import quote_plus
+from six import b
 from .logs import get_log
 from json import dumps
 from datetime import datetime, timedelta
@@ -278,6 +279,29 @@ def pipeline_handler(request):
     return response
 
 
+def search_handler(request):
+    match = request.params.get('q', request.params.get('query', None))
+    entity_filter = request.params.get('entity_filter', '{http://pyff.io/role}idp')
+    log.debug("match={}".format(match))
+    load_icon = request.params.get('load_icon', False)
+    store = request.registry.md.store
+
+    #import pdb; pdb.set_trace()
+    def _response():
+        yield b('[')
+        in_loop = False
+        for e in store.search(query=match.lower(), entity_filter=entity_filter):
+            if in_loop:
+                yield b(',')
+            yield b(dumps(e))
+            in_loop = True
+        yield b(']')
+
+    response = Response(content_type='application/json')
+    response.app_iter = _response()
+    return response
+
+
 def add_cors_headers_response_callback(event):
     def cors_headers(request, response):
         response.headers.update({
@@ -329,6 +353,9 @@ def mkapp(*args, **kwargs):
 
         ctx.add_route('webfinger', '/.well-known/webfinger', request_method='GET')
         ctx.add_view(webfinger_handler, route_name='webfinger')
+
+        ctx.add_route('search', '/api/search', request_method='GET')
+        ctx.add_view(search_handler, route_name='search')
 
         ctx.add_route('status', '/api/status', request_method='GET')
         ctx.add_view(status_handler, route_name='status')
