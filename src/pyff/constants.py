@@ -7,6 +7,8 @@ import logging
 import getopt
 import sys
 import os
+import six
+
 from . import __version__ as pyff_version
 
 
@@ -42,46 +44,94 @@ PLACEHOLDER_ICON = 'data:image/gif;base64,R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALA
 DIGESTS = ['sha1', 'md5', 'null']
 
 
+def as_string(o):
+    if type(o) not in six.string_types:
+        o = str(o)
+    return o
+
+
+def as_int(o):
+    return int(o)
+
+
+def as_loglevel(o):
+    if type(o) not in six.string_types:
+        if hasattr(logging, str(o)):
+            o = getattr(logging, str(o))
+        raise ValueError("No such loglevel: {}".format(repr(o)))
+    return o
+
+
+def as_list_of_string(o):
+    if type(o) in six.string_types:
+        o = o.split('/[:,]+/')
+    return o
+
+
+def as_bool(o):
+    if type(o) not in ('bool', ):
+        o = bool(o)
+    return o
+
+
+class EnvSetting(object):
+
+    def __init__(self, name, default, typeconv=as_string):
+        self.name = name
+        self.typeconv = typeconv
+        self._fallback = pyconfig.setting('pyff.{}'.format(name), default, allow_default=True)
+
+    def __get__(self, instance, owner):
+        v = os.environ.get("PYFF_{}".format(self.name.upper().replace('.','_')), self._fallback.__get__(instance, owner))
+        if v is not None:
+            v = self.typeconv(v)
+
+        return v
+
+
+def setting(name, default, typeconv=as_string):
+    return EnvSetting(name, default, typeconv=typeconv)
+
+
 class Config(object):
 
-    google_api_key = pyconfig.setting("pyff.google_api_key", None)
-    loglevel = pyconfig.setting("pyff.loglevel", logging.INFO)
-    access_log = pyconfig.setting("pyff.access_log", None)
-    error_log = pyconfig.setting("pyff.error_log", None)
-    logfile = pyconfig.setting("pyff.log", None)
-    port = pyconfig.setting("pyff.port", 8080)
-    bind_address = pyconfig.setting("pyff.bind_address", "127.0.0.1")
-    pid_file = pyconfig.setting("pyff.pid_file", "/var/run/pyff.pid")
-    caching_enabled = pyconfig.setting("pyff.caching.enabled", True)
-    caching_delay = pyconfig.setting("pyff.caching.delay", 300)
-    daemonize = pyconfig.setting("pyff.daemonize", True)
-    autoreload = pyconfig.setting("pyff.autoreload", False)
-    aliases = pyconfig.setting("pyff.aliases", ATTRS)
-    base_dir = pyconfig.setting("pyff.base_dir", None)
-    proxy = pyconfig.setting("pyff.proxy", False)
-    allow_shutdown = pyconfig.setting("pyff.allow_shutdown", False)
-    modules = pyconfig.setting("pyff.modules", [])
-    cache_ttl = pyconfig.setting("pyff.cache.ttl", 300)
-    default_cache_duration = pyconfig.setting("pyff.default.cache_duration", "PT1H")
-    respect_cache_duration = pyconfig.setting("pyff.respect_cache_duration", True)
-    info_buffer_size = pyconfig.setting("pyff.info_buffer_size", 10)
-    worker_pool_size = pyconfig.setting("pyff.worker_pool_size", 10)
-    store_class = pyconfig.setting("pyff.store.class", "pyff.store:MemoryStore")
-    update_frequency = pyconfig.setting("pyff.update_frequency", 600)
-    cache_frequency = pyconfig.setting("pyff.cache_frequency", 200)
-    request_timeout = pyconfig.setting("pyff.request_timeout", 10)
-    request_cache_time = pyconfig.setting("pyff.request_cache_time", 300)
-    request_cache_backend = pyconfig.setting("pyff.request_cache_backend", None)
-    request_override_encoding = pyconfig.setting("pyff.request_override_encoding",
-                                                 "utf8")  # set to non to enable chardet guessing
-    devel_memory_profile = pyconfig.setting("pyff.devel_memory_profile", False)
-    devel_write_xml_to_file = pyconfig.setting("pyff.devel_write_xml_to_file", False)
-    ds_template = pyconfig.setting("pyff.ds_template", "ds.html")
-    redis_host = pyconfig.setting("pyff.redis_host", "localhost")
-    redis_port = pyconfig.setting("pyff.redis_port", 6379)
-    rq_queue = pyconfig.setting("pyff.rq_queue", "pyff")
-    cache_chunks = pyconfig.setting("pyff.cache_chunks", 10)
-    pipeline = pyconfig.setting("pyff.pipeline", os.environ.get("PYFF_PIPELINE"))
+    google_api_key = setting("google_api_key", None)
+    loglevel = setting("loglevel", logging.INFO, as_loglevel)
+    access_log = setting("access_log", None)
+    error_log = setting("error_log", None)
+    logfile = setting("log", None)
+    port = setting("port", 8080, as_int)
+    bind_address = setting("bind_address", "127.0.0.1")
+    pid_file = setting("pid_file", "/var/run/pyff.pid")
+    caching_enabled = setting("caching.enabled", True)
+    caching_delay = setting("caching.delay", 300, as_int)
+    daemonize = setting("daemonize", True)
+    autoreload = setting("autoreload", False, as_bool)
+    aliases = setting("aliases", ATTRS)
+    base_dir = setting("base_dir", None)
+    proxy = setting("proxy", False, as_bool)
+    allow_shutdown = setting("allow_shutdown", False, as_bool)
+    modules = setting("modules", [], as_list_of_string)
+    cache_ttl = setting("cache.ttl", 300, as_int)
+    default_cache_duration = setting("default_cache_duration", "PT1H")
+    respect_cache_duration = setting("respect_cache_duration", True, as_bool)
+    info_buffer_size = setting("info_buffer_size", 10, as_int)
+    worker_pool_size = setting("worker_pool_size", 10, as_int)
+    store_class = setting("store.class", "pyff.store:MemoryStore")
+    update_frequency = setting("update_frequency", 600, as_int)
+    cache_frequency = setting("cache_frequency", 200, as_int)
+    request_timeout = setting("request_timeout", 10, as_int)
+    request_cache_time = setting("request_cache_time", 300, as_int)
+    request_cache_backend = setting("request_cache_backend", None)
+    request_override_encoding = setting("request_override_encoding", "utf8")  # set to non to enable chardet guessing
+    devel_memory_profile = setting("devel_memory_profile", False, as_bool)
+    devel_write_xml_to_file = setting("devel_write_xml_to_file", False, as_bool)
+    ds_template = setting("ds_template", "ds.html")
+    redis_host = setting("redis_host", "localhost")
+    redis_port = setting("redis_port", 6379, as_int)
+    rq_queue = setting("rq_queue", "pyff")
+    cache_chunks = setting("cache_chunks", 10, as_int)
+    pipeline = setting("pipeline", None)
 
 
 config = Config()
