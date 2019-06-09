@@ -8,6 +8,7 @@ import getopt
 import sys
 import os
 import six
+import json
 
 from . import __version__ as pyff_version
 
@@ -55,7 +56,7 @@ def as_int(o):
 
 
 def as_loglevel(o):
-    if type(o) not in six.string_types:
+    if type(o) in six.string_types:
         if hasattr(logging, str(o)):
             o = getattr(logging, str(o))
         raise ValueError("No such loglevel: {}".format(repr(o)))
@@ -65,6 +66,12 @@ def as_loglevel(o):
 def as_list_of_string(o):
     if type(o) in six.string_types:
         o = o.split('/[:,]+/')
+    return o
+
+
+def as_dict_of_string(o):
+    if type(o) in six.string_types:
+        o = json.loads(o)
     return o
 
 
@@ -107,7 +114,7 @@ class Config(object):
     caching_delay = setting("caching.delay", 300, as_int)
     daemonize = setting("daemonize", True)
     autoreload = setting("autoreload", False, as_bool)
-    aliases = setting("aliases", ATTRS)
+    aliases = setting("aliases", ATTRS, as_dict_of_string)
     base_dir = setting("base_dir", None)
     proxy = setting("proxy", False, as_bool)
     allow_shutdown = setting("allow_shutdown", False, as_bool)
