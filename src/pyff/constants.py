@@ -120,6 +120,7 @@ class Config(object):
     allow_shutdown = setting("allow_shutdown", False, as_bool)
     modules = setting("modules", [], as_list_of_string)
     cache_ttl = setting("cache.ttl", 300, as_int)
+    cache_size = setting("cache.size", 3000, as_int)
     default_cache_duration = setting("default_cache_duration", "PT1H")
     respect_cache_duration = setting("respect_cache_duration", True, as_bool)
     info_buffer_size = setting("info_buffer_size", 10, as_int)
