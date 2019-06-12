@@ -41,7 +41,8 @@ install_requires = [
     'pyramid',
     'accept_types',
     'apscheduler',
-    'redis-collections'
+    'redis-collections',
+    'cachetools'
 ]
 
 python_implementation_str = python_implementation()

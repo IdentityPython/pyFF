@@ -28,3 +28,4 @@ wsgi-intercept
 gunicorn
 apscheduler
 redis-collections
+cachetools
