@@ -14,13 +14,12 @@ import six
 from .parse import parse_resource
 from itertools import chain
 from .exceptions import ResourceException
-from .utils import url_get, non_blocking_lock
+from .utils import url_get, non_blocking_lock, hex_digest
 from copy import deepcopy
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED
 from apscheduler.schedulers.base import STATE_RUNNING
 from threading import Lock
-from singleton_decorator import singleton
 
 if six.PY2:
     from UserDict import DictMixin as ResourceManagerBase
@@ -89,6 +88,7 @@ class Fetcher(object):
         log.debug("waiting for {} jobs to finish...".format(self.count))
 
         if self.is_done():
+            self.store.refresh()
             log.debug("this fetcher is done!")
             if self.stop_when_done:
                 log.debug("shutting down...")
@@ -261,6 +261,9 @@ class Resource(object):
         else:
             return self._infos[-1]
 
+    def _etag(self, r):
+        return r.headers['ETag'] or hex_digest(r.text, 'sha256')
+
     def fetch(self, store=None):
         info = dict()
         info['Resource'] = self.url
@@ -307,6 +310,6 @@ class Resource(object):
                 log.error(error)
 
             if store is not None:
-                store.update(self.t, tid=self.name)
+                store.update(self.t, tid=self.name, etag=self._etag(r))
 
         return self.children

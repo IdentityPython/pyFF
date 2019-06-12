@@ -40,7 +40,8 @@ install_requires = [
     'whoosh',
     'pyramid',
     'accept_types',
-    'apscheduler'
+    'apscheduler',
+    'redis-collections'
 ]
 
 python_implementation_str = python_implementation()

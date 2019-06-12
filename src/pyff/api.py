@@ -12,13 +12,12 @@ from six import b
 from .logs import get_log
 from json import dumps
 from datetime import datetime, timedelta
-from .utils import dumptree, duration2timedelta, hash_id, json_serializer, b2u
+from .utils import dumptree, duration2timedelta, hash_id, json_serializer, b2u, make_default_scheduler
 import pkg_resources
 from accept_types import AcceptableType
 from lxml import etree
 from pyramid.events import NewRequest
 import requests
-from apscheduler.schedulers.background import BackgroundScheduler
 
 log = get_log(__name__)
 
@@ -315,7 +314,24 @@ def add_cors_headers_response_callback(event):
     event.request.add_response_callback(cors_headers)
 
 
+def launch_memory_usage_server(port = 9002):
+    import cherrypy
+    import dowser
+
+    cherrypy.tree.mount(dowser.Root())
+    cherrypy.config.update({
+        'environment': 'embedded',
+        'server.socket_port': port
+    })
+
+    cherrypy.engine.start()
+
+
 def mkapp(*args, **kwargs):
+
+    if config.devel_memory_profile:
+        launch_memory_usage_server()
+
     with Configurator(debug_logger=log) as ctx:
         ctx.add_subscriber(add_cors_headers_response_callback, NewRequest)
 
@@ -334,19 +350,13 @@ def mkapp(*args, **kwargs):
         if not len(pipeline) > 0:
             pipeline = [config.pipeline]
 
-        ctx.registry.scheduler = BackgroundScheduler({
-            'apscheduler.executors.default': {
-                'class': 'apscheduler.executors.pool:ThreadPoolExecutor',
-                'max_workers': '20'
-            },
-            'apscheduler.timezone': 'UTC',
-        })
-
+        ctx.registry.scheduler = make_default_scheduler()
         ctx.registry.pipeline = pipeline
         ctx.registry.plumbings = [plumbing(v) for v in pipeline]
         ctx.registry.aliases = config.aliases
         ctx.registry.md = MDRepository()
-        ctx.registry.md.store = make_store_instance()
+        ctx.registry.md.store = make_store_instance(scheduler=ctx.registry.scheduler)
+        log.debug(ctx.registry.md.store)
 
         ctx.add_route('robots', '/robots.txt')
         ctx.add_view(robots_handler, route_name='robots')
@@ -374,13 +384,14 @@ def mkapp(*args, **kwargs):
 
         start = datetime.utcnow()+timedelta(seconds=1)
         log.debug(start)
-        ctx.registry.scheduler.add_job(call,
-                                       'interval',
-                                       id="call/update",
-                                       args=['update'],
-                                       start_date=start,
-                                       seconds=config.update_frequency,
-                                       max_instances=1)
+        if config.update_frequency > 0:
+            ctx.registry.scheduler.add_job(call,
+                                           'interval',
+                                           id="call/update",
+                                           args=['update'],
+                                           start_date=start,
+                                           seconds=config.update_frequency,
+                                           max_instances=1)
 
         ctx.registry.scheduler.start()
         return ctx.make_wsgi_app()

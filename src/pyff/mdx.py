@@ -290,13 +290,6 @@ class MDRoot(object):
 
     discovery = SHIBDiscovery()
 
-    if config.devel_memory_profile:
-        try:  # pragma: nocover
-            import dowser
-            memory = dowser.Root()
-        except ImportError:
-            memory = NotImplementedFunction('Memory profiling needs dowser')
-
     _well_known = WellKnown()
     static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
 

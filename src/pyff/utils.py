@@ -43,6 +43,10 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 import contextlib
 import threading
+from cachetools import LRUCache
+from _collections_abc import MutableMapping
+from apscheduler.schedulers.background import BackgroundScheduler
+
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -470,7 +474,7 @@ def hex_digest(data, hn='sha1'):
 
 
 def parse_xml(io, base_url=None):
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False,collect_ids=False))
+    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False, collect_ids=False))
 
 
 def has_tag(t, tag):
@@ -703,7 +707,7 @@ def json_serializer(o):
         return dict(o.items())
     if isinstance(o, BaseException):
         return str(o)
-    if hasattr(o,'to_json') and hasattr(o.to_json,'__call__'):
+    if hasattr(o, 'to_json') and hasattr(o.to_json, '__call__'):
         return o.to_json()
 
     raise ValueError("Object {} of type {} is not JSON-serializable via this function".format(repr(o), type(o)))
@@ -731,3 +735,43 @@ def non_blocking_lock(lock=threading.Lock(), exception_class=ResourceException, 
         yield lock
     finally:
         lock.release()
+
+
+def make_default_scheduler():
+    return BackgroundScheduler({
+        'apscheduler.executors.default': {
+            'class': 'apscheduler.executors.pool:ThreadPoolExecutor',
+            'max_workers': str(config.worker_pool_size)
+        },
+        'apscheduler.timezone': 'UTC',
+    })
+
+
+class LRUProxyDict(MutableMapping):
+
+    def __init__(self, proxy, *args, **kwargs):
+        self._proxy = proxy
+        self._cache = LRUCache(**kwargs)
+
+    def __getitem__(self, item):
+        v = self._cache.get(item, None)
+        if v is not None:
+            return v
+        v = self._proxy.get(item, None)
+        if v is not None:
+            self._cache[item] = v
+        return v
+
+    def __setitem__(self, key, value):
+        self._proxy[key] = value
+        self._cache[key] = value
+
+    def __delitem__(self, key):
+        del self._proxy[key]
+        del self._cache[key]
+
+    def __iter__(self):
+        return self._proxy.__iter__()
+
+    def __len__(self):
+        return len(self._proxy)

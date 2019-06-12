@@ -27,3 +27,4 @@ six
 wsgi-intercept
 gunicorn
 apscheduler
+redis-collections

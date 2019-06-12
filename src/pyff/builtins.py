@@ -659,7 +659,7 @@ alias invisible for anything except the corresponding mime type.
 
     if req.plumbing.id != name:
         log.debug("storing synthentic collection {}".format(name))
-        n = req.store.update(ot, name)
+        req.store.update(ot, name)
 
     return ot
 
@@ -701,7 +701,7 @@ def _filter(req, *opts):
 
     ot = entitiesdescriptor(args, name, lookup_fn=lambda member: find_in_document(req.t, member), copy=False)
     if alias:
-        n = req.store.update(ot, name)
+        req.store.update(ot, name)
 
     req.t = None
 
