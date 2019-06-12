@@ -898,7 +898,6 @@ def entity_info(e, langs=None):
     d['privacy_statement_url'] = privacy_statement_url(e, langs)
     d['geo'] = entity_geoloc(e)
     d['orgurl'] = entity_orgurl(e, langs)
-    d['scopes'] = entity_scopes(e)
     d['service_name'] = entity_service_name(e, langs)
     d['service_descr'] = entity_service_description(e, langs)
     d['requested_attributes'] = entity_requested_attributes(e, langs)

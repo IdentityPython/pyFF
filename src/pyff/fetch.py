@@ -262,7 +262,7 @@ class Resource(object):
             return self._infos[-1]
 
     def _etag(self, r):
-        return r.headers['ETag'] or hex_digest(r.text, 'sha256')
+        return r.headers.get('ETag', None) or hex_digest(r.text, 'sha256')
 
     def fetch(self, store=None):
         info = dict()

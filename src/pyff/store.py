@@ -55,7 +55,7 @@ class SAMLStoreBase(object):
     def collections(self):
         raise NotImplementedError()
 
-    def update(self, t, tid=None):
+    def update(self, t, tid=None, etag=None, lazy=True):
         raise NotImplementedError()
 
     def reset(self):
@@ -262,7 +262,7 @@ class EmptyStore(SAMLStoreBase):
     def __init__(self, *args, **kwargs):
         pass
 
-    def update(self, **kwargs):
+    def update(self, *args, **kwargs):
         return 0
 
     def size(self, **kwargs):
@@ -380,21 +380,22 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         self.schema.add("entity_id", ID(stored=True, unique=True))
         for a in list(ATTRS.keys()):
             self.schema.add(a, KEYWORD())
-        self._redis = StrictRedis(host=config.redis_host, port=config.redis_port)
+        self._redis = kwargs.pop('redis', None)
+        if self._redis is None:
+            self._redis = StrictRedis(host=config.redis_host, port=config.redis_port)
         now = datetime.now()
         self._last_index_time = now
         self._last_modified = now
+        self.objects = self.xml_dict('objects')
+        self.parts = self.json_dict('parts')
         self.storage = FileStorage(os.path.join(self._dir, self._name))
         try:
             self.index = self.storage.open_index(schema=self.schema)
         except BaseException as ex:
-            log.error(ex)
+            log.warn(ex)
             self.storage.create()
             self.index = self.storage.create_index(self.schema)
             self._reindex()
-
-        self.objects = self.xml_dict('objects')
-        self.parts = self.json_dict('parts')
 
     def refresh(self):
         if self._last_modified > self._last_index_time:
@@ -450,6 +451,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
                 print(result)
 
     def _index_prep(self, info):
+        log.debug(info)
         res = dict()
         if 'entity_attributes' in info:
             for a, v in list(info.pop('entity_attributes').items()):
@@ -469,9 +471,10 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
                 elif type(v) in six.string_types:
                     res[k] = info[a].lower()
 
+        log.debug(res)
         return res
 
-    def update(self, t, tid=None, etag=None):
+    def update(self, t, tid=None, etag=None, lazy=True):
         relt = root(t)
         assert (relt is not None)
 
@@ -497,13 +500,18 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
                 self.parts[tid] = {'id': tid, 'count': len(items), 'etag': etag, 'items': list(items)}
                 self._last_modified = datetime.now()
 
+        if not lazy:
+            self._reindex()
+
     @ttl_cache(ttl=config.cache_ttl, maxsize=config.cache_size)
     def collections(self):
-        for ref in self.parts.keys():
-            yield ref
+        return [b2u(ref) for ref in self.parts.keys()]
 
     def reset(self):
-        self.__init__(directory=self._dir, clear=True, scheduler=self._scheduler, name=self._name)
+        for ref in self.parts.keys():
+            del self.parts[b2u(ref)]
+        for ref in self.objects.keys():
+            del self.objects[b2u(ref)]
 
     def size(self, a=None, v=None):
         if a is None:
@@ -596,7 +604,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
 
 
 class MemoryStore(SAMLStoreBase):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.md = dict()
         self.index = dict()
         self.entities = dict()
@@ -673,7 +681,7 @@ class MemoryStore(SAMLStoreBase):
     def collections(self):
         return list(self.md.keys())
 
-    def update(self, t, tid=None, etag=None):
+    def update(self, t, tid=None, etag=None, lazy=True):
         relt = root(t)
         assert (relt is not None)
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:

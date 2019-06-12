@@ -1,12 +1,12 @@
 from unittest import TestCase
 import os
-from mock import patch
-from mockredis import mock_strict_redis_client
+import fakeredis
 from pyff.constants import ATTRS
 from pyff.store import MemoryStore, SAMLStoreBase, entity_attribute_dict, RedisWhooshStore
 from pyff.utils import resource_filename, parse_xml, root
 import tempfile
 import shutil
+
 
 class TestRedisWhooshStore(TestCase):
 
@@ -21,33 +21,29 @@ class TestRedisWhooshStore(TestCase):
     def tearDown(self):
         shutil.rmtree(self.dir)
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_create_store(self):
-        store = RedisWhooshStore(directory=self.dir, clear=True)
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
         assert (store is not None)
         assert (store.size() == 0)
         assert (len(store.collections()) == 0)
         assert (str(store))
         assert (not store.attributes())
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_parse_test01(self):
         assert (self.test01_source is not None)
         assert (os.path.exists(self.test01_source))
         assert (self.test01 is not None)
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_import_reset_test01(self):
-        store = RedisWhooshStore(directory=self.dir, clear=True)
-        store.update(self.test01)
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.test01, etag="test01")
         assert (store.size() > 0)
         store.reset()
         assert (store.size() == 0)
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_store_attributes_test01(self):
-        store = RedisWhooshStore(directory=self.dir, clear=True)
-        store.update(self.test01)
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.test01, etag='test01', lazy=False)
         print(store.attributes())
         assert (ATTRS['domain'] in store.attributes())
         assert (ATTRS['role'] in store.attributes())
@@ -56,17 +52,15 @@ class TestRedisWhooshStore(TestCase):
         assert ('example.net' in store.attribute(ATTRS['domain']))
         assert ('foo.com' not in store.attribute(ATTRS['domain']))
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_entity_dict_test01(self):
         d = entity_attribute_dict(root(self.test01))
         assert ('example.com' in d[ATTRS['domain']])
         assert ('example.net' in d[ATTRS['domain']])
         assert ('foo.com' not in d[ATTRS['domain']])
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_lookup_test01(self):
-        store = RedisWhooshStore(directory=self.dir, clear=True)
-        store.update(self.test01)
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.test01, etag='test01', lazy=False)
         entity_id = root(self.test01).get('entityID')
         e = store.lookup(entity_id)
         assert (len(e) == 1)
@@ -74,10 +68,9 @@ class TestRedisWhooshStore(TestCase):
         assert (e[0].get('entityID') is not None)
         assert (e[0].get('entityID') == entity_id)
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_lookup_intersect_test01(self):
-        store = RedisWhooshStore(directory=self.dir, clear=True)
-        store.update(self.test01)
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.test01, etag='test01', lazy=False)
         entity_id = root(self.test01).get('entityID')
         e = store.lookup("%s=%s+%s=%s" % (ATTRS['domain'], 'example.com', ATTRS['role'], 'idp'))
         assert (len(e) == 1)
@@ -85,18 +78,16 @@ class TestRedisWhooshStore(TestCase):
         assert (e[0].get('entityID') is not None)
         assert (e[0].get('entityID') == entity_id)
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_lookup_intersect_empty_test01(self):
-        store = RedisWhooshStore(directory=self.dir, clear=True)
-        store.update(self.test01)
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.test01, etag='test01', lazy=False)
         entity_id = root(self.test01).get('entityID')
         e = store.lookup("%s=%s+%s=%s" % (ATTRS['domain'], 'example.com', ATTRS['role'], 'sp'))
         assert (len(e) == 0)
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_search_test01(self):
-        store = RedisWhooshStore(directory=self.dir, clear=True)
-        store.update(self.test01)
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.test01, etag='test01', lazy=False)
         entity_id = root(self.test01).get('entityID')
         for q in ('example', 'Example', 'university'):
             e = list(store.search(q))
@@ -105,10 +96,9 @@ class TestRedisWhooshStore(TestCase):
             assert (e[0].get('entityID') is not None)
             assert (e[0].get('entityID') == entity_id)
 
-    @patch('redis.StrictRedis', mock_strict_redis_client)
     def test_search_swamid(self):
-        store = RedisWhooshStore(directory=self.dir, clear=True)
-        store.update(self.swamid)
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.swamid, etag='test01', lazy=False)
         for q in ('sunet', 'sunet.se', 'nordunet', 'miun'):
             e = list(store.search(q))
             assert (len(e) != 0)
