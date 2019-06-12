@@ -5,16 +5,30 @@ pyFF has two command-line tools: pyff and pyffd.
 
 .. code-block:: bash
 
-  # pyff --loglevel=INFO pipeline.fd [pipeline2.fd]
-  # pyffd --loglevel=INFO pipeline.fd [pipeline2.fd]
+  # pyff --loglevel=INFO [pipeline.fd]+
+  # pyffd --loglevel=INFO [pipeline.fd]+
 
-pyff operates by setting up and running "pipelines". Each pipeline starts with an empty "active repository" - an
+
+pyFF operates by setting up and running "pipelines". Each pipeline starts with an empty "active repository" - an
 in-memory representation of a set of SAML metadata documents - and an empty "working document" - a subset of the
 EntityDescriptor elements in the active repository.
 
 The pyffd tool starts a metadata server with an HTTP-based interface for viewing and downloading metadata. The
 HTTP interface can produce *XML*, *HTML* and *JSON* output (as well as other formats with a bit of configuration) and
 implements the MDX specification for online SAML metadata query.
+
+To start the pyFF daemon
+
+.. code-block:: bash
+
+  # CACHE=-C
+  # PYFF_LOGLEVEL=DEBUG
+  # PYFF_UPDATE_FREQUENCY=28800
+  # PYFF_HOST=0.0.0.0
+  # PYFF_PORT=8080
+  # PYFF_PIDFILE=/tmp/pyff.pid
+
+  # pyffd -f ${CACHE} --loglevel=${PYFF_LOGLEVEL} --frequency=${PYFF_UPDATE_FREQUENCY} --host=${PYFF_HOST} --port=${PYFF_PORT} -p ${PYFF_PIDFILE} --proxy test_mdx.yaml
 
 Pipeline files are *yaml* documents representing a list of processing steps:
 

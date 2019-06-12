@@ -1,0 +1,24 @@
+- when update:
+    - load:
+       - https://metadata.federation.renater.fr/renater/main/main-all-renater-metadata.xmll
+       - https://metadata.federation.renater.fr/renater/main/main-all-edugain-metadata.xml
+    - break
+- when request:
+    - select
+    - pipe:
+        - when accept application/xml:
+             - xslt:
+                 stylesheet: tidy.xsl
+             - first
+             - finalize:
+                cacheDuration: PT20M
+                validUntil: P7D
+             - sign:
+                 key: sign.key
+                 cert: sign.crt
+             - emit application/xml
+             - break
+        - when accept application/json:
+             - discojson
+             - emit application/json:
+- break

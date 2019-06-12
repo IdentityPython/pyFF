@@ -1,6 +1,6 @@
-- local: /tmp/edugain
+- load:
+    - /tmp/edugain
 - select
-- select: "/tmp/edugain!md:EntityDescriptor[md:IDPSSODescriptor]"
 - publish:
      output: /tmp/edugain-idps.xml
 - stats
