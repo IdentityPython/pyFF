@@ -1,11 +1,9 @@
 import logging
 from six import StringIO
-from time import sleep
-from unittest import TestCase, skip
-
+from unittest import TestCase
 from mock import patch
 
-from pyff.decorators import deprecated, cached
+from pyff.decorators import deprecated
 
 
 class Logger():
@@ -41,68 +39,3 @@ class TestDeprecated(TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_stdout:
             old_stuff()
             assert('Call to deprecated function' in mock_stdout.getvalue())
-
-
-class TestCached(TestCase):
-
-    def setUp(self):
-        self.counter = 0
-
-    @cached(ttl=2)
-    def next_counter(self, info="nothing"):
-        self.counter += 1
-        self.info = info
-        return self.counter
-
-    def test_cached_simple(self):
-        assert (self.counter == 0)
-        assert (self.next_counter() == 1)
-        assert (self.next_counter() == 1)
-        assert (self.next_counter(info="another") == 2)
-        assert (self.counter == 2)
-
-    def test_cached_clear(self):
-        assert (self.counter == 0)
-        assert (self.next_counter() == 1)
-        self.next_counter.clear()
-        assert (self.counter == 1)
-        assert (self.next_counter() == 2)
-
-    def test_cached_timeout(self):
-        assert (self.counter == 0)
-        assert (self.next_counter() == 1)
-        print("sleeping for 5 seconds...")
-        sleep(5)
-        assert (self.counter == 1)
-        assert (self.next_counter() == 2)
-
-
-class TestCachedTyped(TestCase):
-
-    def setUp(self):
-        self.counter = 0
-
-    @cached(ttl=3, typed=True)  # long enough time for the test to run ... we hope
-    def next_counter(self, info="nothing"):
-        self.counter += 1
-        self.info = info
-        return self.counter
-
-    @skip("fix later")
-    def test_cached_simple(self):
-        assert (self.counter == 0)
-        assert (self.next_counter() == 1)
-        assert (self.next_counter() == 1)
-        assert (self.next_counter.hits() == 1)
-        assert (self.next_counter.misses() == 1)
-        assert (self.next_counter(info="another") == 2)
-        assert (self.counter == 2)
-        self.next_counter.invalidate(info="another")
-        assert (self.next_counter(info="another") == 3)
-
-    def test_cached_clear(self):
-        assert (self.counter == 0)
-        assert (self.next_counter() == 1)
-        self.next_counter.clear()
-        assert (self.counter == 1)
-        assert (self.next_counter() == 2)

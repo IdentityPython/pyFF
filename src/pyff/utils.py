@@ -231,7 +231,6 @@ def check_signature(t, key, only_one_signature=False):
     return t
 
 
-# @cached(hash_key=lambda *args, **kwargs: hash(args[0]))
 def validate_document(t):
     schema().assertValid(t)
 
