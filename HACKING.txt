@@ -1,13 +1,10 @@
 Development setup
 =================
 
-To create a buildout,
+1. Create a virtualenv and activate it
+2. ./setup.py develop
 
-  $ python bootstrap.py
-  $ bin/buildout
-
-Building the docs requires Sphinx-PyPI-upload
-Testing pkcs11 requires PyKCS11
+Optionally do the same for pyXMLSecurity if you plan to do work that involves crypto functions
 
 Release HOWTO
 =============
