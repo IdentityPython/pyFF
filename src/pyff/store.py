@@ -451,7 +451,6 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
                 print(result)
 
     def _index_prep(self, info):
-        log.debug(info)
         res = dict()
         if 'entity_attributes' in info:
             for a, v in list(info.pop('entity_attributes').items()):
@@ -470,8 +469,6 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
                     res[k] = " ".join([vv.lower() for vv in v])
                 elif type(v) in six.string_types:
                     res[k] = info[a].lower()
-
-        log.debug(res)
         return res
 
     def update(self, t, tid=None, etag=None, lazy=True):
