@@ -82,7 +82,7 @@ setup(name='pyFF',
       zip_safe=False,
       install_requires=install_requires,
       entry_points={
-          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main', 'pyffq=pyff.mdq:main'],
+          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main'],
           'paste.app_factory': [
              'pyffapp=pyff.wsgi:app_factory'
           ],
