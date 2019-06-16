@@ -16,6 +16,7 @@ from .constants import config, parse_options
 from xmldiff.main import diff_trees
 from xmldiff.formatting import DiffFormatter
 
+
 def difftool():
     """
     diff two saml metadata sources
