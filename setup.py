@@ -9,7 +9,7 @@ from os.path import abspath, dirname, join
 from setuptools import find_packages
 
 __author__ = 'Leif Johansson'
-__version__ = '1.0.1dev0'
+__version__ = '1.0.1'
 
 here = abspath(dirname(__file__))
 README = open(join(here, 'README.rst')).read()
@@ -43,7 +43,8 @@ install_requires = [
     'apscheduler',
     'redis-collections',
     'cachetools',
-    'xmldiff'
+    'xmldiff',
+    'gunicorn'
 ]
 
 python_implementation_str = python_implementation()
