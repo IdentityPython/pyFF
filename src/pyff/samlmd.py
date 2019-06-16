@@ -1194,3 +1194,9 @@ def set_nodecountry(e, country_code):
     if sp is not None and len(sp) > 0:
         ext = entity_extensions(sp)
         _set_nodecountry_in_ext(ext, country_code)
+
+
+def diff(t1, t2):
+    s1 = set([e.get('entityID') for e in iter_entities(root(t1))])
+    s2 = set([e.get('entityID') for e in iter_entities(root(t2))])
+    return s1.difference(s2)

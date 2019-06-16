@@ -194,7 +194,7 @@ class Resource(object):
         self.opts.setdefault('cleanup', [])
         self.opts.setdefault('via', [])
         self.opts.setdefault('fail_on_error', False)
-        self.opts.setdefault('as', None)
+        #self.opts.setdefault('as', None)
         self.opts.setdefault('verify', None)
         self.opts.setdefault('filter_invalid', True)
         self.opts.setdefault('validate', True)

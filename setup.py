@@ -42,7 +42,8 @@ install_requires = [
     'accept_types',
     'apscheduler',
     'redis-collections',
-    'cachetools'
+    'cachetools',
+    'xmldiff'
 ]
 
 python_implementation_str = python_implementation()
@@ -82,7 +83,7 @@ setup(name='pyFF',
       zip_safe=False,
       install_requires=install_requires,
       entry_points={
-          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main'],
+          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main', 'samldiff=pyff.tools:difftool'],
           'paste.app_factory': [
              'pyffapp=pyff.wsgi:app_factory'
           ],

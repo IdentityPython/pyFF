@@ -103,7 +103,7 @@ def setting(name, default, typeconv=as_string):
 class Config(object):
 
     google_api_key = setting("google_api_key", None)
-    loglevel = setting("loglevel", logging.INFO, as_loglevel)
+    loglevel = setting("loglevel", logging.WARN, as_loglevel)
     access_log = setting("access_log", None)
     error_log = setting("error_log", None)
     logfile = setting("log", None)
@@ -126,6 +126,7 @@ class Config(object):
     info_buffer_size = setting("info_buffer_size", 10, as_int)
     worker_pool_size = setting("worker_pool_size", 10, as_int)
     store_class = setting("store.class", "pyff.store:MemoryStore")
+    store_name = setting("store.name", "pyff")
     update_frequency = setting("update_frequency", 600, as_int)
     cache_frequency = setting("cache_frequency", 200, as_int)
     request_timeout = setting("request_timeout", 10, as_int)

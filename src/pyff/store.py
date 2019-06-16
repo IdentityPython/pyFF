@@ -367,7 +367,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
     def __init__(self, *args, **kwargs):
         self._dir = kwargs.pop('directory', '.whoosh')
         clear = bool(kwargs.pop('clear', False))
-        self._name = kwargs.pop('name', 'pyff')
+        self._name = kwargs.pop('name', config.store_name)
         self._scheduler = kwargs.pop('scheduler', None)
         if self._scheduler is None:
             self._scheduler = make_default_scheduler()
@@ -541,6 +541,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         # import pdb; pdb.set_trace()
         key = key.strip('+')
         key = key.replace('+', ' AND ')
+        key = key.replace('-', ' AND NOT ')
         for uri, a in list(ATTRS_INV.items()):
             key = key.replace(uri, a)
         key = " {!s} ".format(key)
