@@ -117,6 +117,7 @@ class Config(object):
     aliases = setting("aliases", ATTRS, as_dict_of_string)
     base_dir = setting("base_dir", None)
     proxy = setting("proxy", False, as_bool)
+    public_url = setting("public_url", None, as_string)
     allow_shutdown = setting("allow_shutdown", False, as_bool)
     modules = setting("modules", [], as_list_of_string)
     cache_ttl = setting("cache.ttl", 300, as_int)
@@ -141,6 +142,12 @@ class Config(object):
     rq_queue = setting("rq_queue", "pyff")
     cache_chunks = setting("cache_chunks", 10, as_int)
     pipeline = setting("pipeline", None)
+
+    @property
+    def base_url(self):
+        if self.public_url is not None:
+            return self.public_url
+        return "http://{}{}".format(config.bind_address, "" if config.port == 80 else ":{}".format(config.port))
 
 
 config = Config()
