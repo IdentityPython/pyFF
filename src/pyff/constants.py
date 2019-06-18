@@ -145,7 +145,7 @@ class Config(object):
 
     @property
     def base_url(self):
-        if self.public_url is not None:
+        if self.public_url:
             return self.public_url
         return "http://{}{}".format(config.bind_address, "" if config.port == 80 else ":{}".format(config.port))
 

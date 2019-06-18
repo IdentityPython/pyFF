@@ -5,7 +5,7 @@ from .exceptions import ResourceException
 from .constants import config
 import importlib
 from .pipes import plumbing
-from .samlmd import MDRepository, entity_display_name, discojson
+from .samlmd import MDRepository, entity_display_name
 from .store import make_store_instance
 from six.moves.urllib_parse import quote_plus
 from six import b
