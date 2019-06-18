@@ -102,3 +102,9 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * New redis+whoos-based backend
 * Standalone API with WSGI-support based on pyramid
 * apscheduler used for backround tasks including resource fetch
+
+1.0.1
+---
+* Release date: tis 18 jun 2019 12:13:41 CEST
+* A samldiff tool
+* Minor fixes to align requirements for docker package
