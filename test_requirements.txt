@@ -3,6 +3,6 @@ pbr
 nose>=1.0
 funcsigs
 mock
-mockredispy
 testfixtures
 coverage
+fakeredis

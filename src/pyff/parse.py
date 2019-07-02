@@ -19,10 +19,18 @@ class ParserException(Exception):
     def raise_wraped(self):
         raise self._wraped
 
+class PyffParser(object):
 
-class NoParser(object):
+    def to_json(self):
+        return str(self);
+
+
+class NoParser(PyffParser):
     def __init__(self):
         pass
+
+    def __str__(self):
+        return "Not a supported type"
 
     def magic(self, content):
         return True
@@ -31,9 +39,12 @@ class NoParser(object):
         raise ParserException("No matching parser found for %s" % resource.url)
 
 
-class DirectoryParser(object):
+class DirectoryParser(PyffParser):
     def __init__(self, ext):
         self.ext = ext
+
+    def __str__(self):
+        return "Directory"
 
     def magic(self, content):
         return os.path.isdir(content)
@@ -52,6 +63,9 @@ class DirectoryParser(object):
 
     def parse(self, resource, content):
         resource.children = []
+        info = dict()
+        info['Description'] = 'Directory'
+        info['Expiration Time'] = 'never expires'
         n = 0
         for fn in self._find_matching_files(content):
             resource.add_child("file://" + fn)
@@ -60,19 +74,28 @@ class DirectoryParser(object):
         if n == 0:
             raise IOError("no entities found in {}".format(content))
 
+        resource.never_expires = True
+        resource.expire_time = None
+        resource.last_seen = datetime.now()
+
         return dict()
 
 
-class XRDParser(object):
+class XRDParser(PyffParser):
     def __init__(self):
         pass
+
+    def __str__(self):
+        return "XRD"
 
     def magic(self, content):
         return 'XRD' in content
 
+
     def parse(self, resource, content):
         info = dict()
-        info['Description'] = "XRD links from {}".format(resource.url)
+        info['Description'] = "XRD links"
+        info['Expiration Time'] = 'never expires'
         t = parse_xml(unicode_stream(content))
 
         relt = root(t)
@@ -86,10 +109,10 @@ class XRDParser(object):
                     fp = fingerprints[0]
                 log.debug("XRD: {} verified by {}".format(link_href, fp))
                 resource.add_child(link_href, verify=fp)
-        resource.last_seen = datetime.now
+        resource.last_seen = datetime.now()
         resource.expire_time = None
+        resource.never_expires = True
         return info
-
 
 
 _parsers = [XRDParser(), DirectoryParser('.xml'), NoParser()]
@@ -102,4 +125,5 @@ def add_parser(parser):
 def parse_resource(resource, content):
     for parser in _parsers:
         if parser.magic(content):
+            resource.last_parser = parser
             return parser.parse(resource, content)

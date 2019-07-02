@@ -1,10 +1,8 @@
 mako
 six
 redis
-urllib3
-idna
 ipaddr
-publicsuffix
+publicsuffix2
 lxml
 cherrypy
 sphinx-pypi-upload
@@ -23,3 +21,12 @@ multiprocess
 requests_cache
 requests_file
 whoosh
+accept_types
+pyramid
+six
+wsgi-intercept
+gunicorn
+apscheduler
+redis-collections
+cachetools
+xmldiff

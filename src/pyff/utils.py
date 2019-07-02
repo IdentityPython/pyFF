@@ -38,6 +38,15 @@ from markupsafe import Markup
 import six
 import traceback
 from . import __version__
+from requests.structures import CaseInsensitiveDict
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+import contextlib
+import threading
+from cachetools import LRUCache
+from _collections_abc import MutableMapping
+from apscheduler.schedulers.background import BackgroundScheduler
+
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -222,7 +231,6 @@ def check_signature(t, key, only_one_signature=False):
     return t
 
 
-# @cached(hash_key=lambda *args, **kwargs: hash(args[0]))
 def validate_document(t):
     schema().assertValid(t)
 
@@ -465,7 +473,7 @@ def hex_digest(data, hn='sha1'):
 
 
 def parse_xml(io, base_url=None):
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False,collect_ids=False))
+    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False, collect_ids=False))
 
 
 def has_tag(t, tag):
@@ -598,6 +606,7 @@ def guess_entity_software(e):
 def is_text(x):
     return isinstance(x, six.string_types) or isinstance(x, six.text_type)
 
+
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
@@ -626,10 +635,15 @@ def url_get(url):
         s = requests.session()
         s.mount('file://', FileAdapter())
     else:
+        retry = Retry(connect=3, backoff_factor=0.5)
+        adapter = HTTPAdapter(max_retries=retry)
         s = CachedSession(cache_name="pyff_cache",
                           backend=config.request_cache_backend,
                           expire_after=config.request_cache_time,
                           old_data_on_error=True)
+        s.mount('http://', adapter)
+        s.mount('https://', adapter)
+
     headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
     try:
         r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
@@ -685,14 +699,78 @@ def b2u(data):
     return data
 
 
+def json_serializer(o):
+    if isinstance(o, datetime):
+        return o.__str__()
+    if isinstance(o, CaseInsensitiveDict):
+        return dict(o.items())
+    if isinstance(o, BaseException):
+        return str(o)
+    if hasattr(o, 'to_json') and hasattr(o.to_json, '__call__'):
+        return o.to_json()
+
+    raise ValueError("Object {} of type {} is not JSON-serializable via this function".format(repr(o), type(o)))
+
+
 class Lambda(object):
 
     def __init__(self, cb, *args, **kwargs):
         self._cb = cb
-        self._args = args
-        self._kwargs = kwargs
+        self._args = [a for a in args]
+        self._kwargs = kwargs or {}
 
     def __call__(self, *args, **kwargs):
-        list(args).append(list(self._args))
+        args = [a for a in args]
+        args.extend(self._args)
         kwargs.update(self._kwargs)
         return self._cb(*args, **kwargs)
+
+
+@contextlib.contextmanager
+def non_blocking_lock(lock=threading.Lock(), exception_class=ResourceException, args=("Resource is busy",)):
+    if not lock.acquire(blocking=False):
+        raise exception_class(*args)
+    try:
+        yield lock
+    finally:
+        lock.release()
+
+
+def make_default_scheduler():
+    return BackgroundScheduler({
+        'apscheduler.executors.default': {
+            'class': 'apscheduler.executors.pool:ThreadPoolExecutor',
+            'max_workers': str(config.worker_pool_size)
+        },
+        'apscheduler.timezone': 'UTC',
+    })
+
+
+class LRUProxyDict(MutableMapping):
+
+    def __init__(self, proxy, *args, **kwargs):
+        self._proxy = proxy
+        self._cache = LRUCache(**kwargs)
+
+    def __getitem__(self, item):
+        v = self._cache.get(item, None)
+        if v is not None:
+            return v
+        v = self._proxy.get(item, None)
+        if v is not None:
+            self._cache[item] = v
+        return v
+
+    def __setitem__(self, key, value):
+        self._proxy[key] = value
+        self._cache[key] = value
+
+    def __delitem__(self, key):
+        del self._proxy[key]
+        del self._cache[key]
+
+    def __iter__(self):
+        return self._proxy.__iter__()
+
+    def __len__(self):
+        return len(self._proxy)

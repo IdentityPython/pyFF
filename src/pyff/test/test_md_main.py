@@ -6,34 +6,17 @@ from threading import Thread
 from time import sleep
 from mako.lookup import TemplateLookup
 import requests
-from pyff.test import SignerTestCase, run_pyffd, run_pyff
+from pyff.test import SignerTestCase, run_pyffd, run_pyff, find_unbound_port
 from pyff.test.test_pipeline import PipeLineTest
 import os
 from pyff.md import __doc__ as pyffdoc
 from pyff import __version__ as pyffversion
 from pyff.utils import parse_xml, root, validate_document
-import random
-import socket
 import six
 
 # range of ports where available ports can be found
 PORT_RANGE = [33000, 60000]
 MAX_PORT_TRIES = 100
-
-
-def find_unbound_port(i=0):
-    """
-    Returns an unbound port number on 127.0.0.1.
-    """
-    if i > MAX_PORT_TRIES:
-        raise ValueError("Unable to find an unused port after %d tries" % i)
-    port = random.randint(*PORT_RANGE)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.bind(("127.0.0.1", port))
-    except socket.error:
-        port = find_unbound_port(i + 1)
-    return port
 
 
 class PyFFDTest(PipeLineTest):
@@ -244,7 +227,8 @@ class PyFFTest(PipeLineTest):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", self.bad)
         assert 'Traceback' in err
         assert 'No pipe named snartibartifast is installed' in err
-        assert (exit_code == 255)
+        print(exit_code)
+        assert (exit_code == 1)
 
     def test_run_signer_logfile(self):
         out, err, exit_code = run_pyff("--loglevel=DEBUG", "--logfile=%s" % self.logfile, self.signer)

@@ -7,8 +7,14 @@ from unittest import TestCase
 import os
 import pkg_resources
 import six
+import socket
+import random
 
 from pyff import __version__ as pyffversion
+
+# range of ports where available ports can be found
+PORT_RANGE = [33000, 60000]
+MAX_PORT_TRIES = 100
 
 
 class ExitException(Exception):
@@ -17,6 +23,21 @@ class ExitException(Exception):
 
     def __str__(self):
         return "would have exited with %d" % self.code
+
+
+def find_unbound_port(i=0):
+    """
+    Returns an unbound port number on 127.0.0.1.
+    """
+    if i > MAX_PORT_TRIES:
+        raise ValueError("Unable to find an unused port after %d tries" % i)
+    port = random.randint(*PORT_RANGE)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(("127.0.0.1", port))
+    except socket.error:
+        port = find_unbound_port(i + 1)
+    return port
 
 
 def run_pyff(*args):

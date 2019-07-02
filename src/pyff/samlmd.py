@@ -14,7 +14,7 @@ from .exceptions import *
 import traceback
 from distutils.util import strtobool
 from .fetch import ResourceManager
-from .parse import add_parser
+from .parse import add_parser, PyffParser
 from xmlsec.crypto import CertDict
 from concurrent import futures
 
@@ -122,16 +122,19 @@ def parse_saml_metadata(source,
         if fail_on_error:
             raise ex
 
-        return None, None
+        return None, None, ex
 
     log.debug("returning %d valid entities" % len(list(iter_entities(t))))
 
-    return t, expire_time_offset
+    return t, expire_time_offset, None
 
 
-class SAMLMetadataResourceParser:
+class SAMLMetadataResourceParser(PyffParser):
     def __init__(self):
         pass
+
+    def __str__(self):
+        return "SAML"
 
     def magic(self, content):
         return "EntitiesDescriptor" in content or "EntityDescriptor" in content
@@ -139,14 +142,14 @@ class SAMLMetadataResourceParser:
     def parse(self, resource, content):
         info = dict()
         info['Validation Errors'] = dict()
-        t, expire_time_offset = parse_saml_metadata(unicode_stream(content),
-                                                    key=resource.opts['verify'],
-                                                    base_url=resource.url,
-                                                    cleanup=resource.opts['cleanup'],
-                                                    fail_on_error=resource.opts['fail_on_error'],
-                                                    filter_invalid=resource.opts['filter_invalid'],
-                                                    validate=resource.opts['validate'],
-                                                    validation_errors=info['Validation Errors'])
+        t, expire_time_offset, exception = parse_saml_metadata(unicode_stream(content),
+                                                               key=resource.opts['verify'],
+                                                               base_url=resource.url,
+                                                               cleanup=resource.opts['cleanup'],
+                                                               fail_on_error=resource.opts['fail_on_error'],
+                                                               filter_invalid=resource.opts['filter_invalid'],
+                                                               validate=resource.opts['validate'],
+                                                               validation_errors=info['Validation Errors'])
 
         if expire_time_offset is not None:
             expire_time = datetime.now() + expire_time_offset
@@ -157,27 +160,40 @@ class SAMLMetadataResourceParser:
             resource.t = t
             resource.type = "application/samlmetadata+xml"
 
+            resource.info['Entities'] = []
+            for e in iter_entities(t):
+                resource.info['Entities'].append(e.get('entityID'))
+
+        if exception is not None:
+            resource.info['Exception'] = exception
+
         return info
 
 
 add_parser(SAMLMetadataResourceParser())
 
 
-class MDServiceListParser(object):
+class MDServiceListParser(PyffParser):
     def __init__(self):
         pass
+
+    def __str__(self):
+        return "MDSL"
 
     def magic(self, content):
         return 'MetadataServiceList' in content
 
     def parse(self, resource, content):
         info = dict()
-        info['Description'] = "eIDAS MetadataServiceList from {}".format(resource.url)
+        info['Description'] = "eIDAS MetadataServiceList"
         t = parse_xml(unicode_stream(content))
         t.xinclude()
         relt = root(t)
         info['Version'] = relt.get('Version', '0')
         info['IssueDate'] = relt.get('IssueDate')
+        info['NextUpdate'] = relt.get('NextUpdate')
+        resource.expire_time = iso2datetime(relt.get('NextUpdate'))
+        info['Expiration Time'] = str(resource.expire_time)
         info['IssuerName'] = first_text(relt, "{%s}IssuerName" % NS['ser'])
         info['SchemeIdentifier'] = first_text(relt, "{%s}SchemeIdentifier" % NS['ser'])
         info['SchemeTerritory'] = first_text(relt, "{%s}SchemeTerritory" % NS['ser'])
@@ -210,13 +226,13 @@ class MDServiceListParser(object):
                                     set_nodecountry(e, _country_code)
                                 if bool(_hide_from_discovery) and is_idp(e):
                                     set_entity_attributes(e, {ATTRS['entity-category']:
-                                                              'http://refeds.org/category/hide-from-discovery'})
+                                                                  'http://refeds.org/category/hide-from-discovery'})
                             return _t
 
                         r.add_via(Lambda(_update_entities, **args))
 
         log.debug("Done parsing eIDAS MetadataServiceList")
-        resource.last_seen = datetime.now
+        resource.last_seen = datetime.now()
         resource.expire_time = None
         return info
 
@@ -248,7 +264,6 @@ def filter_invalids_from_document(t, base_url, validation_errors):
     xsd = schema()
     for e in iter_entities(t):
         if not xsd.validate(e):
-            log.debug(etree.tostring(e))
             error = xml_error(xsd.error_log, m=base_url)
             entity_id = e.get("entityID", "(Missing entityID)")
             log.warn('removing \'%s\': schema validation failed: %s' % (entity_id, xsd.error_log))
@@ -282,6 +297,28 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
     return t
 
 
+def resolve_entities(entities, lookup_fn=None):
+    """
+
+    :param entities: a set of entities specifiers (lookup is used to find entities from this set)
+    :param lookup_fn:  a function used to lookup entities by name
+    :return: a set of entities
+    """
+
+    def _resolve(m, l_fn):
+        if hasattr(m, 'tag'):
+            return [m]
+        else:
+            return l_fn(m)
+
+    resolved_entities = set()
+    for member in entities:
+        for entity in _resolve(member, lookup_fn):
+            resolved_entities.add(entity)
+
+    return resolved_entities
+
+
 def entitiesdescriptor(entities,
                        name,
                        lookup_fn=None,
@@ -292,7 +329,7 @@ def entitiesdescriptor(entities,
                        copy=True,
                        nsmap=None):
     """
-:param lookup_fn: a function used to lookup entities by name
+:param lookup_fn: a function used to lookup entities by name - set to None to skip resolving
 :param entities: a set of entities specifiers (lookup is used to find entities from this set)
 :param name: the @Name attribute
 :param cache_duration: an XML timedelta expression, eg PT1H for 1hr
@@ -308,25 +345,15 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
     if nsmap is None:
         nsmap = dict()
 
-    def _resolve(m, l_fn):
-        if hasattr(m, 'tag'):
-            return [m]
-        else:
-            return l_fn(m)
-
     nsmap.update(NS)
-    resolved_entities = set()
-    for member in entities:
-        for entity in _resolve(member, lookup_fn):
-            resolved_entities.add(entity)
 
-    if not resolved_entities:
-        return None
+    if lookup_fn is not None:
+        entities = resolve_entities(entities, lookup_fn=lookup_fn)
 
-    for entity in resolved_entities:
+    for entity in entities:
         nsmap.update(entity.nsmap)
 
-    log.debug("selecting %d entities before validation" % len(resolved_entities))
+    log.debug("selecting %d entities before validation" % len(entities))
 
     attrs = dict(Name=name, nsmap=nsmap)
     if cache_duration is not None:
@@ -334,7 +361,7 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
     if valid_until is not None:
         attrs['validUntil'] = valid_until
     t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], **attrs)
-    for entity in resolved_entities:
+    for entity in entities:
         entity_id = entity.get('entityID', None)
         if (entity is not None) and (entity_id is not None):
             ent_insert = entity
@@ -739,10 +766,12 @@ def discojson(e, langs=None, fallback_to_favicon=False, load_icon=True):
     return d
 
 
-def discojson_t(t):
+def discojson_t(t, load_icons=False):
     lst = [discojson(en, load_icon=False) for en in iter_entities(t)]
-    with futures.ThreadPoolExecutor(max_workers=config.worker_pool_size) as executor:
-        return list(executor.map(discojson_load_icon, lst))
+    if load_icons:
+        with futures.ThreadPoolExecutor(max_workers=config.worker_pool_size) as executor:
+            lst = list(executor.map(discojson_load_icon, lst))
+    return lst
 
 
 def sha1_id(e):
@@ -847,6 +876,19 @@ def object_id(e):
     return e.get('entityID')
 
 
+def entity_simple_info(e, langs=None):
+    d = entity_simple_summary(e)
+    d['service_name'] = entity_service_name(e, langs)
+    d['service_descr'] = entity_service_description(e, langs)
+    d['entity_attributes'] = entity_attribute_dict(e)
+    keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
+    if keywords is not None:
+        lst = [elt.text for elt in keywords]
+        if len(lst) > 0:
+            d['keywords'] = ",".join(lst)
+    return d
+
+
 def entity_info(e, langs=None):
     d = entity_simple_summary(e)
     keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
@@ -858,7 +900,6 @@ def entity_info(e, langs=None):
     d['privacy_statement_url'] = privacy_statement_url(e, langs)
     d['geo'] = entity_geoloc(e)
     d['orgurl'] = entity_orgurl(e, langs)
-    d['scopes'] = entity_scopes(e)
     d['service_name'] = entity_service_name(e, langs)
     d['service_descr'] = entity_service_description(e, langs)
     d['requested_attributes'] = entity_requested_attributes(e, langs)
@@ -1155,3 +1196,9 @@ def set_nodecountry(e, country_code):
     if sp is not None and len(sp) > 0:
         ext = entity_extensions(sp)
         _set_nodecountry_in_ext(ext, country_code)
+
+
+def diff(t1, t2):
+    s1 = set([e.get('entityID') for e in iter_entities(root(t1))])
+    s2 = set([e.get('entityID') for e in iter_entities(root(t2))])
+    return s1.difference(s2)

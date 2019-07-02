@@ -23,12 +23,13 @@ from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
     validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
-    discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry
+    discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
 from .fetch import Resource
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
 from .store import make_store_instance
 import six
+import ipaddr
 
 __author__ = 'leifj'
 
@@ -163,7 +164,7 @@ active document. To avoid this do a select before your fork, thus:
         nt = deepcopy(req.t)
 
     ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
-    ireq = Plumbing.Request(ip, req.md, nt)
+    ireq = Plumbing.Request(ip, req.md, t=nt)
     ip.iprocess(ireq)
 
     if req.t is not None and ireq.t is not None and len(root(ireq.t)) > 0:
@@ -484,7 +485,7 @@ Defaults are marked with (*)
             "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
 
         url = r.pop(0)
-        params = {"via": [],"cleanup": [],"verify": None, "as": url}
+        params = {"via": [], "cleanup": [], "verify": None, "as": url}
 
         while len(r) > 0:
             elt = r.pop(0)
@@ -511,7 +512,7 @@ Defaults are marked with (*)
         req.md.rm.add(Resource(url, **params))
 
     log.debug("Refreshing all resources")
-    req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']), store=store)
+    req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']), store=store, scheduler=req.scheduler)
     req._store = None
     req.md.store = store  # commit the store
 
@@ -603,13 +604,62 @@ alias invisible for anything except the corresponding mime type.
         if opts[0] == 'as' and len(opts) == 2:
             name = opts[1]
 
-    ot = entitiesdescriptor(args, name, lookup_fn=req.md.store.select)
+    entities = resolve_entities(args, lookup_fn=req.md.store.select)
+
+    if req.state.get('match', None):  # TODO - allow this to be passed in via normal arguments
+
+        match = req.state['match']
+
+        if isinstance(match, six.string_types):
+            query = [match.lower()]
+
+        def _strings(elt):
+            lst = []
+            for attr in ['{%s}DisplayName' % NS['mdui'],
+                         '{%s}ServiceName' % NS['md'],
+                         '{%s}OrganizationDisplayName' % NS['md'],
+                         '{%s}OrganizationName' % NS['md'],
+                         '{%s}Keywords' % NS['mdui'],
+                         '{%s}Scope' % NS['shibmd']]:
+                lst.extend([s.text for s in elt.iter(attr)])
+            lst.append(elt.get('entityID'))
+            return [item for item in lst if item is not None]
+
+        def _ip_networks(elt):
+            return [ipaddr.IPNetwork(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
+
+        def _match(q, elt):
+            q = q.strip()
+            if ':' in q or '.' in q:
+                try:
+                    nets = _ip_networks(elt)
+                    for net in nets:
+                        if ':' in q and ipaddr.IPv6Address(q) in net:
+                            return net
+                        if '.' in q and ipaddr.IPv4Address(q) in net:
+                            return net
+                except ValueError:
+                    pass
+
+            if q is not None and len(q) > 0:
+                tokens = _strings(elt)
+                for tstr in tokens:
+                    for tpart in tstr.split():
+                        if tpart.lower().startswith(q):
+                            return tstr
+            return None
+
+        log.debug("matching {} in {} entities".format(match, len(entities)))
+        entities = list(filter(lambda e: _match(match, e) is not None, entities))
+        log.debug("returning {} entities after match".format(len(entities)))
+
+    ot = entitiesdescriptor(entities, name)
     if ot is None:
         raise PipeException("empty select - stop")
 
     if req.plumbing.id != name:
         log.debug("storing synthentic collection {}".format(name))
-        n = req.store.update(ot, name)
+        req.store.update(ot, name)
 
     return ot
 
@@ -651,7 +701,7 @@ def _filter(req, *opts):
 
     ot = entitiesdescriptor(args, name, lookup_fn=lambda member: find_in_document(req.t, member), copy=False)
     if alias:
-        n = req.store.update(ot, name)
+        req.store.update(ot, name)
 
     req.t = None
 
@@ -713,6 +763,12 @@ def _discojson(req, *opts):
     """
 Return a discojuice-compatible json representation of the tree
 
+.. code-block:: yaml
+  discojson:
+      - load_icons: True
+
+This would return a json representation of the active tree with data: URI version of the icons
+
 :param req: The request
 :param opts: Options (unusued)
 :return: returns a JSON array
@@ -721,7 +777,11 @@ Return a discojuice-compatible json representation of the tree
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    res = discojson_t(req.t)
+    load_icons = False
+    if req.args:
+        load_icons = bool(req.args.get('load_icons', False))
+
+    res = discojson_t(req.t, load_icons=load_icons)
     res.sort(key=operator.itemgetter('title'))
 
     return json.dumps(res)
