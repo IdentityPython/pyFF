@@ -7,7 +7,7 @@ import six
 from pyff import utils
 from pyff.constants import NS
 from pyff.samlmd import find_entity, entities_list
-from pyff.utils import resource_filename, parse_xml, root, resource_string
+from pyff.utils import resource_filename, parse_xml, root, resource_string, b2u, Lambda
 from ..merge_strategies import replace_existing, remove
 
 
@@ -113,3 +113,25 @@ class TestXMLErrors(TestCase):
         assert(utils.xml_error(errors, m='other') == 'other')
         assert(utils.xml_error(errors, m='kaka') == '')
 
+
+class TestMisc(TestCase):
+
+    def test_b2u(self):
+        assert(int(b2u(b'1')) == 1)
+        assert(b2u('kaka') == 'kaka')
+
+
+class TestLambda(TestCase):
+
+    def test_lambda(self):
+
+        def _cb(*args, **kwargs):
+            assert (args[0] == args[1])
+
+        f = Lambda(_cb, "kaka")
+        f("kaka")
+        try:
+            f("foo")
+            assert False
+        except AssertionError as ex:
+            pass

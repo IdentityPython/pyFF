@@ -173,6 +173,9 @@ would then be signed (using signer.key) and finally published in /var/metadata/p
         self._id = pid
         self.pipeline = pipeline
 
+    def to_json(self):
+        return self.pipeline
+
     @property
     def id(self):
         return self._id
@@ -193,7 +196,7 @@ Represents a single request. When processing a set of pipelines a single request
 may modify any of the fields.
         """
 
-        def __init__(self, pl, md, t, name=None, args=None, state=None, store=None):
+        def __init__(self, pl, md, t=None, name=None, args=None, state=None, store=None, scheduler=None, raise_exceptions=True):
             if not state:
                 state = dict()
             if not args:
@@ -206,6 +209,9 @@ may modify any of the fields.
             self.state = state
             self.done = False
             self._store = store
+            self.scheduler = scheduler
+            self.raise_exceptions = raise_exceptions
+            self.exception = None
 
         @property
         def store(self):
@@ -218,49 +224,34 @@ may modify any of the fields.
 
             :param pl: The plumbing to run this request through
             """
-            for p in pl.pipeline:
-                cb, opts, name, args = load_pipe(p)
-                log.debug("{!s}: calling '{}' using args: {} and opts: {}".format(pl, name, repr(args), repr(opts)))
-                if is_text(args):
-                    args = [args]
-                if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
-                    raise PipeException("Unknown argument type %s" % repr(args))
-                self.args = args
-                self.name = name
-                ot = cb(self, *opts)
-                if ot is not None:
-                    self.t = ot
-                if self.done:
-                    break
-            return self.t
+            return pl.iprocess(self)
 
-    def process(self, md, args=None, state=None, t=None, store=None):
-        """
-The main entrypoint for processing a request pipeline. Calls the inner processor.
-
-
-:param md: The current metadata repository
-:param state: The active request state
-:param t: The active working document
-:param store: The store object to operate on
-:param args: Pipeline arguments
-:return: The result of applying the processing pipeline to t.
-        """
-        if not state:
-            state = dict()
-
-        return Plumbing.Request(self, md, t, args=args, state=state, store=store).process(self)
+#            for p in pl.pipeline:
+#                cb, opts, name, args = load_pipe(p)
+#                log.debug("{!s}: calling '{}' using args: {} and opts: {}".format(pl, name, repr(args), repr(opts)))
+#                if is_text(args):
+#                    args = [args]
+#                if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
+#                    raise PipeException("Unknown argument type %s" % repr(args))
+#                self.args = args
+#                self.name = name
+#                ot = cb(self, *opts)
+#                if ot is not None:
+#                    self.t = ot
+#                if self.done:
+#                    break
+#            return self.t
 
     def iprocess(self, req):
         """The inner request pipeline processor.
 
         :param req: The request to run through the pipeline
         """
-        log.debug("Processing {}".format(self.pipeline))
+        #log.debug("Processing {}".format(self.pipeline))
         for p in self.pipeline:
             try:
                 pipefn, opts, name, args = load_pipe(p)
-                # log.debug("traversing pipe %s,%s,%s using %s" % (pipe,name,args,opts))
+                log.debug("{!s}: calling '{}' using args: {} and opts: {}".format(self.pipeline, name, repr(args), repr(opts)))
                 if is_text(args):
                     args = [args]
                 if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
@@ -272,11 +263,32 @@ The main entrypoint for processing a request pipeline. Calls the inner processor
                     req.t = ot
                 if req.done:
                     break
-            except PipeException as ex:
+            except BaseException as ex:
                 log.debug(traceback.format_exc())
                 log.error(ex)
+                req.exception = ex
+                if req.raise_exceptions:
+                    raise ex
                 break
         return req.t
+
+    def process(self, md, args=None, state=None, t=None, store=None, raise_exceptions=True):
+        """
+        The main entrypoint for processing a request pipeline. Calls the inner processor.
+
+
+        :param raise_exceptions: weather to raise or just log exceptions in the process
+        :param md: The current metadata repository
+        :param state: The active request state
+        :param t: The active working document
+        :param store: The store object to operate on
+        :param args: Pipeline arguments
+        :return: The result of applying the processing pipeline to t.
+        """
+        if not state:
+            state = dict()
+
+        return Plumbing.Request(self, md, t=t, args=args, state=state, store=store, raise_exceptions=raise_exceptions).process(self)
 
 
 def plumbing(fn):

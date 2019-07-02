@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
 from distutils.core import setup
@@ -9,7 +9,7 @@ from os.path import abspath, dirname, join
 from setuptools import find_packages
 
 __author__ = 'Leif Johansson'
-__version__ = '0.10.0.dev0'
+__version__ = '1.0.2.dev'
 
 here = abspath(dirname(__file__))
 README = open(join(here, 'README.rst')).read()
@@ -17,9 +17,6 @@ NEWS = open(join(here, 'NEWS.txt')).read()
 
 install_requires = [
     'mako',
-    'six',
-    'urllib3',
-    'idna',
     'lxml >=4.1.1',
     'pyyaml >=3.10',
     'pyXMLSecurity >=0.15',
@@ -30,7 +27,7 @@ install_requires = [
     'httplib2 >=0.7.7',
     'six>=1.11.0',
     'ipaddr',
-    'publicsuffix',
+    'publicsuffix2',
     'redis',
     'futures',
     'requests',
@@ -40,7 +37,14 @@ install_requires = [
     'pyyaml',
     'multiprocess',
     'minify',
-    'whoosh'
+    'whoosh',
+    'pyramid',
+    'accept_types',
+    'apscheduler',
+    'redis-collections',
+    'cachetools',
+    'xmldiff',
+    'gunicorn'
 ]
 
 python_implementation_str = python_implementation()
@@ -58,7 +62,7 @@ setup(name='pyFF',
       url='http://blogs.mnt.se',
       license='BSD',
       setup_requires=['nose>=1.0'],
-      tests_require=['pbr', 'coverage', 'nose>=1.0', 'mock', 'mako', 'mockredispy', 'testfixtures'],
+      tests_require=['pbr', 'fakeredis', 'coverage', 'nose>=1.0', 'mock', 'mako', 'testfixtures', 'wsgi_intercept'],
       test_suite="nose.collector",
       packages=find_packages('src'),
       package_dir={'': 'src'},
@@ -80,7 +84,13 @@ setup(name='pyFF',
       zip_safe=False,
       install_requires=install_requires,
       entry_points={
-          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main']
+          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main', 'samldiff=pyff.tools:difftool'],
+          'paste.app_factory': [
+             'pyffapp=pyff.wsgi:app_factory'
+          ],
+          'paste.server_runner': [
+             'pyffs=pyff.wsgi:server_runner'
+          ],
       },
       message_extractors={'src': [
           ('**.py', 'python', None),

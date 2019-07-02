@@ -1,30 +1,40 @@
-from six import StringIO
-from copy import deepcopy
-import re
-from redis import Redis
-from .constants import NS, ATTRS, ATTRS_INV
-from .decorators import cached
-from .logs import get_log
-from .constants import config
-from .utils import root, dumptree, parse_xml, hex_digest, hash_id, valid_until_ts, \
-    avg_domain_distance, ts_now, load_callable, is_text, b2u
-from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_info, \
-    object_id, find_merge_strategy, find_entity, entity_simple_summary, entitiesdescriptor
-from whoosh.fields import Schema, TEXT, ID, KEYWORD, STORED, BOOLEAN
-from whoosh import writing
-from . import merge_strategies
-import ipaddr
 import operator
+import re
+from copy import deepcopy
+
+import ipaddr
 import six
+from redis import StrictRedis
+from redis_collections import Dict, Set
+from whoosh.writing import CLEAR
+from whoosh.fields import Schema, ID, KEYWORD, NGRAMWORDS
+from whoosh.qparser import MultifieldParser, QueryParser
+from whoosh.filedb.filestore import FileStorage
+import json
+from io import BytesIO
+from cachetools.func import ttl_cache
+from threading import ThreadError
+from datetime import datetime, timedelta
+
+from . import merge_strategies
+from .constants import NS, ATTRS, ATTRS_INV
+from .constants import config
+from .logs import get_log
+from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_simple_info, \
+    object_id, find_merge_strategy, find_entity, entity_simple_summary, entitiesdescriptor, discojson
+from .utils import root, hash_id, avg_domain_distance, load_callable, is_text, b2u, parse_xml, dumptree, \
+    LRUProxyDict, make_default_scheduler, hex_digest
+import os
+import shutil
 
 log = get_log(__name__)
 
 DINDEX = ('sha1', 'sha256', 'null')
 
 
-def make_store_instance():
+def make_store_instance(*args, **kwargs):
     new_store = load_callable(config.store_class)
-    return new_store()
+    return new_store(*args, **kwargs)
 
 
 class SAMLStoreBase(object):
@@ -45,7 +55,7 @@ class SAMLStoreBase(object):
     def collections(self):
         raise NotImplementedError()
 
-    def update(self, t, tid=None, ts=None, merge_strategy=None):
+    def update(self, t, tid=None, etag=None, lazy=True):
         raise NotImplementedError()
 
     def reset(self):
@@ -53,6 +63,9 @@ class SAMLStoreBase(object):
 
     def entity_ids(self):
         return set(e.get('entityID') for e in self.lookup('entities'))
+
+    def refresh(self):
+        pass
 
     def _select(self, member=None):
         if member is None:
@@ -145,12 +158,10 @@ replace old_e in t.
             if new is not None:
                 self.update(new)
 
-    def search(self, query=None, path=None, page=None, page_limit=10, entity_filter=None, related=None):
+    def search(self, query=None, path=None, entity_filter=None, related=None):
         """
 :param query: A string to search for.
 :param path: The repository collection (@Name) to search in - None for search in all collections
-:param page:  When using paged search, the page index
-:param page_limit: When using paged search, the maximum entry per page
 :param entity_filter: An optional lookup expression used to filter the entries before search is done.
 :param related: an optional '+'-separated list of related domain names for prioritizing search results
 
@@ -240,14 +251,7 @@ The dict in the list contains three items:
         res.sort(key=operator.itemgetter('title'))
         res.sort(key=operator.itemgetter('ddist'), reverse=True)
 
-        if page is not None:
-            total = len(res)
-            begin = (page - 1) * page_limit
-            end = begin + page_limit
-            more = (end < total)
-            return res[begin:end], more, total
-        else:
-            return res
+        return res
 
 
 class EmptyStore(SAMLStoreBase):
@@ -255,10 +259,10 @@ class EmptyStore(SAMLStoreBase):
     def lookup(self, key):
         return list()
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         pass
 
-    def update(self, **kwargs):
+    def update(self, *args, **kwargs):
         return 0
 
     def size(self, **kwargs):
@@ -283,93 +287,232 @@ class EmptyStore(SAMLStoreBase):
         return list()
 
 
-class WhooshStore(SAMLStoreBase):
+class Unpickled(object):
 
-    def __init__(self):
-        self.schema = Schema(scopes=KEYWORD(),
-                             descr=TEXT(),
-                             service_name=TEXT(),
-                             service_descr=TEXT(),
-                             keywords=KEYWORD())
+    def _pickle(self, data):
+        return data
+
+    def _unpickle(self, data):
+        return data
+
+
+class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for keys (uuids)
+
+    class StringSet(Set):
+
+        _pickle = Unpickled._pickle
+        _unpickle = Unpickled._unpickle
+        _pickle_3 = _pickle
+        _unpickle_3 = _unpickle
+        _pickle_value = _pickle
+        _unpickle_value = _unpickle
+        _pickle_key = _pickle
+        _unpickle_key = _unpickle
+
+    class StringDict(Dict):
+
+        _pickle = Unpickled._pickle
+        _unpickle = Unpickled._unpickle
+        _pickle_3 = _pickle
+        _unpickle_3 = _unpickle
+        _pickle_value = _pickle
+        _unpickle_value = _unpickle
+        _pickle_key = _pickle
+        _unpickle_key = _unpickle
+
+    class JSONDict(Dict):
+
+        _pickle_key = Unpickled._pickle
+        _unpickle_key = Unpickled._unpickle
+
+        def _pickle(self, x):
+            return json.dumps(x)
+
+        def _unpickle(self, x):
+            return json.loads(b2u(x))
+
+        _pickle_3 = _pickle
+        _unpickle_3 = _unpickle
+        _pickle_value = _pickle
+        _unpickle_value = _unpickle
+
+    class XMLDict(Dict):
+
+        _pickle_key = Unpickled._pickle
+        _unpickle_key = Unpickled._unpickle
+
+        def _pickle(self, data):
+            return dumptree(data)
+
+        def _unpickle(self, pickled_data):
+            return root(parse_xml(BytesIO(pickled_data)))
+
+        _pickle_3 = _pickle
+        _unpickle_3 = _unpickle
+        _pickle_value = _pickle
+        _unpickle_value = _unpickle
+
+    def json_dict(self, name):
+        return LRUProxyDict(RedisWhooshStore.JSONDict(key='{}_{}'.format(self._name, name),
+                                                      redis=self._redis,
+                                                      writeback=True),
+                            maxsize=config.cache_size)
+
+    def xml_dict(self, name):
+        return LRUProxyDict(RedisWhooshStore.XMLDict(key='{}_{}'.format(self._name, name),
+                                                     redis=self._redis,
+                                                     writeback=True),
+                            maxsize=config.cache_size)
+
+    def __init__(self, *args, **kwargs):
+        self._dir = kwargs.pop('directory', '.whoosh')
+        clear = bool(kwargs.pop('clear', False))
+        self._name = kwargs.pop('name', config.store_name)
+        self._scheduler = kwargs.pop('scheduler', None)
+        if self._scheduler is None:
+            self._scheduler = make_default_scheduler()
+            self._scheduler.start()
+
+        if clear:
+            shutil.rmtree(self._dir)
+        self.schema = Schema(content=NGRAMWORDS(stored=False))
         self.schema.add("object_id", ID(stored=True, unique=True))
         self.schema.add("entity_id", ID(stored=True, unique=True))
         for a in list(ATTRS.keys()):
             self.schema.add(a, KEYWORD())
-        self._collections = set()
-        from whoosh.filedb.filestore import RamStorage, FileStorage
-        self.storage = RamStorage()
-        self.storage.create()
-        self.index = self.storage.create_index(self.schema)
-        self.objects = dict()
-        self.infos = dict()
+        self._redis = kwargs.pop('redis', None)
+        if self._redis is None:
+            self._redis = StrictRedis(host=config.redis_host, port=config.redis_port)
+        now = datetime.now()
+        self._last_index_time = now
+        self._last_modified = now
+        self.objects = self.xml_dict('objects')
+        self.parts = self.json_dict('parts')
+        self.storage = FileStorage(os.path.join(self._dir, self._name))
+        try:
+            self.index = self.storage.open_index(schema=self.schema)
+        except BaseException as ex:
+            log.warn(ex)
+            self.storage.create()
+            self.index = self.storage.create_index(self.schema)
+            self._reindex()
+
+    def refresh(self):
+        if self._last_modified > self._last_index_time:
+            self._scheduler.add_job(RedisWhooshStore._reindex,
+                                    args=[self],
+                                    max_instances=1,
+                                    coalesce=True,
+                                    misfire_grace_time=2*config.update_frequency)
+
+    def _reindex(self):
+        log.debug("indexing the store...")
+        self._last_index_time = datetime.now()
+        seen = set()
+        refs = set([b2u(s) for s in self.objects.keys()])
+        parts = self.parts.values()
+        for ref in refs:
+            for part in parts:
+                if ref in part['items']:
+                    seen.add(ref)
+
+        ix = self.storage.open_index()
+        lock = ix.lock("reindex")
+        try:
+            log.debug("waiting for index lock")
+            lock.acquire(True)
+            log.debug("got index lock")
+            with ix.writer() as writer:
+                for ref in refs:
+                    if ref not in seen:
+                        log.debug("removing unseen ref {}".format(ref))
+                        del self.objects[ref]
+                        del self.parts[ref]
+
+                log.debug("updating index")
+                for e in self.objects.values():
+                    info = self._index_prep(entity_simple_info(e))
+                    ref = object_id(e)
+                    writer.add_document(object_id=ref, **info)
+
+                writer.mergetype = CLEAR
+        finally:
+            try:
+                log.debug("releasing index lock")
+                lock.release()
+            except ThreadError as ex:
+                pass
 
     def dump(self):
         ix = self.storage.open_index()
-        print(ix.schema)
         from whoosh.query import Every
         with ix.searcher() as searcher:
             for result in ix.searcher().search(Every('object_id')):
                 print(result)
 
     def _index_prep(self, info):
+        res = dict()
         if 'entity_attributes' in info:
             for a, v in list(info.pop('entity_attributes').items()):
                 info[a] = v
-        for a, v in list(info.items()):
-            if type(v) is not list and type(v) is not tuple:
-                info[a] = [info.pop(a)]
 
+        content = " ".join(filter(lambda x: x is not None,
+                                  [info.get(x, '') for x in ('service_name', 'title', 'domain', 'keywords', 'scopes')]))
+        res['content'] = content.strip()
+        for a, v in info.items():
+            k = a
             if a in ATTRS_INV:
-                info[ATTRS_INV[a]] = info.pop(a)
+                k = ATTRS_INV[a]
 
-        for a in list(info.keys()):
-            if a not in self.schema.names():
-                del info[a]
+            if k in self.schema.names():
+                if type(v) in (list, tuple):
+                    res[k] = " ".join([vv.lower() for vv in v])
+                elif type(v) in six.string_types:
+                    res[k] = info[a].lower()
+        return res
 
-        for a, v in list(info.items()):
-            info[a] = [six.text_type(vv) for vv in v]
-
-    def _index(self, e, tid=None):
-        info = entity_info(e)
-        if tid is not None:
-            info['collection_id'] = tid
-        self._index_prep(info)
-        id = six.text_type(object_id(e))
-        # mix in tid here
-        self.infos[id] = info
-        self.objects[id] = e
-        ix = self.storage.open_index()
-        with ix.writer() as writer:
-            writer.add_document(object_id=id, **info)
-            writer.mergetype = writing.CLEAR
-
-    def update(self, t, tid=None, ts=None, merge_strategy=None):
+    def update(self, t, tid=None, etag=None, lazy=True):
         relt = root(t)
         assert (relt is not None)
-        ne = 0
 
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
-            self._index(relt)
-            ne += 1
+            ref = object_id(relt)
+            parts = self.parts[ref]
+            if etag is not None and (parts is None or parts.get('etag', None) != etag):
+                self.parts[ref] = {'id': relt.get('entityID'), 'etag': etag, 'count': 1, 'items': [ref]}
+                self.objects[ref] = relt
+                self._last_modified = datetime.now()
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('Name')
-            self._collections.add(tid)
-            for e in iter_entities(t):
-                self._index(e, tid=tid)
-                ne += 1
+            if etag is None:
+                etag = hex_digest(dumptree(t, pretty_print=False), 'sha256')
+            parts = self.parts[tid]
+            if parts is None or parts.get('etag', None) != etag:
+                items = set()
+                for e in iter_entities(t):
+                    ref = object_id(e)
+                    items.add(ref)
+                    self.objects[ref] = e
+                self.parts[tid] = {'id': tid, 'count': len(items), 'etag': etag, 'items': list(items)}
+                self._last_modified = datetime.now()
 
-        return ne
+        if not lazy:
+            self._reindex()
 
+    @ttl_cache(ttl=config.cache_ttl, maxsize=config.cache_size)
     def collections(self):
-        return b2u(self._collections)
+        return [b2u(ref) for ref in self.parts.keys()]
 
     def reset(self):
-        self.__init__()
+        for ref in self.parts.keys():
+            del self.parts[b2u(ref)]
+        for ref in self.objects.keys():
+            del self.objects[b2u(ref)]
 
     def size(self, a=None, v=None):
         if a is None:
-            return len(list(self.objects.keys()))
+            return len(self.objects.keys())
         elif a is not None and v is None:
             return len(self.attribute(a))
         else:
@@ -394,17 +537,11 @@ class WhooshStore(SAMLStoreBase):
         else:
             return []
 
-    def lookup(self, key, raw=True, field="entity_id"):
-        if key == 'entities' or key is None:
-            if raw:
-                return b2u(list(self.objects.values()))
-            else:
-                return b2u(list(self.infos.values()))
-
-        from whoosh.qparser import QueryParser
+    def _prep_key(self, key):
         # import pdb; pdb.set_trace()
         key = key.strip('+')
         key = key.replace('+', ' AND ')
+        key = key.replace('-', ' AND NOT ')
         for uri, a in list(ATTRS_INV.items()):
             key = key.replace(uri, a)
         key = " {!s} ".format(key)
@@ -412,22 +549,60 @@ class WhooshStore(SAMLStoreBase):
         key = re.sub("{([^}]+)}(\S+)", "\\1:\\2", key)
         key = key.strip()
 
+        return key
+
+    def _entities(self):
+        lst = set()
+        for ref_data in self.parts.values():
+            for ref in ref_data['items']:
+                e = self.objects.get(ref, None)
+                if e is not None:
+                    lst.add(e)
+
+        return b2u(list(lst))
+
+    @ttl_cache(ttl=config.cache_ttl, maxsize=config.cache_size)
+    def lookup(self, key, field="entity_id"):
+        if key == 'entities' or key is None:
+            return self._entities()
+
+        key = self._prep_key(key)
         qp = QueryParser("object_id", schema=self.schema)
         q = qp.parse(key)
         lst = set()
         with self.index.searcher() as searcher:
             results = searcher.search(q, limit=None)
             for result in results:
-                if raw:
-                    lst.add(self.objects[result['object_id']])
-                else:
-                    lst.add(self.infos[result['object_id']])
+                e = self.objects.get(result['object_id'], None)
+                if e is not None:
+                    lst.add(e)
 
         return b2u(list(lst))
 
+    @ttl_cache(ttl=config.cache_ttl, maxsize=config.cache_size)
+    def search(self, query=None, path=None, entity_filter=None, related=None):
+        if entity_filter:
+            query = "{!s} AND {!s}".format(query, entity_filter)
+        query = self._prep_key(query)
+        qp = MultifieldParser(['content', 'domain'], schema=self.schema)
+        q = qp.parse(query)
+        lst = set()
+        with self.index.searcher() as searcher:
+            results = searcher.search(q, limit=None)
+            log.debug(results)
+            for result in results:
+                lst.add(result['object_id'])
+
+        res = list()
+        for ref in lst:
+            e = self.objects.get(ref, None)
+            if e is not None:
+                res.append(discojson(e, load_icon=False))
+        return res
+
 
 class MemoryStore(SAMLStoreBase):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.md = dict()
         self.index = dict()
         self.entities = dict()
@@ -504,20 +679,15 @@ class MemoryStore(SAMLStoreBase):
     def collections(self):
         return list(self.md.keys())
 
-    def update(self, t, tid=None, ts=None, merge_strategy=None):
-        #log.debug("memory store update: %s: %s" % (repr(t), tid))
+    def update(self, t, tid=None, etag=None, lazy=True):
         relt = root(t)
         assert (relt is not None)
-        ne = 0
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
-            # log.debug("memory store setting entity descriptor")
             self._unindex(relt)
             self._index(relt)
             self.entities[relt.get('entityID')] = relt  # TODO: merge?
             if tid is not None:
                 self.md[tid] = [relt.get('entityID')]
-            ne += 1
-            # log.debug("keys %s" % self.md.keys())
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('Name')
@@ -525,13 +695,9 @@ class MemoryStore(SAMLStoreBase):
             for e in iter_entities(t):
                 self.update(e)
                 lst.append(e.get('entityID'))
-                ne += 1
             self.md[tid] = lst
 
-        return ne
-
     def lookup(self, key):
-        #log.debug("memory store lookup: %s" % key)
         return self._lookup(key)
 
     def _lookup(self, key):
@@ -550,7 +716,7 @@ class MemoryStore(SAMLStoreBase):
                     hits.intersection_update(other)
 
                 if not hits:
-                    #log.debug("empty intersection")
+                    # log.debug("empty intersection")
                     return []
 
             if hits is not None and hits:
@@ -582,150 +748,3 @@ class MemoryStore(SAMLStoreBase):
             return lst
 
         return []
-
-
-class RedisStore(SAMLStoreBase):
-    from .decorators import deprecated
-
-    @deprecated(reason="The RedisStore has seen almost no use and is not able to track API changes")
-    def __init__(self, version=ts_now(), default_ttl=3600 * 24 * 4, respect_validity=True):
-        self.rc = Redis(charset="utf-8")
-        self.default_ttl = default_ttl
-        self.respect_validity = respect_validity
-
-    def _expiration(self, relt):
-        ts = ts_now() + self.default_ttl
-        if self.respect_validity:
-            return valid_until_ts(relt, ts)
-
-    def reset(self):
-        self.rc.flushdb()
-
-    def _drop_empty_av(self, attr, tag, ts):
-        an = "#%s" % attr
-        for c in self.rc.smembers(an):
-            tn = "%s#members" % c
-            self.rc.zremrangebyscore(tn, "-inf", ts)
-            if not self.rc.zcard(tn) > 0:
-                log.debug("dropping empty %s %s" % (attr, c))
-                self.rc.srem(an, c)
-
-    def update_entity(self, relt, t, tid, ts, p=None):
-        if p is None:
-            p = self.rc
-        p.set("%s#metadata" % tid, dumptree(t))
-        self._get_metadata.invalidate(tid)  # invalidate the parse-cache entry
-        if ts is not None:
-            p.expireat("%s#metadata" % tid, ts)
-        nfo = dict(expires=ts)
-        nfo.update(**relt.attrib)
-        p.hmset(tid, nfo)
-        if ts is not None:
-            p.expireat(tid, ts)
-
-    def membership(self, gid, mid, ts, p=None):
-        if p is None:
-            p = self.rc
-        p.zadd("%s#members" % gid, mid, ts)
-        # p.zadd("%s#groups", mid, gid, ts)
-        p.sadd("#collections", gid)
-
-    def attributes(self):
-        return b2u(self.rc.smembers("#attributes"))
-
-    def attribute(self, an):
-        return b2u(self.rc.zrangebyscore("%s#values" % an, ts_now(), "+inf"))
-
-    def collections(self):
-        return b2u(self.rc.smembers("#collections"))
-
-    def update(self, t, tid=None, ts=None, merge_strategy=None):  # TODO: merge ?
-        #log.debug("redis store update: %s: %s" % (t, tid))
-        relt = root(t)
-        ne = 0
-        if ts is None:
-            ts = int(ts_now() + 3600 * 24 * 4)  # 4 days is the arbitrary default expiration
-        if relt.tag == "{%s}EntityDescriptor" % NS['md']:
-            if tid is None:
-                tid = relt.get('entityID')
-            with self.rc.pipeline() as p:
-                self.update_entity(relt, t, tid, ts, p)
-                entity_id = relt.get("entityID")
-                if entity_id is not None:
-                    self.membership("entities", entity_id, ts, p)
-                for ea, eav in list(entity_attribute_dict(relt).items()):
-                    for v in eav:
-                        # log.debug("%s=%s" % (ea, v))
-                        self.membership("{%s}%s" % (ea, v), tid, ts, p)
-                        p.zadd("%s#values" % ea, v, ts)
-                    p.sadd("#attributes", ea)
-
-                for hn in ('sha1', 'sha256', 'md5'):
-                    tid_hash = hex_digest(tid, hn)
-                    p.set("{%s}%s#alias" % (hn, tid_hash), tid)
-                    if ts is not None:
-                        p.expireat(tid_hash, ts)
-                p.execute()
-            ne += 1
-        elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
-            if tid is None:
-                tid = relt.get('Name')
-            ts = self._expiration(relt)
-            with self.rc.pipeline() as p:
-                self.update_entity(relt, t, tid, ts, p)
-                for e in iter_entities(t):
-                    ne += self.update(e, ts=ts)
-                    entity_id = e.get("entityID")
-                    if entity_id is not None:
-                        self.membership(tid, entity_id, ts, p)
-                        self.membership("entities", entity_id, ts, p)
-                p.execute()
-        else:
-            raise ValueError("Bad metadata top-level element: '%s'" % root(t).tag)
-
-        return ne
-
-    def _members(self, k):
-        mem = []
-        if self.rc.exists("%s#members" % k):
-            for entity_id in self.rc.zrangebyscore("%s#members" % k, ts_now(), "+inf"):
-                mem.extend(self.lookup(entity_id))
-        return mem
-
-    @cached(ttl=30)
-    def _get_metadata(self, key):
-        return root(parse_xml(six.BytesIO(self.rc.get("%s#metadata" % key))))
-
-    def lookup(self, key):
-        log.debug("redis store lookup: %s" % key)
-        if isinstance(key, six.binary_type):
-            key = key.decode("utf-8")
-
-        if '+' in key:
-            hk = hex_digest(key)
-            if not self.rc.exists("%s#members" % hk):
-                self.rc.zinterstore("%s#members" % hk, ["%s#members" % k for k in key.split('+')], 'min')
-                self.rc.expire("%s#members" % hk, 30)  # XXX bad juju - only to keep clients from hammering
-            return b2u(self.lookup(hk))
-
-        m = re.match("^(.+)=(.+)$", key)
-        if m:
-            return self.lookup("{%s}%s" % (m.group(1), m.group(2)))
-
-        m = re.match("^{(.+)}(.+)$", key)
-        if m and ';' in m.group(2):
-            hk = hex_digest(key)
-            if not self.rc.exists("%s#members" % hk):
-                self.rc.zunionstore("%s#members" % hk,
-                                    ["{%s}%s#members" % (m.group(1), v) for v in str(m.group(2)).split(';')], 'min')
-                self.rc.expire("%s#members" % hk, 30)  # XXX bad juju - only to keep clients from hammering
-            return b2u(self.lookup(hk))
-        elif self.rc.exists("%s#alias" % key):
-            return b2u(self.lookup(self.rc.get("%s#alias" % key)))
-        elif self.rc.exists("%s#metadata" % key):
-            return [b2u(self._get_metadata(key))]
-        else:
-            return b2u(self._members(key))
-
-    def size(self):
-        return self.rc.zcount("entities#members", ts_now(), "+inf")

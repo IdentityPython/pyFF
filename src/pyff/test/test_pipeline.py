@@ -1,6 +1,3 @@
-
-
-
 import shutil
 import sys
 import tempfile
@@ -8,7 +5,6 @@ import os
 import yaml
 from mako.lookup import TemplateLookup
 from mock import patch
-from nose.plugins.skip import Skip
 from pyff.samlmd import MDRepository
 from pyff.exceptions import MetadataException
 from pyff.pipes import plumbing, Plumbing, PipeException
@@ -43,8 +39,8 @@ class PipeLineTest(SignerTestCase):
 
     def exec_pipeline(self, pstr):
         md = MDRepository()
-        p = yaml.load(six.StringIO(pstr))
-        print(p)
+        p = yaml.safe_load(six.StringIO(pstr))
+        print("\n{}".format(yaml.dump(p)))
         res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}})
         return res, md
 
@@ -104,13 +100,12 @@ class LoadErrorTest(PipeLineTest):
                 try:
                     res, md = self.exec_pipeline("""
     - load fail_on_error True:
-        - %s/metadata/test01.xml
         - %s/file_that_does_not_exist.xml
     - select
     - stats
-    """ % (self.datadir, self.datadir))
-                except (PipeException,ResourceException) as ex:
-                    print(ex)
+    """ % (self.datadir))
+                except ResourceException as ex:
+                    print("----\n",ex,"\n++++")
                     assert ("file_that_does_not_exist.xml" in str(ex))
                     return True
                 finally:
@@ -131,13 +126,12 @@ class LoadErrorTest(PipeLineTest):
                 try:
                     res, md = self.exec_pipeline("""
     - load fail_on_error True:
-        - %s/metadata/test01.xml
         - file://%s/file_that_does_not_exist.xml
     - select
     - stats
-    """ % (self.datadir, self.datadir))
+    """ % (self.datadir))
                 except ResourceException as ex:
-                    print(ex)
+                    print(str(ex))
                     assert ("file_that_does_not_exist.xml" in str(ex))
                     return True
                 finally:
@@ -159,12 +153,11 @@ class LoadErrorTest(PipeLineTest):
                 try:
                     res, md = self.exec_pipeline("""
     - load fail_on_error True:
-        - %s/metadata/test01.xml
         - http://127.0.0.1/does_not_exist.xml
     - select
     - stats
-    """ % (self.datadir))
-                except Exception as ex:
+    """)
+                except BaseException as ex:
                     print(ex)
                     assert ("does_not_exist.xml" in str(ex))
                     return True
@@ -191,7 +184,7 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir, self.datadir))
-                except (MetadataException, ParserException) as ex:
+                except (MetadataException, ParserException, ResourceException) as ex:
                     print(ex)
                     return True
                 finally:
@@ -216,7 +209,7 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir))
-                except (MetadataException, ParserException) as ex:
+                except (MetadataException, ParserException, ResourceException) as ex:
                     print(ex)
                     return True
                 finally:
@@ -261,7 +254,7 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir, self.datadir))
-                except MetadataException as ex:
+                except (MetadataException,) as ex:
                     print(ex)
                     assert (":SCHEMASV:" in str(ex))
                     assert ("/metadata/test03-invalid.xml" in str(ex))
@@ -360,14 +353,15 @@ class SortTest(PipeLineTest):
             with LogCapture() as l:
                 res, md = self.exec_pipeline("""
     - load:
-        - %s/metadata
+        - %s/metadata/test01.xml
+        - %s/metadata/sharav.abes.fr.xml
         - %s/simple-pipeline/idp.aco.net.xml
     - select:
         - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - sort
     - dump
     - stats
-    """ % (self.datadir, self.datadir))
+    """ % (self.datadir, self.datadir, self.datadir))
             print(sys.stdout.captured)
             print(sys.stderr.captured)
 
@@ -385,15 +379,15 @@ class SortTest(PipeLineTest):
             with LogCapture() as l:
                 res, md = self.exec_pipeline("""
     - load:
-        - %s/metadata
+        - %s/metadata/test01.xml
+        - %s/metadata/sharav.abes.fr.xml
         - %s/simple-pipeline/idp.aco.net.xml
     - select:
         - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - sort order_by %s
     - stats
-    """ % (self.datadir, self.datadir, sxp))
-            print(sys.stdout.captured)
-            print(sys.stderr.captured)
+    """ % (self.datadir, self.datadir, self.datadir, sxp))
+            #print(l)
 
             # tuple format (entityID, has value for 'order_by' xpath)
             expected_order = [(self.EID3, True), (self.EID1, False), (self.EID2, False)]
@@ -409,13 +403,14 @@ class SortTest(PipeLineTest):
             with LogCapture() as l:
                 res, md = self.exec_pipeline("""
     - load:
-        - %s/metadata
+        - %s/metadata/test01.xml
+        - %s/metadata/sharav.abes.fr.xml
         - %s/simple-pipeline/idp.aco.net.xml
     - select:
         - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - sort order_by %s
     - stats
-    """ % (self.datadir, self.datadir, sxp))
+    """ % (self.datadir, self.datadir, self.datadir, sxp))
             print(sys.stdout.captured)
             print(sys.stderr.captured)
 
@@ -473,7 +468,7 @@ class SigningTest(PipeLineTest):
 """)
                 assert ('https://idp.nordu.net/idp/shibboleth' in sys.stdout.captured)
             except IOError:
-                raise Skip
+                pass
 
     def test_end_exit(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
@@ -485,7 +480,7 @@ class SigningTest(PipeLineTest):
 """)
                 assert False
             except IOError:
-                raise Skip
+                pass
             except ExitException as ex:
                 assert ex.code == 22
                 assert "slartibartifast" in "".join(sys.stdout.captured)
@@ -499,7 +494,7 @@ class SigningTest(PipeLineTest):
                 assert '<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"/>' \
                        in "".join(sys.stdout.captured)
             except IOError:
-                raise Skip
+                pass
 
     def test_missing_select(self):
         for stmt in ('publish', 'signcerts', 'info', 'sign', 'store', 'finalize',
@@ -513,7 +508,7 @@ class SigningTest(PipeLineTest):
                 except PipeException:
                     pass
                 except IOError:
-                    raise Skip
+                    pass
 
     def test_first_select_as(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
@@ -565,7 +560,7 @@ class SigningTest(PipeLineTest):
             except PipeException:
                 pass
             except IOError:
-                raise Skip
+                pass
             finally:
                 try:
                     os.unlink(tmpfile)
@@ -582,7 +577,7 @@ class SigningTest(PipeLineTest):
             except PipeException:
                 pass
             except IOError:
-                raise Skip
+                pass
 
     def test_empty_store2(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
@@ -595,7 +590,7 @@ class SigningTest(PipeLineTest):
             except PipeException:
                 pass
             except IOError:
-                raise Skip
+                pass
 
     def test_empty_dir_error(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
@@ -603,11 +598,11 @@ class SigningTest(PipeLineTest):
             with LogCapture() as l:
                 try:
                     self.exec_pipeline("""
-- load:
+- load fail_on_error True:
    - %s/empty
 """ % self.datadir)
                 except IOError:
-                    raise Skip
+                    pass
                 assert "no entities found in" in str(l)
 
     def test_store_and_retrieve(self):
@@ -633,7 +628,7 @@ class SigningTest(PipeLineTest):
                 assert root(t1).get('entityID') == root(t2).get('entityID')
                 assert root(t2).get('entityID') == entity_id
             except IOError:
-                raise Skip
+                pass
             finally:
                 shutil.rmtree(tmpdir)
 
@@ -647,7 +642,7 @@ class SigningTest(PipeLineTest):
             except PipeException:
                 pass
             except IOError:
-                raise Skip
+                pass
 
     def test_pick_invalid(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
@@ -666,7 +661,7 @@ class SigningTest(PipeLineTest):
                 print(str(ex))
                 pass
             except IOError:
-                raise Skip
+                pass
             finally:
                 try:
                     os.unlink(tmpfile)
@@ -681,14 +676,13 @@ class SigningTest(PipeLineTest):
 - when batch:
     - load:
         - %s/metadata via blacklist_example
-    - loadstats
 - when blacklist_example:
     - fork merge remove:
         - filter:
             - https://idp.example.com/saml2/idp/metadata.php
 """ % self.datadir)
             except IOError:
-                raise Skip
+                pass
             print(md.lookup('https://idp.example.com/saml2/idp/metadata.php'))
             assert (not md.lookup('https://idp.example.com/saml2/idp/metadata.php'))
 
@@ -700,10 +694,9 @@ class SigningTest(PipeLineTest):
 - when batch:
     - load:
         - %s/bad_metadata cleanup bad
-    - loadstats
 - when bad:
     - check_xml_namespaces
 """ % self.datadir)
             except ValueError:
-                raise Skip
+                pass
             assert("Expected exception from bad namespace in")
