@@ -272,6 +272,8 @@ def safe_write(fn, data):
             tmpn = tmp.name
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
             os.rename(tmpn, fn)
+            # made these file readable by all
+            os.chmod(fn, 0o644)
             return True
     except Exception as ex:
         log.debug(traceback.format_exc())
