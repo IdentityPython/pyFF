@@ -211,5 +211,3 @@ class TestStoreBase(TestCase):
             assert False
         except NotImplementedError:
             pass
-
-        assert (base.clone() == base)

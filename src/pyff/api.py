@@ -12,6 +12,7 @@ from .logs import get_log
 from json import dumps
 from datetime import datetime, timedelta
 from .utils import dumptree, duration2timedelta, hash_id, json_serializer, b2u, make_default_scheduler
+from .repo import MDRepository
 import pkg_resources
 from accept_types import AcceptableType
 from lxml import etree
@@ -332,7 +333,10 @@ def launch_memory_usage_server(port = 9002):
 
 def mkapp(*args, **kwargs):
 
-    md = kwargs.pop('md')
+    md = kwargs.pop('md', None)
+    if md is None:
+        md = MDRepository()
+   
 
     if config.devel_memory_profile:
         launch_memory_usage_server()

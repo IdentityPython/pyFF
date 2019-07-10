@@ -5,7 +5,7 @@ import os
 import yaml
 from mako.lookup import TemplateLookup
 from mock import patch
-from pyff.samlmd import MDRepository
+from pyff.repo import MDRepository
 from pyff.exceptions import MetadataException
 from pyff.pipes import plumbing, Plumbing, PipeException
 from pyff.test import ExitException
@@ -41,7 +41,6 @@ class PipeLineTest(SignerTestCase):
 
     def exec_pipeline(self, pstr):
         md = MDRepository()
-        md.store = make_store_instance()
         p = yaml.safe_load(six.StringIO(pstr))
         print("\n{}".format(yaml.dump(p)))
         res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}})

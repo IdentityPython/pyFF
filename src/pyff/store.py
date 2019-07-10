@@ -755,7 +755,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         for ref in lst:
             e = self.objects.get(ref, None)
             if e is not None:
-                res.append(discojson(e, load_icon=False))
+                res.append(discojson(e))
         return res
 
 

@@ -878,9 +878,10 @@ def find_matching_files(d, extensions):
 
 def is_past_ttl(last_seen, ttl=config.cache_ttl):
     fuzz = ttl
+    now = int(time.time())
     if config.randomize_cache_ttl:
         fuzz = random.randrange(1, ttl)
-    return int(time.time()) > int(last_seen) + fuzz
+    return now > int(last_seen) + fuzz
 
 
 class Watchable(object):

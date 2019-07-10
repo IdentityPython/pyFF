@@ -40,8 +40,8 @@ class NoParser(PyffParser):
 
 
 class DirectoryParser(PyffParser):
-    def __init__(self, ext):
-        self.ext = ext
+    def __init__(self, extensions):
+        self.extensions = extensions
 
     def __str__(self):
         return "Directory"
@@ -55,7 +55,7 @@ class DirectoryParser(PyffParser):
         info['Description'] = 'Directory'
         info['Expiration Time'] = 'never expires'
         n = 0
-        for fn in find_matching_files(content, [self.ext]):
+        for fn in find_matching_files(content, self.extensions):
             resource.add_child("file://" + fn)
             n += 1
 
@@ -103,7 +103,7 @@ class XRDParser(PyffParser):
         return info
 
 
-_parsers = [XRDParser(), DirectoryParser('.xml'), NoParser()]
+_parsers = [XRDParser(), DirectoryParser(['xml']), NoParser()]
 
 
 def add_parser(parser):

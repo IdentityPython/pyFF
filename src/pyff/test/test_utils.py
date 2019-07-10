@@ -128,13 +128,13 @@ class TestMisc(TestCase):
         config.randomize_cache_ttl = False
         config.cache_ttl = 0
         now = int(time.time())
-        assert(is_past_ttl(now - 1))
-        assert(not is_past_ttl(now))
+        assert(is_past_ttl(now - 1, ttl=config.cache_ttl))
+        assert(not is_past_ttl(now, ttl=config.cache_ttl))
         config.cache_ttl = 3
         config.randomize_cache_ttl = True
-        assert(is_past_ttl(now - 6))
-        assert(not is_past_ttl(now))
-        assert(is_past_ttl(now - 100))
+        assert(is_past_ttl(now - 6, ttl=config.cache_ttl))
+        assert(not is_past_ttl(now, ttl=config.cache_ttl))
+        assert(is_past_ttl(now - 100, ttl=config.cache_ttl))
 
     def test_schema(self):
         assert(schema())
