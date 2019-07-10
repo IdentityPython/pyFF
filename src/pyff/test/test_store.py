@@ -39,6 +39,7 @@ class TestRedisWhooshStore(TestCase):
         store.update(self.test01, etag="test01")
         assert (store.size() > 0)
         store.reset()
+        print(store.size())
         assert (store.size() == 0)
 
     def test_store_attributes_test01(self):

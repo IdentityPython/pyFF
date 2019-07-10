@@ -11,7 +11,7 @@ import importlib
 import logging
 import sys
 import traceback
-from .samlmd import MDRepository
+from .repo import MDRepository
 from .pipes import plumbing
 from .constants import config, parse_options
 
@@ -30,7 +30,7 @@ def main():
     config.modules.append('pyff.builtins')
     for mn in config.modules:
         importlib.import_module(mn)
-
+    config.update_frequency = 0
     try:
         md = MDRepository()
         for p in args:

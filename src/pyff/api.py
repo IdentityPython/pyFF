@@ -5,8 +5,7 @@ from .exceptions import ResourceException
 from .constants import config
 import importlib
 from .pipes import plumbing
-from .samlmd import MDRepository, entity_display_name
-from .store import make_store_instance
+from .samlmd import entity_display_name
 from six.moves.urllib_parse import quote_plus
 from six import b
 from .logs import get_log
@@ -18,6 +17,7 @@ from accept_types import AcceptableType
 from lxml import etree
 from pyramid.events import NewRequest
 import requests
+import threading
 
 log = get_log(__name__)
 
@@ -31,12 +31,14 @@ Disallow: /
 
 def status_handler(request):
     d = {}
-    for r in request.registry.md.rm.walk():
+    for r in request.registry.md.rm:
         if 'Validation Errors' in r.info and r.info['Validation Errors']:
             d[r.url] = r.info['Validation Errors']
     _status = dict(version=pkg_resources.require("pyFF")[0].version,
                    invalids=d,
+                   icon_store=dict(size=request.registry.md.icon_store.size()),
                    jobs=[dict(id=j.id, next_run_time=j.next_run_time) for j in request.registry.scheduler.get_jobs()],
+                   threads=[t.name for t in threading.enumerate()],
                    store=dict(size=request.registry.md.store.size()))
     response = Response(dumps(_status, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
@@ -145,7 +147,10 @@ def process_handler(request):
                      'path': path,
                      'stats': {}}
 
-            r = p.process(request.registry.md, state=state, raise_exceptions=True)
+            r = p.process(request.registry.md,
+                          state=state,
+                          raise_exceptions=True,
+                          scheduler=request.registry.scheduler)
             if r is not None:
                 response = Response()
                 response.headers.update(state.get('headers', {}))
@@ -264,7 +269,7 @@ def resources_handler(request):
             nfo['Children'] = [_info(cr) for cr in r.children]
         return nfo
 
-    _resources = [_info(r) for r in request.registry.md.rm.values()]
+    _resources = [_info(r) for r in request.registry.md.rm.children]
     response = Response(dumps(_resources, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
 
@@ -282,10 +287,8 @@ def search_handler(request):
     match = request.params.get('q', request.params.get('query', None))
     entity_filter = request.params.get('entity_filter', '{http://pyff.io/role}idp')
     log.debug("match={}".format(match))
-    load_icon = request.params.get('load_icon', False)
     store = request.registry.md.store
 
-    #import pdb; pdb.set_trace()
     def _response():
         yield b('[')
         in_loop = False
@@ -329,6 +332,8 @@ def launch_memory_usage_server(port = 9002):
 
 def mkapp(*args, **kwargs):
 
+    md = kwargs.pop('md')
+
     if config.devel_memory_profile:
         launch_memory_usage_server()
 
@@ -350,13 +355,11 @@ def mkapp(*args, **kwargs):
         if not len(pipeline) > 0:
             pipeline = [config.pipeline]
 
-        ctx.registry.scheduler = make_default_scheduler()
+        ctx.registry.scheduler = md.scheduler
         ctx.registry.pipeline = pipeline
         ctx.registry.plumbings = [plumbing(v) for v in pipeline]
         ctx.registry.aliases = config.aliases
-        ctx.registry.md = MDRepository()
-        ctx.registry.md.store = make_store_instance(scheduler=ctx.registry.scheduler)
-        log.debug(ctx.registry.md.store)
+        ctx.registry.md = md
 
         ctx.add_route('robots', '/robots.txt')
         ctx.add_view(robots_handler, route_name='robots')
@@ -391,7 +394,7 @@ def mkapp(*args, **kwargs):
                                            args=['update'],
                                            start_date=start,
                                            seconds=config.update_frequency,
+                                           replace_existing=True,
                                            max_instances=1)
 
-        ctx.registry.scheduler.start()
         return ctx.make_wsgi_app()

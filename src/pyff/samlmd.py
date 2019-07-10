@@ -1,8 +1,8 @@
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
-    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, url_get, img_to_data, is_text, unicode_stream, \
-    Lambda
+    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, is_text, unicode_stream, \
+    Lambda, b2u
 from .logs import get_log
 from .constants import config, NS, ATTRS, NF_URI
 from lxml import etree
@@ -13,10 +13,8 @@ from copy import deepcopy
 from .exceptions import *
 import traceback
 from distutils.util import strtobool
-from .fetch import ResourceManager
 from .parse import add_parser, PyffParser
 from xmlsec.crypto import CertDict
-from concurrent import futures
 
 log = get_log(__name__)
 
@@ -286,7 +284,7 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
     else:  # all or nothing
         log.debug("Validating (one-shot) {}".format(base_url))
         try:
-            return validate_document(t)
+            validate_document(t)
         except DocumentInvalid as ex:
             err = xml_error(ex.error_log, m=base_url)
             validation_errors[base_url] = err
@@ -370,8 +368,9 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
             t.append(ent_insert)
 
     if config.devel_write_xml_to_file:
-        with open("/tmp/pyff_entities_out.xml", "w") as fd:
-            fd.write(dumptree(t))
+        import os
+        with open("/tmp/pyff_entities_out-{}.xml".format(os.getpid()), "w") as fd:
+            fd.write(b2u(dumptree(t)))
 
     if validate:
         validation_errors = dict()
@@ -677,47 +676,7 @@ def entity_scopes(e):
     return [s.text for s in elt]
 
 
-def discojson_load_icon(d, fallback_to_favicon=False):
-    try:
-        if 'entity_icon_url' in d:
-            icon_info = d['entity_icon_url']
-        else:
-            icon_info = {}
-        urls = []
-        if icon_info and 'url' in icon_info:
-            url = icon_info['url']
-            urls.append(url)
-
-            if 'scope' in d and fallback_to_favicon:
-                scopes = d['scope'].split(',')
-                for scope in scopes:
-                    urls.append("https://{}/favico.ico".format(scope))
-                    urls.append("https://www.{}/favico.ico".format(scope))
-                    urls.append("http://{}/favico.ico".format(scope))
-                    urls.append("http://www.{}/favico.ico".format(scope))
-
-        d['entity_icon'] = None
-        for url in urls:
-            if url.startswith("data:"):
-                d['entity_icon'] = url
-                break
-
-            if '://' in url:
-                try:
-                    r = url_get(url)
-                except IOError:
-                    continue
-                if r.ok and r.content:
-                    d['entity_icon'] = img_to_data(r.content, r.headers.get('Content-Type'))
-                    break
-    except Exception as ex:
-        log.debug(traceback.format_exc())
-        log.error(ex)
-
-    return d
-
-
-def discojson(e, langs=None, fallback_to_favicon=False, load_icon=True):
+def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     if e is None:
         return dict()
 
@@ -746,10 +705,12 @@ def discojson(e, langs=None, fallback_to_favicon=False, load_icon=True):
             d['name_tag'] = (scopes[0].split('.'))[0].upper()
 
     icon_info = entity_icon_url(e)
-    d['entity_icon_url'] = entity_icon_url(e)
-
-    if load_icon:
-        discojson_load_icon(d, fallback_to_favicon=fallback_to_favicon)
+    if icon_info is not None:
+        if icon_store is not None and 'url' in icon_info:
+            ico = icon_store.lookup(icon_info['url'])
+            if ico is not None:
+                icon_info['url'] = ico
+        d['entity_icon_url'] = icon_info
 
     keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
     if keywords is not None:
@@ -766,12 +727,8 @@ def discojson(e, langs=None, fallback_to_favicon=False, load_icon=True):
     return d
 
 
-def discojson_t(t, load_icons=False):
-    lst = [discojson(en, load_icon=False) for en in iter_entities(t)]
-    if load_icons:
-        with futures.ThreadPoolExecutor(max_workers=config.worker_pool_size) as executor:
-            lst = list(executor.map(discojson_load_icon, lst))
-    return lst
+def discojson_t(t, icon_store=None):
+    return [discojson(en, icon_store=icon_store) for en in iter_entities(t)]
 
 
 def sha1_id(e):
@@ -1089,82 +1046,6 @@ Entities where no value exists for the given 'sxp' are sorted last.
 
     container = root(t)
     container[:] = sorted(container, key=lambda e: get_key(e))
-
-
-class MDRepository():
-    """A class representing a set of SAML metadata and the resources from where this metadata was loaded.
-    """
-
-    def __init__(self):
-        self.rm = ResourceManager()
-        self.store = None
-
-    def _lookup(self, member, store=None):
-        if store is None:
-            store = self.store
-
-        if member is None:
-            member = "entities"
-
-        if is_text(member):
-            if '!' in member:
-                (src, xp) = member.split("!")
-                if len(src) == 0:
-                    src = None
-                return self.lookup(src, xp=xp, store=store)
-
-        log.debug("calling store lookup %s" % member)
-        return store.lookup(member)
-
-    def lookup(self, member, xp=None, store=None):
-        """
-Lookup elements in the working metadata repository
-
-:param member: A selector (cf below)
-:type member: basestring
-:param xp: An optional xpath filter
-:type xp: basestring
-:param store: the store to operate on
-:return: An interable of EntityDescriptor elements
-:rtype: etree.Element
-
-
-**Selector Syntax**
-
-    - selector "+" selector
-    - [sourceID] "!" xpath
-    - attribute=value or {attribute}value
-    - entityID
-    - source (typically @Name from an EntitiesDescriptor set but could also be an alias)
-
-The first form results in the intersection of the results of doing a lookup on the selectors. The second form
-results in the EntityDescriptor elements from the source (defaults to all EntityDescriptors) that match the
-xpath expression. The attribute-value forms resuls in the EntityDescriptors that contain the specified entity
-attribute pair. If non of these forms apply, the lookup is done using either source ID (normally @Name from
-the EntitiesDescriptor) or the entityID of single EntityDescriptors. If member is a URI but isn't part of
-the metadata repository then it is fetched an treated as a list of (one per line) of selectors. If all else
-fails an empty list is returned.
-
-        """
-        if store is None:
-            store = self.store
-
-        l = self._lookup(member, store=store)
-        if hasattr(l, 'tag'):
-            l = [l]
-        elif hasattr(l, '__iter__'):
-            l = list(l)
-
-        if xp is None:
-            return l
-        else:
-            log.debug("filtering %d entities using xpath %s" % (len(l), xp))
-            t = entitiesdescriptor(l, 'dummy', lookup_fn=self.lookup)
-            if t is None:
-                return []
-            l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
-            log.debug("got %d entities after filtering" % len(l))
-            return l
 
 
 def set_nodecountry(e, country_code):

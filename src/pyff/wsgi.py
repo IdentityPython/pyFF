@@ -1,9 +1,13 @@
 from wsgiref.simple_server import make_server
 from .api import mkapp
-app = mkapp()
+from .repo import MDRepository
+
+md = MDRepository()
+app = mkapp(md=md)
 
 
 def app_factory(global_config, **local_config):
+    local_config['md'] = md
     return mkapp(global_config, **local_config)
 
 
@@ -17,7 +21,7 @@ def server_runner(*args):
 
 
 def main():
-    server_runner(mkapp(), bind_address='0.0.0.0', port=8080)
+    server_runner(mkapp(md=md), bind_address='0.0.0.0', port=8080)
 
 
 if __name__ == '__main__':

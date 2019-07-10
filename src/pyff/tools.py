@@ -11,7 +11,7 @@ import sys
 import traceback
 from .samlmd import diff, iter_entities
 from .store import MemoryStore
-from .fetch import ResourceManager, Resource
+from .resource import ResourceManager, Resource
 from .constants import config, parse_options
 from xmldiff.main import diff_trees
 from xmldiff.formatting import DiffFormatter

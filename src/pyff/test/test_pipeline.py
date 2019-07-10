@@ -12,8 +12,10 @@ from pyff.test import ExitException
 from pyff.test import SignerTestCase
 from pyff.utils import hash_id, parse_xml, resource_filename, root
 from pyff.parse import ParserException
-from pyff.fetch import ResourceException
+from pyff.resource import ResourceException
 import six
+from pyff.store import make_store_instance
+
 # don't remove this - it only appears unused to static analysis
 from pyff import builtins
 
@@ -39,6 +41,7 @@ class PipeLineTest(SignerTestCase):
 
     def exec_pipeline(self, pstr):
         md = MDRepository()
+        md.store = make_store_instance()
         p = yaml.safe_load(six.StringIO(pstr))
         print("\n{}".format(yaml.dump(p)))
         res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}})
@@ -254,7 +257,7 @@ class LoadErrorTest(PipeLineTest):
     - select
     - stats
     """ % (self.datadir, self.datadir))
-                except (MetadataException,) as ex:
+                except (MetadataException, ParserException) as ex:
                     print(ex)
                     assert (":SCHEMASV:" in str(ex))
                     assert ("/metadata/test03-invalid.xml" in str(ex))

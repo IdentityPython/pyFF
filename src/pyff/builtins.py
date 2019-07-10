@@ -24,10 +24,8 @@ from .utils import total_seconds, dumptree, safe_write, root, with_tree, duratio
     validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
     discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
-from .fetch import Resource
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
-from .store import make_store_instance
 import six
 import ipaddr
 
@@ -164,7 +162,7 @@ active document. To avoid this do a select before your fork, thus:
         nt = deepcopy(req.t)
 
     ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
-    ireq = Plumbing.Request(ip, req.md, t=nt)
+    ireq = Plumbing.Request(ip, req.md, t=nt, scheduler=req.scheduler)
     ip.iprocess(ireq)
 
     if req.t is not None and ireq.t is not None and len(root(ireq.t)) > 0:
@@ -254,7 +252,6 @@ is equivalent to
     - two
 
     """
-    # req.process(Plumbing(pipeline=req.args, pid="%s.pipe" % req.plumbing.pid))
     ot = Plumbing(pipeline=req.args, pid="%s.pipe" % req.plumbing.id).iprocess(req)
     req.done = False
     return ot
@@ -474,8 +471,6 @@ Defaults are marked with (*)
     opts['filter_invalid'] = bool(strtobool(opts['filter_invalid']))
 
     remotes = []
-    store = make_store_instance()  # start the load process by creating a provisional store object
-    req._store = store
     for x in req.args:
         x = x.strip()
         log.debug("load parsing '%s'" % x)
@@ -502,19 +497,17 @@ Defaults are marked with (*)
                 params['verify'] = elt
 
         if params['via'] is not None:
-            params['via'] = [PipelineCallback(pipe, req, store=store) for pipe in params['via']]
+            params['via'] = [PipelineCallback(pipe, req, store=req.md.store) for pipe in params['via']]
 
         if params['cleanup'] is not None:
-            params['cleanup'] = [PipelineCallback(pipe, req, store=store) for pipe in params['cleanup']]
+            params['cleanup'] = [PipelineCallback(pipe, req, store=req.md.store) for pipe in params['cleanup']]
 
         params.update(opts)
 
-        req.md.rm.add(Resource(url, **params))
+        req.md.rm.add_child(url, **params)
 
     log.debug("Refreshing all resources")
-    req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']), store=store, scheduler=req.scheduler)
-    req._store = None
-    req.md.store = store  # commit the store
+    req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']))
 
 
 def _select_args(req):
@@ -765,9 +758,9 @@ Return a discojuice-compatible json representation of the tree
 
 .. code-block:: yaml
   discojson:
-      - load_icons: True
 
-This would return a json representation of the active tree with data: URI version of the icons
+If the config.load_icons directive is set the icons will be returned from a (possibly persistent) local
+cache & converted to data: URIs
 
 :param req: The request
 :param opts: Options (unusued)
@@ -777,11 +770,7 @@ This would return a json representation of the active tree with data: URI versio
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    load_icons = False
-    if req.args:
-        load_icons = bool(req.args.get('load_icons', False))
-
-    res = discojson_t(req.t, load_icons=load_icons)
+    res = discojson_t(req.t, icon_store=req.md.icon_store)
     res.sort(key=operator.itemgetter('title'))
 
     return json.dumps(res)

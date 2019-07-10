@@ -1,5 +1,5 @@
 import os
-from .utils import parse_xml, root, first_text, unicode_stream
+from .utils import parse_xml, root, first_text, unicode_stream, find_matching_files
 from .constants import NS
 from .logs import get_log
 from xmlsec.crypto import CertDict
@@ -49,25 +49,13 @@ class DirectoryParser(PyffParser):
     def magic(self, content):
         return os.path.isdir(content)
 
-    def _find_matching_files(self, d):
-        log.debug("find files in {}".format(repr(d)))
-        for top, dirs, files in os.walk(d):
-            for dn in dirs:
-                if dn.startswith("."):
-                    dirs.remove(dn)
-
-            for nm in files:
-                if nm.endswith(self.ext):
-                    fn = os.path.join(top, nm)
-                    yield fn
-
     def parse(self, resource, content):
         resource.children = []
         info = dict()
         info['Description'] = 'Directory'
         info['Expiration Time'] = 'never expires'
         n = 0
-        for fn in self._find_matching_files(content):
+        for fn in find_matching_files(content, [self.ext]):
             resource.add_child("file://" + fn)
             n += 1
 

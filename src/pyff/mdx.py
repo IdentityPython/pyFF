@@ -62,7 +62,8 @@ from .locks import ReadWriteLock
 from .pipes import plumbing
 from .utils import resource_string, duration2timedelta, debug_observer, render_template, hash_id, safe_b64e, safe_b64d
 from .logs import get_log, SysLogLibHandler
-from .samlmd import entity_simple_summary, entity_display_name, entity_info, MDRepository
+from .samlmd import entity_simple_summary, entity_display_name, entity_info
+from .repo import MDRepository
 import logging
 from datetime import datetime
 from publicsuffix2 import get_public_suffix

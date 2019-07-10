@@ -2,6 +2,8 @@
 Useful constants for pyFF. Mostly XML namespace declarations.
 """
 
+
+from distutils.util import strtobool
 import pyconfig
 import logging
 import getopt
@@ -77,7 +79,7 @@ def as_dict_of_string(o):
 
 def as_bool(o):
     if type(o) not in ('bool', ):
-        o = bool(o)
+        o = bool(strtobool(str(o)))
     return o
 
 
@@ -120,28 +122,35 @@ class Config(object):
     public_url = setting("public_url", None, as_string)
     allow_shutdown = setting("allow_shutdown", False, as_bool)
     modules = setting("modules", [], as_list_of_string)
-    cache_ttl = setting("cache.ttl", 300, as_int)
+    cache_ttl = setting("cache_ttl", 300, as_int)
+    randomize_cache_ttl = setting("randomize_cache_ttl", True, as_bool)
     cache_size = setting("cache.size", 3000, as_int)
     default_cache_duration = setting("default_cache_duration", "PT1H")
     respect_cache_duration = setting("respect_cache_duration", True, as_bool)
     info_buffer_size = setting("info_buffer_size", 10, as_int)
     worker_pool_size = setting("worker_pool_size", 10, as_int)
     store_class = setting("store.class", "pyff.store:MemoryStore")
+    store_clear = setting("store.clear", False, as_bool)
+    icon_store_clear = setting("icon_store.clear", False, as_bool)
+    icon_maxsize = setting("icon_maxsize", 31*1024, as_int)  # 32k is the biggest data: uri size
+    resource_store_class = setting('resource_store.class', "pyff.fetch:MemoryResourceStore")
+    icon_store_class = setting("icon_store.class", "pyff.store:MemoryIconStore")
     store_name = setting("store.name", "pyff")
     update_frequency = setting("update_frequency", 600, as_int)
-    cache_frequency = setting("cache_frequency", 200, as_int)
     request_timeout = setting("request_timeout", 10, as_int)
     request_cache_time = setting("request_cache_time", 300, as_int)
-    request_cache_backend = setting("request_cache_backend", None)
+    request_cache_backend = setting("request_cache_backend", 'memory', as_string)
     request_override_encoding = setting("request_override_encoding", "utf8")  # set to non to enable chardet guessing
     devel_memory_profile = setting("devel_memory_profile", False, as_bool)
     devel_write_xml_to_file = setting("devel_write_xml_to_file", False, as_bool)
     ds_template = setting("ds_template", "ds.html")
     redis_host = setting("redis_host", "localhost")
     redis_port = setting("redis_port", 6379, as_int)
-    rq_queue = setting("rq_queue", "pyff")
-    cache_chunks = setting("cache_chunks", 10, as_int)
+    load_icons = setting("load_icons", False, as_bool)
+    cache_ttl_icons = setting("cache_ttl_icons", 24*3600, as_int)
+    load_icons_async = setting("load_icons_async", False, as_bool)  # this is unstable - apscheduler is unpredictable
     pipeline = setting("pipeline", None)
+    scheduler_job_store = setting("scheduler_job_store", "memory", as_string)
 
     @property
     def base_url(self):

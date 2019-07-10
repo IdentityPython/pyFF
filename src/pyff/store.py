@@ -1,10 +1,8 @@
 import operator
 import re
-from copy import deepcopy
 
 import ipaddr
 import six
-from redis import StrictRedis
 from redis_collections import Dict, Set
 from whoosh.writing import CLEAR
 from whoosh.fields import Schema, ID, KEYWORD, NGRAMWORDS
@@ -15,15 +13,16 @@ from io import BytesIO
 from cachetools.func import ttl_cache
 from threading import ThreadError
 from datetime import datetime, timedelta
-
+import time
+from pyff.resource import IconHandler
 from . import merge_strategies
 from .constants import NS, ATTRS, ATTRS_INV
 from .constants import config
 from .logs import get_log
 from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_simple_info, \
-    object_id, find_merge_strategy, find_entity, entity_simple_summary, entitiesdescriptor, discojson
+    object_id, find_merge_strategy, find_entity, entity_simple_summary, entitiesdescriptor, discojson, entity_icon_url
 from .utils import root, hash_id, avg_domain_distance, load_callable, is_text, b2u, parse_xml, dumptree, \
-    LRUProxyDict, make_default_scheduler, hex_digest
+    LRUProxyDict, hex_digest, redis, is_past_ttl
 import os
 import shutil
 
@@ -37,12 +36,211 @@ def make_store_instance(*args, **kwargs):
     return new_store(*args, **kwargs)
 
 
+def make_icon_store_instance(*args, **kwargs):
+    new_store = load_callable(config.icon_store_class)
+    return new_store(*args, **kwargs)
+
+
+class Unpickled(object):
+
+    def _pickle(self, data):
+        return data
+
+    def _unpickle(self, data):
+        return data
+
+
+class StringSet(Set):
+    _pickle = Unpickled._pickle
+    _unpickle = Unpickled._unpickle
+    _pickle_3 = _pickle
+    _unpickle_3 = _unpickle
+    _pickle_value = _pickle
+    _unpickle_value = _unpickle
+    _pickle_key = _pickle
+    _unpickle_key = _unpickle
+
+
+class StringDict(Dict):
+    _pickle = Unpickled._pickle
+    _unpickle = Unpickled._unpickle
+    _pickle_3 = _pickle
+    _unpickle_3 = _unpickle
+    _pickle_value = _pickle
+    _unpickle_value = _unpickle
+    _pickle_key = _pickle
+    _unpickle_key = _unpickle
+
+
+class JSONDict(Dict):
+    _pickle_key = Unpickled._pickle
+    _unpickle_key = Unpickled._unpickle
+
+    def _pickle(self, x):
+        return json.dumps(x)
+
+    def _unpickle(self, x):
+        return json.loads(b2u(x))
+
+    _pickle_3 = _pickle
+    _unpickle_3 = _unpickle
+    _pickle_value = _pickle
+    _unpickle_value = _unpickle
+
+
+class XMLDict(Dict):
+    _pickle_key = Unpickled._pickle
+    _unpickle_key = Unpickled._unpickle
+
+    def _pickle(self, data):
+        return dumptree(data)
+
+    def _unpickle(self, pickled_data):
+        return root(parse_xml(BytesIO(pickled_data)))
+
+    _pickle_3 = _pickle
+    _unpickle_3 = _unpickle
+    _pickle_value = _pickle
+    _unpickle_value = _unpickle
+
+
+class IconStore(object):
+
+    def __init__(self):
+        pass
+
+    def size(self):
+        raise NotImplementedError()
+
+    def lookup(self, uri):
+        raise NotImplementedError()
+
+    def update(self, uri, img, info=None):
+        raise NotImplementedError()
+
+    def reset(self):
+        raise NotImplementedError()
+
+    def is_valid(self, url):
+        return True
+
+    def __call__(self, *args, **kwargs):
+        watched = kwargs.pop('watched', None)
+        scheduler = kwargs.pop('scheduler', None)
+        log.debug("about to schedule icon refresh on {} using {}".format(self, scheduler.state))
+        if watched is not None and scheduler is not None:
+            urls = []
+            for r in watched.walk():
+                log.debug("looking at {}".format(r.url))
+                if r.t is not None:
+                    for e in iter_entities(r.t):
+                        ico = entity_icon_url(e)
+                        if ico is not None and 'url' in ico and not ico['url'].startswith('data:'):
+                            urls.append(ico)
+            if config.load_icons_async:
+                now = datetime.now()
+                start = now + timedelta(seconds=20)
+                job = scheduler.add_job(IconStore._load_icons,
+                                        args=[self, urls],
+                                        id="load_icons",
+                                        next_run_time=start,
+                                        name="load_icons",
+                                        max_instances=1,
+                                        coalesce=False)
+                log.debug(job)
+            else:
+                self._load_icons(urls)
+
+    def _load_icons(self, urls):
+        tbs = []
+        for u in [ico['url'] for ico in urls]:
+            if not self.is_valid(u):
+                tbs.append(u)
+
+        log.debug("fetching {} icons".format(len(tbs)))
+        if len(tbs) > 0:
+            icon_handler = IconHandler(icon_store=self, name="Icons")
+            icon_handler.schedule(tbs)
+            try:
+                icon_handler.done.acquire()
+                icon_handler.done.wait()
+            finally:
+                icon_handler.done.release()
+            icon_handler.fetcher.stop()
+            icon_handler.fetcher.join()
+
+
+class MemoryIconStore(IconStore):
+
+    def __init__(self):
+        super().__init__()
+        self.icons = {}
+
+    def lookup(self, uri):
+        return self.icons.get(uri, None)
+
+    def update(self, uri, img, info=None):
+        self.icons[uri] = img
+
+    def reset(self):
+        self.icons = {}
+
+    def size(self):
+        return len(self.icons)
+
+
+class RedisIconStore(IconStore):
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self._name = kwargs.pop('name', config.store_name)
+        self._redis = kwargs.pop('redis', redis())
+        clear = bool(kwargs.pop('clear', config.store_clear))
+        self._setup()
+        if clear:
+            self.reset()
+
+    def _setup(self):
+        if not self._redis:
+            self._redis = redis()  # XXX test cases won't get correctly unpicked because of this
+        self.icons = LRUProxyDict(JSONDict(key="{}_icons".format(self._name),
+                                           redis=self._redis,
+                                           writeback=True),
+                                  maxsize=config.cache_size)
+
+    def lookup(self, uri):
+        nfo = self.icons.get(uri, None)
+        if nfo is not None and 'data' in nfo:
+            return nfo['data']
+        return None
+
+    def is_valid(self, url):
+        nfo = self.icons.get(url, None)
+        if nfo is None or 'last_seen' not in nfo or is_past_ttl(int(nfo['last_seen']), ttl=config.cache_ttl_icons):
+            return False
+        return True
+
+    def update(self, uri, img, info=None):
+        self.icons[uri] = dict(data=img, info=info, last_seen=int(time.time()))
+
+    def __getstate__(self):
+        return dict(_name=self._name, _redis=None)
+
+    def __setstate__(self, state):
+        state.setdefault('_redis', None)
+        self.__dict__.update(state)
+        self._setup()
+
+    def reset(self):
+        self._redis.delete("{}_icons".format(self._name))
+
+    def size(self):
+        return len(self.icons)
+
+
 class SAMLStoreBase(object):
     def lookup(self, key):
         raise NotImplementedError()
-
-    def clone(self):
-        return self
 
     def __iter__(self):
         for e in self.lookup("entities"):
@@ -64,9 +262,6 @@ class SAMLStoreBase(object):
     def entity_ids(self):
         return set(e.get('entityID') for e in self.lookup('entities'))
 
-    def refresh(self):
-        pass
-
     def _select(self, member=None):
         if member is None:
             member = "entities"
@@ -80,6 +275,14 @@ class SAMLStoreBase(object):
 
         log.debug("calling store lookup %s" % member)
         return self.lookup(member)
+
+    def __call__(self, *args, **kwargs):
+        watched = kwargs.pop('watched', None)
+        scheduler = kwargs.pop('scheduler', None)
+        if watched is not None and scheduler is not None:
+            for r in watched.walk():
+                if r.t is not None:
+                    self.update(r.t, tid=r.name, etag=r.etag)
 
     def select(self, member, xp=None):
         """
@@ -287,105 +490,42 @@ class EmptyStore(SAMLStoreBase):
         return list()
 
 
-class Unpickled(object):
-
-    def _pickle(self, data):
-        return data
-
-    def _unpickle(self, data):
-        return data
-
-
 class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for keys (uuids)
 
-    class StringSet(Set):
-
-        _pickle = Unpickled._pickle
-        _unpickle = Unpickled._unpickle
-        _pickle_3 = _pickle
-        _unpickle_3 = _unpickle
-        _pickle_value = _pickle
-        _unpickle_value = _unpickle
-        _pickle_key = _pickle
-        _unpickle_key = _unpickle
-
-    class StringDict(Dict):
-
-        _pickle = Unpickled._pickle
-        _unpickle = Unpickled._unpickle
-        _pickle_3 = _pickle
-        _unpickle_3 = _unpickle
-        _pickle_value = _pickle
-        _unpickle_value = _unpickle
-        _pickle_key = _pickle
-        _unpickle_key = _unpickle
-
-    class JSONDict(Dict):
-
-        _pickle_key = Unpickled._pickle
-        _unpickle_key = Unpickled._unpickle
-
-        def _pickle(self, x):
-            return json.dumps(x)
-
-        def _unpickle(self, x):
-            return json.loads(b2u(x))
-
-        _pickle_3 = _pickle
-        _unpickle_3 = _unpickle
-        _pickle_value = _pickle
-        _unpickle_value = _unpickle
-
-    class XMLDict(Dict):
-
-        _pickle_key = Unpickled._pickle
-        _unpickle_key = Unpickled._unpickle
-
-        def _pickle(self, data):
-            return dumptree(data)
-
-        def _unpickle(self, pickled_data):
-            return root(parse_xml(BytesIO(pickled_data)))
-
-        _pickle_3 = _pickle
-        _unpickle_3 = _unpickle
-        _pickle_value = _pickle
-        _unpickle_value = _unpickle
-
     def json_dict(self, name):
-        return LRUProxyDict(RedisWhooshStore.JSONDict(key='{}_{}'.format(self._name, name),
-                                                      redis=self._redis,
-                                                      writeback=True),
+        return LRUProxyDict(JSONDict(key='{}_{}'.format(self._name, name),
+                                     redis=self._redis,
+                                     writeback=True),
                             maxsize=config.cache_size)
 
     def xml_dict(self, name):
-        return LRUProxyDict(RedisWhooshStore.XMLDict(key='{}_{}'.format(self._name, name),
-                                                     redis=self._redis,
-                                                     writeback=True),
+        return LRUProxyDict(XMLDict(key='{}_{}'.format(self._name, name),
+                                    redis=self._redis,
+                                    writeback=True),
                             maxsize=config.cache_size)
 
     def __init__(self, *args, **kwargs):
         self._dir = kwargs.pop('directory', '.whoosh')
-        clear = bool(kwargs.pop('clear', False))
+        clear = bool(kwargs.pop('clear', config.store_clear))
         self._name = kwargs.pop('name', config.store_name)
-        self._scheduler = kwargs.pop('scheduler', None)
-        if self._scheduler is None:
-            self._scheduler = make_default_scheduler()
-            self._scheduler.start()
-
+        self._redis = kwargs.pop('redis', redis())
         if clear:
             shutil.rmtree(self._dir)
+        now = datetime.now()
+        self._last_index_time = now
+        self._last_modified = now
+        self._setup()
+        if clear:
+            self.reset()
+
+    def _setup(self):
+        if not self._redis:
+            self._redis = redis()  # XXX test cases won't get correctly unpicked because of this
         self.schema = Schema(content=NGRAMWORDS(stored=False))
         self.schema.add("object_id", ID(stored=True, unique=True))
         self.schema.add("entity_id", ID(stored=True, unique=True))
         for a in list(ATTRS.keys()):
             self.schema.add(a, KEYWORD())
-        self._redis = kwargs.pop('redis', None)
-        if self._redis is None:
-            self._redis = StrictRedis(host=config.redis_host, port=config.redis_port)
-        now = datetime.now()
-        self._last_index_time = now
-        self._last_modified = now
         self.objects = self.xml_dict('objects')
         self.parts = self.json_dict('parts')
         self.storage = FileStorage(os.path.join(self._dir, self._name))
@@ -397,13 +537,28 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
             self.index = self.storage.create_index(self.schema)
             self._reindex()
 
-    def refresh(self):
-        if self._last_modified > self._last_index_time:
-            self._scheduler.add_job(RedisWhooshStore._reindex,
-                                    args=[self],
-                                    max_instances=1,
-                                    coalesce=True,
-                                    misfire_grace_time=2*config.update_frequency)
+    def __getstate__(self):
+        state = dict()
+        for p in ('_dir', '_name', '_last_index_time', '_last_modified'):
+            state[p] = getattr(self, p)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._setup()
+
+    def __call__(self, *args, **kwargs):
+        watched = kwargs.pop('watched', None)
+        scheduler = kwargs.pop('scheduler', None)
+        if watched is not None and scheduler is not None:
+            super(RedisWhooshStore, self).__call__(watched=watched, scheduler=scheduler)
+            log.debug("indexing using {}".format(scheduler))
+            if scheduler is not None:  # and self._last_modified > self._last_index_time and :
+                scheduler.add_job(RedisWhooshStore._reindex,
+                                  args=[self],
+                                  max_instances=1,
+                                  coalesce=True,
+                                  misfire_grace_time=2 * config.update_frequency)
 
     def _reindex(self):
         log.debug("indexing the store...")
@@ -477,7 +632,9 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
 
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
             ref = object_id(relt)
-            parts = self.parts[ref]
+            parts = None
+            if ref in self.parts:
+                parts = self.parts[ref]
             if etag is not None and (parts is None or parts.get('etag', None) != etag):
                 self.parts[ref] = {'id': relt.get('entityID'), 'etag': etag, 'count': 1, 'items': [ref]}
                 self.objects[ref] = relt
@@ -487,7 +644,9 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
                 tid = relt.get('Name')
             if etag is None:
                 etag = hex_digest(dumptree(t, pretty_print=False), 'sha256')
-            parts = self.parts[tid]
+            parts = None
+            if tid in self.parts:
+                parts = self.parts[tid]
             if parts is None or parts.get('etag', None) != etag:
                 items = set()
                 for e in iter_entities(t):
@@ -505,10 +664,9 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         return [b2u(ref) for ref in self.parts.keys()]
 
     def reset(self):
-        for ref in self.parts.keys():
-            del self.parts[b2u(ref)]
-        for ref in self.objects.keys():
-            del self.objects[b2u(ref)]
+        for k in ('{}_{}'.format(self._name, 'parts'), '{}_{}'.format(self._name, 'objects')):
+            self._redis.delete('{}_{}'.format(self._name, 'parts'))
+            self._redis.delete('{}_{}'.format(self._name, 'objects'))
 
     def size(self, a=None, v=None):
         if a is None:
@@ -613,9 +771,6 @@ class MemoryStore(SAMLStoreBase):
 
     def __str__(self):
         return repr(self.index)
-
-    def clone(self):
-        return deepcopy(self)
 
     def size(self, a=None, v=None):
         if a is None:

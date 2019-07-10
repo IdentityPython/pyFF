@@ -132,7 +132,7 @@ A delayed pipeline callback used as a post for parse_saml_metadata
         try:
             state = kwargs
             state[self.entry_point] = True
-            log.debug("********* {}".format(repr(state)))
+            log.debug("state: {}".format(repr(state)))
             return self.plumbing.process(self.req.md, store=self.store, state=state, t=t)
         except Exception as ex:
             log.debug(traceback.format_exc())
@@ -226,22 +226,6 @@ may modify any of the fields.
             """
             return pl.iprocess(self)
 
-#            for p in pl.pipeline:
-#                cb, opts, name, args = load_pipe(p)
-#                log.debug("{!s}: calling '{}' using args: {} and opts: {}".format(pl, name, repr(args), repr(opts)))
-#                if is_text(args):
-#                    args = [args]
-#                if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
-#                    raise PipeException("Unknown argument type %s" % repr(args))
-#                self.args = args
-#                self.name = name
-#                ot = cb(self, *opts)
-#                if ot is not None:
-#                    self.t = ot
-#                if self.done:
-#                    break
-#            return self.t
-
     def iprocess(self, req):
         """The inner request pipeline processor.
 
@@ -272,11 +256,12 @@ may modify any of the fields.
                 break
         return req.t
 
-    def process(self, md, args=None, state=None, t=None, store=None, raise_exceptions=True):
+    def process(self, md, args=None, state=None, t=None, store=None, raise_exceptions=True, scheduler=None):
         """
         The main entrypoint for processing a request pipeline. Calls the inner processor.
 
 
+        :param scheduler: a scheduler for use in pipes
         :param raise_exceptions: weather to raise or just log exceptions in the process
         :param md: The current metadata repository
         :param state: The active request state
@@ -288,7 +273,13 @@ may modify any of the fields.
         if not state:
             state = dict()
 
-        return Plumbing.Request(self, md, t=t, args=args, state=state, store=store, raise_exceptions=raise_exceptions).process(self)
+        return Plumbing.Request(self, md,
+                                t=t,
+                                args=args,
+                                state=state,
+                                store=store,
+                                raise_exceptions=raise_exceptions,
+                                scheduler=scheduler).process(self)
 
 
 def plumbing(fn):
