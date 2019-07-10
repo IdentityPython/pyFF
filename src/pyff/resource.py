@@ -136,7 +136,6 @@ class Resource(Watchable):
         self.never_expires = False
         self.last_seen = None
         self.last_parser = None
-        self.current_job = None
         self._infos = deque(maxlen=config.info_buffer_size)
         self.children = deque()
         self._setup()
@@ -206,6 +205,9 @@ class Resource(Watchable):
     def __iter__(self):
         return self.walk()
 
+    def __eq__(self, other):
+        return self.url == other.url
+
     def __contains__(self, item):
         return item in self.children
 
@@ -228,13 +230,24 @@ class Resource(Watchable):
     def add_info(self, info):
         self._infos.append(info)
 
+    def _replace(self, r):
+        for i in range(0, len(self.children)):
+            if self.children[i].url == r.url:
+                self.children[i] = r
+                return
+        raise ValueError("Resource {} not present - use add_child".format(r.url))
+
     def add_child(self, url, **kwargs):
         opts = deepcopy(self.opts)
         if 'as' in opts:
             del opts['as']
         opts.update(kwargs)
         r = Resource(url, **opts)
-        self.children.append(r)
+        if r in self.children:
+            self._replace(r)
+        else:
+            self.children.append(r)
+
         return r
 
     @property

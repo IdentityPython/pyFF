@@ -11,6 +11,7 @@ from pyff.samlmd import set_entity_attributes, is_idp, is_sp, entity_icon_url, \
     metadata_expiration, annotate_entity, sha1_id
 from pyff.repo import MDRepository
 
+
 class TestRepo(TestCase):
     def setUp(self):
         self.md = MDRepository()

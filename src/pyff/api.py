@@ -263,13 +263,11 @@ def resources_handler(request):
         nfo = r.info
         nfo['Valid'] = r.is_valid()
         nfo['Parser'] = r.last_parser
-        nfo['Job'] = r.current_job
         if r.last_seen is not None:
             nfo['Last Seen'] = r.last_seen
         if len(r.children) > 0:
             nfo['Children'] = [_info(cr) for cr in r.children]
         return nfo
-
     _resources = [_info(r) for r in request.registry.md.rm.children]
     response = Response(dumps(_resources, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'

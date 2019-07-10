@@ -6,6 +6,7 @@ import os
 import six
 from pyff import utils
 from pyff.constants import NS
+from pyff.resource import Resource
 from pyff.samlmd import find_entity, entities_list
 from pyff.utils import resource_filename, parse_xml, root, resource_string, b2u, Lambda, schema, find_matching_files, \
     url_get, img_to_data, is_past_ttl
@@ -209,3 +210,12 @@ class TestImage(TestCase):
             img = img_to_data(r.content, mime_type)
             assert img
             print (img)
+
+
+class TestResource(TestCase):
+
+    def test_cmp(self):
+        r1 = Resource("https://mds.edugain.org", via=lambda x: x)
+        r2 = Resource("https://mds.edugain.org")
+
+        assert r1 == r2
