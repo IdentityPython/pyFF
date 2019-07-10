@@ -43,9 +43,9 @@ An implementation of draft-lajoie-md-query
 
 """
 
+from __future__ import unicode_literals
 from .constants import config, parse_options
 from .logs import get_log
-from __future__ import unicode_literals
 import importlib
 import os
 import gunicorn.app.base
