@@ -15,6 +15,8 @@ here = abspath(dirname(__file__))
 README = open(join(here, 'README.rst')).read()
 NEWS = open(join(here, 'NEWS.txt')).read()
 
+python_requires='>=3.5';
+
 install_requires = [
     'mako',
     'lxml >=4.1.1',
@@ -55,6 +57,10 @@ setup(name='pyFF',
       long_description=README + '\n\n' + NEWS,
       classifiers=[
           # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
+         'Programming Language :: Python :: 3',
+         'Programming Language :: Python :: 3.5',
+         'Programming Language :: Python :: 3.6',
+         'Programming Language :: Python :: 3.7',
       ],
       keywords='identity federation saml metadata',
       author=__author__,
