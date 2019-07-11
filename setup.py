@@ -31,7 +31,6 @@ install_requires = [
     'ipaddr',
     'publicsuffix2',
     'redis',
-    'futures',
     'requests',
     'requests_cache',
     'requests_file',
