@@ -31,8 +31,9 @@ transforming metadata to add custom elements.
 
    usage/install
    usage/quickstart
+   usage/running
    usage/deploying
-   examples
+   usage/examples
    coding
    faq
 
