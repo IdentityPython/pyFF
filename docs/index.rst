@@ -5,30 +5,44 @@ pyFF Documentation
 :Author: `Leif Johansson <leifj@sunet.se>`
 :Release: |release|
 
-pyFF is a simple but reasonably complete SAML metadata processor. It is intended to be
+**pyFF** is a simple but reasonably complete SAML metadata processor. It is intended to be
 used by anyone who needs to aggregate, validate, combine, transform, sign or publish
 SAML metadata.
+
+**pyFF** is used to run infrastructure for several identity federations of signifficant 
+size including edugain.org.
+
+**pyFF** supports producing and validating digital signatures on SAML metadata using
+the pyXMLSecurity package which in turn supports PKCS#11 and other mechanisms for
+talking to HSMs and other cryptographic hardware.
+
+**pyFF** is also a complete implementation of the SAML metadata query protocol as 
+described in draft-young-md-query and draft-young-md-query-saml and implements
+extensions to MDQ for searching which means pyFF can be used as the backend for
+a discovery service for large-scale identity federations.
 
 Possible usecases include running an federation aggregator, filtering metadata for use
 by a discovery service, generating reports from metadata (eg certificate expiration reports),
 transforming metadata to add custom elements.
 
-pyFF supports producing and validating digital signatures on SAML metadata using
-the pyXMLSecurity package which in turn supports using PKCS#11-modules - notoriously
-difficult to achieve using other tools.
-
-pyFF is not a SAML metadata registry. If you need one of those have a look at the
-PEER project (also on pypi).
-
 .. toctree::
    :maxdepth: 2
+   :caption: Documentation
 
-   install
-   using
+   usage/install
+   usage/quickstart
+   usage/deploying
    examples
    coding
    faq
-   api/modules
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API
+
+   pyFF API <code/pyff>
+
 
 
 The pyFF logo is the chemical symbol for sublimation - a process by which elements

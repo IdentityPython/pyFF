@@ -50,13 +50,16 @@ import importlib
 import os
 import gunicorn.app.base
 from gunicorn.six import iteritems
-from wsgi import app
+from .wsgi import app
 import multiprocessing
 
 log = get_log(__name__)
 
 
 class MDQApplication(gunicorn.app.base.BaseApplication):
+
+    def init(self, parser, opts, args):
+        super().init(self, parser, opts, args)
 
     def __init__(self, app, options=None):
         self.options = options or {}

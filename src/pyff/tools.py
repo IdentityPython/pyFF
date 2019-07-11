@@ -11,7 +11,7 @@ import sys
 import traceback
 from .samlmd import diff, iter_entities
 from .store import MemoryStore
-from .resource import ResourceManager, Resource
+from .resource import Resource
 from .constants import config, parse_options
 from xmldiff.main import diff_trees
 from xmldiff.formatting import DiffFormatter
@@ -28,7 +28,7 @@ def difftool():
     logging.basicConfig(**log_args)
 
     try:
-        rm = ResourceManager()
+        rm = Resource()
         r1 = Resource(args[0])
         r2 = Resource(args[1])
         rm.add(r1)

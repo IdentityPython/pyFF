@@ -17,8 +17,10 @@ from . import __version__ as pyff_version
 
 __author__ = 'leifj'
 
+#: The default nameFormat URI in pyFF is always urn:oasis:names:tc:SAML:2.0:attrname-format:uri
 NF_URI = "urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
 
+#: These are the namespace prefixes pyFF knows about.
 NS = dict(md="urn:oasis:names:tc:SAML:2.0:metadata",
           ds='http://www.w3.org/2000/09/xmldsig#',
           mdui="urn:oasis:names:tc:SAML:metadata:ui",
@@ -34,6 +36,8 @@ NS = dict(md="urn:oasis:names:tc:SAML:2.0:metadata",
           ser="http://eidas.europa.eu/metadata/servicelist",
           eidas="http://eidas.europa.eu/saml-extensions")
 
+#: These are the attribute aliases pyFF knows about. These are used to build URI paths, populate the index
+#: and simplify lookup expressions involving boolean or set logic.
 ATTRS = {'collection': 'http://pyff.io/collection',
          'entity-category': 'http://macedir.org/entity-category',
          'role': 'http://pyff.io/role',
@@ -103,6 +107,13 @@ def setting(name, default, typeconv=as_string):
 
 
 class Config(object):
+    """
+    The :py:const:`pyff.constants:config` object is a singleton instance of this Class and contains all
+    configuration parameters available to pyFF. Each parameter can be set directly, via :py:mod:`pyconfig`
+    or via environment variables by prefixing the setting name in upper case with "PYFF_". The setting
+    called "loglevel" then becomes "PYFF_LOGLEVEL" etc. Any occurence of '.' or '-' is also transscribed
+    to '_' when the setting is referenced as an environment variable.
+    """
 
     google_api_key = setting("google_api_key", None)
     loglevel = setting("loglevel", logging.WARN, as_loglevel)
@@ -136,7 +147,7 @@ class Config(object):
     resource_store_class = setting('resource_store.class', "pyff.fetch:MemoryResourceStore")
     icon_store_class = setting("icon_store.class", "pyff.store:MemoryIconStore")
     store_name = setting("store.name", "pyff")
-    update_frequency = setting("update_frequency", 600, as_int)
+    update_frequency = setting("update_frequency", 0, as_int)
     request_timeout = setting("request_timeout", 10, as_int)
     request_cache_time = setting("request_cache_time", 300, as_int)
     request_cache_backend = setting("request_cache_backend", 'memory', as_string)

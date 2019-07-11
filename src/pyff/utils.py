@@ -662,6 +662,10 @@ def chunks(l, n):
 
 
 class DirAdapter(BaseAdapter):
+    """
+    An implementation of the requests Adapter interface that returns a the files in a directory. Used to simplify
+    the code paths in pyFF and allows directories to be treated as yet another representation of a collection of metadata.
+    """
 
     def send(self, request, **kwargs):
         resp = Response()

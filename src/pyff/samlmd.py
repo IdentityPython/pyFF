@@ -71,7 +71,7 @@ def parse_saml_metadata(source,
 :param validate: (default: True) set to False to turn off all XML schema validation
 :param validation_errors: A dict that will be used to return validation errors to the caller
 :param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
-(but after xinclude processing and signature validation)
+
     """
 
     if validation_errors is None:

@@ -334,7 +334,6 @@ def mkapp(*args, **kwargs):
     md = kwargs.pop('md', None)
     if md is None:
         md = MDRepository()
-   
 
     if config.devel_memory_profile:
         launch_memory_usage_server()
@@ -353,13 +352,14 @@ def mkapp(*args, **kwargs):
         for mn in config.modules:
             importlib.import_module(mn)
 
-        pipeline = args
-        if not len(pipeline) > 0:
+        pipeline = args or None
+        if pipeline is None and config.pipeline:
             pipeline = [config.pipeline]
 
         ctx.registry.scheduler = md.scheduler
-        ctx.registry.pipeline = pipeline
-        ctx.registry.plumbings = [plumbing(v) for v in pipeline]
+        if pipeline is not None:
+            ctx.registry.pipeline = pipeline
+            ctx.registry.plumbings = [plumbing(v) for v in pipeline]
         ctx.registry.aliases = config.aliases
         ctx.registry.md = md
 
