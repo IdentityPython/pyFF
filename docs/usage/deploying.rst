@@ -76,7 +76,7 @@ port 80 and an admin UI on port 8080.
            - STORAGE_DOMAIN=your.public.domain
            - SEARCH_URL=http://pyff/api/search
      pyff:
-        image: docker.sunet.se/pyff:1.1.0
+        image: docker.sunet.se/pyff:stable
         container_name: pyff-api
 
 
