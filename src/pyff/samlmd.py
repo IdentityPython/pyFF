@@ -635,7 +635,7 @@ def entity_extended_display(entity, langs=None):
     if info == entity.get('entityID'):
         info = ''
 
-    return trunc_str(display.strip(), 40), trunc_str(info.strip(), 256)
+    return display.strip(), info.strip()
 
 
 def entity_display_name(entity, langs=None):
