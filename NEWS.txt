@@ -108,3 +108,12 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Release date: tis 18 jun 2019 12:13:41 CEST
 * A samldiff tool
 * Minor fixes to align requirements for docker package
+
+1.1.0
+---
+* Release date: fre 12 jul 2019 10:27:05 CEST
+* simplify resource management and introduce new thread-based fetcher architecture
+* new icon fetching infrastructure
+* re-introduce predictive load order
+* multiple bug fixes and cleanup
+* documentation restructure and rewrite
