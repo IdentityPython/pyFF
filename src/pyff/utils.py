@@ -843,7 +843,12 @@ class LRUProxyDict(MutableMapping):
         self._proxy = proxy
         self._cache = LRUCache(**kwargs)
 
+    def __contains__(self, item):
+        return item in self._cache or item in self._proxy
+
     def __getitem__(self, item):
+        if item is None:
+            raise ValueError("None key")
         v = self._cache.get(item, None)
         if v is not None:
             return v

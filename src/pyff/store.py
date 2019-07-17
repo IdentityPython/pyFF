@@ -724,6 +724,17 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         if key == 'entities' or key is None:
             return self._entities()
 
+        bkey = six.b(key)
+        if bkey in self.objects:
+            return [self.objects.get(bkey)]
+
+        if bkey in self.parts:
+            res = []
+            part = self.parts.get(bkey)
+            for item in part['items']:
+                res.extend(self.lookup(item))
+            return res
+
         key = self._prep_key(key)
         qp = QueryParser("object_id", schema=self.schema)
         q = qp.parse(key)
@@ -858,6 +869,10 @@ class MemoryStore(SAMLStoreBase):
     def _lookup(self, key):
         if key == 'entities' or key is None:
             return list(self.entities.values())
+
+        if key in self.entities:
+            return [self.entities[key]]
+
         if '+' in key:
             key = key.strip('+')
             # log.debug("lookup intersection of '%s'" % ' and '.join(key.split('+')))
@@ -890,9 +905,6 @@ class MemoryStore(SAMLStoreBase):
                 # log.debug("... adding %s=%s" % (m.group(1),v))
                 res.update(self._get_index(m.group(1), v))
             return list(res)
-
-        if key in self.entities:
-            return [self.entities[key]]
 
         if key in self.md:
             log.debug("entities list %s: %d" % (key, len(self.md[key])))

@@ -54,6 +54,6 @@ class SimplePipeLineTest(SignerTestCase):
 
     def tear_down(self):
         super(SimplePipeLineTest, self).tearDown()
-        #os.unlink(self.signer)
-        #os.unlink(self.validator)
-        #os.unlink(self.output)
+
+
+

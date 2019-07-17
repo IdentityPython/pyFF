@@ -2,6 +2,7 @@ from unittest import TestCase
 import os
 import fakeredis
 from pyff.constants import ATTRS
+from pyff.samlmd import iter_entities
 from pyff.store import MemoryStore, SAMLStoreBase, entity_attribute_dict, RedisWhooshStore
 from pyff.utils import resource_filename, parse_xml, root
 import tempfile
@@ -16,6 +17,8 @@ class TestRedisWhooshStore(TestCase):
         self.test01 = parse_xml(self.test01_source)
         self.swamid_source = os.path.join(self.datadir, 'swamid-2.0-test.xml')
         self.swamid = parse_xml(self.swamid_source)
+        self.wayf_source = os.path.join(self.datadir, 'wayf-edugain-metadata.xml')
+        self.wayf = parse_xml(self.wayf_source)
         self.dir = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -34,12 +37,24 @@ class TestRedisWhooshStore(TestCase):
         assert (os.path.exists(self.test01_source))
         assert (self.test01 is not None)
 
+    def test_parse_wayf(self):
+        assert (self.wayf_source is not None)
+        assert (os.path.exists(self.wayf_source))
+        assert (self.wayf is not None)
+
     def test_import_reset_test01(self):
         store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
         store.update(self.test01, etag="test01")
         assert (store.size() > 0)
         store.reset()
         print(store.size())
+        assert (store.size() == 0)
+
+    def test_import_reset_wayf(self):
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.wayf, tid='https://metadata.wayf.dk/wayf-edugain-metadata.xml')
+        assert (store.size() == 77)
+        store.reset()
         assert (store.size() == 0)
 
     def test_store_attributes_test01(self):
@@ -79,6 +94,25 @@ class TestRedisWhooshStore(TestCase):
         assert (e[0].get('entityID') is not None)
         assert (e[0].get('entityID') == entity_id)
 
+    def test_lookup_wayf(self):
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.wayf, tid='https://metadata.wayf.dk/wayf-edugain-metadata.xml')
+        assert(store.size() == 77)
+        res = store.lookup("entities")
+        lst = [e.get('entityID') for e in res]
+        assert (len(lst) == 77)
+        assert ('https://birk.wayf.dk/birk.php/wayf.supportcenter.dk/its/saml2/idp/metadata.php?unit=its' in lst)
+
+    def test_select_wayf(self):
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.wayf, tid='https://metadata.wayf.dk/wayf-edugain-metadata.xml')
+        assert(store.size() == 77)
+        res = store.select('https://metadata.wayf.dk/wayf-edugain-metadata.xml')
+        assert(len(res) == 77)
+        lst = [e.get('entityID') for e in res]
+        assert (len(lst) == 77)
+        assert ('https://birk.wayf.dk/birk.php/wayf.supportcenter.dk/its/saml2/idp/metadata.php?unit=its' in lst)
+
     def test_lookup_intersect_empty_test01(self):
         store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
         store.update(self.test01, etag='test01', lazy=False)
@@ -114,6 +148,8 @@ class TestMemoryStore(TestCase):
         self.test01 = parse_xml(self.test01_source)
         self.swamid_source = os.path.join(self.datadir, 'swamid-2.0-test.xml')
         self.swamid = parse_xml(self.swamid_source)
+        self.wayf_source = os.path.join(self.datadir, 'wayf-edugain-metadata.xml')
+        self.wayf = parse_xml(self.wayf_source)
 
     def test_create_store(self):
         store = MemoryStore()
@@ -122,6 +158,11 @@ class TestMemoryStore(TestCase):
         assert (len(store.collections()) == 0)
         assert (str(store))
         assert (not store.attributes())
+
+    def test_parse_wayf(self):
+        assert (self.wayf_source is not None)
+        assert (os.path.exists(self.wayf_source))
+        assert (self.wayf is not None)
 
     def test_parse_test01(self):
         assert (self.test01_source is not None)
@@ -132,6 +173,13 @@ class TestMemoryStore(TestCase):
         store = MemoryStore()
         store.update(self.test01)
         assert (store.size() > 0)
+        store.reset()
+        assert (store.size() == 0)
+
+    def test_import_reset_wayf(self):
+        store = MemoryStore()
+        store.update(self.wayf, tid='https://metadata.wayf.dk/wayf-edugain-metadata.xml')
+        assert (store.size() == 77)
         store.reset()
         assert (store.size() == 0)
 
@@ -160,6 +208,24 @@ class TestMemoryStore(TestCase):
         assert (e[0] is not None)
         assert (e[0].get('entityID') is not None)
         assert (e[0].get('entityID') == entity_id)
+
+    def test_lookup_wayf(self):
+        store = MemoryStore()
+        store.update(self.wayf, tid='https://metadata.wayf.dk/wayf-edugain-metadata.xml')
+        assert(store.size() == 77)
+        res = store.lookup("entities")
+        lst = [e.get('entityID') for e in res]
+        assert (len(lst) == 77)
+        assert ('https://birk.wayf.dk/birk.php/wayf.supportcenter.dk/its/saml2/idp/metadata.php?unit=its' in lst)
+
+    def test_select_wayf(self):
+        store = MemoryStore()
+        store.update(self.wayf, tid='https://metadata.wayf.dk/wayf-edugain-metadata.xml')
+        assert(store.size() == 77)
+        res = store.select("https://metadata.wayf.dk/wayf-edugain-metadata.xml")
+        lst = [e.get('entityID') for e in res]
+        assert (len(lst) == 77)
+        assert ('https://birk.wayf.dk/birk.php/wayf.supportcenter.dk/its/saml2/idp/metadata.php?unit=its' in lst)
 
     def test_lookup_intersect_test01(self):
         store = MemoryStore()
