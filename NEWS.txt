@@ -117,3 +117,9 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * re-introduce predictive load order
 * multiple bug fixes and cleanup
 * documentation restructure and rewrite
+
+1.1.1
+---
+* Release date: tor 18 jul 2019 16:05:54 CEST
+* Fix bug affecting entityIDs with querystring components thx to Maja Wolniewicz <mgw@umk.pl>
+
