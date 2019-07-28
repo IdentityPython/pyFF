@@ -145,7 +145,7 @@ def process_handler(request):
                      'accept': accepter,
                      'url': request.current_route_url(),
                      'select': q,
-                     'match': match,
+                     'match': match.lower() if match else match,
                      'path': path,
                      'stats': {}}
 
