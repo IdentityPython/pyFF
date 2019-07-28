@@ -19,6 +19,7 @@ from lxml import etree
 from pyramid.events import NewRequest
 import requests
 import threading
+import pytz
 
 log = get_log(__name__)
 
@@ -397,6 +398,7 @@ def mkapp(*args, **kwargs):
                                            start_date=start,
                                            seconds=config.update_frequency,
                                            replace_existing=True,
-                                           max_instances=1)
+                                           max_instances=1,
+                                           timezone=pytz.utc)
 
         return ctx.make_wsgi_app()
