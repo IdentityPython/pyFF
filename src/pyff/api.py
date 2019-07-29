@@ -11,7 +11,7 @@ from six import b
 from .logs import get_log
 from json import dumps
 from datetime import datetime, timedelta
-from .utils import dumptree, duration2timedelta, hash_id, json_serializer, b2u, make_default_scheduler
+from .utils import dumptree, duration2timedelta, hash_id, json_serializer, b2u
 from .repo import MDRepository
 import pkg_resources
 from accept_types import AcceptableType
@@ -39,7 +39,8 @@ def status_handler(request):
     _status = dict(version=pkg_resources.require("pyFF")[0].version,
                    invalids=d,
                    icon_store=dict(size=request.registry.md.icon_store.size()),
-                   jobs=[dict(id=j.id, next_run_time=j.next_run_time) for j in request.registry.scheduler.get_jobs()],
+                   jobs=[dict(id=j.id, next_run_time=j.next_run_time)
+                         for j in request.registry.scheduler.get_jobs()],
                    threads=[t.name for t in threading.enumerate()],
                    store=dict(size=request.registry.md.store.size()))
     response = Response(dumps(_status, default=json_serializer))
@@ -75,7 +76,7 @@ def _fmt(data, accepter):
 
 
 def call(entry):
-    r = requests.post('{}/api/call/{}'.format(config.base_url, entry))
+    requests.post('{}/api/call/{}'.format(config.base_url, entry))
 
 
 def process_handler(request):
@@ -122,9 +123,12 @@ def process_handler(request):
 
     alias = path.pop(0)
     path = '/'.join(path)
-    path = path.replace(':/', '://')  # ugly workaround bc WSGI drops double-slashes
 
-    log.debug("handling entry={}, alias={}, path={}".format(entry, alias, path))
+    # Ugly workaround bc WSGI drops double-slashes.
+    path = path.replace(':/', '://')
+
+    msg = "handling entry={}, alias={}, path={}"
+    log.debug(msg.format(entry, alias, path))
 
     pfx = None
     if 'entities' not in alias:
@@ -139,7 +143,8 @@ def process_handler(request):
     else:
         q = path
 
-    accept = str(request.accept).split(',')[0]  # TODO - sometimes the client sends > 1 accept header value with ','
+    # TODO - sometimes the client sends > 1 accept header value with ','.
+    accept = str(request.accept).split(',')[0]
     if (not accept or '*/*' in accept) and ext:
         accept = _ctypes[ext]
 
@@ -171,7 +176,8 @@ def process_handler(request):
                 response.size = len(r)
                 response.content_type = ctype
                 cache_ttl = int(state.get('cache', 0))
-                response.expires = datetime.now() + timedelta(seconds=cache_ttl)
+                response.expires = (datetime.now() +
+                                    timedelta(seconds=cache_ttl))
 
                 return response
     except ResourceException as ex:
@@ -189,27 +195,39 @@ def process_handler(request):
 
 
 def webfinger_handler(request):
-    """An implementation the webfinger protocol (http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-12)
-        in order to provide information about up and downstream metadata available at this pyFF instance.
+    """An implementation the webfinger protocol
+(http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-12)
+in order to provide information about up and downstream metadata available at
+this pyFF instance.
 
 Example:
 
 .. code-block:: bash
 
-        # curl http://localhost:8080/.well-known/webfinger?resource=http://localhost:8080
+# curl http://my.org/.well-known/webfinger?resource=http://my.org
 
 This should result in a JSON structure that looks something like this:
 
 .. code-block:: json
 
-        {"expires": "2013-04-13T17:40:42.188549",
-         "links": [
-            {"href": "http://reep.refeds.org:8080/role/sp.xml", "rel": "urn:oasis:names:tc:SAML:2.0:metadata"},
-            {"href": "http://reep.refeds.org:8080/role/sp.json", "rel": "disco-json"}],
-         "subject": "http://reep.refeds.org:8080"}
+{
+ "expires": "2013-04-13T17:40:42.188549",
+ "links": [
+ {
+  "href": "http://reep.refeds.org:8080/role/sp.xml",
+  "rel": "urn:oasis:names:tc:SAML:2.0:metadata"
+  },
+ {
+  "href": "http://reep.refeds.org:8080/role/sp.json",
+  "rel": "disco-json"
+  }
+ ],
+ "subject": "http://reep.refeds.org:8080"
+}
 
-Depending on which version of pyFF your're running and the configuration you may also see downstream metadata
-listed using the 'role' attribute to the link elements.
+Depending on which version of pyFF your're running and the configuration you
+may also see downstream metadata listed using the 'role' attribute to the link
+elements.
         """
 
     resource = request.params.get('resource', None)
@@ -244,7 +262,9 @@ listed using the 'role' attribute to the link elements.
                 suffix = _dflt_rels[r][0]
             links.append(dict(rel=r,
                               type=_dflt_rels[r][1],
-                              href='%s/%s%s' % (request.host_url, url, suffix)))
+                              href='%s/%s%s' % (request.host_url, url, suffix)
+                              )
+                         )
 
     _links('/entities/')
     for a in request.registry.md.store.collections():
@@ -253,10 +273,12 @@ listed using the 'role' attribute to the link elements.
 
     for entity in request.registry.md.store.lookup('entities'):
         entity_display = entity_display_name(entity)
-        _links("/entities/%s" % hash_id(entity.get('entityID')), title=entity_display)
+        _links("/entities/%s" % hash_id(entity.get('entityID')),
+               title=entity_display)
 
-    for a in request.registry.aliases.keys():
-        for v in request.registry.md.store.attribute(request.registry.aliases[a]):
+    aliases = request.registry.aliases
+    for a in aliases.keys():
+        for v in request.registry.md.store.attribute(aliases[a]):
             _links('%s/%s' % (a, quote_plus(v)))
 
     response = Response(dumps(jrd, default=json_serializer))
@@ -283,7 +305,8 @@ def resources_handler(request):
 
 
 def pipeline_handler(request):
-    response = Response(dumps(request.registry.plumbings, default=json_serializer))
+    response = Response(dumps(request.registry.plumbings,
+                              default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
 
     return response
@@ -296,14 +319,17 @@ def search_handler(request):
     match = (match.split('@').pop() if match and not match.endswith('@')
              else match)
 
-    entity_filter = request.params.get('entity_filter', '{http://pyff.io/role}idp')
+    entity_filter = request.params.get('entity_filter',
+                                       '{http://pyff.io/role}idp')
     log.debug("match={}".format(match))
     store = request.registry.md.store
 
     def _response():
         yield b('[')
         in_loop = False
-        for e in store.search(query=match.lower(), entity_filter=entity_filter):
+        entities = store.search(query=match.lower(),
+                                entity_filter=entity_filter)
+        for e in entities:
             if in_loop:
                 yield b(',')
             yield b(dumps(e))
@@ -320,7 +346,8 @@ def add_cors_headers_response_callback(event):
         response.headers.update({
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'POST,GET,DELETE,PUT,OPTIONS',
-            'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization',
+            'Access-Control-Allow-Headers': ('Origin, Content-Type, Accept, '
+                                             'Authorization'),
             'Access-Control-Allow-Credentials': 'true',
             'Access-Control-Max-Age': '1728000',
         })
@@ -328,7 +355,7 @@ def add_cors_headers_response_callback(event):
     event.request.add_response_callback(cors_headers)
 
 
-def launch_memory_usage_server(port = 9002):
+def launch_memory_usage_server(port=9002):
     import cherrypy
     import dowser
 
@@ -378,7 +405,8 @@ def mkapp(*args, **kwargs):
         ctx.add_route('robots', '/robots.txt')
         ctx.add_view(robots_handler, route_name='robots')
 
-        ctx.add_route('webfinger', '/.well-known/webfinger', request_method='GET')
+        ctx.add_route('webfinger', '/.well-known/webfinger',
+                      request_method='GET')
         ctx.add_view(webfinger_handler, route_name='webfinger')
 
         ctx.add_route('search', '/api/search', request_method='GET')
@@ -393,7 +421,8 @@ def mkapp(*args, **kwargs):
         ctx.add_route('pipeline', '/api/pipeline', request_method='GET')
         ctx.add_view(pipeline_handler, route_name='pipeline')
 
-        ctx.add_route('call', '/api/call/{entry}', request_method=['POST', 'PUT'])
+        ctx.add_route('call', '/api/call/{entry}',
+                      request_method=['POST', 'PUT'])
         ctx.add_view(process_handler, route_name='call')
 
         ctx.add_route('request', '/*path', request_method='GET')
