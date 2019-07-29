@@ -111,6 +111,12 @@ def process_handler(request):
     entry = request.matchdict.get('entry', 'request')
     path = list(request.matchdict.get('path', []))
     match = request.params.get('q', request.params.get('query', None))
+
+    # Enable matching on scope.
+    match = (match.split('@').pop() if match and not match.endswith('@')
+             else match)
+    log.debug("match={}".format(match))
+
     if 0 == len(path):
         path = ['entities']
 
@@ -285,6 +291,11 @@ def pipeline_handler(request):
 
 def search_handler(request):
     match = request.params.get('q', request.params.get('query', None))
+
+    # Enable matching on scope.
+    match = (match.split('@').pop() if match and not match.endswith('@')
+             else match)
+
     entity_filter = request.params.get('entity_filter', '{http://pyff.io/role}idp')
     log.debug("match={}".format(match))
     store = request.registry.md.store
