@@ -65,7 +65,7 @@ class MediaAccept(object):
 
 def _fmt(data, accepter):
     if data is None or len(data) == 0:
-        return 'text/plain', ''
+        return "", 'text/plain'
     if isinstance(data, (etree._Element, etree._ElementTree)) and (
             accepter.get('text/xml') or accepter.get('application/xml') or accepter.get('application/samlmetadata+xml')):
         return dumptree(data), 'application/samlmetadata+xml'
@@ -101,7 +101,7 @@ def process_handler(request):
     log.debug(request)
 
     if request.matchdict is None:
-        raise exc.exception_response(404)
+        raise exc.exception_response(400)
 
     if request.body:
         try:
@@ -164,22 +164,23 @@ def process_handler(request):
                           state=state,
                           raise_exceptions=True,
                           scheduler=request.registry.scheduler)
-            if r is not None:
-                response = Response()
-                response.headers.update(state.get('headers', {}))
-                ctype = state.get('headers').get('Content-Type', None)
-                if not ctype:
-                    r, t = _fmt(r, accepter)
-                    ctype = t
+            log.debug(r)
+            if r is None:
+                r = []
 
-                response.text = b2u(r)
-                response.size = len(r)
-                response.content_type = ctype
-                cache_ttl = int(state.get('cache', 0))
-                response.expires = (datetime.now() +
-                                    timedelta(seconds=cache_ttl))
+            response = Response()
+            response.headers.update(state.get('headers', {}))
+            ctype = state.get('headers').get('Content-Type', None)
+            if not ctype:
+               r, t = _fmt(r, accepter)
+               ctype = t
 
-                return response
+            response.text = b2u(r)
+            response.size = len(r)
+            response.content_type = ctype
+            cache_ttl = int(state.get('cache', 0))
+            response.expires = (datetime.now() + timedelta(seconds=cache_ttl))
+            return response
     except ResourceException as ex:
         import traceback
         log.debug(traceback.format_exc())
@@ -191,9 +192,9 @@ def process_handler(request):
         log.error(ex)
         raise exc.exception_response(500)
 
-    raise exc.exception_response(404)
-
-
+    if request.method == 'GET':
+       raise exc.exception_response(404)
+ 
 def webfinger_handler(request):
     """An implementation the webfinger protocol
 (http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-12)
