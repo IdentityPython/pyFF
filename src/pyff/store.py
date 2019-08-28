@@ -519,6 +519,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
             self.reset()
 
     def _setup(self):
+        self._redis = getattr(self, '_redis', None)
         if not self._redis:
             self._redis = redis()  # XXX test cases won't get correctly unpicked because of this
         self.schema = Schema(content=NGRAMWORDS(stored=False))
