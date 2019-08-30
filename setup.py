@@ -40,7 +40,7 @@ install_requires = [
     'minify',
     'whoosh',
     'pyramid',
-    'accept_types',
+    'accept_types >=0.4.0',
     'apscheduler',
     'redis-collections',
     'cachetools',
