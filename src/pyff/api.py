@@ -62,8 +62,13 @@ class MediaAccept(object):
     def __contains__(self, item):
         return self._type.matches(item)
 
+    def __str__(self):
+        return str(self._type)
+
 
 def _fmt(data, accepter):
+    log.debug(accepter)
+    import pdb; pdb.set_trace()
     if data is None or len(data) == 0:
         return "", 'text/plain'
     if isinstance(data, (etree._Element, etree._ElementTree)) and (
@@ -145,7 +150,7 @@ def process_handler(request):
 
     # TODO - sometimes the client sends > 1 accept header value with ','.
     accept = str(request.accept).split(',')[0]
-    if (not accept or '*/*' in accept) and ext:
+    if (not accept or 'application/*' in accept or 'text/*' in accept) and ext:
         accept = _ctypes[ext]
 
     try:
