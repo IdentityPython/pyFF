@@ -67,8 +67,6 @@ class MediaAccept(object):
 
 
 def _fmt(data, accepter):
-    log.debug(accepter)
-    import pdb; pdb.set_trace()
     if data is None or len(data) == 0:
         return "", 'text/plain'
     if isinstance(data, (etree._Element, etree._ElementTree)) and (
