@@ -309,12 +309,13 @@ def resolve_entities(entities, lookup_fn=None):
         else:
             return l_fn(m)
 
-    resolved_entities = set()
+    resolved_entities = dict()  # a set won't do since __compare__ doesn't use @entityID
     for member in entities:
         for entity in _resolve(member, lookup_fn):
-            resolved_entities.add(entity)
-
-    return resolved_entities
+            entity_id = entity.get('entityID', None)
+            if entity is not None and entity_id is not None:
+                resolved_entities[entity_id] = entity
+    return resolved_entities.values()
 
 
 def entitiesdescriptor(entities,
@@ -360,12 +361,10 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
         attrs['validUntil'] = valid_until
     t = etree.Element("{%s}EntitiesDescriptor" % NS['md'], **attrs)
     for entity in entities:
-        entity_id = entity.get('entityID', None)
-        if (entity is not None) and (entity_id is not None):
-            ent_insert = entity
-            if copy:
-                ent_insert = deepcopy(ent_insert)
-            t.append(ent_insert)
+        ent_insert = entity
+        if copy:
+            ent_insert = deepcopy(ent_insert)
+        t.append(ent_insert)
 
     if config.devel_write_xml_to_file:
         import os
