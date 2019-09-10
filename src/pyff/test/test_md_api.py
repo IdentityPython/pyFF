@@ -97,7 +97,7 @@ class PyFFAPITest(PipeLineTest):
     def test_load_and_query(self):
         with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
             r = requests.post("{}/api/call/update".format(url))
-            assert ("application/xml" in r.headers['content-type'])
+            assert ("application/samlmetadata+xml" in r.headers['content-type'])
 
             # verify we managed to load something into the DB
             r = requests.get("{}/api/status".format(url))
