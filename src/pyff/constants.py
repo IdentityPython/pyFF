@@ -95,7 +95,7 @@ class EnvSetting(object):
         self._fallback = pyconfig.setting('pyff.{}'.format(name), default, allow_default=True)
 
     def __get__(self, instance, owner):
-        v = os.environ.get("PYFF_{}".format(self.name.upper().replace('.','_')), self._fallback.__get__(instance, owner))
+        v = os.environ.get("PYFF_{}".format(self.name.upper().replace('.','_').replace('-','_')), self._fallback.__get__(instance, owner))
         if v is not None:
             v = self.typeconv(v)
 
