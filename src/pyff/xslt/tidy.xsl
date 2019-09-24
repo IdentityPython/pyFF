@@ -11,6 +11,7 @@
   <xsl:template match="@cacheDuration"/>
   <xsl:template match="@xml:base"/>
   <xsl:template match="ds:Signature"/>
+  <xsl:template match="md:RoleDescriptor"/>
   <xsl:template match="md:OrganizationName|md:OrganizationURL|md:OrganizationDisplayName">
      <xsl:if test="normalize-space(text()) != ''">
         <xsl:copy><xsl:apply-templates select="node()|@*"/></xsl:copy>
