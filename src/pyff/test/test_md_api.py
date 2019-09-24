@@ -97,7 +97,7 @@ class PyFFAPITest(PipeLineTest):
     def test_load_and_query(self):
         with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
             r = requests.post("{}/api/call/update".format(url))
-            assert ("application/samlmetadata+xml" in r.headers['content-type'])
+            assert ("application/samlmetadata+xml" in r.headers['Content-Type'])
 
             # verify we managed to load something into the DB
             r = requests.get("{}/api/status".format(url))
@@ -117,6 +117,7 @@ class PyFFAPITest(PipeLineTest):
 
             # load the NORDUnet IdP as json
             r = requests.get("{}/entities/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.json".format(url))
+            assert ("application/json" in r.headers['Content-Type'])
             assert (r.status_code == 200)
             data = r.json()
             assert(data is not None and len(data) == 1)
