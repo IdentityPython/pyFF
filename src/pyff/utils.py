@@ -862,8 +862,8 @@ class LRUProxyDict(MutableMapping):
         self._cache[key] = value
 
     def __delitem__(self, key):
-        del self._proxy[key]
-        del self._cache[key]
+        self._proxy.pop(key, None)
+        self._cache.pop(key, None)
 
     def __iter__(self):
         return self._proxy.__iter__()
