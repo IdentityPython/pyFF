@@ -148,7 +148,8 @@ def process_handler(request):
 
     # TODO - sometimes the client sends > 1 accept header value with ','.
     accept = str(request.accept).split(',')[0]
-    if (not accept or 'application/*' in accept or 'text/*' in accept) and ext:
+    #import pdb; pdb.set_trace()
+    if (not accept or 'application/*' in accept or 'text/*' in accept or '*/*' in accept) and ext:
         accept = _ctypes[ext]
 
     try:
