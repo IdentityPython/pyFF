@@ -416,9 +416,9 @@ The dict in the list contains three items:
                 if q is not None and len(q) > 0:
                     tokens = _strings(elt)
                     for tstr in tokens:
-                        for tpart in tstr.split():
-                            if tpart.lower().startswith(q):
-                                return tstr
+                        if q in tstr.lower():
+                            return tstr
+                        
             return None
 
         f = []
