@@ -525,6 +525,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         self.schema = Schema(content=NGRAMWORDS(stored=False))
         self.schema.add("object_id", ID(stored=True, unique=True))
         self.schema.add("entity_id", ID(stored=True, unique=True))
+        self.schema.add('sha1', ID(stored=True, unique=True))
         for a in list(ATTRS.keys()):
             self.schema.add(a, KEYWORD())
         self.objects = self.xml_dict('objects')
@@ -625,6 +626,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
                     res[k] = " ".join([vv.lower() for vv in v])
                 elif type(v) in six.string_types:
                     res[k] = info[a].lower()
+        res['sha1'] = hash_id(info['entity_id'], prefix=False)
         return res
 
     def update(self, t, tid=None, etag=None, lazy=True):
@@ -721,7 +723,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         return b2u(list(lst))
 
     @ttl_cache(ttl=config.cache_ttl, maxsize=config.cache_size)
-    def lookup(self, key, field="entity_id"):
+    def lookup(self, key):
         if key == 'entities' or key is None:
             return self._entities()
 
