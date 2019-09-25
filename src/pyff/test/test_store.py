@@ -103,6 +103,15 @@ class TestRedisWhooshStore(TestCase):
         assert (len(lst) == 77)
         assert ('https://birk.wayf.dk/birk.php/wayf.supportcenter.dk/its/saml2/idp/metadata.php?unit=its' in lst)
 
+    def test_lookup_wayf_sha1(self):
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(self.wayf, tid='https://metadata.wayf.dk/wayf-edugain-metadata.xml',lazy=False)
+        assert(store.size() == 77)
+        res = store.lookup("{sha1}4ece490318a017bc2cc24674f5ad049ad562f7b2")
+        lst = [e.get('entityID') for e in res]
+        assert (len(lst) == 1)
+        assert ('https://birk.wayf.dk/birk.php/wayf.supportcenter.dk/its/saml2/idp/metadata.php?unit=its' in lst)
+
     def test_select_wayf(self):
         store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
         store.update(self.wayf, tid='https://metadata.wayf.dk/wayf-edugain-metadata.xml')
@@ -216,6 +225,15 @@ class TestMemoryStore(TestCase):
         res = store.lookup("entities")
         lst = [e.get('entityID') for e in res]
         assert (len(lst) == 77)
+        assert ('https://birk.wayf.dk/birk.php/wayf.supportcenter.dk/its/saml2/idp/metadata.php?unit=its' in lst)
+
+    def test_lookup_wayf_sha1(self):
+        store = MemoryStore()
+        store.update(self.wayf, tid='https://metadata.wayf.dk/wayf-edugain-metadata.xml')
+        assert(store.size() == 77)
+        res = store.lookup("{sha1}4ece490318a017bc2cc24674f5ad049ad562f7b2")
+        lst = [e.get('entityID') for e in res]
+        assert (len(lst) == 1)
         assert ('https://birk.wayf.dk/birk.php/wayf.supportcenter.dk/its/saml2/idp/metadata.php?unit=its' in lst)
 
     def test_select_wayf(self):
