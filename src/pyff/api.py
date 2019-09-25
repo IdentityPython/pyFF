@@ -70,7 +70,8 @@ def _fmt(data, accepter):
     if data is None or len(data) == 0:
         return "", 'text/plain'
     if isinstance(data, (etree._Element, etree._ElementTree)) and (
-            accepter.get('text/xml') or accepter.get('application/xml') or accepter.get('application/samlmetadata+xml')):
+            accepter.get('text/xml') or accepter.get('application/xml') or accepter.get(
+        'application/samlmetadata+xml')):
         return dumptree(data), 'application/samlmetadata+xml'
     if isinstance(data, (dict, list)) and accepter.get('application/json'):
         return dumps(data, default=json_serializer), 'application/json'
@@ -148,7 +149,7 @@ def process_handler(request):
 
     # TODO - sometimes the client sends > 1 accept header value with ','.
     accept = str(request.accept).split(',')[0]
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     if (not accept or 'application/*' in accept or 'text/*' in accept or '*/*' in accept) and ext:
         accept = _ctypes[ext]
 
@@ -176,8 +177,8 @@ def process_handler(request):
             response.headers.update(state.get('headers', {}))
             ctype = state.get('headers').get('Content-Type', None)
             if not ctype:
-               r, t = _fmt(r, accepter)
-               ctype = t
+                r, t = _fmt(r, accepter)
+                ctype = t
 
             response.text = b2u(r)
             response.size = len(r)
@@ -197,8 +198,9 @@ def process_handler(request):
         raise exc.exception_response(500)
 
     if request.method == 'GET':
-       raise exc.exception_response(404)
- 
+        raise exc.exception_response(404)
+
+
 def webfinger_handler(request):
     """An implementation the webfinger protocol
 (http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-12)
@@ -302,6 +304,7 @@ def resources_handler(request):
         if len(r.children) > 0:
             nfo['Children'] = [_info(cr) for cr in r.children]
         return nfo
+
     _resources = [_info(r) for r in request.registry.md.rm.children]
     response = Response(dumps(_resources, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
@@ -374,7 +377,6 @@ def launch_memory_usage_server(port=9002):
 
 
 def mkapp(*args, **kwargs):
-
     md = kwargs.pop('md', None)
     if md is None:
         md = MDRepository()
@@ -433,7 +435,7 @@ def mkapp(*args, **kwargs):
         ctx.add_route('request', '/*path', request_method='GET')
         ctx.add_view(process_handler, route_name='request')
 
-        start = datetime.utcnow()+timedelta(seconds=1)
+        start = datetime.utcnow() + timedelta(seconds=1)
         log.debug(start)
         if config.update_frequency > 0:
             ctx.registry.scheduler.add_job(call,
