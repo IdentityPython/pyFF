@@ -685,6 +685,7 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     d = dict(title=title,
              descr=descr,
              auth='saml',
+             entity_id=entity_id,
              entityID=entity_id)
 
     eattr = entity_attribute_dict(e)
@@ -742,6 +743,7 @@ def entity_simple_summary(e):
     entity_id = e.get('entityID')
     d = dict(title=title,
              descr=descr,
+             auth='saml',
              entity_id=entity_id,
              entityID=entity_id,
              domains=";".join(sub_domains(e)),
