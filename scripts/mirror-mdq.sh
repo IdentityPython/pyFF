@@ -70,7 +70,7 @@ echo $target | grep -qv '@' && mkdir -p $target
  WGET_ARGS="--mirror --no-host-directories -q --connect-timeout=10"
  idx_obj=".well-known/webfinger$relarg"
  if wget $WGET_ARGS "$base/$idx_obj"; then 
-    jq -r '.links[].href' < "$idx_obj" | xargs -P 10 -r -n 1 wget $WGET_ARGS
+    jq -r '.links[].href' < "$idx_obj" | xargs -P ${MIRROR_MDQ_NPROC:-10} -r -n 1 wget $WGET_ARGS
     ret=$?
  else
     err "Failed to fetch metadata index $idx_obj" $?

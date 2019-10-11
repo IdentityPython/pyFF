@@ -435,7 +435,7 @@ def filter_lang(elts, langs=None):
         return []
 
     lst = list(filter(_l, elts))
-    if lst:
+    if len(lst) > 0:
         return lst
     else:
         return elts
