@@ -247,38 +247,6 @@ class NotImplementedFunction(object):
         return self.message
 
 
-class SHIBDiscovery(object):
-    """
-    An endpoint designed to provide backwards compatibility with standard shibboleth-based discovery services.
-    """
-
-    def __init__(self, server=None):
-        self.server = server
-
-    @cherrypy.expose
-    def DS(self, *args, **kwargs):
-        kwargs['path'] = "/role/idp.ds"
-        kwargs['request_type'] = 'discovery'
-        return self.server.request(**kwargs)
-
-    @cherrypy.expose
-    def WAYF(self, *args, **kwargs):
-        raise HTTPError(400, _("400 Bad Request - shibboleth WAYF protocol not supported"))
-
-    @cherrypy.expose
-    def default(self, *args, **kwargs):
-        log.debug("default args: %s, kwargs: %s" % (repr(args), repr(kwargs)))
-        if len(args) > 0 and args[0] in self.server.aliases:
-            kwargs['pfx'] = args[0]
-            if len(args) > 1:
-                kwargs['path'] = args[1]
-            return self.server.request(**kwargs)
-        else:
-            kwargs['pfx'] = None
-            kwargs['path'] = "/" + "/".join(args)
-            return self.server.request(**kwargs)
-
-
 class MDRoot(object):
     """The root application of pyFF. The root application assembles the MDStats and WellKnown classes with an
     MDServer instance.
@@ -287,9 +255,6 @@ class MDRoot(object):
     def __init__(self, server):
         self.server = server
         self._well_known.server = server
-        self.discovery.server = server
-
-    discovery = SHIBDiscovery()
 
     _well_known = WellKnown()
     static = cherrypy.tools.staticdir.handler("/static", os.path.join(site_dir, "static"))
