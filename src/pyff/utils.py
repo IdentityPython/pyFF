@@ -49,7 +49,7 @@ from requests.packages.urllib3.util.retry import Retry
 import contextlib
 import threading
 from cachetools import LRUCache, TTLCache
-from _collections_abc import MutableMapping
+from _collections_abc import MutableMapping, Mapping
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 from requests.adapters import BaseAdapter, Response
@@ -709,6 +709,9 @@ def url_get(url):
         s.mount('https://', adapter)
 
     headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
+    _etag = None
+    if _etag is not None:
+        headers['If-None-Match'] = _etag
     try:
         r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
     except IOError as ex:
@@ -835,6 +838,29 @@ def make_default_scheduler():
     return BackgroundScheduler(executors={'default': ThreadPoolExecutor(config.worker_pool_size)},
                                jobstores={'default': jobstore },
                                job_defaults={'misfire_grace_time': config.update_frequency})
+
+
+class MappingStack(Mapping):
+
+    def __init__(self, *args):
+        self._m = list(args)
+
+    def __contains__(self, item):
+        return any([item in d for d in self._m])
+
+    def __getitem__(self, item):
+        for d in self._m:
+            if item in d:
+                return d[item]
+        return None
+
+    def __iter__(self):
+        for d in self._m:
+            for item in d:
+                yield item
+
+    def __len__(self) -> int:
+        return sum([len(d) for d in self._m])
 
 
 class LRUProxyDict(MutableMapping):

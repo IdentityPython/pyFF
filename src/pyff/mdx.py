@@ -60,7 +60,8 @@ from simplejson import dumps
 from .constants import config, parse_options
 from .locks import ReadWriteLock
 from .pipes import plumbing
-from .utils import resource_string, duration2timedelta, debug_observer, render_template, hash_id, safe_b64e, safe_b64d
+from .utils import resource_string, duration2timedelta, debug_observer, render_template, \
+    hash_id, safe_b64e, safe_b64d, MappingStack
 from .logs import get_log, SysLogLibHandler
 from .samlmd import entity_simple_summary, entity_display_name, entity_info
 from .repo import MDRepository
@@ -421,6 +422,9 @@ class MDServer(object):
         def __init__(self):
             pass
 
+        def __str__(self):
+            return " ".join(["{}={}".format(a, self.get(a)) for a in ['application/xml', 'application/json', 'text/plain']])
+
         def has_key(self, key):
             return True
 
@@ -502,7 +506,9 @@ class MDServer(object):
                 if ext is not None:
                     path = "%s.%s" % (path, ext)
         else:
-            accept = {content_type: True}
+            accept = MappingStack(MDServer.MediaAccept(), {content_type: True})
+
+        log.debug(accept)
 
         with self.lock.readlock:
             if ext == 'ds':
