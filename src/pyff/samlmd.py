@@ -189,8 +189,17 @@ class MDServiceListParser(PyffParser):
         relt = root(t)
         info['Version'] = relt.get('Version', '0')
         info['IssueDate'] = relt.get('IssueDate')
-        info['NextUpdate'] = relt.get('NextUpdate')
-        resource.expire_time = iso2datetime(relt.get('NextUpdate'))
+        next_update = relt.get('NextUpdate')
+        if next_update is not None:
+            info['NextUpdate'] = next_update
+            resource.expire_time = iso2datetime(next_update)
+        elif config.respect_cache_duration:
+            now = datetime.utcnow()
+            now = now.replace(microsecond=0)
+            next_update = now + duration2timedelta(config.default_cache_duration)
+            info['NextUpdate'] = next_update
+            resource.expire_time = next_update
+
         info['Expiration Time'] = str(resource.expire_time)
         info['IssuerName'] = first_text(relt, "{%s}IssuerName" % NS['ser'])
         info['SchemeIdentifier'] = first_text(relt, "{%s}SchemeIdentifier" % NS['ser'])
