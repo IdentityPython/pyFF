@@ -827,7 +827,7 @@ def non_blocking_lock(lock=threading.Lock(), exception_class=ResourceException, 
 
 def make_default_scheduler():
     if config.scheduler_job_store == 'redis':
-        jobstore = RedisJobStore()
+        jobstore = RedisJobStore(host=config.redis_host, port=config.redis_port)
     elif config.scheduler_job_store == 'memory':
         jobstore = MemoryJobStore()
     else:
