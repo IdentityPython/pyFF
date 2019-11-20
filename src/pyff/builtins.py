@@ -1079,6 +1079,26 @@ def check_xml_namespaces(req, *opts):
     with_tree(root(req.t), _verify)
     return req.t
 
+@pipe
+def drop_xsi_type(req, *opts):
+    """
+
+    :param req: The request
+    :param opts: Options (not used)
+    :return: drop all xsi:type declarations
+
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    def _drop_xsi_type(elt):
+        try:
+            del elt.attrib["{%s}type" % NS["xsi"]]
+        except Exception as ex:
+            pass
+
+    with_tree(root(req.t), _drop_xsi_type)
+    return req.t
 
 @pipe
 def certreport(req, *opts):
