@@ -16,12 +16,13 @@ import re
 import xmlsec
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-from .constants import NS
+
+from .constants import NS, config
 from .decorators import deprecated
 from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
-    validate_document, hash_id
+    validate_document, hash_id, ensure_dir
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
     discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
 from six.moves.urllib_parse import urlparse
@@ -29,6 +30,7 @@ from .exceptions import MetadataException
 import six
 import ipaddr
 from pyff.pipes import registry
+from six.moves.urllib_parse import quote_plus
 
 
 __author__ = 'leifj'
@@ -53,6 +55,84 @@ def dump(req, *opts):
         print("<EntitiesDescriptor xmlns=\"{}\"/>".format(NS['md']))
 
 
+@pipe(name="mdq")
+def _mdq_t(req, *opts):
+    """
+
+    Emit an mdq tree
+
+    :param req:
+    :param opts:
+    :return: None
+
+    **Examples**
+
+    .. code-block:: yaml
+
+        - mdq
+           output: "somedir"
+
+
+    """
+
+    params = {"via": []}
+    base_dir = req.args.get('output', None)
+
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    for x in req.args:
+        x = x.strip()
+        log.debug("load parsing '%s'" % x)
+        r = x.split()
+
+        assert len(r) in range(1, 3), PipeException(
+            "Usage: mdq [via pipeline]")
+
+        url = r.pop(0)
+        params = {"via": []}
+
+        while len(r) > 0:
+            elt = r.pop(0)
+            if elt == "via":
+                params[elt] = r.pop(0)
+
+        if params['via'] is not None:
+            params['via'] = [PipelineCallback(pipe, req, store=req.md.store) for pipe in params['via']]
+
+    def _xml(t):
+        return dumptree(t)
+
+    def _json(t):
+        res = discojson_t(t, icon_store=req.md.icon_store)
+        res.sort(key=operator.itemgetter('title'))
+
+        return json.dumps(res)
+
+    st = req.t
+    if 'via' in params:
+        for cb in params['via']:
+            st = cb(st)
+
+    safe_write("{}/index.json".format(base_dir), _json(st), mkdirs=True)
+    safe_write("{}/index.xml".format(base_dir), _xml(st), mkdirs=True)
+    for e in iter_entities(req.t):  # TODO: run this loop in a worker pool
+        if 'via' in params:
+            for cb in params['via']:
+                e = cb(e)
+        entity_id = e.get('entityID')
+        hid = hash_id(entity_id, 'sha1', True)
+        j = _json(e)
+        x = _xml(e)
+
+        json_fn = "{}/{}.json".format(base_dir, quote_plus(entity_id))
+        xml_fn = "{}/{}.xml".format(base_dir, quote_plus(entity_id))
+        safe_write(json_fn, j, mkdirs=True)
+        safe_write(xml_fn, x, mkdirs=True)
+        os.symlink(json_fn, "{}/{}.json".format(base_dir, quote_plus(hid)))
+        os.symlink(xml_fn, "{}/{}.xml".format(base_dir, quote_plus(hid)))
+
+
 @pipe(name="print")
 def _print_t(req, *opts):
     """
@@ -62,6 +142,13 @@ def _print_t(req, *opts):
     :param req: The request
     :param opts: Options (unused)
     :return: None
+
+    **Examples**
+
+    .. code-block:: yaml
+
+        - print
+           output: "somewhere.foo"
 
     """
     fn = req.args.get('output', None)

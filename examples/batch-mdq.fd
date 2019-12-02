@@ -1,0 +1,12 @@
+- when sign:
+   - finalize
+   - sign:
+- when batch:
+   - load:
+      - http://mds.edugain.org
+      - https://mds.swamid.se/md/swamid-registered.xml
+      - http://md.incommon.org/InCommon/InCommon-metadata.xml
+      - http://fed.openathens.net/oafed/metadata
+   - select:
+   - mdq via sign:
+      output: /tmp/mdq/entities
