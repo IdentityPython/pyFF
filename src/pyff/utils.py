@@ -289,10 +289,17 @@ def request_scheme(request):
     return request.headers.get('X-Forwarded-Proto', request.scheme)
 
 
-def safe_write(fn, data):
+def ensure_dir(fn):
+    d = os.path.dirname(fn)
+    if not os.path.exists(d):
+        os.makedirs(d)
+
+
+def safe_write(fn, data, mkdirs=False):
     """Safely write data to a file with name fn
     :param fn: a filename
     :param data: some string data to write
+    :param mkdirs: create directories along the way (False by default)
     :return: True or False depending on the outcome of the write
     """
     tmpn = None
@@ -305,6 +312,9 @@ def safe_write(fn, data):
             mode = 'w+'
         else:
             mode = 'w+b'
+
+        if mkdirs:
+            ensure_dir(fn)
 
         if isinstance(data, six.binary_type):
             data = data.decode('utf-8')
