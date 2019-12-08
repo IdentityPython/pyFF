@@ -1,12 +1,16 @@
 - when sign:
-   - finalize
+   - finalize:
+      cacheDuration: PT5H
+      validUntil: P10D
    - sign:
+      key: sign.key
+      cert: sign.crt
 - when batch:
    - load:
-      - http://mds.edugain.org
       - https://mds.swamid.se/md/swamid-registered.xml
       - http://md.incommon.org/InCommon/InCommon-metadata.xml
       - http://fed.openathens.net/oafed/metadata
+      - http://edugain.cdn.samlbits.net
    - select:
    - mdq via sign:
       output: /tmp/mdq/entities

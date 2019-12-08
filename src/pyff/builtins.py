@@ -74,31 +74,15 @@ def _mdq_t(req, *opts):
 
 
     """
-
-    params = {"via": []}
+    opts = dict(list(zip(opts[::2], [opts[1::2]])))
+    opts.setdefault('via', [])
     base_dir = req.args.get('output', None)
 
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    for x in req.args:
-        x = x.strip()
-        log.debug("load parsing '%s'" % x)
-        r = x.split()
-
-        assert len(r) in range(1, 3), PipeException(
-            "Usage: mdq [via pipeline]")
-
-        url = r.pop(0)
-        params = {"via": []}
-
-        while len(r) > 0:
-            elt = r.pop(0)
-            if elt == "via":
-                params[elt] = r.pop(0)
-
-        if params['via'] is not None:
-            params['via'] = [PipelineCallback(pipe, req, store=req.md.store) for pipe in params['via']]
+    if opts['via'] is not None:
+        opts['via'] = [PipelineCallback(pipe, req, store=req.md.store) for pipe in opts['via']]
 
     def _xml(t):
         return dumptree(t)
@@ -110,16 +94,15 @@ def _mdq_t(req, *opts):
         return json.dumps(res)
 
     st = req.t
-    if 'via' in params:
-        for cb in params['via']:
-            st = cb(st)
+    for cb in opts['via']:
+        st = cb(st)
 
     safe_write("{}/index.json".format(base_dir), _json(st), mkdirs=True)
     safe_write("{}/index.xml".format(base_dir), _xml(st), mkdirs=True)
-    for e in iter_entities(req.t):  # TODO: run this loop in a worker pool
-        if 'via' in params:
-            for cb in params['via']:
-                e = cb(e)
+
+    def _p(e):
+        for cb in opts['via']:
+            e = cb(e)
         entity_id = e.get('entityID')
         hid = hash_id(entity_id, 'sha1', True)
         j = _json(e)
@@ -127,10 +110,23 @@ def _mdq_t(req, *opts):
 
         json_fn = "{}/{}.json".format(base_dir, quote_plus(entity_id))
         xml_fn = "{}/{}.xml".format(base_dir, quote_plus(entity_id))
+        json_id_fn = "{}/{}.json".format(base_dir, quote_plus(hid))
+        xml_id_fn = "{}/{}.xml".format(base_dir, quote_plus(hid))
         safe_write(json_fn, j, mkdirs=True)
         safe_write(xml_fn, x, mkdirs=True)
+
+        if os.path.exists(json_id_fn):
+            os.unlink(json_id_fn)
         os.symlink(json_fn, "{}/{}.json".format(base_dir, quote_plus(hid)))
+        if os.path.exists(xml_id_fn):
+            os.unlink(xml_id_fn)
         os.symlink(xml_fn, "{}/{}.xml".format(base_dir, quote_plus(hid)))
+        return entity_id
+
+    from multiprocessing.pool import ThreadPool
+    pool = ThreadPool()
+    result = pool.map(_p, iter_entities(req.t))
+    log.info("wrote an mdq store with {} entities".format(len(result)))
 
 
 @pipe(name="print")
@@ -616,7 +612,7 @@ def _select_args(req):
     if args is None or not args:
         args = []
 
-    log.debug("selecting using args: %s" % args)
+    log.info("selecting using args: %s" % args)
 
     return args
 
