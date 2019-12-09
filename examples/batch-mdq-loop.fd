@@ -12,7 +12,7 @@
       - http://fed.openathens.net/oafed/metadata
       - http://edugain.cdn.samlbits.net
    - select:
-   - each:
+   - map:
       - log_entity:
       - fork:
          - drop_xsi_type:

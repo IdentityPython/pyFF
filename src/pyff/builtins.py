@@ -55,8 +55,8 @@ def dump(req, *opts):
         print("<EntitiesDescriptor xmlns=\"{}\"/>".format(NS['md']))
 
 
-@pipe(name="each")
-def _each(req, *opts):
+@pipe(name="map")
+def _map(req, *opts):
     """
 
         loop over the entities in a selection
@@ -69,11 +69,10 @@ def _each(req, *opts):
 
         .. code-block:: yaml
 
-            - each:
+            - map:
                - ...statements...
 
-        Each time around the loop a request is processed with the id set to the entity_id of the object. The
-        statements below the each statements are processed for each entity in the working tree.
+        Executes a set of statements in parallell (using a thread pool).
 
     """
 
