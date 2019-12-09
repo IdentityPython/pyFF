@@ -204,6 +204,7 @@ may modify any of the fields.
             self.plumbing = pl
             self.md = md
             self.t = t
+            self._id = None
             self.name = name
             self.args = args
             self.state = state
@@ -212,6 +213,19 @@ may modify any of the fields.
             self.scheduler = scheduler
             self.raise_exceptions = raise_exceptions
             self.exception = None
+
+        @property
+        def id(self):
+            if self.t is None:
+                return None
+            if self._id is None:
+                self._id = self.t.get('entityID')
+            if self._id is None:
+                self._id = self.t.get('Name')
+            return self._id
+
+        def set_id(self, _id):
+            self._id = _id
 
         @property
         def store(self):
