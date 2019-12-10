@@ -48,7 +48,7 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 import contextlib
 import threading
-from cachetools import LRUCache, TTLCache
+from cachetools import LRUCache
 from _collections_abc import MutableMapping
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor

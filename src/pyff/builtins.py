@@ -32,7 +32,6 @@ import ipaddr
 from pyff.pipes import registry
 from six.moves.urllib_parse import quote_plus
 
-
 __author__ = 'leifj'
 
 FILESPEC_REGEX = "([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)"
@@ -1066,7 +1065,6 @@ def _store(req, *opts):
     return req.t
 
 
-
 @pipe
 def xslt(req, *opts):
     """
@@ -1194,6 +1192,7 @@ def check_xml_namespaces(req, *opts):
     with_tree(root(req.t), _verify)
     return req.t
 
+
 @pipe
 def drop_xsi_type(req, *opts):
     """
@@ -1214,6 +1213,7 @@ def drop_xsi_type(req, *opts):
 
     with_tree(root(req.t), _drop_xsi_type)
     return req.t
+
 
 @pipe
 def certreport(req, *opts):
