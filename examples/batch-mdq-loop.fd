@@ -1,4 +1,5 @@
 - when sign:
+   - drop_xsi_type:
    - finalize:
       cacheDuration: PT5H
       validUntil: P10D
@@ -12,16 +13,13 @@
       - http://fed.openathens.net/oafed/metadata
       - http://edugain.cdn.samlbits.net
    - select:
+   - fork:
+      - then sign:
+      - break
    - map:
       - log_entity:
       - fork:
-         - drop_xsi_type:
-         - finalize:
-            cacheDuration: PT5H
-            validUntil: P10D
-         - sign:
-            key: sign.key
-            cert: sign.crt
+         - then sign:
          - publish:
             output: /tmp/mdq/entities
             hash_link: true
