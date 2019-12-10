@@ -81,12 +81,23 @@ def _map(req, *opts):
         ip = Plumbing(pipeline=req.args, pid="{}.each[{}]".format(req.plumbing.pid, entity_id))
         ireq = Plumbing.Request(ip, req.md, t=e, scheduler=req.scheduler)
         ireq.set_id(entity_id)
+        ireq.set_parent(req)
         return ip.iprocess(ireq)
 
     from multiprocessing.pool import ThreadPool
     pool = ThreadPool()
     result = pool.map(_p, iter_entities(req.t), chunksize=10)
     log.info("processed {} entities".format(len(result)))
+
+
+@pipe(name="then")
+def _then(req, *opts):
+    """
+    Call a named 'when' clause and return - akin to macro invocations for pyFF
+    """
+    for cb in [PipelineCallback(p, req, store=req.md.store) for p in opts]:
+        req.t = cb(req.t)
+    return req.t
 
 
 @pipe(name="log_entity")
@@ -221,6 +232,7 @@ def fork(req, *opts):
     ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
     ireq = Plumbing.Request(ip, req.md, t=nt, scheduler=req.scheduler)
     ireq.set_id(req.id)
+    ireq.set_parent(req)
     ip.iprocess(ireq)
 
     if req.t is not None and ireq.t is not None and len(root(ireq.t)) > 0:
@@ -608,10 +620,10 @@ def load(req, *opts):
                 params['verify'] = elt
 
         if params['via'] is not None:
-            params['via'] = [PipelineCallback(pipe, req, store=req.md.store) for pipe in params['via']]
+            params['via'] = [PipelineCallback(p, req, store=req.md.store) for p in params['via']]
 
         if params['cleanup'] is not None:
-            params['cleanup'] = [PipelineCallback(pipe, req, store=req.md.store) for pipe in params['cleanup']]
+            params['cleanup'] = [PipelineCallback(p, req, store=req.md.store) for p in params['cleanup']]
 
         params.update(opts)
 
