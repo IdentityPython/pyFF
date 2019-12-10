@@ -45,11 +45,13 @@ class Fetch(threading.Thread):
                         if self.content_handler is not None:
                             r = self.content_handler(r)
                         self.response.put({'response': r, 'url': url, 'exception': None, 'last_fetched': datetime.now()})
+                        log.info("successfully fetched {}".format(url))
                     except Exception as ex:
                         self.response.put({'response': None, 'url': url, 'exception': ex, 'last_fetched': datetime.now()})
+                        log.warn("error fetching {}".format(url))
+                        log.warn(ex)
                         import traceback
                         log.debug(traceback.format_exc())
-                        log.warn(ex)
                     finally:
                         self.state('idle')
                 self.request.task_done()
@@ -73,7 +75,7 @@ class Fetcher(threading.Thread, Watchable):
         self.halt = False
 
     def schedule(self, url):
-        log.debug("putting {} on queue".format(url))
+        log.info("scheduling fetch of {}".format(url))
         self.request.put(url)
 
     def stop(self):

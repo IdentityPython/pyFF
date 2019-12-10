@@ -53,6 +53,9 @@ similar implemented using k8s etc). Assuming your.public.domain is the public ad
 service you wish to deploy the follwoing compose file would give you a discovery service on
 port 80 and an admin UI on port 8080.
 
+Take care to check which version of the software components is the latest and greatest (and/or
+apropriate for your situation) and modify accordingly.
+
 .. code-block:: yaml
 
   version: "3"
@@ -66,7 +69,7 @@ port 80 and an admin UI on port 8080.
            - MDQ_URL=http://pyff
            - PYFF_APIS=true
      thiss:
-        image: docker.sunet.se/thiss-js:1.0.0
+        image: docker.sunet.se/thiss-js:1.1.2
         container_name: thiss
         ports:
            - "80:80"

@@ -16,12 +16,13 @@ import re
 import xmlsec
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
-from .constants import NS
+
+from .constants import NS, config
 from .decorators import deprecated
 from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
-    validate_document, hash_id
+    validate_document, hash_id, ensure_dir
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
     discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
 from six.moves.urllib_parse import urlparse
@@ -29,6 +30,7 @@ from .exceptions import MetadataException
 import six
 import ipaddr
 from pyff.pipes import registry
+from six.moves.urllib_parse import quote_plus
 
 
 __author__ = 'leifj'
@@ -53,6 +55,60 @@ def dump(req, *opts):
         print("<EntitiesDescriptor xmlns=\"{}\"/>".format(NS['md']))
 
 
+@pipe(name="map")
+def _map(req, *opts):
+    """
+
+        loop over the entities in a selection
+
+        :param req:
+        :param opts:
+        :return: None
+
+        **Examples**
+
+        .. code-block:: yaml
+
+            - map:
+               - ...statements...
+
+        Executes a set of statements in parallell (using a thread pool).
+
+    """
+
+    def _p(e):
+        entity_id = e.get('entityID')
+        ip = Plumbing(pipeline=req.args, pid="{}.each[{}]".format(req.plumbing.pid, entity_id))
+        ireq = Plumbing.Request(ip, req.md, t=e, scheduler=req.scheduler)
+        ireq.set_id(entity_id)
+        ireq.set_parent(req)
+        return ip.iprocess(ireq)
+
+    from multiprocessing.pool import ThreadPool
+    pool = ThreadPool()
+    result = pool.map(_p, iter_entities(req.t), chunksize=10)
+    log.info("processed {} entities".format(len(result)))
+
+
+@pipe(name="then")
+def _then(req, *opts):
+    """
+    Call a named 'when' clause and return - akin to macro invocations for pyFF
+    """
+    for cb in [PipelineCallback(p, req, store=req.md.store) for p in opts]:
+        req.t = cb(req.t)
+    return req.t
+
+
+@pipe(name="log_entity")
+def _log_entity(req, *opts):
+    """
+    log the request id as it is processed (typically the entity_id)
+    """
+    log.info(req.id)
+    return req.t
+
+
 @pipe(name="print")
 def _print_t(req, *opts):
     """
@@ -63,12 +119,20 @@ def _print_t(req, *opts):
     :param opts: Options (unused)
     :return: None
 
+    **Examples**
+
+    .. code-block:: yaml
+
+        - print
+           output: "somewhere.foo"
+
     """
     fn = req.args.get('output', None)
     if fn is not None:
         safe_write(fn, req.t)
     else:
         print(req.t)
+
 
 @pipe
 def end(req, *opts):
@@ -167,6 +231,8 @@ def fork(req, *opts):
 
     ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
     ireq = Plumbing.Request(ip, req.md, t=nt, scheduler=req.scheduler)
+    ireq.set_id(req.id)
+    ireq.set_parent(req)
     ip.iprocess(ireq)
 
     if req.t is not None and ireq.t is not None and len(root(ireq.t)) > 0:
@@ -357,25 +423,62 @@ def publish(req, *opts):
     .. code-block:: yaml
 
         - publish: /tmp/idp.xml
+
+    The full set of options with their corresponding defaults:
+
+    .. code-block:: yaml
+
+        - publish:
+             output: output
+             raw: false
+             urlencode_filenames: false
+             hash_link: false
+             update_store: true
+             ext: .xml
+
+    If output is an existing directory, publish will write the working tree to a filename in the directory
+    based on the @entityID or @Name attribute. Unless 'raw' is set to true the working tree will be serialized
+    to a string before writing. If true, 'hash_link' will generate a symlink based on the hash id (sha1) for
+    compatibility with MDQ. Unless false, 'update_store' will cause the the current store to be updated with
+    the published artifact. Setting 'ext' allows control over the file extension.
     """
 
     if req.t is None:
         raise PipeException("Empty document submitted for publication")
 
     if req.args is None:
-        raise PipeException("publish must specify output")
+        raise PipeException("Publish must at least specify output")
 
-    try:
-        validate_document(req.t)
-    except DocumentInvalid as ex:
-        log.error(ex.error_log)
-        raise PipeException("XML schema validation failed")
+    if type(req.args) is not dict:
+        req.args = dict(output=req.args[0])
 
-    output_file = None
-    if type(req.args) is dict:
-        output_file = req.args.get("output", None)
-    else:
-        output_file = req.args[0]
+    for t in ('raw', 'update_store', 'hash_link', 'urlencode_filenames'):
+        if t in req.args and type(req.args[t]) is not bool:
+            req.args[t] = strtobool("{}".format(req.args[t]))
+
+    req.args.setdefault('ext', '.xml')
+    req.args.setdefault('output_file', 'output')
+    req.args.setdefault('raw', False)
+    req.args.setdefault('update_store', True)
+    req.args.setdefault('hash_link', False)
+    req.args.setdefault('urlencode_filenames', False)
+
+    output_file = req.args.get("output", None)
+
+    if not req.args.get('raw'):
+        try:
+            validate_document(req.t)
+        except DocumentInvalid as ex:
+            log.error(ex.error_log)
+            raise PipeException("XML schema validation failed")
+
+    def _nop(x):
+        return x
+
+    enc = _nop
+    if req.args.get('urlencode_filenames'):
+        enc = quote_plus
+
     if output_file is not None:
         output_file = output_file.strip()
         resource_name = output_file
@@ -384,13 +487,25 @@ def publish(req, *opts):
             output_file = m.group(1)
             resource_name = m.group(2)
         out = output_file
+        data = req.t
+        if not req.args.get('raw'):
+            data = dumptree(req.t)
+
         if os.path.isdir(output_file):
-            out = "{}.xml".format(os.path.join(output_file, req.id))
+            file_name = "{}{}".format(enc(req.id), req.args.get('ext'))
+            out = os.path.join(output_file, file_name)
+            safe_write(out, data, mkdirs=True)
+            if req.args.get('hash_link'):
+                link_name = "{}{}".format(enc(hash_id(req.id)), req.args.get('ext'))
+                link_path = os.path.join(output_file, link_name)
+                if os.path.exists(link_path):
+                    os.unlink(link_path)
+                os.symlink(file_name, link_path)
+        else:
+            safe_write(out, data, mkdirs=True)
 
-        data = dumptree(req.t)
-
-        safe_write(out, data)
-        req.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
+        if req.args.get('update_store'):
+            req.store.update(req.t, tid=resource_name)  # TODO maybe this is not the right thing to do anymore
     return req.t
 
 
@@ -505,10 +620,10 @@ def load(req, *opts):
                 params['verify'] = elt
 
         if params['via'] is not None:
-            params['via'] = [PipelineCallback(pipe, req, store=req.md.store) for pipe in params['via']]
+            params['via'] = [PipelineCallback(p, req, store=req.md.store) for p in params['via']]
 
         if params['cleanup'] is not None:
-            params['cleanup'] = [PipelineCallback(pipe, req, store=req.md.store) for pipe in params['cleanup']]
+            params['cleanup'] = [PipelineCallback(p, req, store=req.md.store) for p in params['cleanup']]
 
         params.update(opts)
 
@@ -529,7 +644,7 @@ def _select_args(req):
     if args is None or not args:
         args = []
 
-    log.debug("selecting using args: %s" % args)
+    log.info("selecting using args: %s" % args)
 
     return args
 
@@ -1079,6 +1194,26 @@ def check_xml_namespaces(req, *opts):
     with_tree(root(req.t), _verify)
     return req.t
 
+@pipe
+def drop_xsi_type(req, *opts):
+    """
+
+    :param req: The request
+    :param opts: Options (not used)
+    :return: drop all xsi:type declarations
+
+    """
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    def _drop_xsi_type(elt):
+        try:
+            del elt.attrib["{%s}type" % NS["xsi"]]
+        except Exception as ex:
+            pass
+
+    with_tree(root(req.t), _drop_xsi_type)
+    return req.t
 
 @pipe
 def certreport(req, *opts):

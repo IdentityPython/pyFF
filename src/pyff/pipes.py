@@ -114,7 +114,7 @@ A delayed pipeline callback used as a post for parse_saml_metadata
 
     def __init__(self, entry_point, req, store=None):
         self.entry_point = entry_point
-        self.plumbing = Plumbing(req.plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
+        self.plumbing = Plumbing(req.scope_of(entry_point).plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
         self.req = req
         self.store = store
 
@@ -204,6 +204,7 @@ may modify any of the fields.
             self.plumbing = pl
             self.md = md
             self.t = t
+            self._id = None
             self.name = name
             self.args = args
             self.state = state
@@ -212,6 +213,31 @@ may modify any of the fields.
             self.scheduler = scheduler
             self.raise_exceptions = raise_exceptions
             self.exception = None
+            self.parent = None
+
+        def scope_of(self, entry_point):
+            if 'with {}'.format(entry_point) in self.plumbing.pipeline:
+                return self
+            elif self.parent is None:
+                return self
+            else:
+                return self.parent.scope_of(entry_point)
+
+        @property
+        def id(self):
+            if self.t is None:
+                return None
+            if self._id is None:
+                self._id = self.t.get('entityID')
+            if self._id is None:
+                self._id = self.t.get('Name')
+            return self._id
+
+        def set_id(self, _id):
+            self._id = _id
+
+        def set_parent(self, _parent):
+            self.parent = _parent
 
         @property
         def store(self):
