@@ -3,6 +3,7 @@ __author__ = 'leifj'
 import logging
 import syslog
 import six
+import os
 
 try:
     import cherrypy
@@ -58,6 +59,19 @@ def get_log(name):
 
 
 log = get_log('pyff')
+
+
+def log_config_file(ini):
+    if ini is not None:
+        import logging.config
+        if not os.path.isabs(ini):
+            ini = os.path.join(os.getcwd(), ini)
+        if not os.path.exists(ini):
+            raise ValueError("PYFF_LOGGING={} does not exist".format(ini))
+        logging.config.fileConfig(ini)
+
+
+log_config_file(os.getenv('PYFF_LOGGING', None))
 
 # http://www.aminus.org/blogs/index.php/2008/07/03/writing-high-efficiency-large-python-sys-1?blog=2
 # blog post explicitly gives permission for use

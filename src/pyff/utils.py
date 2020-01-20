@@ -6,16 +6,21 @@
 This module contains various utilities.
 
 """
+import cgi
 import hashlib
 import io
+import random
 import tempfile
+from copy import copy
 from datetime import timedelta, datetime
 from email.utils import parsedate
 from threading import local
 from time import gmtime, strftime
+
+from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.jobstores.redis import RedisJobStore
 from six.moves.urllib_parse import urlparse, quote_plus
 from itertools import chain
-from six import StringIO
 import yaml
 import xmlsec
 import cherrypy
@@ -38,6 +43,26 @@ from markupsafe import Markup
 import six
 import traceback
 from . import __version__
+from requests.structures import CaseInsensitiveDict
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+import contextlib
+import threading
+from cachetools import LRUCache, TTLCache
+from _collections_abc import MutableMapping
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor
+from requests.adapters import BaseAdapter, Response
+try:
+    from redis import StrictRedis
+except ImportError as ex:
+    StrictRedis = None
+
+try:
+    from PIL import Image
+except ImportError as ex:
+    Image = None
+
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -184,7 +209,7 @@ class ResourceResolver(etree.Resolver):
         """
         Resolves URIs using the resource API
         """
-        # log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
+        #log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
         path = system_url.split("/")
         fn = path[len(path) - 1]
         if pkg_resources.resource_exists(__name__, fn):
@@ -195,20 +220,50 @@ class ResourceResolver(etree.Resolver):
             raise ValueError("Unable to locate %s" % fn)
 
 
+thread_local_lock = threading.Lock()
+
+
 def schema():
     if not hasattr(thread_data, 'schema'):
         thread_data.schema = None
 
     if thread_data.schema is None:
         try:
-            parser = etree.XMLParser(collect_ids=False, resolve_entities=False)
+            thread_local_lock.acquire(blocking=True)
+            parser = etree.XMLParser()
             parser.resolvers.add(ResourceResolver())
             st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
             thread_data.schema = etree.XMLSchema(st)
         except etree.XMLSchemaParseError as ex:
+            import traceback
+            traceback.print_exc()
             log.error(xml_error(ex.error_log))
             raise ex
+        finally:
+            thread_local_lock.release()
     return thread_data.schema
+
+
+def redis():
+    if not hasattr(thread_data, 'redis'):
+        thread_data.redis = None
+
+    if StrictRedis is None:
+        raise ValueError("redis_py missing from dependencies")
+
+    if thread_data.redis is None:
+        try:
+            thread_local_lock.acquire(blocking=True)
+            thread_data.redis = StrictRedis(host=config.redis_host, port=config.redis_port)
+        except BaseException as ex:
+            import traceback
+            traceback.print_exc()
+            log.error(ex)
+            raise ex
+        finally:
+            thread_local_lock.release()
+
+    return thread_data.redis
 
 
 def check_signature(t, key, only_one_signature=False):
@@ -222,7 +277,6 @@ def check_signature(t, key, only_one_signature=False):
     return t
 
 
-# @cached(hash_key=lambda *args, **kwargs: hash(args[0]))
 def validate_document(t):
     schema().assertValid(t)
 
@@ -235,10 +289,17 @@ def request_scheme(request):
     return request.headers.get('X-Forwarded-Proto', request.scheme)
 
 
-def safe_write(fn, data):
+def ensure_dir(fn):
+    d = os.path.dirname(fn)
+    if not os.path.exists(d):
+        os.makedirs(d)
+
+
+def safe_write(fn, data, mkdirs=False):
     """Safely write data to a file with name fn
     :param fn: a filename
     :param data: some string data to write
+    :param mkdirs: create directories along the way (False by default)
     :return: True or False depending on the outcome of the write
     """
     tmpn = None
@@ -252,6 +313,9 @@ def safe_write(fn, data):
         else:
             mode = 'w+b'
 
+        if mkdirs:
+            ensure_dir(fn)
+
         if isinstance(data, six.binary_type):
             data = data.decode('utf-8')
 
@@ -264,6 +328,8 @@ def safe_write(fn, data):
             tmpn = tmp.name
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
             os.rename(tmpn, fn)
+            # made these file readable by all
+            os.chmod(fn, 0o644)
             return True
     except Exception as ex:
         log.debug(traceback.format_exc())
@@ -299,7 +365,7 @@ def truncate_filter(s, max_len=10):
 
 def to_yaml_filter(pipeline):
     print(pipeline)
-    out = StringIO()
+    out = six.StringIO()
     yaml.dump(pipeline, stream=out)
     return out.getvalue()
 
@@ -379,7 +445,7 @@ def filter_lang(elts, langs=None):
         return []
 
     lst = list(filter(_l, elts))
-    if lst:
+    if len(lst) > 0:
         return lst
     else:
         return elts
@@ -465,7 +531,7 @@ def hex_digest(data, hn='sha1'):
 
 
 def parse_xml(io, base_url=None):
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False,collect_ids=False))
+    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False, collect_ids=False))
 
 
 def has_tag(t, tag):
@@ -598,19 +664,34 @@ def guess_entity_software(e):
 def is_text(x):
     return isinstance(x, six.string_types) or isinstance(x, six.text_type)
 
+
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
 
-def urls_get(urls):
+class DirAdapter(BaseAdapter):
     """
-    Download multiple URLs and return all the response objects
-    :param urls:
-    :return:
+    An implementation of the requests Adapter interface that returns a the files in a directory. Used to simplify
+    the code paths in pyFF and allows directories to be treated as yet another representation of a collection of metadata.
     """
-    return [url_get(url) for url in urls]
+
+    def send(self, request, **kwargs):
+        resp = Response()
+        (_, _, _dir) = request.url.partition('://')
+        if _dir is None or len(_dir) == 0:
+            raise ValueError("not a directory url: {}".format(request.url))
+        resp.raw = six.BytesIO(six.b(_dir))
+        resp.status_code = 200
+        resp.reason = "OK"
+        resp.headers = {}
+        resp.url = request.url
+
+        return resp
+
+    def close(self):
+        pass
 
 
 def url_get(url):
@@ -619,17 +700,24 @@ def url_get(url):
     :param url:
     :return:
     """
-    s = None
-    info = dict()
 
+    s = None
     if 'file://' in url:
         s = requests.session()
         s.mount('file://', FileAdapter())
+    elif 'dir://' in url:
+        s = requests.session()
+        s.mount('dir://', DirAdapter())
     else:
+        retry = Retry(total=3, backoff_factor=0.5)
+        adapter = HTTPAdapter(max_retries=retry)
         s = CachedSession(cache_name="pyff_cache",
                           backend=config.request_cache_backend,
                           expire_after=config.request_cache_time,
                           old_data_on_error=True)
+        s.mount('http://', adapter)
+        s.mount('https://', adapter)
+
     headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
     try:
         r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
@@ -658,10 +746,33 @@ def safe_b64d(s):
     return base64.b64decode(s)
 
 
-def img_to_data(data, mime_type):
+# data:&lt;class 'type'&gt;;base64,
+# data:<class 'type'>;base64,
+
+def img_to_data(data, content_type):
     """Convert a file (specified by a path) into a data URI."""
-    data64 = safe_b64e(data)
-    return 'data:%s;base64,%s' % (mime_type, data64)
+    mime_type, options = cgi.parse_header(content_type)
+    data64 = None
+    if len(data) > config.icon_maxsize:
+        return None
+
+    if Image is not None:
+        try:
+            im = Image.open(io.BytesIO(data))
+            if im.format not in ('PNG', 'SVG'):
+                out = io.BytesIO()
+                im.save(out, format="PNG")
+                data64 = safe_b64e(out.getvalue())
+                assert data64
+                mime_type = "image/png"
+        except BaseException as ex:
+            log.warn(ex)
+            import traceback
+            log.debug(traceback.format_exc())
+
+    if data64 is None or len(data64) == 0:
+        data64 = safe_b64e(data)
+    return 'data:{};base64,{}'.format(mime_type, data64)
 
 
 def short_id(data):
@@ -685,14 +796,146 @@ def b2u(data):
     return data
 
 
+def json_serializer(o):
+    if isinstance(o, datetime):
+        return o.__str__()
+    if isinstance(o, CaseInsensitiveDict):
+        return dict(o.items())
+    if isinstance(o, BaseException):
+        return str(o)
+    if hasattr(o, 'to_json') and hasattr(o.to_json, '__call__'):
+        return o.to_json()
+    if isinstance(o, threading.Thread):
+        return o.name
+
+    raise ValueError("Object {} of type {} is not JSON-serializable via this function".format(repr(o), type(o)))
+
+
 class Lambda(object):
 
     def __init__(self, cb, *args, **kwargs):
         self._cb = cb
-        self._args = args
-        self._kwargs = kwargs
+        self._args = [a for a in args]
+        self._kwargs = kwargs or {}
 
     def __call__(self, *args, **kwargs):
-        list(args).append(list(self._args))
+        args = [a for a in args]
+        args.extend(self._args)
         kwargs.update(self._kwargs)
         return self._cb(*args, **kwargs)
+
+
+@contextlib.contextmanager
+def non_blocking_lock(lock=threading.Lock(), exception_class=ResourceException, args=("Resource is busy",)):
+    if not lock.acquire(blocking=False):
+        raise exception_class(*args)
+    try:
+        yield lock
+    finally:
+        lock.release()
+
+
+def make_default_scheduler():
+    if config.scheduler_job_store == 'redis':
+        jobstore = RedisJobStore(host=config.redis_host, port=config.redis_port)
+    elif config.scheduler_job_store == 'memory':
+        jobstore = MemoryJobStore()
+    else:
+        raise ValueError("unknown or unsupported job store type '{}'".format(config.scheduler_job_store))
+    return BackgroundScheduler(executors={'default': ThreadPoolExecutor(config.worker_pool_size)},
+                               jobstores={'default': jobstore },
+                               job_defaults={'misfire_grace_time': config.update_frequency})
+
+
+class LRUProxyDict(MutableMapping):
+
+    def __init__(self, proxy, *args, **kwargs):
+        self._proxy = proxy
+        self._cache = LRUCache(**kwargs)
+
+    def __contains__(self, item):
+        return item in self._cache or item in self._proxy
+
+    def __getitem__(self, item):
+        if item is None:
+            raise ValueError("None key")
+        v = self._cache.get(item, None)
+        if v is not None:
+            return v
+        v = self._proxy.get(item, None)
+        if v is not None:
+            self._cache[item] = v
+        return v
+
+    def __setitem__(self, key, value):
+        self._proxy[key] = value
+        self._cache[key] = value
+
+    def __delitem__(self, key):
+        self._proxy.pop(key, None)
+        self._cache.pop(key, None)
+
+    def __iter__(self):
+        return self._proxy.__iter__()
+
+    def __len__(self):
+        return len(self._proxy)
+
+
+def find_matching_files(d, extensions):
+    for top, dirs, files in os.walk(d):
+        for dn in dirs:
+            if dn.startswith("."):
+                dirs.remove(dn)
+
+        for nm in files:
+            (_, _, ext) = nm.rpartition('.')
+            if ext in extensions:
+                fn = os.path.join(top, nm)
+                yield fn
+
+
+def is_past_ttl(last_seen, ttl=config.cache_ttl):
+    fuzz = ttl
+    now = int(time.time())
+    if config.randomize_cache_ttl:
+        fuzz = random.randrange(1, ttl)
+    return now > int(last_seen) + fuzz
+
+
+class Watchable(object):
+
+    class Watcher(object):
+        def __init__(self, cb, args, kwargs):
+            self.cb = cb
+            self.args = args
+            self.kwargs = kwargs
+
+        def __call__(self, *args, **kwargs):
+            kwargs_copy = copy(kwargs)
+            args_copy = copy(list(args))
+            kwargs_copy.update(self.kwargs)
+            args_copy.extend(self.args)
+            return self.cb(*args_copy, **kwargs_copy)
+
+        def __cmp__(self, other):
+            return other.cb == self.cb
+
+    def __init__(self):
+        self.watchers = []
+
+    def add_watcher(self, cb, *args, **kwargs):
+        self.watchers.append(Watchable.Watcher(cb, args, kwargs))
+
+    def remove_watcher(self, cb, *args, **kwargs):
+        self.watchers.remove(Watchable.Watcher(cb))
+
+    def notify(self, *args, **kwargs):
+        kwargs['watched'] = self
+        for cb in self.watchers:
+            try:
+                cb(*args, **kwargs)
+            except BaseException as ex:
+                import traceback
+                log.debug(traceback.format_exc())
+                log.warn(ex)

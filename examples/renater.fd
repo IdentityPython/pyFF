@@ -1,0 +1,10 @@
+- load:l
+    - https://metadata.federation.renater.fr/renater/main/main-all-renater-metadata.xmll
+    - https://metadata.federation.renater.fr/renater/main/main-all-edugain-metadata.xml
+- select
+- sign:
+    key: sign.key
+    cert: sign.crt
+- certreport
+- stats
+- publish: /tmp/renater-annotated.xml

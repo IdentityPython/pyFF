@@ -1,13 +1,10 @@
 Development setup
 =================
 
-To create a buildout,
+1. Create a virtualenv and activate it
+2. ./setup.py develop
 
-  $ python bootstrap.py
-  $ bin/buildout
-
-Building the docs requires Sphinx-PyPI-upload
-Testing pkcs11 requires PyKCS11
+Optionally do the same for pyXMLSecurity if you plan to do work that involves crypto functions
 
 Release HOWTO
 =============
@@ -21,7 +18,7 @@ To make a release,
   4) git tag <version>
   5) git push && git push --tag
   6) cd docs && make html
-  6) Upload to PyPI: 'python setup.py sdist register upload upload_sphinx'
+  6) Upload to PyPI: 'python setup.py sdist upload'
   7) Increase version in setup.py (for next release) with dev suffix
   8) Create NEWS.txt entry for next release
 

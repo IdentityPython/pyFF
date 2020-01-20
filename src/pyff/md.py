@@ -7,52 +7,20 @@ Usage: [-h|--help]
        [--logfile=<file>]
        [--version]
 """
-import getopt
 import importlib
 import logging
 import sys
 import traceback
-from . import __version__
-from .samlmd import MDRepository
+from .repo import MDRepository
 from .pipes import plumbing
-from .constants import config
+from .constants import config, parse_options
 
 
 def main():
     """
     The main entrypoint for the pyFF cmdline tool.
     """
-
-    opts = None
-    args = None
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hRm', ['help', 'loglevel=', 'logfile=', 'version', 'module'])
-    except getopt.error as msg:
-        print(msg)
-        print(__doc__)
-        sys.exit(2)
-
-    if config.loglevel is None:
-        config.loglevel = logging.WARN
-
-    if config.modules is None:
-        config.modules = []
-
-    for o, a in opts:
-        if o in ('-h', '--help'):
-            print(__doc__)
-            sys.exit(0)
-        elif o in '--loglevel':
-            config.loglevel = getattr(logging, a.upper(), None)
-            if not isinstance(config.loglevel, int):
-                raise ValueError('Invalid log level: %s' % a)
-        elif o in '--logfile':
-            config.logfile = a
-        elif o in ('-m', '--module'):
-            config.modules.append(a)
-        elif o in '--version':
-            print("pyff version {}".format(__version__))
-            sys.exit(0)
+    args = parse_options("pyff", __doc__, 'hm:', ['help', 'loglevel=', 'logfile=', 'version', 'module='])
 
     log_args = {'level': config.loglevel}
     if config.logfile is not None:
@@ -62,7 +30,7 @@ def main():
     config.modules.append('pyff.builtins')
     for mn in config.modules:
         importlib.import_module(mn)
-
+    config.update_frequency = 0
     try:
         md = MDRepository()
         for p in args:

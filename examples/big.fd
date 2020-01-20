@@ -1,8 +1,8 @@
-- load xrd /tmp/big-loaded.xrd:
+- load:
   - examples/big.xrd
 - select
 - store: 
-     directory: /tmp/big
+     - directory /tmp/big
 - publish:
-     output: /tmp/big.xml
+     - output /tmp/big.xml
 - stats

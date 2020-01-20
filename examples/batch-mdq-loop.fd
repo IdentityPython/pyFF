@@ -1,0 +1,37 @@
+- when sign:
+   - drop_xsi_type:
+   - finalize:
+      cacheDuration: PT5H
+      validUntil: P10D
+   - sign:
+      key: sign.key
+      cert: sign.crt
+- when batch:
+   - load:
+      - https://mds.swamid.se/md/swamid-registered.xml
+      - http://md.incommon.org/InCommon/InCommon-metadata.xml
+      - http://fed.openathens.net/oafed/metadata
+      - http://edugain.cdn.samlbits.net
+   - select:
+   - fork:
+      - then sign:
+      - break
+   - map:
+      - log_entity:
+      - fork:
+         - then sign:
+         - publish:
+            output: /tmp/mdq/entities
+            hash_link: true
+            urlencode_filenames: true
+            update_store: false
+         - break
+      - fork:
+         - discojson
+         - publish:
+            output: /tmp/mdq/entities
+            hash_link: true
+            raw: true
+            ext: .json
+            urlencode_filenames: true
+            update_store: false

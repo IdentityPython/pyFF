@@ -1,0 +1,20 @@
+- when update:
+  - load:
+    - https://mds.edugain.org
+- when request:
+  - select:
+  - pipe:
+    - when accept application/xml:
+      - first
+      - finalize:
+          cacheDuration: PT12H
+          validUntil: P10D
+      - sign:
+          key: sign.key
+          cert: sign.crt
+      - emit application/xml
+      - break
+    - when accept application/json:
+      - discojson
+      - emit application/json
+      - break

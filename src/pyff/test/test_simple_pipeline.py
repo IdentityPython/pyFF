@@ -4,7 +4,7 @@ import os
 from mako.lookup import TemplateLookup
 
 from pyff.constants import NS
-from pyff.samlmd import MDRepository
+from pyff.repo import MDRepository
 from pyff.pipes import plumbing
 from pyff.test import SignerTestCase
 
@@ -54,6 +54,6 @@ class SimplePipeLineTest(SignerTestCase):
 
     def tear_down(self):
         super(SimplePipeLineTest, self).tearDown()
-        #os.unlink(self.signer)
-        #os.unlink(self.validator)
-        #os.unlink(self.output)
+
+
+
