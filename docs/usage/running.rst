@@ -75,13 +75,13 @@ a basic example:
 Lets pick this pipeline apart. First notice the two *when* instructions. The :ref:`pyff.builtins:when` pipe is used to 
 conditionally execute a set of instructions. There is essentially only one type of condition. When processing a pipeline
 pyFF keeps a state variable (a dict-like object) which changes as the instructions are processed. When the pipeline is
-launched the state is initialized with a a set of key-value pairs used to control execution of the pipeline. 
+launched the state is initialized with a set of key-value pairs used to control execution of the pipeline.
 
 There are a few pre-defined states, in this case we're dealing with two: the execution mode `update` or `request` (we'll
 get to that one later) or the `accept` state used to implement content negotiation in the pyFF wsgi app. In fact there are
-two ways to express a condition for `when`: with one parameter in which case the condition evaluates to `True` iff the 
+two ways to express a condition for `when`: with one parameter in which case the condition evaluates to `True` if the
 parameter is present as a key in the state object, or with two parameters in which case the condition evaluates to `True`
-iff the parameter is present and has the prescribed value.
+if the parameter is present and has the prescribed value.
 
 Looking at our example the first when clause evaluates to `True` when `update` is present in state. This happens when
 pyFF is in an update loop. The other when clause gets triggered when `request` is present in state which happens when
