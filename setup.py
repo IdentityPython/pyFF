@@ -30,6 +30,7 @@ install_requires = [
     'six>=1.11.0',
     'ipaddr',
     'publicsuffix2',
+    'redis-collections==0.7.0',
     'redis',
     'requests',
     'requests_cache',
@@ -42,7 +43,6 @@ install_requires = [
     'pyramid',
     'accept_types >=0.4.1',
     'apscheduler',
-    'redis-collections',
     'cachetools',
     'xmldiff',
     'gunicorn'
