@@ -130,8 +130,7 @@ class SignerTestCase(TestCase):
         cls.public_keyspec = tempfile.NamedTemporaryFile('w').name
 
         _p(['openssl', 'genrsa',
-            '2048',
-            '-nodes'], outf=cls.private_keyspec, ignore_exit=True)
+            '2048'], outf=cls.private_keyspec, ignore_exit=True)
         _p(['openssl', 'req',
             '-x509',
             '-sha1',
