@@ -123,3 +123,8 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Release date: tor 18 jul 2019 16:05:54 CEST
 * Fix bug affecting entityIDs with querystring components thx to Maja Wolniewicz <mgw@umk.pl>
 
+1.1.2
+---
+* Release date: ons 19 feb 2020 14:35:45 CET
+* Bugfixes
+* Documentation updates
