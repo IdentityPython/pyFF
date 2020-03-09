@@ -79,9 +79,9 @@ launched the state is initialized with a set of key-value pairs used to control 
 
 There are a few pre-defined states, in this case we're dealing with two: the execution mode `update` or `request` (we'll
 get to that one later) or the `accept` state used to implement content negotiation in the pyFF wsgi app. In fact there are
-two ways to express a condition for `when`: with one parameter in which case the condition evaluates to `True` if the
+two ways to express a condition for `when`: with one parameter in which case the condition evaluates to `True` iff the 
 parameter is present as a key in the state object, or with two parameters in which case the condition evaluates to `True`
-if the parameter is present and has the prescribed value.
+iff the parameter is present and has the prescribed value.
 
 Looking at our example the first when clause evaluates to `True` when `update` is present in state. This happens when
 pyFF is in an update loop. The other when clause gets triggered when `request` is present in state which happens when
