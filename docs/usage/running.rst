@@ -75,7 +75,7 @@ a basic example:
 Lets pick this pipeline apart. First notice the two *when* instructions. The :ref:`pyff.builtins:when` pipe is used to 
 conditionally execute a set of instructions. There is essentially only one type of condition. When processing a pipeline
 pyFF keeps a state variable (a dict-like object) which changes as the instructions are processed. When the pipeline is
-launched the state is initialized with a a set of key-value pairs used to control execution of the pipeline. 
+launched the state is initialized with a set of key-value pairs used to control execution of the pipeline.
 
 There are a few pre-defined states, in this case we're dealing with two: the execution mode `update` or `request` (we'll
 get to that one later) or the `accept` state used to implement content negotiation in the pyFF wsgi app. In fact there are
