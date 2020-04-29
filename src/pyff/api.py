@@ -140,20 +140,18 @@ def process_handler(request):
         if pfx is None:
             raise exc.exception_response(404)
 
-    ext = _d(path, True)[1]
+    path, ext = _d(path, True)
+    if pfx and path:
+        q = "{%s}%s" % (pfx, path)
+        path = "/%s/%s" % (alias, path)
+    else:
+        q = path
 
     # TODO - sometimes the client sends > 1 accept header value with ','.
     accept = str(request.accept).split(',')[0]
     # import pdb; pdb.set_trace()
     if (not accept or 'application/*' in accept or 'text/*' in accept or '*/*' in accept) and ext:
         accept = _ctypes[ext]
-        path = _d(path, True)[0]
-
-    if pfx and path:
-        q = "{%s}%s" % (pfx, path)
-        path = "/%s/%s" % (alias, path)
-    else:
-        q = path
 
     try:
         accepter = MediaAccept(accept)
