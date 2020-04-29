@@ -56,7 +56,7 @@ a basic example:
   - when request:
     - select:
     - pipe:
-        - when accept application/xml:
+        - when accept application/samlmetadata+xml application/xml:
             - first
             - finalize:
                 cacheDuration: PT12H
@@ -64,7 +64,7 @@ a basic example:
             - sign:
                 key: sign.key
                 cert: sign.crt
-            - emit application/xml
+            - emit application/samlmetadata+xml
             - break
         - when accept application/json:
             - discojson
@@ -109,7 +109,7 @@ appear to have no parameters, is actually "fed" from the request processing of p
 
 The subsequent calls to `when` implements content negotiation to provide a discojuice and XML version of the 
 metadata depending on what the caller is asking for. This is key to using pyFF as a backend to the thiss.io discovery 
-service for instance.
+service. More than one content type may be specified to accommodate noncompliant MDQ clients.
 
 The rest of the XML "branch" of the pipeline should be pretty easy to understand. First we use the 
 :py:func:`pyff.builtins.first` pipe to ensure that we only return a single EntityDescriptor if our select

@@ -18,7 +18,7 @@
 - when request:
     - select
     - pipe:
-        - when accept application/xml:
+        - when accept application/samlmetadata+xml application/xml:
              - pipe:
                  - when path /md/swamid-kalmar-1.0:
                      - xslt:
@@ -34,7 +34,7 @@
              - sign:
                  key: sign.key
                  cert: sign.crt
-             - emit application/xml
+             - emit application/samlmetadata+xml
              - break
         - when accept application/json:
              - discojson
