@@ -162,6 +162,7 @@ class Config(object):
     load_icons_async = setting("load_icons_async", False, as_bool)  # this is unstable - apscheduler is unpredictable
     pipeline = setting("pipeline", None)
     scheduler_job_store = setting("scheduler_job_store", "memory", as_string)
+    content_negotiation_policy = setting("content_negotiation_policy", "extension", as_string)
 
     @property
     def base_url(self):
