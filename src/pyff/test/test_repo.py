@@ -48,6 +48,19 @@ class TestRepo(TestCase):
         assert (e is not None)
         assert (e.get('entityID') == entity_id)
 
+    def test_lang_sv(self):
+        from pyff.constants import config
+        entity_id = root(self.t).get('entityID')
+        self.md.store.update(root(self.t), entity_id)
+        e = self.md.lookup(entity_id)[0]
+        langs_save = config.langs
+        config.langs = ['sv']
+
+        name, desc = entity_extended_display(e)
+        config.langs = langs_save
+        assert (name == 'Example universitet')
+        assert (desc == 'Identity Provider för Example universitet')
+
     def test_utils(self):
         entity_id = root(self.t).get('entityID')
         self.md.store.update(root(self.t), entity_id)

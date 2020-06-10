@@ -66,12 +66,21 @@ class MediaAccept(object):
         return str(self._type)
 
 
+xml_types = ('text/xml', 'application/xml', 'application/samlmetadata+xml')
+
+
+def _is_xml_type(accepter):
+    return any([x in accepter for x in xml_types])
+
+
+def _is_xml(data):
+    return isinstance(data, (etree._Element, etree._ElementTree))
+
+
 def _fmt(data, accepter):
     if data is None or len(data) == 0:
         return "", 'text/plain'
-    if isinstance(data, (etree._Element, etree._ElementTree)) and (
-            accepter.get('text/xml') or accepter.get('application/xml') or accepter.get(
-        'application/samlmetadata+xml')):
+    if _is_xml(data) and _is_xml_type(accepter):
         return dumptree(data), 'application/samlmetadata+xml'
     if isinstance(data, (dict, list)) and accepter.get('application/json'):
         return dumps(data, default=json_serializer), 'application/json'
@@ -84,7 +93,7 @@ def call(entry):
 
 
 def process_handler(request):
-    _ctypes = {'xml': 'application/xml',
+    _ctypes = {'xml': 'application/samlmetadata+xml;application/xml;text/xml',
                'json': 'application/json'}
 
     def _d(x, do_split=True):

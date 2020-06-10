@@ -436,10 +436,10 @@ def duration2timedelta(period):
 
 def filter_lang(elts, langs=None):
     if langs is None or type(langs) is not list:
-        langs = ['en']
+        langs = config.langs
 
     def _l(elt):
-        return elt.get("{http://www.w3.org/XML/1998/namespace}lang", "en") in langs
+        return elt.get("{http://www.w3.org/XML/1998/namespace}lang", langs[0]) in langs
 
     if elts is None:
         return []

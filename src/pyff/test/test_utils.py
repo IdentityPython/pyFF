@@ -137,6 +137,10 @@ class TestMisc(TestCase):
         assert(not is_past_ttl(now, ttl=config.cache_ttl))
         assert(is_past_ttl(now - 100, ttl=config.cache_ttl))
 
+    def test_config_lang(self):
+        from pyff.constants import config
+        assert ('en' in config.langs)
+
     def test_schema(self):
         assert(schema())
 
