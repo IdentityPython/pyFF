@@ -4,7 +4,7 @@
 - when request:
   - select:
   - pipe:
-    - when accept application/xml:
+    - when accept application/samlmetadata+xml application/xml:
       - first
       - finalize:
           cacheDuration: PT12H
@@ -12,7 +12,7 @@
       - sign:
           key: sign.key
           cert: sign.crt
-      - emit application/xml
+      - emit application/samlmetadata+xml
       - break
     - when accept application/json:
       - discojson
