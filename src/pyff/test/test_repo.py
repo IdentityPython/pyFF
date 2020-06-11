@@ -60,6 +60,9 @@ class TestRepo(TestCase):
         config.langs = langs_save
         assert (name == 'Example universitet')
         assert (desc == 'Identity Provider för Example universitet')
+        name, desc = entity_extended_display(e)
+        assert (name == 'Example University')
+        assert (desc == 'Identity Provider for Example University')
 
     def test_utils(self):
         entity_id = root(self.t).get('entityID')
