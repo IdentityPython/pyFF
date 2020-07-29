@@ -37,8 +37,7 @@ stylesheet (cf below) which cleans up some known problems, sign the result and w
 .. code-block:: yaml
 
     - load:
-       - http://mds.edugain.org 
-       - edugain-signer.crt
+       - http://mds.edugain.org edugain-signer.crt
     - select:
        - "http://mds.edugain.org!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - xslt:
