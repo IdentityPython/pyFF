@@ -181,6 +181,8 @@ class Resource(Watchable):
         return "Resource {} expires at {} using ".format(self.url if self.url is not None else "(root)", self.expire_time) + \
                ",".join(["{}={}".format(k, v) for k, v in list(self.opts.items())])
 
+    from .decorators import heapy
+    @heapy(trace=False)
     def reload(self, fail_on_error=False):
         with non_blocking_lock(self.lock):
             if fail_on_error:
@@ -198,6 +200,16 @@ class Resource(Watchable):
                 rp.fetcher.join()
 
             self.notify()
+            #import objgraph;
+
+            #import gc
+            #gc.collect()
+            #x = objgraph.get_leaking_objects()
+            #log.debug([type(o) for o in x])
+            #import threading
+            #log.debug(threading.enumerate())
+            #import pdb;
+            #pdb.set_trace()
 
     def __len__(self):
         return len(self.children)

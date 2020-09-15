@@ -30,7 +30,7 @@ install_requires = [
     'six>=1.11.0',
     'ipaddr',
     'publicsuffix2',
-    'redis-collections==0.7.0',
+    'redis-collections==0.8.1',
     'redis',
     'requests',
     'requests_cache',

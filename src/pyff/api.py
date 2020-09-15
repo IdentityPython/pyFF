@@ -89,7 +89,7 @@ def _fmt(data, accepter):
 
 
 def call(entry):
-    requests.post('{}/api/call/{}'.format(config.base_url, entry))
+    return requests.post('{}/api/call/{}'.format(config.base_url, entry))
 
 
 def process_handler(request):

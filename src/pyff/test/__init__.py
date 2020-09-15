@@ -31,6 +31,7 @@ def find_unbound_port(i=0):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.bind(("127.0.0.1", port))
+            sock.shutdown()
         except socket.error:
             pass
         return port

@@ -11,6 +11,31 @@ __author__ = 'leifj'
 log = get_log(__name__)
 
 
+def heapy(trace=False, minsize=0):
+    def decorating(func):
+        def new_func(*args, **kwargs):
+            from gc import collect
+            collect()
+            from guppy import hpy
+            hp = hpy()
+            hp.setrelheap()
+            r = func(*args, **kwargs)
+            collect()
+            after = hp.heap()
+            print("-----------------------------")
+            print(args)
+            print(kwargs)
+            print(after)
+            print("+++++++++++++++++++++++++++++")
+            if trace and after.size > minsize:
+                import pdb
+                pdb.set_trace()
+
+            return r
+        return new_func
+    return decorating
+
+
 def deprecated(logger=log, reason="Complain to the developer about unspecified code deprecation"):
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted

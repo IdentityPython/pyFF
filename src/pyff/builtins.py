@@ -22,7 +22,7 @@ from .decorators import deprecated
 from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
-    validate_document, hash_id, ensure_dir
+    validate_document, hash_id, dup_tree
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
     discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
 from six.moves.urllib_parse import urlparse
@@ -211,9 +211,10 @@ def fork(req, *opts):
                 attribute: value
 
 
-    Note that unless you have a select statement before your fork merge you'll be merging into an empty
+    Note that unless you have a select statement before your fork+merge you'll be merging into an empty
     active document which with the default merge strategy of replace_existing will result in an empty
-    active document. To avoid this do a select before your fork, thus:
+    active document because it is the entities of the parent document that are used to determine which
+    entities are touched by the merge. To avoid this do a select before your fork, thus:
 
     .. code-block:: yaml
 
@@ -226,7 +227,7 @@ def fork(req, *opts):
     """
     nt = None
     if req.t is not None:
-        nt = deepcopy(req.t)
+        nt = dup_tree(req.t) #deepcopy(req.t)
 
     ip = Plumbing(pipeline=req.args, pid="%s.fork" % req.plumbing.pid)
     ireq = Plumbing.Request(ip, req.md, t=nt, scheduler=req.scheduler)
@@ -240,6 +241,10 @@ def fork(req, *opts):
             if opts[-1] != 'merge':
                 sn = opts[-1]
             req.md.store.merge(req.t, ireq.t, strategy_name=sn)
+
+    nt = None
+    ip = None
+    ireq = None
 
     return req.t
 

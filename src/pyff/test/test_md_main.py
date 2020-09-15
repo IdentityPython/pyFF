@@ -65,7 +65,8 @@ class PyFFDTest(PipeLineTest):
         for i in range(0, 60):
             try:
                 r = requests.get("http://127.0.0.1:%s/status" % cls.port)
-                if r.json() and 'running' in r.json()['status']:
+                j = r.json()
+                if j and 'running' in j['status']:
                     return
 
                 print(r.json())

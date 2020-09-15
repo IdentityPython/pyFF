@@ -7,6 +7,7 @@ import traceback
 import os
 import yaml
 from .utils import resource_string, PyffException, is_text
+from .decorators import heapy
 from .logs import get_log
 
 log = get_log(__name__)
@@ -252,6 +253,7 @@ may modify any of the fields.
             """
             return pl.iprocess(self)
 
+    #@heapy(trace=True, minsize=100000000)
     def iprocess(self, req):
         """The inner request pipeline processor.
 

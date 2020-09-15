@@ -27,7 +27,7 @@ class EntitySet(object):
                 self.add(e)
 
     def add(self, value):
-        self._e[value.get('entityID')] = value
+        self._e[value.get('entityID')] = True
 
     def discard(self, value):
         entity_id = value.get('entityID')
@@ -35,7 +35,7 @@ class EntitySet(object):
             del self._e[entity_id]
 
     def __iter__(self):
-        for e in list(self._e.values()):
+        for e in list(self._e.keys()):
             yield e
 
     def __len__(self):
@@ -80,10 +80,9 @@ def parse_saml_metadata(source,
     try:
         t = parse_xml(source, base_url=base_url)
         t.xinclude()
-
-        expire_time_offset = metadata_expiration(t)
-
         t = check_signature(t, key)
+        
+        expire_time_offset = metadata_expiration(t)
 
         if cleanup is not None and isinstance(cleanup, list):
             for cb in cleanup:

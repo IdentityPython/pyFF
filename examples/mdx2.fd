@@ -11,6 +11,23 @@
        - examples/links.xrd as links via normalize
        - http://mds.edugain.org via edugain
     - select
+    - fork and merge:
+       - select: "!//md:EntityDescriptor[md:Extensions[mdrpi:RegistrationInfo[@registrationAuthority='http://www.swamid.se/']]]"
+       - setattr:
+            http://pyff.io/collection: swamid-2.0
+    - fork and merge:
+        - select:
+            - "http://pyff.io/collection=swamid-2.0+http://pyff.io/role=idp"
+        - setattr:
+            http://pyff.io/collection: swamid-idp
+    - fork:
+        - select as /md/foo-2.0:
+            - http://pyff.io/collection=swamid-2.0
+        - break
+    - fork:
+        - select as /md/skolfederation-2.0:
+            - http://meta01.skolfederation.se/skolfederation-2_0.xml 
+        - break
     - fork:
         - select as /ndn:
            - https://idp.nordu.net/idp/shibboleth

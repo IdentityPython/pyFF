@@ -64,7 +64,7 @@ except ImportError as ex:
     Image = None
 
 
-etree.set_default_parser(etree.XMLParser(resolve_entities=False))
+#etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
 __author__ = 'leifj'
 
@@ -168,6 +168,9 @@ def dumptree(t, pretty_print=False, method='xml', xml_declaration=True):
 Return a string representation of the tree, optionally pretty_print(ed) (default False)
 
 :param t: An ElemenTree to serialize
+:param pretty_print: Should we pretty print the output (default False)
+:param method: The serialization method to pass to etree.tostring (default 'xml')
+:param xml_declaration: Should we include an ?xml declaration (default True)
     """
     return etree.tostring(t, encoding='UTF-8', method=method, xml_declaration=xml_declaration,
                           pretty_print=pretty_print)
@@ -694,6 +697,10 @@ class DirAdapter(BaseAdapter):
         pass
 
 
+def dup_tree(t, base_url=None):
+    return parse_xml(six.BytesIO(dumptree(t)), base_url=base_url)
+
+
 def url_get(url):
     """
     Download an URL using a cache and return the response object
@@ -711,12 +718,15 @@ def url_get(url):
     else:
         retry = Retry(total=3, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
-        s = CachedSession(cache_name="pyff_cache",
-                          backend=config.request_cache_backend,
-                          expire_after=config.request_cache_time,
-                          old_data_on_error=True)
-        s.mount('http://', adapter)
-        s.mount('https://', adapter)
+        if config.caching_enabled:
+            s = CachedSession(cache_name="pyff_cache",
+                              backend=config.request_cache_backend,
+                              expire_after=config.request_cache_time,
+                              old_data_on_error=True)
+            s.mount('http://', adapter)
+            s.mount('https://', adapter)
+        else:
+            s = requests.session()
 
     headers = {'User-Agent': "pyFF/{}".format(__version__), 'Accept': '*/*'}
     try:

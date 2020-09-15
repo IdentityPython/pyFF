@@ -22,7 +22,7 @@ from .logs import get_log
 from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_simple_info, \
     object_id, find_merge_strategy, find_entity, entity_simple_summary, entitiesdescriptor, discojson, entity_icon_url
 from .utils import root, hash_id, avg_domain_distance, load_callable, is_text, b2u, parse_xml, dumptree, \
-    LRUProxyDict, hex_digest, redis, is_past_ttl
+    LRUProxyDict, hex_digest, redis, is_past_ttl, dup_tree
 import os
 import shutil
 
@@ -801,9 +801,11 @@ class MemoryStore(SAMLStoreBase):
         return list(self.index.setdefault('attr', {}).setdefault(a, {}).keys())
 
     def _modify(self, entity, modifier):
+        entity_id = entity.get('entityID')
 
         def _m(idx, vv):
-            getattr(idx.setdefault(vv, EntitySet()), modifier)(entity)
+            value_set = idx.setdefault(vv, set())
+            getattr(value_set, modifier)(entity_id)
 
         for hn in DINDEX:
             _m(self.index[hn], hash_id(entity, hn, False))
@@ -826,21 +828,28 @@ class MemoryStore(SAMLStoreBase):
     def _unindex(self, entity):
         return self._modify(entity, "discard")
 
+    def _resolve_one(self, entity_id):
+        return root(parse_xml(BytesIO(self.entities[entity_id])))
+
+    def _resolve(self, entity_ids):
+        for entity_id in entity_ids:
+            yield self._resolve_one(entity_id)
+
     def _get_index(self, a, v):
         if a in DINDEX:
             return self.index[a].get(v, [])
         else:
             idx = self.index['attr'].setdefault(a, {})
-            entities = idx.get(v, None)
-            if entities is not None:
-                return entities
+            entity_ids = idx.get(v, None)
+            if entity_ids is not None:
+                return self._resolve(entity_ids)
             else:
                 m = re.compile(v)
-                entities = []
+                entity_ids = set()
                 for value, ents in list(idx.items()):
                     if m.match(value):
-                        entities.extend(ents)
-                return entities
+                        entity_ids.update(ents)
+                return self._resolve(entity_ids)
 
     def reset(self):
         self.__init__()
@@ -854,7 +863,7 @@ class MemoryStore(SAMLStoreBase):
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
             self._unindex(relt)
             self._index(relt)
-            self.entities[relt.get('entityID')] = relt  # TODO: merge?
+            self.entities[relt.get('entityID')] = dumptree(relt)  # TODO: merge?
             if tid is not None:
                 self.md[tid] = [relt.get('entityID')]
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
@@ -871,10 +880,10 @@ class MemoryStore(SAMLStoreBase):
 
     def _lookup(self, key):
         if key == 'entities' or key is None:
-            return list(self.entities.values())
+            return [self._resolve_one(entity_id) for entity_id in self.entities.keys()]
 
         if key in self.entities:
-            return [self.entities[key]]
+            return [self._resolve_one(key)]
 
         if '+' in key:
             key = key.strip('+')
