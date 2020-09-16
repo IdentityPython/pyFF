@@ -54,7 +54,7 @@ class TestRepo(TestCase):
         self.md.store.update(root(self.t), entity_id)
         e = self.md.lookup(entity_id)[0]
         langs_save = config.langs
-        config.langs = ['sv']
+        config.langs = ['sv','en']
 
         name, desc = entity_extended_display(e)
         config.langs = langs_save

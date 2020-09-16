@@ -11,6 +11,7 @@ import sys
 import os
 import six
 import json
+import re
 
 from . import __version__ as pyff_version
 
@@ -71,7 +72,7 @@ def as_loglevel(o):
 
 def as_list_of_string(o):
     if type(o) in six.string_types:
-        o = o.split('/[:,]+/')
+        o = re.findall(r'[^,:\s]+', o)
     return o
 
 
@@ -162,7 +163,7 @@ class Config(object):
     load_icons_async = setting("load_icons_async", False, as_bool)  # this is unstable - apscheduler is unpredictable
     pipeline = setting("pipeline", None)
     scheduler_job_store = setting("scheduler_job_store", "memory", as_string)
-    langs = setting("langs", ['en'], as_list_of_string)
+    langs = setting("langs", 'en', as_list_of_string)
 
     @property
     def base_url(self):
