@@ -134,3 +134,9 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Release date: ons 16 sep 2020 14:21:20 CEST
 * Limited support for i18n in JSON export - alternative and primary language choices
 * Bugfixes related to mime-type for metadata
+
+1.1.4
+---
+* Release date: tor 17 sep 2020 00:50:42 CEST
+* Bugfixes for language support
+* Support for exposing multiple language tags in discojson
