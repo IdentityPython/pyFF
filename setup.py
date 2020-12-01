@@ -38,7 +38,6 @@ install_requires = [
     'pyconfig',
     'pyyaml',
     'multiprocess',
-    'minify',
     'whoosh',
     'pyramid',
     'accept_types >=0.4.1',
