@@ -140,3 +140,9 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Release date: tor 17 sep 2020 00:50:42 CEST
 * Bugfixes for language support
 * Support for exposing multiple language tags in discojson
+
+1.1.5
+---
+* Release date: tis  1 dec 2020 14:19:18 CET
+* Remove dependency on minify
+
