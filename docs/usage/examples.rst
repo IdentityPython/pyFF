@@ -206,7 +206,7 @@ you want validation to work.
 Example 4 - Sign using a PKCS#11 module
 ---------------------------------------
 
-Fetch SWAMID metadata (and validate the signature using a certificate matching the given SHA1 fingerprint), select
+Fetch SWAMID metadata (and validate the signature using a certificate matching the given SHA256 fingerprint), select
 the Identity Providers, tidy it up a bit and sign with the key with the label 'signer' in the PKCS#11 module
 /usr/lib/libsofthsm.so. If a certificate is found in the same PKCS#11 object, that certificate is included in
 the Signature object.
