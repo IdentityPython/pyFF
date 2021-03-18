@@ -30,3 +30,4 @@ apscheduler
 redis-collections
 cachetools
 xmldiff
+pygments>=2.7.4 # not directly required, pinned by Snyk to avoid a vulnerability
