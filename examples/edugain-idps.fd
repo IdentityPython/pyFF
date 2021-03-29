@@ -1,6 +1,5 @@
 - load:
-    - http://mds.edugain.org 
-    - examples/edugain.crt
+    - http://mds.edugain.org examples/edugain.crt
 - select: "/tmp/edugain!md:EntityDescriptor[md:IDPSSODescriptor]"
 - store:
     directory: /tmp/edugain
