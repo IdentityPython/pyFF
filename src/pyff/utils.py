@@ -555,7 +555,11 @@ def hex_digest(data, hn='sha1'):
 
 
 def parse_xml(io, base_url=None):
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False, collect_ids=False))
+    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(
+        resolve_entities=False,
+        collect_ids=False,
+        huge_tree=True
+    ))
 
 
 def has_tag(t, tag):
