@@ -164,6 +164,7 @@ class Config(object):
     pipeline = setting("pipeline", None)
     scheduler_job_store = setting("scheduler_job_store", "memory", as_string)
     langs = setting("langs", 'en', as_list_of_string)
+    huge_xml = setting("huge_xml", False, as_bool)
 
     @property
     def base_url(self):
