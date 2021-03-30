@@ -113,7 +113,7 @@ class PyFFAPITest(PipeLineTest):
             # load the NORDUnet IdP as xml
             r = requests.get("{}/entities/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.xml".format(url))
             assert (r.status_code == 200)
-            assert ('application/xml' in r.headers['Content-Type'])
+            assert ('application/samlmetadata+xml' in r.headers['Content-Type'])
 
             # load the NORDUnet IdP as json
             r = requests.get("{}/entities/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.json".format(url))

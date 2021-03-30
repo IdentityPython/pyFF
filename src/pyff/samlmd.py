@@ -2,7 +2,7 @@ from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
     schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
     has_tag, hash_id, load_callable, rreplace, dumptree, first_text, is_text, unicode_stream, \
-    Lambda, b2u
+    Lambda, b2u, lang_dict
 from .logs import get_log
 from .constants import config, NS, ATTRS, NF_URI
 from lxml import etree
@@ -608,6 +608,18 @@ def entity_domains(entity):
         domains.append(url2host(entity.get('entityID')))
     return domains
 
+def entity_extended_display_i18n(entity, default_lang=None):
+
+    name_dict = lang_dict(entity.iter("{%s}OrganizationName" % NS['md']), lambda e: e.text, default_lang=default_lang)
+    name_dict.update(lang_dict(entity.iter("{%s}OrganizationDisplayName" % NS['md']), lambda e: e.text, default_lang=default_lang))
+    name_dict.update(lang_dict(entity.iter("{%s}ServiceName" % NS['md']), lambda e: e.text, default_lang=default_lang))
+    name_dict.update(lang_dict(entity.iter("{%s}DisplayName" % NS['mdui']), lambda e: e.text, default_lang=default_lang))
+
+    desc_dict = lang_dict(entity.iter("{%s}OrganizationURL" % NS['md']), lambda e: e.text, default_lang=default_lang)
+    desc_dict.update(lang_dict(entity.iter("{%s}Description" % NS['mdui']), lambda e: e.text, default_lang=default_lang))
+
+    return name_dict, desc_dict
+
 
 def entity_extended_display(entity, langs=None):
     """Utility-method for computing a displayable string for a given entity.
@@ -621,24 +633,30 @@ def entity_extended_display(entity, langs=None):
     for organizationName in filter_lang(entity.iter("{%s}OrganizationName" % NS['md']), langs=langs):
         info = display
         display = organizationName.text
+        break
 
     for organizationDisplayName in filter_lang(entity.iter("{%s}OrganizationDisplayName" % NS['md']), langs=langs):
         info = display
         display = organizationDisplayName.text
+        break
 
     for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md']), langs=langs):
         info = display
         display = serviceName.text
+        break
 
     for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui']), langs=langs):
         info = display
         display = displayName.text
+        break
 
     for organizationUrl in filter_lang(entity.iter("{%s}OrganizationURL" % NS['md']), langs=langs):
         info = organizationUrl.text
+        break
 
     for description in filter_lang(entity.iter("{%s}Description" % NS['mdui']), langs=langs):
         info = description.text
+        break
 
     if info == entity.get('entityID'):
         info = ''
@@ -690,9 +708,12 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
 
     title, descr = entity_extended_display(e)
     entity_id = e.get('entityID')
+    title_langs, descr_langs = entity_extended_display_i18n(e)
 
     d = dict(title=title,
              descr=descr,
+             title_langs=title_langs,
+             descr_langs=descr_langs,
              auth='saml',
              entity_id=entity_id,
              entityID=entity_id)
@@ -778,11 +799,13 @@ def entity_orgurl(entity, langs=None):
 def entity_service_name(entity, langs=None):
     for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md']), langs=langs):
         return serviceName.text
+    return None
 
 
 def entity_service_description(entity, langs=None):
     for serviceName in filter_lang(entity.iter("{%s}ServiceDescription" % NS['md']), langs=langs):
         return serviceName.text
+    return None
 
 
 def entity_requested_attributes(entity, langs=None):

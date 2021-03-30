@@ -42,7 +42,7 @@
 - when request:
     - select
     - pipe:
-        - when accept application/xml:
+        - when accept application/samlmetadata+xml application/xml:
              - xslt:
                  stylesheet: tidy.xsl
              - pubinfo:
@@ -54,7 +54,7 @@
              - sign:
                  key: default.key
                  cert: default.crt
-             - emit application/xml
+             - emit application/samlmetadata+xml
              - break
         - when accept application/json:
              - xslt:

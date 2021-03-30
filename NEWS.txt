@@ -123,3 +123,26 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Release date: tor 18 jul 2019 16:05:54 CEST
 * Fix bug affecting entityIDs with querystring components thx to Maja Wolniewicz <mgw@umk.pl>
 
+1.1.2
+---
+* Release date: ons 19 feb 2020 14:35:45 CET
+* Bugfixes
+* Documentation updates
+
+1.1.3
+---
+* Release date: ons 16 sep 2020 14:21:20 CEST
+* Limited support for i18n in JSON export - alternative and primary language choices
+* Bugfixes related to mime-type for metadata
+
+1.1.4
+---
+* Release date: tor 17 sep 2020 00:50:42 CEST
+* Bugfixes for language support
+* Support for exposing multiple language tags in discojson
+
+1.1.5
+---
+* Release date: tis  1 dec 2020 14:19:18 CET
+* Remove dependency on minify
+

@@ -48,7 +48,7 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 import contextlib
 import threading
-from cachetools import LRUCache, TTLCache
+from cachetools import LRUCache
 from _collections_abc import MutableMapping, Mapping
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -434,17 +434,41 @@ def duration2timedelta(period):
     return delta
 
 
+def _lang(elt, default_lang):
+        return elt.get("{http://www.w3.org/XML/1998/namespace}lang", default_lang)
+
+
+def lang_dict(elts, getter = lambda e: e, default_lang=None):
+    if default_lang is None:
+       default_lang = config.langs[0]
+
+    r = dict()
+    for e in elts:
+       r[_lang(e, default_lang)] = getter(e)
+    return r
+
+
+def find_lang(elts, lang, default_lang):
+
+    return next((e for e in elts if _lang(e,default_lang) == lang),elts[0])
+
+
 def filter_lang(elts, langs=None):
     if langs is None or type(langs) is not list:
-        langs = ['en']
+        langs = config.langs
 
-    def _l(elt):
-        return elt.get("{http://www.w3.org/XML/1998/namespace}lang", "en") in langs
+    #log.debug("langs: {}".format(langs))
 
     if elts is None:
         return []
 
-    lst = list(filter(_l, elts))
+    elts = list(elts)
+
+    if len(elts) == 0:
+        return []
+
+    dflt = langs[0]
+    lst = [find_lang(elts, l, dflt) for l in langs]
     if len(lst) > 0:
         return lst
     else:
@@ -531,7 +555,12 @@ def hex_digest(data, hn='sha1'):
 
 
 def parse_xml(io, base_url=None):
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False, collect_ids=False))
+    huge_xml = config.huge_xml
+    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(
+        resolve_entities=False,
+        collect_ids=False,
+        huge_tree=huge_xml
+    ))
 
 
 def has_tag(t, tag):

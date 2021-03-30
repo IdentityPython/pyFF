@@ -18,7 +18,7 @@ To make a release,
   4) git tag <version>
   5) git push && git push --tag
   6) cd docs && make html
-  6) Upload to PyPI: 'python setup.py sdist upload'
+  6) Upload to PyPI: twine upload dist/pyFF-<version>.tar.gz
   7) Increase version in setup.py (for next release) with dev suffix
   8) Create NEWS.txt entry for next release
 

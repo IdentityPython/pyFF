@@ -5,7 +5,7 @@ from unittest import TestCase
 import os
 import six
 from pyff import utils
-from pyff.constants import NS
+from pyff.constants import NS, as_list_of_string
 from pyff.resource import Resource
 from pyff.samlmd import find_entity, entities_list
 from pyff.utils import resource_filename, parse_xml, root, resource_string, b2u, Lambda, schema, find_matching_files, \
@@ -137,6 +137,10 @@ class TestMisc(TestCase):
         assert(not is_past_ttl(now, ttl=config.cache_ttl))
         assert(is_past_ttl(now - 100, ttl=config.cache_ttl))
 
+    def test_config_lang(self):
+        from pyff.constants import config
+        assert ('en' in config.langs)
+
     def test_schema(self):
         assert(schema())
 
@@ -219,3 +223,12 @@ class TestResource(TestCase):
         r2 = Resource("https://mds.edugain.org")
 
         assert r1 == r2
+
+class TestConfig(TestCase):
+
+    def test_as_list_of_string(self):
+        x = as_list_of_string('a,b')
+        print(x)
+        assert len(x) == 2
+        assert x[0] == 'a'
+        assert x[1] == 'b'
