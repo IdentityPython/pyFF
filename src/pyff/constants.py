@@ -165,6 +165,7 @@ class Config(object):
     scheduler_job_store = setting("scheduler_job_store", "memory", as_string)
     langs = setting("langs", 'en', as_list_of_string)
     huge_xml = setting("huge_xml", False, as_bool)
+    content_negotiation_policy = setting("content_negotiation_policy", "extension", as_string)
 
     @property
     def base_url(self):

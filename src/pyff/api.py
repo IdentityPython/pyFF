@@ -149,18 +149,46 @@ def process_handler(request):
         if pfx is None:
             raise exc.exception_response(404)
 
-    path, ext = _d(path, True)
+    # content_negotiation_policy is one of three values:
+    # 1. extension - current default, inspect the path and if it ends in
+    #    an extension, e.g. .xml or .json, always strip off the extension to
+    #    get the entityID and if no accept header or a wildcard header, then
+    #    use the extension to determine the return Content-Type.
+    #
+    # 2. adaptive - only if no accept header or if a wildcard, then inspect
+    #    the path and if it ends in an extension strip off the extension to
+    #    get the entityID and use the extension to determine the return
+    #    Content-Type.
+    #
+    # 3. header - future default, do not inspect the path for an extension and
+    #    use only the Accept header to determine the return Content-Type.
+    policy = config.content_negotiation_policy
+
+    # TODO - sometimes the client sends > 1 accept header value with ','.
+    accept = str(request.accept).split(',')[0]
+    valid_accept = (accept and
+                    not ('application/*' in accept
+                         or 'text/*' in accept
+                         or '*/*' in accept)
+                    )
+
+    path_no_extension, extension = _d(path, True)
+    accept_from_extension = _ctypes.get(extension, accept)
+
+    if policy == 'extension':
+        path = path_no_extension
+        if not valid_accept:
+            accept = accept_from_extension
+    elif policy == 'adaptive':
+        if not valid_accept:
+            path = path_no_extension
+            accept = accept_from_extension
+
     if pfx and path:
         q = "{%s}%s" % (pfx, path)
         path = "/%s/%s" % (alias, path)
     else:
         q = path
-
-    # TODO - sometimes the client sends > 1 accept header value with ','.
-    accept = str(request.accept).split(',')[0]
-    # import pdb; pdb.set_trace()
-    if (not accept or 'application/*' in accept or 'text/*' in accept or '*/*' in accept) and ext:
-        accept = _ctypes[ext]
 
     try:
         accepter = MediaAccept(accept)
