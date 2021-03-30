@@ -431,6 +431,12 @@ class MDServer(object):
         def get(self, item):
             return self.__getitem__(item)
 
+        def __contains__(self, item):
+            try:
+                return cptools.accept(item, debug=True)
+            except HTTPError:
+                return False
+
         def __getitem__(self, item):
             try:
                 return cptools.accept(item, debug=True)

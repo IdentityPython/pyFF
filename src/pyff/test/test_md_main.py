@@ -90,7 +90,7 @@ class PyFFDTest(PipeLineTest):
         assert (r.status_code == 200)
 
     def test_alias_ndn(self):
-        r = requests.get("http://127.0.0.1:%s/ndn.xml" % self.port)
+        r = requests.get("http://127.0.0.1:%s/ndn.xml" % self.port, headers={'Accept': 'application/xml'})
         assert (r.status_code == 200)
         # assert (r.encoding == 'utf8')
         t = parse_xml(six.BytesIO(r.content))
@@ -121,7 +121,7 @@ class PyFFDTest(PipeLineTest):
 
     def test_md_query_single(self):
         q = quote_plus('https://idp.nordu.net/idp/shibboleth')
-        r = requests.get("http://127.0.0.1:%s/entities/%s" % (self.port, q))
+        r = requests.get("http://127.0.0.1:%s/entities/%s" % (self.port, q), headers={'Accept': 'application/xml'})
         assert (r.status_code == 200)
         assert ('application/xml' in r.headers['Content-Type'])
         t = parse_xml(six.BytesIO(r.content))
@@ -130,7 +130,7 @@ class PyFFDTest(PipeLineTest):
         assert (e.get('entityID') == 'https://idp.nordu.net/idp/shibboleth')
 
     def test_all_entities_parses(self):
-        r = requests.get("http://127.0.0.1:%s/entities" % self.port)
+        r = requests.get("http://127.0.0.1:%s/entities" % self.port, headers={'Accept': 'application/xml'})
         assert (r.status_code == 200)
         # assert (r.encoding == 'utf8')
         t = parse_xml(six.BytesIO(r.content))

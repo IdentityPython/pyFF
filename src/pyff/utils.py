@@ -889,6 +889,10 @@ class MappingStack(Mapping):
 
     def __getitem__(self, item):
         for d in self._m:
+            log.debug("----")
+            log.debug(repr(d))
+            log.debug(repr(item))
+            log.debug("++++")
             if item in d:
                 return d[item]
         return None
