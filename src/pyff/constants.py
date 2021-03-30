@@ -166,6 +166,7 @@ class Config(object):
     langs = setting("langs", 'en', as_list_of_string)
     huge_xml = setting("huge_xml", False, as_bool)
     content_negotiation_policy = setting("content_negotiation_policy", "extension", as_string)
+    xinclude = setting("xinclude", True, as_bool)
 
     @property
     def base_url(self):

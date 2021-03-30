@@ -79,7 +79,8 @@ def parse_saml_metadata(source,
 
     try:
         t = parse_xml(source, base_url=base_url)
-        t.xinclude()
+        if config.xinclude:
+            t.xinclude()
 
         expire_time_offset = metadata_expiration(t)
 
@@ -185,7 +186,8 @@ class MDServiceListParser(PyffParser):
         info = dict()
         info['Description'] = "eIDAS MetadataServiceList"
         t = parse_xml(unicode_stream(content))
-        t.xinclude()
+        if config.xinclude:
+            t.xinclude()
         relt = root(t)
         info['Version'] = relt.get('Version', '0')
         info['IssueDate'] = relt.get('IssueDate')

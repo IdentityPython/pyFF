@@ -22,7 +22,7 @@ from .decorators import deprecated
 from .logs import get_log
 from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
-    validate_document, hash_id, ensure_dir
+    validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
     discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
 from six.moves.urllib_parse import urlparse
@@ -1099,7 +1099,7 @@ def xslt(req, *opts):
     params = dict((k, "\'%s\'" % v) for (k, v) in list(req.args.items()))
     del params['stylesheet']
     try:
-        return xslt_transform(req.t, stylesheet, params)
+        return root(xslt_transform(req.t, stylesheet, params))
     except Exception as ex:
         log.debug(traceback.format_exc())
         raise ex
