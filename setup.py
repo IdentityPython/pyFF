@@ -89,7 +89,7 @@ setup(name='pyFF',
       install_requires=install_requires,
       scripts=['scripts/mirror-mdq.sh'],
       entry_points={
-          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main', 'samldiff=pyff.tools:difftool'],
+          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main', 'pyffd2=pyff.mdq:main', 'samldiff=pyff.tools:difftool'],
           'paste.app_factory': [
              'pyffapp=pyff.wsgi:app_factory'
           ],

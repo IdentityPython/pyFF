@@ -20,8 +20,20 @@ from pyramid.events import NewRequest
 import requests
 import threading
 import pytz
+from cachetools import TTLCache
 
 log = get_log(__name__)
+
+
+class NoCache(object):
+    def __init__(self):
+        pass
+
+    def __getitem__(self, item):
+        return None
+
+    def __setitem__(self, instance, value):
+        return value
 
 
 def robots_handler(request):
@@ -90,6 +102,19 @@ def _fmt(data, accepter):
 
 def call(entry):
     requests.post('{}/api/call/{}'.format(config.base_url, entry))
+
+
+def request_handler(request):
+    key = request.path
+    r = None
+    try:
+        r = request.registry.cache[key]
+    except KeyError:
+        pass
+    if r is None:
+        r = process_handler(request)
+        request.registry.cache[key] = r
+    return r
 
 
 def process_handler(request):
@@ -417,7 +442,7 @@ def mkapp(*args, **kwargs):
     md = kwargs.pop('md', None)
     if md is None:
         md = MDRepository()
-
+    print(md)
     if config.devel_memory_profile:
         launch_memory_usage_server()
 
@@ -445,6 +470,10 @@ def mkapp(*args, **kwargs):
             ctx.registry.plumbings = [plumbing(v) for v in pipeline]
         ctx.registry.aliases = config.aliases
         ctx.registry.md = md
+        if config.caching_enabled:
+            ctx.registry.cache = TTLCache(config.cache_size, config.cache_ttl)
+        else:
+            ctx.registry.cache = NoCache()
 
         ctx.add_route('robots', '/robots.txt')
         ctx.add_view(robots_handler, route_name='robots')
@@ -465,12 +494,11 @@ def mkapp(*args, **kwargs):
         ctx.add_route('pipeline', '/api/pipeline', request_method='GET')
         ctx.add_view(pipeline_handler, route_name='pipeline')
 
-        ctx.add_route('call', '/api/call/{entry}',
-                      request_method=['POST', 'PUT'])
+        ctx.add_route('call', '/api/call/{entry}', request_method=['POST', 'PUT'])
         ctx.add_view(process_handler, route_name='call')
 
         ctx.add_route('request', '/*path', request_method='GET')
-        ctx.add_view(process_handler, route_name='request')
+        ctx.add_view(request_handler, route_name='request')
 
         start = datetime.utcnow() + timedelta(seconds=1)
         log.debug(start)
@@ -480,6 +508,7 @@ def mkapp(*args, **kwargs):
                                            id="call/update",
                                            args=['update'],
                                            start_date=start,
+                                           misfire_grace_time=10,
                                            seconds=config.update_frequency,
                                            replace_existing=True,
                                            max_instances=1,

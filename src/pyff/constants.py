@@ -2,7 +2,6 @@
 Useful constants for pyFF. Mostly XML namespace declarations.
 """
 
-
 from distutils.util import strtobool
 import pyconfig
 import logging
@@ -12,9 +11,9 @@ import os
 import six
 import json
 import re
+import multiprocessing
 
 from . import __version__ as pyff_version
-
 
 __author__ = 'leifj'
 
@@ -83,7 +82,7 @@ def as_dict_of_string(o):
 
 
 def as_bool(o):
-    if type(o) not in ('bool', ):
+    if type(o) not in ('bool',):
         o = bool(strtobool(str(o)))
     return o
 
@@ -93,14 +92,21 @@ class EnvSetting(object):
     def __init__(self, name, default, typeconv=as_string):
         self.name = name
         self.typeconv = typeconv
-        self._fallback = pyconfig.setting('pyff.{}'.format(name), default, allow_default=True)
+        self.fallback = pyconfig.setting('pyff.{}'.format(name), default, allow_default=True)
+        self.value = None
 
     def __get__(self, instance, owner):
-        v = os.environ.get("PYFF_{}".format(self.name.upper().replace('.','_').replace('-','_')), self._fallback.__get__(instance, owner))
+        v = self.value
+        if v is None:
+            v = os.environ.get("PYFF_{}".format(self.name.upper().replace('.', '_').replace('-', '_')),
+                               self.fallback.__get__(instance, owner))
         if v is not None:
             v = self.typeconv(v)
 
         return v
+
+    def __set__(self, instance, value):
+        self.value = value
 
 
 def setting(name, default, typeconv=as_string):
@@ -123,8 +129,9 @@ class Config(object):
     logfile = setting("log", None)
     port = setting("port", 8080, as_int)
     bind_address = setting("bind_address", "127.0.0.1")
+    host = bind_address
     pid_file = setting("pid_file", "/var/run/pyff.pid")
-    caching_enabled = setting("caching.enabled", True)
+    caching_enabled = setting("caching.enabled", True, as_bool)
     caching_delay = setting("caching.delay", 300, as_int)
     daemonize = setting("daemonize", True)
     autoreload = setting("autoreload", False, as_bool)
@@ -140,15 +147,17 @@ class Config(object):
     default_cache_duration = setting("default_cache_duration", "PT1H")
     respect_cache_duration = setting("respect_cache_duration", True, as_bool)
     info_buffer_size = setting("info_buffer_size", 10, as_int)
-    worker_pool_size = setting("worker_pool_size", 10, as_int)
+    worker_pool_size = setting("worker_pool_size", 1, as_int)
+    threads = setting("threads", 10, as_int)
     store_class = setting("store.class", "pyff.store:MemoryStore")
     store_clear = setting("store.clear", False, as_bool)
     icon_store_clear = setting("icon_store.clear", False, as_bool)
-    icon_maxsize = setting("icon_maxsize", 31*1024, as_int)  # 32k is the biggest data: uri size
+    icon_maxsize = setting("icon_maxsize", 31 * 1024, as_int)  # 32k is the biggest data: uri size
     resource_store_class = setting('resource_store.class', "pyff.fetch:MemoryResourceStore")
     icon_store_class = setting("icon_store.class", "pyff.store:MemoryIconStore")
     store_name = setting("store.name", "pyff")
     update_frequency = setting("update_frequency", 0, as_int)
+    worker_timeout = setting('worker_timeout', 1200, as_int)
     request_timeout = setting("request_timeout", 10, as_int)
     request_cache_time = setting("request_cache_time", 300, as_int)
     request_cache_backend = setting("request_cache_backend", 'memory', as_string)
@@ -159,7 +168,7 @@ class Config(object):
     redis_host = setting("redis_host", "localhost")
     redis_port = setting("redis_port", 6379, as_int)
     load_icons = setting("load_icons", False, as_bool)
-    cache_ttl_icons = setting("cache_ttl_icons", 24*3600, as_int)
+    cache_ttl_icons = setting("cache_ttl_icons", 24 * 3600, as_int)
     load_icons_async = setting("load_icons_async", False, as_bool)  # this is unstable - apscheduler is unpredictable
     pipeline = setting("pipeline", None)
     scheduler_job_store = setting("scheduler_job_store", "memory", as_string)
@@ -167,12 +176,22 @@ class Config(object):
     huge_xml = setting("huge_xml", False, as_bool)
     content_negotiation_policy = setting("content_negotiation_policy", "extension", as_string)
     xinclude = setting("xinclude", True, as_bool)
+    logger = setting('logger', None, as_string)
 
     @property
     def base_url(self):
         if self.public_url:
             return self.public_url
         return "http://{}{}".format(config.bind_address, "" if config.port == 80 else ":{}".format(config.port))
+
+    def __str__(self):
+        s = "Config"
+        properties = list(Config.__dict__.keys())
+        properties.sort()
+        for p in properties:
+            if not p.startswith('__'):
+                s += "\t{}: {}\n".format(p, getattr(self, p))
+        return s
 
 
 config = Config()
@@ -209,11 +228,13 @@ def parse_options(program, docs, short_args, long_args):
             elif o in ('--log', '-l'):
                 config.error_log = a
                 config.access_log = a
-            elif o in ('--error-log', ):
+            elif o in ('--error-log',):
                 config.error_log = a
-            elif o in ('--access-log', ):
+            elif o in ('--access-log',):
                 config.access_log = a
             elif o in ('--host', '-H'):
+                config.bind_address = a
+            elif o in ('--bind_address',):
                 config.bind_address = a
             elif o in ('--port', '-P'):
                 config.port = int(a)
@@ -227,28 +248,32 @@ def parse_options(program, docs, short_args, long_args):
                 config.daemonize = False
             elif o in ('--autoreload', '-a'):
                 config.autoreload = True
-            elif o in ('--frequency', ):
+            elif o in ('--frequency',):
                 config.update_frequency = int(a)
             elif o in ('-A', '--alias'):
                 (a, colon, uri) = a.partition(':')
                 assert (colon == ':')
                 if a and uri:
                     config.aliases[a] = uri
-            elif o in ('--dir', ):
+            elif o in ('--dir',):
                 config.base_dir = a
-            elif o in ('--proxy', ):
+            elif o in ('--proxy',):
                 config.proxy = True
-            elif o in ('--allow_shutdown', ):
+            elif o in ('--allow_shutdown',):
                 config.allow_shutdown = True
             elif o in ('-m', '--module'):
                 config.modules.append(a)
-            elif o in ('--version', ):
+            elif o in ('--logger',):
+                config.logger = a
+            elif o in ('--version',):
                 print("{} version {}".format(program, pyff_version))
                 sys.exit(0)
             else:
                 raise ValueError("Unknown option '%s'" % o)
 
     except Exception as ex:
+        from traceback import print_exc
+        print_exc(ex)
         print(ex)
         print(docs)
         sys.exit(3)
