@@ -264,6 +264,13 @@ class Resource(Watchable):
         else:
             return self._infos[-1]
 
+    @property
+    def errors(self):
+        if 'Validation Errors' in self.info:
+            return self.info['Validation Errors']
+        else:
+            return []
+
     def parse(self, getter):
         info = dict()
         info['Resource'] = self.url

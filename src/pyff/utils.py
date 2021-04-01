@@ -23,23 +23,19 @@ from six.moves.urllib_parse import urlparse, quote_plus
 from itertools import chain
 import yaml
 import xmlsec
-import cherrypy
 import iso8601
 import os
 import pkg_resources
 import re
-from jinja2 import Environment, PackageLoader
 from lxml import etree
 from .constants import config, NS
 from .logs import get_log
 from .exceptions import *
-from .i18n import language
 import requests
 from requests_file import FileAdapter
 from requests_cache import CachedSession
 import base64
 import time
-from markupsafe import Markup
 import six
 import traceback
 from . import __version__
@@ -53,6 +49,7 @@ from _collections_abc import MutableMapping, Mapping
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 from requests.adapters import BaseAdapter, Response
+
 try:
     from redis import StrictRedis
 except ImportError as ex:
@@ -62,7 +59,6 @@ try:
     from PIL import Image
 except ImportError as ex:
     Image = None
-
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -209,7 +205,7 @@ class ResourceResolver(etree.Resolver):
         """
         Resolves URIs using the resource API
         """
-        #log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
+        # log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
         path = system_url.split("/")
         fn = path[len(path) - 1]
         if pkg_resources.resource_exists(__name__, fn):
@@ -235,7 +231,6 @@ def schema():
             st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
             thread_data.schema = etree.XMLSchema(st)
         except etree.XMLSchemaParseError as ex:
-            import traceback
             traceback.print_exc()
             log.error(xml_error(ex.error_log))
             raise ex
@@ -256,7 +251,6 @@ def redis():
             thread_local_lock.acquire(blocking=True)
             thread_data.redis = StrictRedis(host=config.redis_host, port=config.redis_port)
         except BaseException as ex:
-            import traceback
             traceback.print_exc()
             log.error(ex)
             raise ex
@@ -343,54 +337,6 @@ def safe_write(fn, data, mkdirs=False):
     return False
 
 
-site_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
-env = Environment(loader=PackageLoader(__package__, 'templates'), extensions=['jinja2.ext.i18n'])
-getattr(env, 'install_gettext_callables')(language.gettext, language.ngettext, newstyle=True)
-
-
-def urlencode_filter(s):
-    if type(s) == 'Markup':
-        s = s.unescape()
-    s = s.encode('utf8')
-    s = quote_plus(s)
-    return Markup(s)
-
-
-def truncate_filter(s, max_len=10):
-    if len(s) > max_len:
-        return s[0:max_len] + "..."
-    else:
-        return s
-
-
-def to_yaml_filter(pipeline):
-    print(pipeline)
-    out = six.StringIO()
-    yaml.dump(pipeline, stream=out)
-    return out.getvalue()
-
-
-env.filters['u'] = urlencode_filter
-env.filters['truncate'] = truncate_filter
-env.filters['to_yaml'] = to_yaml_filter
-env.filters['sha1'] = lambda x: hash_id(x, 'sha1', False)
-
-
-def template(name):
-    return env.get_template(name)
-
-
-def render_template(name, **kwargs):
-    kwargs.setdefault('http', cherrypy.request)
-    vhost = request_vhost(cherrypy.request)
-    kwargs.setdefault('vhost', vhost)
-    kwargs.setdefault('scheme', request_scheme(cherrypy.request))
-    kwargs.setdefault('brand', "pyFF @ %s" % vhost)
-    kwargs.setdefault('google_api_key', config.google_api_key)
-    kwargs.setdefault('_', _)
-    return template(name).render(**kwargs)
-
-
 def parse_date(s):
     if s is None:
         return datetime.now()
@@ -435,29 +381,28 @@ def duration2timedelta(period):
 
 
 def _lang(elt, default_lang):
-        return elt.get("{http://www.w3.org/XML/1998/namespace}lang", default_lang)
+    return elt.get("{http://www.w3.org/XML/1998/namespace}lang", default_lang)
 
 
-def lang_dict(elts, getter = lambda e: e, default_lang=None):
+def lang_dict(elts, getter=lambda e: e, default_lang=None):
     if default_lang is None:
-       default_lang = config.langs[0]
+        default_lang = config.langs[0]
 
     r = dict()
     for e in elts:
-       r[_lang(e, default_lang)] = getter(e)
+        r[_lang(e, default_lang)] = getter(e)
     return r
 
 
 def find_lang(elts, lang, default_lang):
-
-    return next((e for e in elts if _lang(e,default_lang) == lang),elts[0])
+    return next((e for e in elts if _lang(e, default_lang) == lang), elts[0])
 
 
 def filter_lang(elts, langs=None):
     if langs is None or type(langs) is not list:
         langs = config.langs
 
-    #log.debug("langs: {}".format(langs))
+    # log.debug("langs: {}".format(langs))
 
     if elts is None:
         return []
@@ -799,7 +744,6 @@ def img_to_data(data, content_type):
                 mime_type = "image/png"
         except BaseException as ex:
             log.warn(ex)
-            import traceback
             log.debug(traceback.format_exc())
 
     if data64 is None or len(data64) == 0:
@@ -875,7 +819,7 @@ def make_default_scheduler():
     else:
         raise ValueError("unknown or unsupported job store type '{}'".format(config.scheduler_job_store))
     return BackgroundScheduler(executors={'default': ThreadPoolExecutor(config.worker_pool_size)},
-                               jobstores={'default': jobstore },
+                               jobstores={'default': jobstore},
                                job_defaults={'misfire_grace_time': config.update_frequency})
 
 
@@ -963,7 +907,6 @@ def is_past_ttl(last_seen, ttl=config.cache_ttl):
 
 
 class Watchable(object):
-
     class Watcher(object):
         def __init__(self, cb, args, kwargs):
             self.cb = cb
@@ -995,6 +938,5 @@ class Watchable(object):
             try:
                 cb(*args, **kwargs)
             except BaseException as ex:
-                import traceback
                 log.debug(traceback.format_exc())
                 log.warn(ex)

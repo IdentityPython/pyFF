@@ -1,6 +1,6 @@
 from datetime import datetime
 from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
-    schema, iso2datetime, duration2timedelta, filter_lang, url2host, trunc_str, subdomains, \
+    schema, iso2datetime, duration2timedelta, filter_lang, url2host, subdomains, \
     has_tag, hash_id, load_callable, rreplace, dumptree, first_text, is_text, unicode_stream, \
     Lambda, b2u, lang_dict
 from .logs import get_log
