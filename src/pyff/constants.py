@@ -208,8 +208,8 @@ def parse_options(program, docs, short_args, long_args):
     if config.loglevel is None:
         config.loglevel = logging.INFO
 
-    if config.aliases is None:
-        config.aliases = dict()
+    if config.aliases is None or len(config.aliases) == 0:
+        config.aliases = dict(metadata=entities)
 
     if config.modules is None:
         config.modules = []

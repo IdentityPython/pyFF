@@ -51,7 +51,6 @@ import gunicorn.app.base
 from six import iteritems
 from .api import mkapp
 from .repo import MDRepository
-from .wsgi import md
 import sys
 
 log = get_log(__name__)
@@ -72,7 +71,7 @@ class MDQApplication(gunicorn.app.base.BaseApplication):
             self.cfg.set(key.lower(), value)
 
     def load(self):
-        return mkapp(config.pipeline, md=md)
+        return mkapp(config.pipeline, md=MDRepository())
 
 
 def main():
@@ -144,6 +143,9 @@ def main():
                 }
             }
         }
+
+    if config.aliases is not None:
+        config.aliases['metadata'] = 'entities'
 
     MDQApplication(options).run()
 

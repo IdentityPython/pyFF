@@ -37,6 +37,12 @@ class NoCache(object):
 
 
 def robots_handler(request):
+    """
+    Impelements robots.txt
+
+    :param request: the HTTP request
+    :return: robots.txt
+    """
     return Response("""
 User-agent: *
 Disallow: /
@@ -44,6 +50,12 @@ Disallow: /
 
 
 def status_handler(request):
+    """
+    Implements the /api/status endpoint
+
+    :param request: the HTTP request
+    :return: JSON status
+    """
     d = {}
     for r in request.registry.md.rm:
         if 'Validation Errors' in r.info and r.info['Validation Errors']:
@@ -105,6 +117,12 @@ def call(entry):
 
 
 def request_handler(request):
+    """
+    The main GET request handler for pyFF. Implements caching and forwards the request to process_handler
+
+    :param request: the HTTP request object
+    :return: the data to send to the client
+    """
     key = request.path
     r = None
     try:
@@ -118,6 +136,12 @@ def request_handler(request):
 
 
 def process_handler(request):
+    """
+    The main request handler for pyFF. Implements API call hooks and content negotiation.
+
+    :param request: the HTTP request object
+    :return: the data to send to the client
+    """
     _ctypes = {'xml': 'application/samlmetadata+xml;application/xml;text/xml',
                'json': 'application/json'}
 
@@ -357,6 +381,12 @@ elements.
 
 
 def resources_handler(request):
+    """
+    Implements the /api/resources endpoint
+
+    :param request: the HTTP request
+    :return: a JSON representation of the set of resources currently loaded by the server
+    """
     def _info(r):
         nfo = r.info
         nfo['Valid'] = r.is_valid()
@@ -375,6 +405,12 @@ def resources_handler(request):
 
 
 def pipeline_handler(request):
+    """
+    Implements the /api/resources endpoint
+
+    :param request: the HTTP request
+    :return: a JSON representation of the active pipeline
+    """
     response = Response(dumps(request.registry.plumbings,
                               default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
@@ -383,6 +419,12 @@ def pipeline_handler(request):
 
 
 def search_handler(request):
+    """
+    Implements the /api/search endpoint
+
+    :param request: the HTTP request with the 'query' request parameter
+    :return: a JSON search result
+    """
     match = request.params.get('q', request.params.get('query', None))
 
     # Enable matching on scope.
@@ -442,7 +484,7 @@ def mkapp(*args, **kwargs):
     md = kwargs.pop('md', None)
     if md is None:
         md = MDRepository()
-    print(md)
+
     if config.devel_memory_profile:
         launch_memory_usage_server()
 
