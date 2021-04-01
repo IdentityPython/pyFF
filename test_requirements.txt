@@ -6,3 +6,4 @@ mock
 testfixtures
 coverage
 fakeredis
+wsgi_intercept

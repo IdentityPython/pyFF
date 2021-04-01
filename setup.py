@@ -9,27 +9,24 @@ from os.path import abspath, dirname, join
 from setuptools import find_packages
 
 __author__ = 'Leif Johansson'
-__version__ = '1.1.6pre0'
+__version__ = '2.0.0pre0'
 
 here = abspath(dirname(__file__))
 README = open(join(here, 'README.rst')).read()
 NEWS = open(join(here, 'NEWS.txt')).read()
 
-python_requires='>=3.5';
+python_requires='>=3.7'
 
 install_requires = [
     'mako',
     'lxml >=4.1.1',
     'pyyaml >=3.10',
     'pyXMLSecurity >=0.15',
-    'cherrypy',
     'iso8601 >=0.1.4',
     'simplejson >=2.6.2',
-    'jinja2',
     'httplib2 >=0.7.7',
     'six>=1.11.0',
     'ipaddr',
-    'publicsuffix2',
     'redis-collections',
     'redis',
     'requests',
@@ -37,7 +34,6 @@ install_requires = [
     'requests_file',
     'pyconfig',
     'pyyaml',
-    'multiprocess',
     'whoosh',
     'pyramid',
     'accept_types >=0.4.1',
@@ -56,14 +52,13 @@ setup(name='pyFF',
       classifiers=[
           # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
          'Programming Language :: Python :: 3',
-         'Programming Language :: Python :: 3.5',
-         'Programming Language :: Python :: 3.6',
          'Programming Language :: Python :: 3.7',
+         'Programming Language :: Python :: 3.8',
       ],
       keywords='identity federation saml metadata',
       author=__author__,
       author_email='leifj@sunet.se',
-      url='http://blogs.mnt.se',
+      url='https://pyff.io',
       license='BSD',
       setup_requires=['nose>=1.0'],
       tests_require=['pbr', 'fakeredis>=1.0.5', 'coverage', 'nose>=1.0', 'mock', 'mako', 'testfixtures', 'wsgi_intercept'],
@@ -72,24 +67,13 @@ setup(name='pyFF',
       package_dir={'': 'src'},
       include_package_data=True,
       package_data={
-          'pyff': ['xslt/*.xsl',
-                   'site/static/js/*.js',
-                   'site/static/js/select2/*',
-                   'site/static/fonts/*',
-                   'site/static/css/*.css',
-                   'site/templates/*',
-                   'site/icons/*',
-                   'site/static/bootstrap/fonts/*',
-                   'site/static/bootstrap/js/*',
-                   'site/static/bootstrap/css/*',
-                   'site/static/bootstrap/img/*',
-                   'schema/*.xsd']
+          'pyff': ['xslt/*.xsl', 'schema/*.xsd']
       },
       zip_safe=False,
       install_requires=install_requires,
       scripts=['scripts/mirror-mdq.sh'],
       entry_points={
-          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdx:main', 'pyffd2=pyff.mdq:main', 'samldiff=pyff.tools:difftool'],
+          'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdq:main', 'samldiff=pyff.tools:difftool'],
           'paste.app_factory': [
              'pyffapp=pyff.wsgi:app_factory'
           ],
