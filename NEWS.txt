@@ -146,3 +146,8 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Release date: tis  1 dec 2020 14:19:18 CET
 * Remove dependency on minify
 
+1.2.0/2.0.0
+* Release date: tor  1 apr 2021 21:15:14 CEST
+* 1.2.0 contains several bugfixes from 1.1.5
+* 2.0.0 drops all frontend components and returns pyFFd to an API-only service
+

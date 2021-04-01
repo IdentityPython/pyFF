@@ -9,7 +9,7 @@ from os.path import abspath, dirname, join
 from setuptools import find_packages
 
 __author__ = 'Leif Johansson'
-__version__ = '2.0.0pre0'
+__version__ = '2.0.0'
 
 here = abspath(dirname(__file__))
 README = open(join(here, 'README.rst')).read()
