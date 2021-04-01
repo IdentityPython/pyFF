@@ -38,14 +38,6 @@ Features
 * Fully compatible with `thiss.io discovery service <https://thiss.io>`_.
 * Fully compatible with `mdq-browser frontend app <https://github.com/SUNET/mdq-browser>`_.
 
-About 2.0
-=========
-
-The 2.0 release of pyFF contains several changes that are in some sense backwards *in*compatible with the 1.x releases:
-
-* No built-in discovery service. The discovery service code that was once part of pyFF has been forked off into its own project: https://github.com/TheIdentitySelector/thiss-js
-* No built-in admin-UI. The https://github.com/SUNET/mdq-browser is a simple single-page application that replaces most of the functions of the old UI and also makes it easier to deploy pyFF in situations where access to the admin UI needs to be limited.
-
 Dependencies
 ============
 
