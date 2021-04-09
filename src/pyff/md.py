@@ -1,11 +1,6 @@
 """
 pyFF is the SAML metadata aggregator
 
-Usage: [-h|--help]
-       [-R]
-       [--loglevel=<level>]
-       [--logfile=<file>]
-       [--version]
 """
 import importlib
 import logging
@@ -20,7 +15,7 @@ def main():
     """
     The main entrypoint for the pyFF cmdline tool.
     """
-    args = parse_options("pyff", __doc__, 'hm:', ['help', 'loglevel=', 'logfile=', 'version', 'module='])
+    args = parse_options("pyff", __doc__)
 
     log_args = {'level': config.loglevel}
     if config.logfile is not None:

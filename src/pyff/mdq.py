@@ -1,43 +1,5 @@
 """
-An implementation of draft-lajoie-md-query
-
-.. code-block:: bash
-
-    Usage: pyffd <options> {pipeline-files}+
-
-    -C|--no-caching
-            Turn off caching
-    -p <pidfile>
-            Write a pidfile at the specified location
-    -f
-            Run in foreground
-    -a
-            Restart pyffd if any of the pipeline files change
-    --log=<log> | -l<log>
-            Set to either a file or syslog:<facility> (eg syslog:auth)
-    --error-log=<log> | --access-log=<log>
-            As --log but only affects the error or access log streams.
-    --loglevel=<level>
-            Set logging level
-    -P<port>|--port=<port>
-            Listen on the specified port
-    -H<host>|--host=<host>
-            Listen on the specified interface
-    --frequency=<seconds>
-            Wake up every <seconds> and run the update pipeline. By
-            default the frequency is set to 600.
-    -A<name:uri>|--alias=<name:uri>
-            Add the mapping 'name: uri' to the toplevel URL alias
-            table. This causes URLs on the form http://server/<name>/x
-            to be processed as http://server/metadata/{uri}x. The
-            default alias table is presented at http://server
-    --dir=<dir>
-            Chdir into <dir> after the server starts up.
-    -m <module>|--modules=<module>
-            Load a module
-
-    {pipeline-files}+
-            One or more pipeline files
+pyFFd is the SAML metadata aggregator daemon
 
 """
 
@@ -78,12 +40,7 @@ def main():
     """
     The (new) main entrypoint for the pyffd command.
     """
-    args = parse_options("pyffd",
-                         __doc__,
-                         'hP:p:H:CfaA:l:Rm:',
-                         ['help', 'loglevel=', 'log=', 'access-log=', 'error-log=', 'logger=',
-                          'port=', 'host=', 'bind_address=', 'no-caching', 'autoreload', 'frequency=', 'module=',
-                          'alias=', 'dir=', 'version', 'proxy', 'allow_shutdown'])
+    args = parse_options("pyffd", __doc__)
 
     if config.base_dir:
         os.chdir(config.base_dir)
@@ -91,7 +48,7 @@ def main():
     options = {
         'bind': '{}:{}'.format(config.host, config.port),
         'workers': config.worker_pool_size,
-        'loglevel': logging.getLevelName(config.loglevel).lower(),
+        'loglevel': config.loglevel,
         'preload_app': True,
         'daemon': config.daemonize,
         'capture_output': False,
@@ -106,8 +63,6 @@ def main():
 
     if args:
         config.pipeline = args[0]
-
-    loglevel_str = logging.getLevelName(config.loglevel).upper()
 
     if config.logger:
         options['logconfig'] = config.logger
@@ -126,19 +81,19 @@ def main():
             'loggers': {
                 'root': {
                     'handlers': ['console'],
-                    'level': loglevel_str
+                    'level': config.loglevel
                 },
                 'pyff': {
                     'handlers': ['console'],
                     'propagate': False,
-                    'level': loglevel_str
+                    'level': config.loglevel
                 }
             },
             'handlers': {
                 'console': {
                     'class': 'logging.StreamHandler',
                     'formatter': 'default',
-                    'level': loglevel_str,
+                    'level': config.loglevel,
                     'stream': 'ext://sys.stderr'
                 }
             }
