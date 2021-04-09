@@ -19,6 +19,12 @@ class ResourceStore(object):
 
 
 class Fetch(threading.Thread):
+    """
+    Fetch is a thread that calls url_get to retrieve a URL. All URL schemes supported by the python requests
+    library aswell as file:/// URLs are supported. The Fetch thread is part of a thread pool that works off of
+    a deque feed by a main Fetcher thread. Results are passed back via another deque owned by the Fetcher. A
+    content handler callable is called with the response object and the result is passed up to the Fetcher.
+    """
 
     def __init__(self, request, response, pool, name, content_handler):
         threading.Thread.__init__(self)
@@ -58,7 +64,10 @@ class Fetch(threading.Thread):
 
 
 class Fetcher(threading.Thread, Watchable):
-
+    """
+    The main threed managing a pool of Fetch threads. All Fetch instances are initiatlized with the same
+    content handler callable.
+    """
     def __init__(self, num_threads=config.worker_pool_size, name="Fetcher", content_handler=None):
         threading.Thread.__init__(self)
         Watchable.__init__(self)
@@ -75,10 +84,20 @@ class Fetcher(threading.Thread, Watchable):
         self.halt = False
 
     def schedule(self, url):
+        """
+        Schedule a URL for retrieval.
+
+        :param url: the url to fetch
+        :return: nothing is returned.
+        """
         log.info("scheduling fetch of {}".format(url))
         self.request.put(url)
 
     def stop(self):
+        """
+        Halt the Fetcher and all Fetch threads.
+        :return:
+        """
         log.debug("stopping fetcher")
         for t in self.threads:
             t.halt = True
@@ -90,6 +109,11 @@ class Fetcher(threading.Thread, Watchable):
         self.response.put(None)
 
     def run(self):
+        """
+        Launch the Fetcher. Notify all watchers.
+
+        :return:  nothing is returned
+        """
         log.debug("Fetcher ({}) ready & waiting for responses...".format(self._id))
         while not self.halt:
             info = self.response.get()
@@ -99,6 +123,13 @@ class Fetcher(threading.Thread, Watchable):
 
 
 def make_fetcher(name="Fetcher", content_handler=None):
+    """
+    A utility method that creates and starts a Fetcher with the specified content handler.
+
+    :param name: A name - used in displays and instrumentation
+    :param content_handler: a callable - passed to the main Fetcher thread
+    :return: the Fetcher instance in running state
+    """
     f = Fetcher(name=name, content_handler=content_handler)
     f.start()
     log.debug("fetcher created: {}".format(f))
