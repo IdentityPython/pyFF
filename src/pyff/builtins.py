@@ -1171,6 +1171,7 @@ def prune(req, *opts):
 @pipe
 def check_xml_namespaces(req, *opts):
     """
+    Ensure that all namespaces are http or httpd scheme URLs.
 
     :param req: The request
     :param opts: Options (not used)
@@ -1196,6 +1197,7 @@ def check_xml_namespaces(req, *opts):
 @pipe
 def drop_xsi_type(req, *opts):
     """
+    Remove all xsi namespaces from the tree.
 
     :param req: The request
     :param opts: Options (not used)
@@ -1218,7 +1220,6 @@ def drop_xsi_type(req, *opts):
 @pipe
 def certreport(req, *opts):
     """
-
     Generate a report of the certificates (optionally limited by expiration time or key size) found in the selection.
 
     :param req: The request
@@ -1333,7 +1334,6 @@ def certreport(req, *opts):
 @pipe
 def emit(req, ctype="application/xml", *opts):
     """
-
     Returns a UTF-8 encoded representation of the working tree.
 
     :param req: The request
@@ -1385,7 +1385,6 @@ def emit(req, ctype="application/xml", *opts):
 @pipe
 def signcerts(req, *opts):
     """
-
     Logs the fingerprints of the signing certs found in the current working tree.
 
     :param req: The request
@@ -1412,7 +1411,6 @@ def signcerts(req, *opts):
 @pipe
 def finalize(req, *opts):
     """
-
     Prepares the working document for publication/rendering.
 
     :param req: The request
@@ -1516,7 +1514,6 @@ def finalize(req, *opts):
 @pipe(name='reginfo')
 def _reginfo(req, *opts):
     """
-
     Sets registration info extension on EntityDescription element
 
     :param req: The request
@@ -1548,7 +1545,6 @@ def _reginfo(req, *opts):
 @pipe(name='pubinfo')
 def _pubinfo(req, *opts):
     """
-
     Sets publication info extension on EntityDescription element
 
     :param req: The request
@@ -1577,7 +1573,6 @@ def _pubinfo(req, *opts):
 @pipe(name='setattr')
 def _setattr(req, *opts):
     """
-
     Sets entity attributes on the working document
 
     :param req: The request
@@ -1614,7 +1609,6 @@ def _setattr(req, *opts):
 @pipe(name='nodecountry')
 def _nodecountry(req, *opts):
     """
-
     Sets eidas:NodeCountry
 
     :param req: The request
