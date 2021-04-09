@@ -8,7 +8,7 @@ import os
 try:
     import cherrypy
 except ImportError as e:
-    print("cherrypy logging disabled")
+    logging.debug("cherrypy logging disabled")
     cherrypy = None
 
 
