@@ -1,9 +1,10 @@
-setuptools
-pbr
-nose>=1.0
-funcsigs
-mock
-testfixtures
 coverage
-fakeredis
+fakeredis>=1.0.5
+funcsigs
+mako
+mock
+nose>=1.0
+pbr
+setuptools
+testfixtures
 wsgi_intercept

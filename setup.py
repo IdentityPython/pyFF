@@ -2,46 +2,37 @@
 # -*- encoding: utf-8 -*-
 
 from distutils.core import setup
+from pathlib import PurePath
 from platform import python_implementation
 from sys import version_info
 
 from os.path import abspath, dirname, join
+from typing import List
+
 from setuptools import find_packages
 
 __author__ = 'Leif Johansson'
 __version__ = '2.0.0'
 
-here = abspath(dirname(__file__))
-README = open(join(here, 'README.rst')).read()
-NEWS = open(join(here, 'NEWS.txt')).read()
+def load_requirements(path: PurePath) -> List[str]:
+    """ Load dependencies from a requirements.txt style file, ignoring comments etc. """
+    res = []
+    with open(path) as fd:
+        for line in fd.readlines():
+            while line.endswith('\n') or line.endswith('\\'):
+                line = line[:-1]
+            line = line.strip()
+            if not line or line.startswith('-') or line.startswith('#'):
+                continue
+            res += [line]
+    return res
 
-python_requires='>=3.7'
+here = PurePath(__file__)
+README = open(here.with_name('README.rst')).read()
+NEWS = open(here.with_name('NEWS.txt')).read()
 
-install_requires = [
-    'mako',
-    'lxml >=4.1.1',
-    'pyyaml >=3.10',
-    'pyXMLSecurity >=0.15',
-    'iso8601 >=0.1.4',
-    'simplejson >=2.6.2',
-    'httplib2 >=0.7.7',
-    'six>=1.11.0',
-    'ipaddr',
-    'redis-collections',
-    'redis',
-    'requests',
-    'requests_cache',
-    'requests_file',
-    'pyconfig',
-    'pyyaml',
-    'whoosh',
-    'pyramid',
-    'accept_types >=0.4.1',
-    'apscheduler',
-    'cachetools',
-    'xmldiff',
-    'gunicorn'
-]
+install_requires = load_requirements(here.with_name('requirements.txt'))
+tests_require = load_requirements(here.with_name('test_requirements.txt'))
 
 python_implementation_str = python_implementation()
 
@@ -61,7 +52,7 @@ setup(name='pyFF',
       url='https://pyff.io',
       license='BSD',
       setup_requires=['nose>=1.0'],
-      tests_require=['pbr', 'fakeredis>=1.0.5', 'coverage', 'nose>=1.0', 'mock', 'mako', 'testfixtures', 'wsgi_intercept'],
+      tests_require=tests_require,
       test_suite="nose.collector",
       packages=find_packages('src'),
       package_dir={'': 'src'},
@@ -85,4 +76,5 @@ setup(name='pyFF',
           ('**.py', 'python', None),
           ('**/templates/**.html', 'mako', None),
       ]},
-)
+      python_requires='>=3.7',
+      )
