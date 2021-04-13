@@ -4,18 +4,20 @@ An abstraction layer for metadata fetchers. Supports both syncronous and asyncro
 
 """
 
-from .logs import get_log
 import os
-import requests
-from .constants import config
-from datetime import datetime
 from collections import deque
-from .parse import parse_resource
-from .exceptions import ResourceException
-from .utils import url_get, non_blocking_lock, hex_digest, img_to_data, Watchable
 from copy import deepcopy
-from threading import Lock, Condition
+from datetime import datetime
+from threading import Condition, Lock
+
+import requests
+
+from .constants import config
+from .exceptions import ResourceException
 from .fetch import make_fetcher
+from .logs import get_log
+from .parse import parse_resource
+from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, url_get
 
 requests.packages.urllib3.disable_warnings()
 
@@ -105,7 +107,6 @@ class IconHandler(URLHandler):
 
 
 class ResourceHandler(URLHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
 
@@ -178,8 +179,9 @@ class Resource(Watchable):
         return self.opts['cleanup']
 
     def __str__(self):
-        return "Resource {} expires at {} using ".format(self.url if self.url is not None else "(root)", self.expire_time) + \
-               ",".join(["{}={}".format(k, v) for k, v in list(self.opts.items())])
+        return "Resource {} expires at {} using ".format(
+            self.url if self.url is not None else "(root)", self.expire_time
+        ) + ",".join(["{}={}".format(k, v) for k, v in list(self.opts.items())])
 
     def reload(self, fail_on_error=False):
         with non_blocking_lock(self.lock):
@@ -281,8 +283,11 @@ class Resource(Watchable):
         r = getter(self.url)
 
         info['HTTP Response Headers'] = r.headers
-        log.debug("got status_code={:d}, encoding={} from_cache={} from {}".
-                  format(r.status_code, r.encoding, getattr(r, "from_cache", False), self.url))
+        log.debug(
+            "got status_code={:d}, encoding={} from_cache={} from {}".format(
+                r.status_code, r.encoding, getattr(r, "from_cache", False), self.url
+            )
+        )
         info['Status Code'] = str(r.status_code)
         info['Reason'] = r.reason
 

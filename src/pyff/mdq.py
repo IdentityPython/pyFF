@@ -4,22 +4,24 @@ pyFFd is the SAML metadata aggregator daemon
 """
 
 from __future__ import unicode_literals
-from .constants import config, parse_options
-from .logs import get_log
+
 import importlib
 import logging
 import os
+import sys
+
 import gunicorn.app.base
 from six import iteritems
+
 from .api import mkapp
+from .constants import config, parse_options
+from .logs import get_log
 from .repo import MDRepository
-import sys
 
 log = get_log(__name__)
 
 
 class MDQApplication(gunicorn.app.base.BaseApplication):
-
     def init(self, parser, opts, args):
         super().init(self, parser, opts, args)
 
@@ -28,7 +30,9 @@ class MDQApplication(gunicorn.app.base.BaseApplication):
         super(MDQApplication, self).__init__()
 
     def load_config(self):
-        cfg = dict([(key, value) for key, value in iteritems(self.options) if key in self.cfg.settings and value is not None])
+        cfg = dict(
+            [(key, value) for key, value in iteritems(self.options) if key in self.cfg.settings and value is not None]
+        )
         for key, value in iteritems(cfg):
             self.cfg.set(key.lower(), value)
 
@@ -55,7 +59,7 @@ def main():
         'timeout': config.worker_timeout,
         'worker_class': 'gthread',
         'worker_tmp_dir': '/dev/shm',
-        'threads': config.threads
+        'threads': config.threads,
     }
 
     if config.pid_file:
@@ -70,33 +74,21 @@ def main():
         options['logconfig_dict'] = {
             'version': 1,
             'formatters': {
-                'default': {
-                    'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
-                    'datefmt': '%Y-%m-%d %H:%M:%S'
-                }
+                'default': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s', 'datefmt': '%Y-%m-%d %H:%M:%S'}
             },
-            'filters': {
-
-            },
+            'filters': {},
             'loggers': {
-                'root': {
-                    'handlers': ['console'],
-                    'level': config.loglevel
-                },
-                'pyff': {
-                    'handlers': ['console'],
-                    'propagate': False,
-                    'level': config.loglevel
-                }
+                'root': {'handlers': ['console'], 'level': config.loglevel},
+                'pyff': {'handlers': ['console'], 'propagate': False, 'level': config.loglevel},
             },
             'handlers': {
                 'console': {
                     'class': 'logging.StreamHandler',
                     'formatter': 'default',
                     'level': config.loglevel,
-                    'stream': 'ext://sys.stderr'
+                    'stream': 'ext://sys.stderr',
                 }
-            }
+            },
         }
 
     if config.aliases is not None:

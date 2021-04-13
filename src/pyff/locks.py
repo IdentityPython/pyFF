@@ -12,7 +12,6 @@ from contextlib import contextmanager
 from threading import Condition, Lock, currentThread
 from time import time
 
-
 # Read write lock
 # ---------------
 
@@ -61,10 +60,10 @@ class ReadWriteLock(object):
 
     def acquireRead(self, blocking=True, timeout=None):
         """Acquire a read lock for the current thread, waiting at most timeout seconds or doing a
-        non-blocking check in case timeout is <= 0.
+            non-blocking check in case timeout is <= 0.
 
-    * In case timeout is None, the call to acquireRead blocks until the lock request can be serviced.
-    * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
+        * In case timeout is None, the call to acquireRead blocks until the lock request can be serviced.
+        * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
 
         if not blocking:
             endtime = -1
@@ -110,8 +109,7 @@ class ReadWriteLock(object):
     @property
     @contextmanager
     def readlock(self):
-        """Yields a read lock
-        """
+        """Yields a read lock"""
         self.acquireRead()
         try:
             yield
@@ -121,8 +119,7 @@ class ReadWriteLock(object):
     @property
     @contextmanager
     def writelock(self):
-        """Yields a write lock
-        """
+        """Yields a write lock"""
         self.acquireWrite()
         try:
             yield
@@ -131,11 +128,11 @@ class ReadWriteLock(object):
 
     def acquireWrite(self, timeout=None):
         """Acquire a write lock for the current thread, waiting at most timeout seconds or doing a non-blocking
-        check in case timeout is <= 0.
+            check in case timeout is <= 0.
 
-    * In case the write lock cannot be serviced due to the deadlock condition mentioned above, a ValueError is raised.
-    * In case timeout is None, the call to acquireWrite blocks until the lock request can be serviced.
-    * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
+        * In case the write lock cannot be serviced due to the deadlock condition mentioned above, a ValueError is raised.
+        * In case timeout is None, the call to acquireWrite blocks until the lock request can be serviced.
+        * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
 
         endtime = None
         if timeout is not None:
@@ -155,9 +152,7 @@ class ReadWriteLock(object):
                     # else also wants to upgrade, there is no way we can do
                     # this except if one of us releases all his read locks.
                     # Signal this to user.
-                    raise ValueError(
-                        "Inevitable dead lock, denying write lock"
-                    )
+                    raise ValueError("Inevitable dead lock, denying write lock")
                 upgradewriter = True
                 self.__upgradewritercount = self.__readers.pop(me)
             else:
@@ -215,7 +210,7 @@ class ReadWriteLock(object):
     def release(self):
         """Release the currently held lock.
 
-    * In case the current thread holds no lock, a ValueError is thrown."""
+        * In case the current thread holds no lock, a ValueError is thrown."""
 
         me = currentThread()
         self.__condition.acquire()

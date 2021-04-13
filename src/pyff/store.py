@@ -1,30 +1,56 @@
+import json
 import operator
+import os
 import re
+import shutil
+import time
+from datetime import datetime, timedelta
+from io import BytesIO
+from threading import ThreadError
 
 import ipaddr
 import six
-from redis_collections import Dict, Set
-from whoosh.writing import CLEAR
-from whoosh.fields import Schema, ID, KEYWORD, NGRAMWORDS
-from whoosh.qparser import MultifieldParser, QueryParser
-from whoosh.filedb.filestore import FileStorage
-import json
-from io import BytesIO
 from cachetools.func import ttl_cache
-from threading import ThreadError
-from datetime import datetime, timedelta
-import time
+from redis_collections import Dict, Set
+from whoosh.fields import ID, KEYWORD, NGRAMWORDS, Schema
+from whoosh.filedb.filestore import FileStorage
+from whoosh.qparser import MultifieldParser, QueryParser
+from whoosh.writing import CLEAR
+
 from pyff.resource import IconHandler
+
 from . import merge_strategies
-from .constants import NS, ATTRS, ATTRS_INV
-from .constants import config
+from .constants import ATTRS, ATTRS_INV, NS, config
 from .logs import get_log
-from .samlmd import EntitySet, iter_entities, entity_attribute_dict, is_sp, is_idp, entity_simple_info, \
-    object_id, find_merge_strategy, find_entity, entity_simple_summary, entitiesdescriptor, discojson, entity_icon_url
-from .utils import root, hash_id, avg_domain_distance, load_callable, is_text, b2u, parse_xml, dumptree, \
-    LRUProxyDict, hex_digest, redis, is_past_ttl
-import os
-import shutil
+from .samlmd import (
+    EntitySet,
+    discojson,
+    entitiesdescriptor,
+    entity_attribute_dict,
+    entity_icon_url,
+    entity_simple_info,
+    entity_simple_summary,
+    find_entity,
+    find_merge_strategy,
+    is_idp,
+    is_sp,
+    iter_entities,
+    object_id,
+)
+from .utils import (
+    LRUProxyDict,
+    avg_domain_distance,
+    b2u,
+    dumptree,
+    hash_id,
+    hex_digest,
+    is_past_ttl,
+    is_text,
+    load_callable,
+    parse_xml,
+    redis,
+    root,
+)
 
 log = get_log(__name__)
 
@@ -42,7 +68,6 @@ def make_icon_store_instance(*args, **kwargs):
 
 
 class Unpickled(object):
-
     def _pickle(self, data):
         return data
 
@@ -105,7 +130,6 @@ class XMLDict(Dict):
 
 
 class IconStore(object):
-
     def __init__(self):
         pass
 
@@ -140,13 +164,15 @@ class IconStore(object):
             if config.load_icons_async:
                 now = datetime.now()
                 start = now + timedelta(seconds=20)
-                job = scheduler.add_job(IconStore._load_icons,
-                                        args=[self, urls],
-                                        id="load_icons",
-                                        next_run_time=start,
-                                        name="load_icons",
-                                        max_instances=1,
-                                        coalesce=False)
+                job = scheduler.add_job(
+                    IconStore._load_icons,
+                    args=[self, urls],
+                    id="load_icons",
+                    next_run_time=start,
+                    name="load_icons",
+                    max_instances=1,
+                    coalesce=False,
+                )
                 log.debug(job)
             else:
                 self._load_icons(urls)
@@ -171,7 +197,6 @@ class IconStore(object):
 
 
 class MemoryIconStore(IconStore):
-
     def __init__(self):
         super().__init__()
         self.icons = {}
@@ -190,7 +215,6 @@ class MemoryIconStore(IconStore):
 
 
 class RedisIconStore(IconStore):
-
     def __init__(self, **kwargs):
         super().__init__()
         self._name = kwargs.pop('name', config.store_name)
@@ -203,10 +227,9 @@ class RedisIconStore(IconStore):
     def _setup(self):
         if not self._redis:
             self._redis = redis()  # XXX test cases won't get correctly unpicked because of this
-        self.icons = LRUProxyDict(JSONDict(key="{}_icons".format(self._name),
-                                           redis=self._redis,
-                                           writeback=True),
-                                  maxsize=config.cache_size)
+        self.icons = LRUProxyDict(
+            JSONDict(key="{}_icons".format(self._name), redis=self._redis, writeback=True), maxsize=config.cache_size
+        )
 
     def lookup(self, uri):
         nfo = self.icons.get(uri, None)
@@ -331,24 +354,24 @@ class SAMLStoreBase(object):
 
     def merge(self, t, nt, strategy=merge_strategies.replace_existing, strategy_name=None):
         """
-:param t: The EntitiesDescriptor element to merge *into*
-:param nt:  The EntitiesDescriptor element to merge *from*
-:param strategy: A callable implementing the merge strategy pattern
-:param strategy_name: The name of a strategy to import. Overrides the callable if present.
-:return:
+        :param t: The EntitiesDescriptor element to merge *into*
+        :param nt:  The EntitiesDescriptor element to merge *from*
+        :param strategy: A callable implementing the merge strategy pattern
+        :param strategy_name: The name of a strategy to import. Overrides the callable if present.
+        :return:
 
-Two EntitiesDescriptor elements are merged - the second into the first. For each element
-in the second collection that is present (using the @entityID attribute as key) in the
-first the strategy callable is called with the old and new EntityDescriptor elements
-as parameters. The strategy callable thus must implement the following pattern:
+        Two EntitiesDescriptor elements are merged - the second into the first. For each element
+        in the second collection that is present (using the @entityID attribute as key) in the
+        first the strategy callable is called with the old and new EntityDescriptor elements
+        as parameters. The strategy callable thus must implement the following pattern:
 
-:old_e: The EntityDescriptor from t
-:e: The EntityDescriptor from nt
-:return: A merged EntityDescriptor element
+        :old_e: The EntityDescriptor from t
+        :e: The EntityDescriptor from nt
+        :return: A merged EntityDescriptor element
 
-Before each call to strategy old_e is removed from the MDRepository index and after
-merge the resultant EntityDescriptor is added to the index before it is used to
-replace old_e in t.
+        Before each call to strategy old_e is removed from the MDRepository index and after
+        merge the resultant EntityDescriptor is added to the index before it is used to
+        replace old_e in t.
         """
         if strategy_name is not None:
             strategy = find_merge_strategy(strategy_name)
@@ -363,20 +386,20 @@ replace old_e in t.
 
     def search(self, query=None, path=None, entity_filter=None, related=None):
         """
-:param query: A string to search for.
-:param path: The repository collection (@Name) to search in - None for search in all collections
-:param entity_filter: An optional lookup expression used to filter the entries before search is done.
-:param related: an optional '+'-separated list of related domain names for prioritizing search results
+        :param query: A string to search for.
+        :param path: The repository collection (@Name) to search in - None for search in all collections
+        :param entity_filter: An optional lookup expression used to filter the entries before search is done.
+        :param related: an optional '+'-separated list of related domain names for prioritizing search results
 
-Returns a list of dict's for each EntityDescriptor present in the metadata store such
-that any of the DisplayName, ServiceName, OrganizationName or OrganizationDisplayName
-elements match the query (as in contains the query as a substring).
+        Returns a list of dict's for each EntityDescriptor present in the metadata store such
+        that any of the DisplayName, ServiceName, OrganizationName or OrganizationDisplayName
+        elements match the query (as in contains the query as a substring).
 
-The dict in the list contains three items:
+        The dict in the list contains three items:
 
-:title: A displayable string, useful as a UI label
-:value: The entityID of the EntityDescriptor
-:id: A sha1-ID of the entityID - on the form {sha1}<sha1-hash-of-entityID>
+        :title: A displayable string, useful as a UI label
+        :value: The entityID of the EntityDescriptor
+        :id: A sha1-ID of the entityID - on the form {sha1}<sha1-hash-of-entityID>
         """
 
         match_query = bool(len(query) > 0)
@@ -386,12 +409,14 @@ The dict in the list contains three items:
 
         def _strings(elt):
             lst = []
-            for attr in ['{%s}DisplayName' % NS['mdui'],
-                         '{%s}ServiceName' % NS['md'],
-                         '{%s}OrganizationDisplayName' % NS['md'],
-                         '{%s}OrganizationName' % NS['md'],
-                         '{%s}Keywords' % NS['mdui'],
-                         '{%s}Scope' % NS['shibmd']]:
+            for attr in [
+                '{%s}DisplayName' % NS['mdui'],
+                '{%s}ServiceName' % NS['md'],
+                '{%s}OrganizationDisplayName' % NS['md'],
+                '{%s}OrganizationName' % NS['md'],
+                '{%s}Keywords' % NS['mdui'],
+                '{%s}Scope' % NS['shibmd'],
+            ]:
                 lst.extend([s.text for s in elt.iter(attr)])
             lst.append(elt.get('entityID'))
             return [item for item in lst if item is not None]
@@ -418,7 +443,7 @@ The dict in the list contains three items:
                     for tstr in tokens:
                         if q in tstr.lower():
                             return tstr
-                        
+
             return None
 
         f = []
@@ -458,7 +483,6 @@ The dict in the list contains three items:
 
 
 class EmptyStore(SAMLStoreBase):
-
     def lookup(self, key):
         return list()
 
@@ -491,18 +515,15 @@ class EmptyStore(SAMLStoreBase):
 
 
 class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for keys (uuids)
-
     def json_dict(self, name):
-        return LRUProxyDict(JSONDict(key='{}_{}'.format(self._name, name),
-                                     redis=self._redis,
-                                     writeback=True),
-                            maxsize=config.cache_size)
+        return LRUProxyDict(
+            JSONDict(key='{}_{}'.format(self._name, name), redis=self._redis, writeback=True), maxsize=config.cache_size
+        )
 
     def xml_dict(self, name):
-        return LRUProxyDict(XMLDict(key='{}_{}'.format(self._name, name),
-                                    redis=self._redis,
-                                    writeback=True),
-                            maxsize=config.cache_size)
+        return LRUProxyDict(
+            XMLDict(key='{}_{}'.format(self._name, name), redis=self._redis, writeback=True), maxsize=config.cache_size
+        )
 
     def __init__(self, *args, **kwargs):
         self._dir = kwargs.pop('directory', '.whoosh')
@@ -556,11 +577,13 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
             super(RedisWhooshStore, self).__call__(watched=watched, scheduler=scheduler)
             log.debug("indexing using {}".format(scheduler))
             if scheduler is not None:  # and self._last_modified > self._last_index_time and :
-                scheduler.add_job(RedisWhooshStore._reindex,
-                                  args=[self],
-                                  max_instances=1,
-                                  coalesce=True,
-                                  misfire_grace_time=2 * config.update_frequency)
+                scheduler.add_job(
+                    RedisWhooshStore._reindex,
+                    args=[self],
+                    max_instances=1,
+                    coalesce=True,
+                    misfire_grace_time=2 * config.update_frequency,
+                )
 
     def _reindex(self):
         log.debug("indexing the store...")
@@ -603,6 +626,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
     def dump(self):
         ix = self.storage.open_index()
         from whoosh.query import Every
+
         with ix.searcher() as searcher:
             for result in ix.searcher().search(Every('object_id')):
                 print(result)
@@ -613,8 +637,12 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
             for a, v in list(info.pop('entity_attributes').items()):
                 info[a] = v
 
-        content = " ".join(filter(lambda x: x is not None,
-                                  [info.get(x, '') for x in ('service_name', 'title', 'domain', 'keywords', 'scopes')]))
+        content = " ".join(
+            filter(
+                lambda x: x is not None,
+                [info.get(x, '') for x in ('service_name', 'title', 'domain', 'keywords', 'scopes')],
+            )
+        )
         res['content'] = content.strip()
         for a, v in info.items():
             k = a
@@ -631,7 +659,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
 
     def update(self, t, tid=None, etag=None, lazy=True):
         relt = root(t)
-        assert (relt is not None)
+        assert relt is not None
 
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
             ref = object_id(relt)
@@ -801,7 +829,6 @@ class MemoryStore(SAMLStoreBase):
         return list(self.index.setdefault('attr', {}).setdefault(a, {}).keys())
 
     def _modify(self, entity, modifier):
-
         def _m(idx, vv):
             getattr(idx.setdefault(vv, EntitySet()), modifier)(entity)
 
@@ -850,7 +877,7 @@ class MemoryStore(SAMLStoreBase):
 
     def update(self, t, tid=None, etag=None, lazy=True):
         relt = root(t)
-        assert (relt is not None)
+        assert relt is not None
         if relt.tag == "{%s}EntityDescriptor" % NS['md']:
             self._unindex(relt)
             self._index(relt)

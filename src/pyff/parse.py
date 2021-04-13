@@ -1,9 +1,11 @@
 import os
-from .utils import parse_xml, root, first_text, unicode_stream, find_matching_files
+from datetime import datetime
+
+from xmlsec.crypto import CertDict
+
 from .constants import NS
 from .logs import get_log
-from xmlsec.crypto import CertDict
-from datetime import datetime
+from .utils import find_matching_files, first_text, parse_xml, root, unicode_stream
 
 __author__ = 'leifj'
 
@@ -19,10 +21,10 @@ class ParserException(Exception):
     def raise_wraped(self):
         raise self._wraped
 
-class PyffParser(object):
 
+class PyffParser(object):
     def to_json(self):
-        return str(self);
+        return str(self)
 
 
 class NoParser(PyffParser):
@@ -78,7 +80,6 @@ class XRDParser(PyffParser):
 
     def magic(self, content):
         return 'XRD' in content
-
 
     def parse(self, resource, content):
         info = dict()

@@ -2,16 +2,17 @@
 Useful constants for pyFF. Mostly XML namespace declarations.
 """
 
-from distutils.util import strtobool
-import pyconfig
-import logging
 import getopt
-import sys
-import os
-import six
 import json
-import re
+import logging
 import multiprocessing
+import os
+import re
+import sys
+from distutils.util import strtobool
+
+import pyconfig
+import six
 
 from . import __version__ as pyff_version
 
@@ -21,28 +22,32 @@ __author__ = 'leifj'
 NF_URI = "urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
 
 #: These are the namespace prefixes pyFF knows about.
-NS = dict(md="urn:oasis:names:tc:SAML:2.0:metadata",
-          ds='http://www.w3.org/2000/09/xmldsig#',
-          mdui="urn:oasis:names:tc:SAML:metadata:ui",
-          mdattr="urn:oasis:names:tc:SAML:metadata:attribute",
-          mdrpi="urn:oasis:names:tc:SAML:metadata:rpi",
-          shibmd="urn:mace:shibboleth:metadata:1.0",
-          xrd='http://docs.oasis-open.org/ns/xri/xrd-1.0',
-          pyff='http://pyff.io/NS',
-          xml='http://www.w3.org/XML/1998/namespace',
-          saml="urn:oasis:names:tc:SAML:2.0:assertion",
-          xs="http://www.w3.org/2001/XMLSchema",
-          xsi="http://www.w3.org/2001/XMLSchema-instance",
-          ser="http://eidas.europa.eu/metadata/servicelist",
-          eidas="http://eidas.europa.eu/saml-extensions")
+NS = dict(
+    md="urn:oasis:names:tc:SAML:2.0:metadata",
+    ds='http://www.w3.org/2000/09/xmldsig#',
+    mdui="urn:oasis:names:tc:SAML:metadata:ui",
+    mdattr="urn:oasis:names:tc:SAML:metadata:attribute",
+    mdrpi="urn:oasis:names:tc:SAML:metadata:rpi",
+    shibmd="urn:mace:shibboleth:metadata:1.0",
+    xrd='http://docs.oasis-open.org/ns/xri/xrd-1.0',
+    pyff='http://pyff.io/NS',
+    xml='http://www.w3.org/XML/1998/namespace',
+    saml="urn:oasis:names:tc:SAML:2.0:assertion",
+    xs="http://www.w3.org/2001/XMLSchema",
+    xsi="http://www.w3.org/2001/XMLSchema-instance",
+    ser="http://eidas.europa.eu/metadata/servicelist",
+    eidas="http://eidas.europa.eu/saml-extensions",
+)
 
 #: These are the attribute aliases pyFF knows about. These are used to build URI paths, populate the index
 #: and simplify lookup expressions involving boolean or set logic.
-ATTRS = {'collection': 'http://pyff.io/collection',
-         'entity-category': 'http://macedir.org/entity-category',
-         'role': 'http://pyff.io/role',
-         'software': 'http://pyff.io/software',
-         'domain': 'http://pyff.io/domain'}
+ATTRS = {
+    'collection': 'http://pyff.io/collection',
+    'entity-category': 'http://macedir.org/entity-category',
+    'role': 'http://pyff.io/role',
+    'software': 'http://pyff.io/software',
+    'domain': 'http://pyff.io/domain',
+}
 
 ATTRS_INV = {v: k for k, v in list(ATTRS.items())}
 
@@ -88,9 +93,18 @@ def as_bool(o):
 
 
 class BaseSetting(object):
-
-    def __init__(self, name, default=None, deprecated=False, cmdline=['pyff', 'pyffd'],
-                 typeconv=as_string, info='', long=None, short=None, hidden=False):
+    def __init__(
+        self,
+        name,
+        default=None,
+        deprecated=False,
+        cmdline=['pyff', 'pyffd'],
+        typeconv=as_string,
+        info='',
+        long=None,
+        short=None,
+        hidden=False,
+    ):
         self.name = name
         self.default = default
         self.deprecated = deprecated
@@ -130,8 +144,10 @@ class BaseSetting(object):
     def __get__(self, instance, owner):
         v = self.value
         if v is None:
-            v = os.environ.get("PYFF_{}".format(self.name.upper().replace('.', '_').replace('-', '_')),
-                               self.fallback.__get__(instance, owner))
+            v = os.environ.get(
+                "PYFF_{}".format(self.name.upper().replace('.', '_').replace('-', '_')),
+                self.fallback.__get__(instance, owner),
+            )
         if v is not None:
             v = self.typeconv(v)
 
@@ -158,13 +174,11 @@ class BaseSetting(object):
 
 
 class EnvSetting(BaseSetting):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
 class ListSetting(BaseSetting):
-
     def __init__(self, *args, **kwargs):
         self.args = kwargs.pop('settings')
         super().__init__(*args, **kwargs)
@@ -181,7 +195,6 @@ class ListSetting(BaseSetting):
 
 
 class InvertedSetting(BaseSetting):
-
     def __init__(self, *args, **kwargs):
         self.setting = kwargs.pop('invert')
         super().__init__(*args, **kwargs)
@@ -194,7 +207,6 @@ class InvertedSetting(BaseSetting):
 
 
 class DummySetting(BaseSetting):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -251,152 +263,196 @@ class Config(object):
     allow_shutdown = S("allow_shutdown", default=False, typeconv=as_bool, deprecated=True)
     ds_template = S("ds_template", default="ds.html", deprecated=True)
 
-    loglevel = S("loglevel", default=logging.WARN,
-                 info="set the loglevel")
+    loglevel = S("loglevel", default=logging.WARN, info="set the loglevel")
 
-    access_log = S("access_log", cmdline=['pyffd'],
-                   info="a log target (file) to use for access logs")
+    access_log = S("access_log", cmdline=['pyffd'], info="a log target (file) to use for access logs")
 
-    error_log = S("error_log", cmdline=['pyffd'],
-                  info="a log target (file) to use for access logs")
+    error_log = S("error_log", cmdline=['pyffd'], info="a log target (file) to use for access logs")
 
-    logfile = ListSetting('log', settings=[error_log, access_log], short='l', cmdline=['pyffd'],
-                          info="a log target (file) to be used for both access and error logs")
+    logfile = ListSetting(
+        'log',
+        settings=[error_log, access_log],
+        short='l',
+        cmdline=['pyffd'],
+        info="a log target (file) to be used for both access and error logs",
+    )
 
-    port = S("port", default=8080, cmdline=['pyffd'], typeconv=as_int, short='P',
-             info="set the port number to bind to")
+    port = S("port", default=8080, cmdline=['pyffd'], typeconv=as_int, short='P', info="set the port number to bind to")
 
-    host = S("host", default="127.0.0.1", short='H', cmdline=['pyffd'],
-             info="set the local address (interface) to bind to")
+    host = S(
+        "host", default="127.0.0.1", short='H', cmdline=['pyffd'], info="set the local address (interface) to bind to"
+    )
 
-    pid_file = S("pid_file", default="/var/run/pyff.pid", short='p', cmdline=['pyffd'],
-                 info="write the pid to this file")
+    pid_file = S(
+        "pid_file", default="/var/run/pyff.pid", short='p', cmdline=['pyffd'], info="write the pid to this file"
+    )
 
-    caching_enabled = S("caching_enabled", default=True, typeconv=as_bool,
-                        info="enable caching?")
+    caching_enabled = S("caching_enabled", default=True, typeconv=as_bool, info="enable caching?")
 
-    no_cashing = N('no_cashing', invert=caching_enabled, short='C',
-                   info="disable all caches")
+    no_cashing = N('no_cashing', invert=caching_enabled, short='C', info="disable all caches")
 
-    daemonize = S("daemonize", default=True, cmdline=['pyffd'],
-                  info="run in background")
+    daemonize = S("daemonize", default=True, cmdline=['pyffd'], info="run in background")
 
-    foreground = N('foreground', invert=daemonize, short='f', cmdline=['pyffd'],
-                   info="run in foreground")
+    foreground = N('foreground', invert=daemonize, short='f', cmdline=['pyffd'], info="run in foreground")
 
-    autoreload = S("autoreload", default=False, typeconv=as_bool, short='a', cmdline=['pyffd'],
-                   info="automatically restart the server when code changes?")
+    autoreload = S(
+        "autoreload",
+        default=False,
+        typeconv=as_bool,
+        short='a',
+        cmdline=['pyffd'],
+        info="automatically restart the server when code changes?",
+    )
 
-    aliases = S("aliases", default=ATTRS, typeconv=as_dict_of_string, cmdline=['pyffd'], hidden=True,
-                info="a set of aliases to add to the server")
+    aliases = S(
+        "aliases",
+        default=ATTRS,
+        typeconv=as_dict_of_string,
+        cmdline=['pyffd'],
+        hidden=True,
+        info="a set of aliases to add to the server",
+    )
 
-    base_dir = S("base_dir",
-                 info="change to this directory before executing the pipeline")
+    base_dir = S("base_dir", info="change to this directory before executing the pipeline")
 
-    modules = S("modules", default=[], typeconv=as_list_of_string, hidden=True,
-                info="modules providing plugins")
+    modules = S("modules", default=[], typeconv=as_list_of_string, hidden=True, info="modules providing plugins")
 
-    cache_ttl = S("cache_ttl", default=300, typeconv=as_int,
-                  info="number of seconds to hold cache objects")
+    cache_ttl = S("cache_ttl", default=300, typeconv=as_int, info="number of seconds to hold cache objects")
 
-    randomize_cache_ttl = S("randomize_cache_ttl", default=True, typeconv=as_bool,
-                            info="add random fuzz to avoid hammering on cached icon URLs?")
+    randomize_cache_ttl = S(
+        "randomize_cache_ttl",
+        default=True,
+        typeconv=as_bool,
+        info="add random fuzz to avoid hammering on cached icon URLs?",
+    )
 
-    cache_size = S("cache.size", long="cache_size", default=3000, typeconv=as_int,
-                   info="the size of the cache")
+    cache_size = S("cache.size", long="cache_size", default=3000, typeconv=as_int, info="the size of the cache")
 
-    default_cache_duration = S("default_cache_duration", default="PT1H",
-                               info="the default saml metadata @cacheDuration")
+    default_cache_duration = S(
+        "default_cache_duration", default="PT1H", info="the default saml metadata @cacheDuration"
+    )
 
-    respect_cache_duration = S("respect_cache_duration", default=True, typeconv=as_bool,
-                               info="respect the @cacheDuration attribute in saml metadata?")
+    respect_cache_duration = S(
+        "respect_cache_duration",
+        default=True,
+        typeconv=as_bool,
+        info="respect the @cacheDuration attribute in saml metadata?",
+    )
 
-    info_buffer_size = S("info_buffer_size", default=10, typeconv=as_int,
-                         info="how much history to keep about each metadata URL")
+    info_buffer_size = S(
+        "info_buffer_size", default=10, typeconv=as_int, info="how much history to keep about each metadata URL"
+    )
 
-    worker_pool_size = S("worker_pool_size", default=1, cmdline=['pyffd'], typeconv=as_int,
-                         info="how many gunicorn workers to run")
+    worker_pool_size = S(
+        "worker_pool_size", default=1, cmdline=['pyffd'], typeconv=as_int, info="how many gunicorn workers to run"
+    )
 
-    threads = S("threads", default=10, cmdline=['pyffd'], typeconv=as_int,
-                info="how many gunicorn threads to run")
+    threads = S("threads", default=10, cmdline=['pyffd'], typeconv=as_int, info="how many gunicorn threads to run")
 
-    store_class = S("store_class", default="pyff.store:MemoryStore",
-                    info="the <pyff.store:Store> implementation")
+    store_class = S("store_class", default="pyff.store:MemoryStore", info="the <pyff.store:Store> implementation")
 
-    store_clear = S("store.clear", long="store_clear", default=False, typeconv=as_bool,
-                    info="empty the store before executing the pipeline?")
+    store_clear = S(
+        "store.clear",
+        long="store_clear",
+        default=False,
+        typeconv=as_bool,
+        info="empty the store before executing the pipeline?",
+    )
 
-    icon_store_clear = S("icon_store.clear", long="icon_store_clear", default=False, typeconv=as_bool,
-                         info="empty the icon store?")
+    icon_store_clear = S(
+        "icon_store.clear", long="icon_store_clear", default=False, typeconv=as_bool, info="empty the icon store?"
+    )
 
-    icon_maxsize = S("icon_maxsize", default=31 * 1024, typeconv=as_int,
-                     info="the maximum size icon to keep in store")  # 32k is the biggest data: uri size
+    icon_maxsize = S(
+        "icon_maxsize", default=31 * 1024, typeconv=as_int, info="the maximum size icon to keep in store"
+    )  # 32k is the biggest data: uri size
 
-    icon_store_class = S("icon_store.class", long="icon_store_class", default="pyff.store:MemoryIconStore",
-                         info="the <IconStore> to use")
+    icon_store_class = S(
+        "icon_store.class", long="icon_store_class", default="pyff.store:MemoryIconStore", info="the <IconStore> to use"
+    )
 
-    store_name = S("store.name", long="store_name", default="pyff",
-                   info="the name of the store (mostly for redis)")
+    store_name = S("store.name", long="store_name", default="pyff", info="the name of the store (mostly for redis)")
 
-    update_frequency = S("update_frequency", default=300, typeconv=as_int, cmdline=['pyffd'], short='F',
-                         info="how often (seconds) to run the update pipeline")
+    update_frequency = S(
+        "update_frequency",
+        default=300,
+        typeconv=as_int,
+        cmdline=['pyffd'],
+        short='F',
+        info="how often (seconds) to run the update pipeline",
+    )
 
-    worker_timeout = S('worker_timeout', default=1200, typeconv=as_int, cmdline=['pyffd'],
-                       info="how long (seconds) to allow a gunicorn worker to run")
+    worker_timeout = S(
+        'worker_timeout',
+        default=1200,
+        typeconv=as_int,
+        cmdline=['pyffd'],
+        info="how long (seconds) to allow a gunicorn worker to run",
+    )
 
-    request_timeout = S("request_timeout", default=10, cmdline=['pyffd'], typeconv=as_int,
-                        info="the outgoing http request timeout (in seconds)")
+    request_timeout = S(
+        "request_timeout",
+        default=10,
+        cmdline=['pyffd'],
+        typeconv=as_int,
+        info="the outgoing http request timeout (in seconds)",
+    )
 
-    request_cache_time = S("request_cache_time", default=300, typeconv=as_int,
-                           info="how long (seconds) to keep request cache objects")
+    request_cache_time = S(
+        "request_cache_time", default=300, typeconv=as_int, info="how long (seconds) to keep request cache objects"
+    )
 
-    request_cache_backend = S("request_cache_backend", default='memory', typeconv=as_string,
-                              info="the requests-cache backend to use")
+    request_cache_backend = S(
+        "request_cache_backend", default='memory', typeconv=as_string, info="the requests-cache backend to use"
+    )
 
-    request_override_encoding = S("request_override_encoding", default="utf8",
-                                  info="set to None to enable chardet guessing")
+    request_override_encoding = S(
+        "request_override_encoding", default="utf8", info="set to None to enable chardet guessing"
+    )
 
-    devel_memory_profile = S("devel_memory_profile", default=False, typeconv=as_bool, cmdline=['pyffd'],
-                             info="launch a memory profiler?")
+    devel_memory_profile = S(
+        "devel_memory_profile", default=False, typeconv=as_bool, cmdline=['pyffd'], info="launch a memory profiler?"
+    )
 
-    devel_write_xml_to_file = S("devel_write_xml_to_file", default=False, typeconv=as_bool,
-                                info="write entities xml files for debugging?")
+    devel_write_xml_to_file = S(
+        "devel_write_xml_to_file", default=False, typeconv=as_bool, info="write entities xml files for debugging?"
+    )
 
-    redis_host = S("redis_host", default="localhost",
-                   info="the host where redis lives")
+    redis_host = S("redis_host", default="localhost", info="the host where redis lives")
 
-    redis_port = S("redis_port", default=6379, typeconv=as_int,
-                   info="the port where redis lives")
+    redis_port = S("redis_port", default=6379, typeconv=as_int, info="the port where redis lives")
 
-    load_icons = S("load_icons", default=False, typeconv=as_bool,
-                   info="preload icons and include as data: URIs?")
+    load_icons = S("load_icons", default=False, typeconv=as_bool, info="preload icons and include as data: URIs?")
 
-    cache_ttl_icons = S("cache_ttl_icons", default=24 * 3600, typeconv=as_int,
-                        info="how long (seconds) to keep icons before reloading them")
+    cache_ttl_icons = S(
+        "cache_ttl_icons",
+        default=24 * 3600,
+        typeconv=as_int,
+        info="how long (seconds) to keep icons before reloading them",
+    )
 
-    load_icons_async = S("load_icons_async", default=False, typeconv=as_bool,
-                         info="load icons asyncronously?")
+    load_icons_async = S("load_icons_async", default=False, typeconv=as_bool, info="load icons asyncronously?")
 
-    pipeline = S("pipeline",
-                 info="the yaml pipeline file")
+    pipeline = S("pipeline", info="the yaml pipeline file")
 
-    scheduler_job_store = S("scheduler_job_store", default="memory", typeconv=as_string,
-                            info="use a persistent job store when running multiple workers")
+    scheduler_job_store = S(
+        "scheduler_job_store",
+        default="memory",
+        typeconv=as_string,
+        info="use a persistent job store when running multiple workers",
+    )
 
-    langs = S("langs", default='en', typeconv=as_list_of_string,
-              info="the default language code(s)")
+    langs = S("langs", default='en', typeconv=as_list_of_string, info="the default language code(s)")
 
-    huge_xml = S("huge_xml", default=False, typeconv=as_bool,
-                 info="enable on huge_xml support in lxml?")
+    huge_xml = S("huge_xml", default=False, typeconv=as_bool, info="enable on huge_xml support in lxml?")
 
-    content_negotiation_policy = S("content_negotiation_policy", default="extension", typeconv=as_string,
-                                   info="cf section on content negotiation")
+    content_negotiation_policy = S(
+        "content_negotiation_policy", default="extension", typeconv=as_string, info="cf section on content negotiation"
+    )
 
-    xinclude = S("xinclude", default=True, typeconv=as_bool,
-                 info="process xinclude statements?")
+    xinclude = S("xinclude", default=True, typeconv=as_bool, info="process xinclude statements?")
 
-    logger = S('logger', typeconv=as_string,
-               info="python logger config - overides all other logging directives")
+    logger = S('logger', typeconv=as_string, info="python logger config - overides all other logging directives")
 
     @property
     def base_url(self):
@@ -476,7 +532,7 @@ def parse_options(program, docs):
                 sys.exit(0)
             elif o in ('-A', '--alias'):
                 (a, colon, uri) = a.partition(':')
-                assert (colon == ':')
+                assert colon == ':'
                 if a and uri:
                     config.aliases[a] = uri
             elif o in ('-m', '--module'):

@@ -1,20 +1,42 @@
+import traceback
+from copy import deepcopy
 from datetime import datetime
-from .utils import parse_xml, check_signature, root, validate_document, xml_error, \
-    schema, iso2datetime, duration2timedelta, filter_lang, url2host, subdomains, \
-    has_tag, hash_id, load_callable, rreplace, dumptree, first_text, is_text, unicode_stream, \
-    Lambda, b2u, lang_dict
-from .logs import get_log
-from .constants import config, NS, ATTRS, NF_URI
+from distutils.util import strtobool
+from itertools import chain
+
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid
-from itertools import chain
-from copy import deepcopy
-from .exceptions import *
-import traceback
-from distutils.util import strtobool
-from .parse import add_parser, PyffParser
 from xmlsec.crypto import CertDict
+
+from .constants import ATTRS, NF_URI, NS, config
+from .exceptions import *
+from .logs import get_log
+from .parse import PyffParser, add_parser
+from .utils import (
+    Lambda,
+    b2u,
+    check_signature,
+    dumptree,
+    duration2timedelta,
+    filter_lang,
+    first_text,
+    has_tag,
+    hash_id,
+    is_text,
+    iso2datetime,
+    lang_dict,
+    load_callable,
+    parse_xml,
+    root,
+    rreplace,
+    schema,
+    subdomains,
+    unicode_stream,
+    url2host,
+    validate_document,
+    xml_error,
+)
 
 log = get_log(__name__)
 
@@ -53,24 +75,26 @@ def find_merge_strategy(strategy_name):
     return load_callable(strategy_name)
 
 
-def parse_saml_metadata(source,
-                        key=None,
-                        base_url=None,
-                        fail_on_error=False,
-                        filter_invalid=True,
-                        cleanup=None,
-                        validate=True,
-                        validation_errors=None):
+def parse_saml_metadata(
+    source,
+    key=None,
+    base_url=None,
+    fail_on_error=False,
+    filter_invalid=True,
+    cleanup=None,
+    validate=True,
+    validation_errors=None,
+):
     """Parse a piece of XML and return an EntitiesDescriptor element after validation.
 
-:param source: a file-like object containing SAML metadata
-:param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
-:param base_url: use this base url to resolve relative URLs for XInclude processing
-:param fail_on_error: (default: False)
-:param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
-:param validate: (default: True) set to False to turn off all XML schema validation
-:param validation_errors: A dict that will be used to return validation errors to the caller
-:param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
+    :param source: a file-like object containing SAML metadata
+    :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
+    :param base_url: use this base url to resolve relative URLs for XInclude processing
+    :param fail_on_error: (default: False)
+    :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
+    :param validate: (default: True) set to False to turn off all XML schema validation
+    :param validation_errors: A dict that will be used to return validation errors to the caller
+    :param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
 
     """
 
@@ -100,20 +124,15 @@ def parse_saml_metadata(source,
             filter_invalid = False
 
         if validate:
-            t = filter_or_validate(t,
-                                   filter_invalid=filter_invalid,
-                                   base_url=base_url,
-                                   source=source,
-                                   validation_errors=validation_errors)
+            t = filter_or_validate(
+                t, filter_invalid=filter_invalid, base_url=base_url, source=source, validation_errors=validation_errors
+            )
 
         if t is not None:
             if t.tag == "{%s}EntityDescriptor" % NS['md']:
-                t = entitiesdescriptor([t],
-                                       base_url,
-                                       copy=False,
-                                       validate=True,
-                                       filter_invalid=filter_invalid,
-                                       nsmap=t.nsmap)
+                t = entitiesdescriptor(
+                    [t], base_url, copy=False, validate=True, filter_invalid=filter_invalid, nsmap=t.nsmap
+                )
 
     except Exception as ex:
         log.debug(traceback.format_exc())
@@ -141,14 +160,16 @@ class SAMLMetadataResourceParser(PyffParser):
     def parse(self, resource, content):
         info = dict()
         info['Validation Errors'] = dict()
-        t, expire_time_offset, exception = parse_saml_metadata(unicode_stream(content),
-                                                               key=resource.opts['verify'],
-                                                               base_url=resource.url,
-                                                               cleanup=resource.opts['cleanup'],
-                                                               fail_on_error=resource.opts['fail_on_error'],
-                                                               filter_invalid=resource.opts['filter_invalid'],
-                                                               validate=resource.opts['validate'],
-                                                               validation_errors=info['Validation Errors'])
+        t, expire_time_offset, exception = parse_saml_metadata(
+            unicode_stream(content),
+            key=resource.opts['verify'],
+            base_url=resource.url,
+            cleanup=resource.opts['cleanup'],
+            fail_on_error=resource.opts['fail_on_error'],
+            filter_invalid=resource.opts['filter_invalid'],
+            validate=resource.opts['validate'],
+            validation_errors=info['Validation Errors'],
+        )
 
         if expire_time_offset is not None:
             expire_time = datetime.now() + expire_time_offset
@@ -218,12 +239,15 @@ class MDServiceListParser(PyffParser):
 
                     ep = ml.find("{%s}Endpoint" % NS['ser'])
                     if ep is not None and fp is not None:
-                        args = dict(country_code=mdl.get('Territory'),
-                                    hide_from_discovery=strtobool(ep.get('HideFromDiscovery', 'false')))
-                        log.debug("MDSL[{}]: {} verified by {} for country {}".format(info['SchemeTerritory'],
-                                                                                      location,
-                                                                                      fp,
-                                                                                      args.get('country_code')))
+                        args = dict(
+                            country_code=mdl.get('Territory'),
+                            hide_from_discovery=strtobool(ep.get('HideFromDiscovery', 'false')),
+                        )
+                        log.debug(
+                            "MDSL[{}]: {} verified by {} for country {}".format(
+                                info['SchemeTerritory'], location, fp, args.get('country_code')
+                            )
+                        )
                         r = resource.add_child(location, verify=fp)
 
                         # this is specific post-processing for MDSL files
@@ -234,8 +258,9 @@ class MDServiceListParser(PyffParser):
                                 if _country_code:
                                     set_nodecountry(e, _country_code)
                                 if bool(_hide_from_discovery) and is_idp(e):
-                                    set_entity_attributes(e, {ATTRS['entity-category']:
-                                                                  'http://refeds.org/category/hide-from-discovery'})
+                                    set_entity_attributes(
+                                        e, {ATTRS['entity-category']: 'http://refeds.org/category/hide-from-discovery'}
+                                    )
                             return _t
 
                         r.add_via(Lambda(_update_entities, **args))
@@ -288,10 +313,11 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
     if filter_invalid:
         t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
         for entity_id, err in validation_errors.items():
-            log.error("Validation error while parsing {} (from {}). Removed @entityID='{}': {}".format(base_url,
-                                                                                                       source,
-                                                                                                       entity_id,
-                                                                                                       err))
+            log.error(
+                "Validation error while parsing {} (from {}). Removed @entityID='{}': {}".format(
+                    base_url, source, entity_id, err
+                )
+            )
     else:  # all or nothing
         log.debug("Validating (one-shot) {}".format(base_url))
         try:
@@ -299,9 +325,7 @@ def filter_or_validate(t, filter_invalid=False, base_url="", source=None, valida
         except DocumentInvalid as ex:
             err = xml_error(ex.error_log, m=base_url)
             validation_errors[base_url] = err
-            raise MetadataException("Validation error while parsing {}: (from {}): {}".format(base_url,
-                                                                                              source,
-                                                                                              err))
+            raise MetadataException("Validation error while parsing {}: (from {}): {}".format(base_url, source, err))
 
     return t
 
@@ -329,27 +353,29 @@ def resolve_entities(entities, lookup_fn=None):
     return resolved_entities.values()
 
 
-def entitiesdescriptor(entities,
-                       name,
-                       lookup_fn=None,
-                       cache_duration=None,
-                       valid_until=None,
-                       validate=True,
-                       filter_invalid=True,
-                       copy=True,
-                       nsmap=None):
+def entitiesdescriptor(
+    entities,
+    name,
+    lookup_fn=None,
+    cache_duration=None,
+    valid_until=None,
+    validate=True,
+    filter_invalid=True,
+    copy=True,
+    nsmap=None,
+):
     """
-:param lookup_fn: a function used to lookup entities by name - set to None to skip resolving
-:param entities: a set of entities specifiers (lookup is used to find entities from this set)
-:param name: the @Name attribute
-:param cache_duration: an XML timedelta expression, eg PT1H for 1hr
-:param valid_until: a relative time eg 2w 4d 1h for 2 weeks, 4 days and 1hour from now.
-:param copy: set to False to avoid making a copy of all the entities in list. This may be dangerous.
-:param validate: set to False to skip schema validation of the resulting EntitiesDesciptor element. This is dangerous!
-:param filter_invalid: remove invalid entitiesdescriptor elements from aggregate
-:param nsmap: additional namespace definitions to include in top level entitiesdescriptor element
+    :param lookup_fn: a function used to lookup entities by name - set to None to skip resolving
+    :param entities: a set of entities specifiers (lookup is used to find entities from this set)
+    :param name: the @Name attribute
+    :param cache_duration: an XML timedelta expression, eg PT1H for 1hr
+    :param valid_until: a relative time eg 2w 4d 1h for 2 weeks, 4 days and 1hour from now.
+    :param copy: set to False to avoid making a copy of all the entities in list. This may be dangerous.
+    :param validate: set to False to skip schema validation of the resulting EntitiesDesciptor element. This is dangerous!
+    :param filter_invalid: remove invalid entitiesdescriptor elements from aggregate
+    :param nsmap: additional namespace definitions to include in top level entitiesdescriptor element
 
-Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
+    Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
     """
 
     if nsmap is None:
@@ -379,16 +405,15 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
     if config.devel_write_xml_to_file:
         import os
+
         with open("/tmp/pyff_entities_out-{}.xml".format(os.getpid()), "w") as fd:
             fd.write(b2u(dumptree(t)))
 
     if validate:
         validation_errors = dict()
-        t = filter_or_validate(t,
-                               filter_invalid=filter_invalid,
-                               base_url=name,
-                               source="request",
-                               validation_errors=validation_errors)
+        t = filter_or_validate(
+            t, filter_invalid=filter_invalid, base_url=name, source="request", validation_errors=validation_errors
+        )
 
         for base_url, err in validation_errors.items():
             log.error("Validation error: @ {}: {}".format(base_url, err))
@@ -398,10 +423,10 @@ Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDu
 
 def entities_list(t=None):
     """
-        :param t: An EntitiesDescriptor or EntityDescriptor element
+    :param t: An EntitiesDescriptor or EntityDescriptor element
 
-        Returns the list of contained EntityDescriptor elements
-        """
+    Returns the list of contained EntityDescriptor elements
+    """
     if t is None:
         return []
     elif root(t).tag == "{%s}EntityDescriptor" % NS['md']:
@@ -426,14 +451,17 @@ def find_entity(t, e_id, attr='entityID'):
 # semantics copied from https://github.com/lordal/md-summary/blob/master/md-summary
 # many thanks to Anders Lordahl & Scotty Logan for the idea
 def guess_entity_software(e):
-    for elt in chain(e.findall(".//{%s}SingleSignOnService" % NS['md']),
-                     e.findall(".//{%s}AssertionConsumerService" % NS['md'])):
+    for elt in chain(
+        e.findall(".//{%s}SingleSignOnService" % NS['md']), e.findall(".//{%s}AssertionConsumerService" % NS['md'])
+    ):
         location = elt.get('Location')
         if location:
-            if 'Shibboleth.sso' in location \
-                    or 'profile/SAML2/POST/SSO' in location \
-                    or 'profile/SAML2/Redirect/SSO' in location \
-                    or 'profile/Shibboleth/SSO' in location:
+            if (
+                'Shibboleth.sso' in location
+                or 'profile/SAML2/POST/SSO' in location
+                or 'profile/SAML2/Redirect/SSO' in location
+                or 'profile/Shibboleth/SSO' in location
+            ):
                 return 'Shibboleth'
             if location.endswith('saml2/idp/SSOService.php') or 'saml/sp/saml2-acs.php' in location:
                 return 'SimpleSAMLphp'
@@ -443,8 +471,11 @@ def guess_entity_software(e):
                 return 'ADFS'
             if '/oala/' in location or 'login.openathens.net' in location:
                 return 'OpenAthens'
-            if '/idp/SSO.saml2' in location or '/sp/ACS.saml2' in location \
-                    or 'sso.connect.pingidentity.com' in location:
+            if (
+                '/idp/SSO.saml2' in location
+                or '/sp/ACS.saml2' in location
+                or 'sso.connect.pingidentity.com' in location
+            ):
                 return 'PingFederate'
             if 'idp/saml2/sso' in location:
                 return 'Authentic2'
@@ -454,14 +485,16 @@ def guess_entity_software(e):
                 return 'CASiteMinder'
             if 'FIM/sps' in location:
                 return 'IBMTivoliFIM'
-            if 'sso/post' in location \
-                    or 'sso/redirect' in location \
-                    or 'saml2/sp/acs' in location \
-                    or 'saml2/ls' in location \
-                    or 'saml2/acs' in location \
-                    or 'acs/redirect' in location \
-                    or 'acs/post' in location \
-                    or 'saml2/sp/ls/' in location:
+            if (
+                'sso/post' in location
+                or 'sso/redirect' in location
+                or 'saml2/sp/acs' in location
+                or 'saml2/ls' in location
+                or 'saml2/acs' in location
+                or 'acs/redirect' in location
+                or 'acs/post' in location
+                or 'saml2/sp/ls/' in location
+            ):
                 return 'PySAML'
             if 'engine.surfconext.nl' in location:
                 return 'SURFConext'
@@ -610,15 +643,22 @@ def entity_domains(entity):
         domains.append(url2host(entity.get('entityID')))
     return domains
 
+
 def entity_extended_display_i18n(entity, default_lang=None):
 
     name_dict = lang_dict(entity.iter("{%s}OrganizationName" % NS['md']), lambda e: e.text, default_lang=default_lang)
-    name_dict.update(lang_dict(entity.iter("{%s}OrganizationDisplayName" % NS['md']), lambda e: e.text, default_lang=default_lang))
+    name_dict.update(
+        lang_dict(entity.iter("{%s}OrganizationDisplayName" % NS['md']), lambda e: e.text, default_lang=default_lang)
+    )
     name_dict.update(lang_dict(entity.iter("{%s}ServiceName" % NS['md']), lambda e: e.text, default_lang=default_lang))
-    name_dict.update(lang_dict(entity.iter("{%s}DisplayName" % NS['mdui']), lambda e: e.text, default_lang=default_lang))
+    name_dict.update(
+        lang_dict(entity.iter("{%s}DisplayName" % NS['mdui']), lambda e: e.text, default_lang=default_lang)
+    )
 
     desc_dict = lang_dict(entity.iter("{%s}OrganizationURL" % NS['md']), lambda e: e.text, default_lang=default_lang)
-    desc_dict.update(lang_dict(entity.iter("{%s}Description" % NS['mdui']), lambda e: e.text, default_lang=default_lang))
+    desc_dict.update(
+        lang_dict(entity.iter("{%s}Description" % NS['mdui']), lambda e: e.text, default_lang=default_lang)
+    )
 
     return name_dict, desc_dict
 
@@ -712,13 +752,15 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     entity_id = e.get('entityID')
     title_langs, descr_langs = entity_extended_display_i18n(e)
 
-    d = dict(title=title,
-             descr=descr,
-             title_langs=title_langs,
-             descr_langs=descr_langs,
-             auth='saml',
-             entity_id=entity_id,
-             entityID=entity_id)
+    d = dict(
+        title=title,
+        descr=descr,
+        title_langs=title_langs,
+        descr_langs=descr_langs,
+        auth='saml',
+        entity_id=entity_id,
+        entityID=entity_id,
+    )
 
     eattr = entity_attribute_dict(e)
     if 'idp' in eattr[ATTRS['role']]:
@@ -773,13 +815,15 @@ def entity_simple_summary(e):
 
     title, descr = entity_extended_display(e)
     entity_id = e.get('entityID')
-    d = dict(title=title,
-             descr=descr,
-             auth='saml',
-             entity_id=entity_id,
-             entityID=entity_id,
-             domains=";".join(sub_domains(e)),
-             id=hash_id(e, 'sha1'))
+    d = dict(
+        title=title,
+        descr=descr,
+        auth='saml',
+        entity_id=entity_id,
+        entityID=entity_id,
+        domains=";".join(sub_domains(e)),
+        id=hash_id(e, 'sha1'),
+    )
 
     scopes = entity_scopes(e)
     if scopes is not None and len(scopes) > 0:
@@ -811,8 +855,10 @@ def entity_service_description(entity, langs=None):
 
 
 def entity_requested_attributes(entity, langs=None):
-    return [(a.get('Name'), bool(a.get('isRequired'))) for a in
-            filter_lang(entity.iter("{%s}RequestedAttribute" % NS['md']), langs=langs)]
+    return [
+        (a.get('Name'), bool(a.get('isRequired')))
+        for a in filter_lang(entity.iter("{%s}RequestedAttribute" % NS['md']), langs=langs)
+    ]
 
 
 def entity_idp(entity):
@@ -833,9 +879,9 @@ def entity_contacts(entity):
     def _contact_dict(contact):
         first_name = first_text(contact, "{%s}GivenName" % NS['md'])
         last_name = first_text(contact, "{%s}SurName" % NS['md'])
-        org = first_text(entity, "{%s}OrganizationName" % NS['md']) or first_text(entity,
-                                                                                  "{%s}OrganizationDisplayName" % NS[
-                                                                                      'md'])
+        org = first_text(entity, "{%s}OrganizationName" % NS['md']) or first_text(
+            entity, "{%s}OrganizationDisplayName" % NS['md']
+        )
         company = first_text(entity, "{%s}Company" % NS['md'])
         mail = first_text(contact, "{%s}EmailAddress" % NS['md'])
         display_name = "Unknown"
@@ -848,12 +894,14 @@ def entity_contacts(entity):
         elif mail:
             _, _, display_name = mail.partition(':')
 
-        return dict(type=contact.get('contactType'),
-                    first_name=first_name,
-                    last_name=last_name,
-                    company=company or org,
-                    display_name=display_name,
-                    mail=mail)
+        return dict(
+            type=contact.get('contactType'),
+            first_name=first_name,
+            last_name=last_name,
+            company=company or org,
+            display_name=display_name,
+            mail=mail,
+        )
 
     return [_contact_dict(c) for c in entity.iter("{%s}ContactPerson" % NS['md'])]
 
@@ -899,8 +947,9 @@ def entity_info(e, langs=None):
     d['is_idp'] = is_idp(e)
     d['is_sp'] = is_sp(e)
     d['is_aa'] = is_aa(e)
-    d['xml'] = dumptree(e, xml_declaration=False, pretty_print=True).decode('utf8').replace('<', '&lt;').replace('>',
-                                                                                                                 '&gt;')
+    d['xml'] = (
+        dumptree(e, xml_declaration=False, pretty_print=True).decode('utf8').replace('<', '&lt;').replace('>', '&gt;')
+    )
     if d['is_idp']:
         d['protocols'] = entity_idp(e).get('protocolSupportEnumeration', "").split()
 
@@ -910,8 +959,8 @@ def entity_info(e, langs=None):
 def entity_extensions(e):
     """Return a list of the Extensions elements in the EntityDescriptor
 
-:param e: an EntityDescriptor
-:return: a list
+    :param e: an EntityDescriptor
+    :return: a list
     """
     ext = e.find("./{%s}Extensions" % NS['md'])
     if ext is None:
@@ -922,25 +971,22 @@ def entity_extensions(e):
 
 def annotate_entity(e, category, title, message, source=None):
     """Add an ATOM annotation to an EntityDescriptor or an EntitiesDescriptor. This is a simple way to
-    add non-normative text annotations to metadata, eg for the purpuse of generating reports.
+        add non-normative text annotations to metadata, eg for the purpuse of generating reports.
 
-:param e: An EntityDescriptor or an EntitiesDescriptor element
-:param category: The ATOM category
-:param title: The ATOM title
-:param message: The ATOM content
-:param source: An optional source URL. It is added as a <link> element with @rel='saml-metadata-source'
+    :param e: An EntityDescriptor or an EntitiesDescriptor element
+    :param category: The ATOM category
+    :param title: The ATOM title
+    :param message: The ATOM content
+    :param source: An optional source URL. It is added as a <link> element with @rel='saml-metadata-source'
     """
     if e.tag != "{%s}EntityDescriptor" % NS['md'] and e.tag != "{%s}EntitiesDescriptor" % NS['md']:
         raise MetadataException('I can only annotate EntityDescriptor or EntitiesDescriptor elements')
     subject = e.get('Name', e.get('entityID', None))
     atom = ElementMaker(nsmap={'atom': 'http://www.w3.org/2005/Atom'}, namespace='http://www.w3.org/2005/Atom')
-    args = [atom.published("%s" % datetime.now().isoformat()),
-            atom.link(href=subject, rel="saml-metadata-subject")]
+    args = [atom.published("%s" % datetime.now().isoformat()), atom.link(href=subject, rel="saml-metadata-subject")]
     if source is not None:
         args.append(atom.link(href=source, rel="saml-metadata-source"))
-    args.extend([atom.title(title),
-                 atom.category(term=category),
-                 atom.content(message, type="text/plain")])
+    args.extend([atom.title(title), atom.category(term=category), atom.content(message, type="text/plain")])
     entity_extensions(e).append(atom.entry(*args))
 
 
@@ -955,9 +1001,7 @@ def _entity_attributes(e):
 
 def _eattribute(e, attr, nf):
     ea = _entity_attributes(e)
-    a = ea.xpath(".//saml:Attribute[@NameFormat='%s' and @Name='%s']" % (nf, attr),
-                 namespaces=NS,
-                 smart_strings=False)
+    a = ea.xpath(".//saml:Attribute[@NameFormat='%s' and @Name='%s']" % (nf, attr), namespaces=NS, smart_strings=False)
     if a is None or len(a) == 0:
         a = etree.Element("{%s}Attribute" % NS['saml'])
         a.set('NameFormat', nf)
@@ -971,10 +1015,10 @@ def _eattribute(e, attr, nf):
 def set_entity_attributes(e, d, nf=NF_URI):
     """Set an entity attribute on an EntityDescriptor
 
-:param e: The EntityDescriptor element
-:param d: A dict of attribute-value pairs that should be added as entity attributes
-:param nf: The nameFormat (by default "urn:oasis:names:tc:SAML:2.0:attrname-format:uri") to use.
-:raise: MetadataException unless e is an EntityDescriptor element
+    :param e: The EntityDescriptor element
+    :param d: A dict of attribute-value pairs that should be added as entity attributes
+    :param nf: The nameFormat (by default "urn:oasis:names:tc:SAML:2.0:attrname-format:uri") to use.
+    :raise: MetadataException unless e is an EntityDescriptor element
     """
     if e.tag != "{%s}EntityDescriptor" % NS['md']:
         raise MetadataException("I can only add EntityAttribute(s) to EntityDescriptor elements")
@@ -1050,14 +1094,13 @@ def expiration(t):
 
 def sort_entities(t, sxp=None):
     """
-Sorts the working entities 't' by the value returned by the xpath 'sxp'
-By default, entities are sorted by 'entityID' when this method is called without 'sxp', and otherwise as
-second criteria.
-Entities where no value exists for the given 'sxp' are sorted last.
+    Sorts the working entities 't' by the value returned by the xpath 'sxp'
+    By default, entities are sorted by 'entityID' when this method is called without 'sxp', and otherwise as
+    second criteria.
+    Entities where no value exists for the given 'sxp' are sorted last.
 
-:param t: An element tree containing the entities to sort
-:param sxp: xpath expression selecting the value used for sorting the entities
-"""
+    :param t: An element tree containing the entities to sort
+    :param sxp: xpath expression selecting the value used for sorting the entities"""
 
     def get_key(e):
         eid = e.attrib.get('entityID')
@@ -1071,8 +1114,7 @@ Entities where no value exists for the given 'sxp' are sorted last.
                 except AttributeError:
                     pass
             except IndexError:
-                log.warn("Sort pipe: unable to sort entity by '%s'. "
-                         "Entity '%s' has no such value" % (sxp, eid))
+                log.warn("Sort pipe: unable to sort entity by '%s'. " "Entity '%s' has no such value" % (sxp, eid))
         except TypeError:
             pass
 
@@ -1086,9 +1128,9 @@ Entities where no value exists for the given 'sxp' are sorted last.
 def set_nodecountry(e, country_code):
     """Set eidas:NodeCountry on an EntityDescriptor
 
-:param e: The EntityDescriptor element
-:param country_code: An ISO country code
-:raise: MetadataException unless e is an EntityDescriptor element
+    :param e: The EntityDescriptor element
+    :param country_code: An ISO country code
+    :raise: MetadataException unless e is an EntityDescriptor element
     """
     if e.tag != "{%s}EntityDescriptor" % NS['md']:
         raise MetadataException("I can only add NodeCountry to EntityDescriptor elements")

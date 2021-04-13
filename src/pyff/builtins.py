@@ -5,32 +5,53 @@ These are the built-in "pipes" - functions that can be used to put together a pr
 import base64
 import hashlib
 import json
+import operator
+import os
+import re
 import sys
 import traceback
 from copy import deepcopy
 from datetime import datetime
 from distutils.util import strtobool
-import operator
-import os
-import re
+
+import ipaddr
+import six
 import xmlsec
 from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
+from six.moves.urllib_parse import quote_plus, urlparse
+
+from pyff.pipes import registry
 
 from .constants import NS, config
 from .decorators import deprecated
-from .logs import get_log
-from .pipes import Plumbing, PipeException, PipelineCallback, pipe
-from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
-    validate_document, hash_id
-from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
-    discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
-from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
-import six
-import ipaddr
-from pyff.pipes import registry
-from six.moves.urllib_parse import quote_plus
+from .logs import get_log
+from .pipes import PipeException, PipelineCallback, Plumbing, pipe
+from .samlmd import (
+    annotate_entity,
+    discojson_t,
+    entitiesdescriptor,
+    find_in_document,
+    iter_entities,
+    resolve_entities,
+    set_entity_attributes,
+    set_nodecountry,
+    set_pubinfo,
+    set_reginfo,
+    sort_entities,
+)
+from .utils import (
+    dumptree,
+    duration2timedelta,
+    hash_id,
+    root,
+    safe_write,
+    total_seconds,
+    validate_document,
+    with_tree,
+    xslt_transform,
+)
 
 __author__ = 'leifj'
 
@@ -58,20 +79,20 @@ def dump(req, *opts):
 def _map(req, *opts):
     """
 
-        loop over the entities in a selection
+    loop over the entities in a selection
 
-        :param req:
-        :param opts:
-        :return: None
+    :param req:
+    :param opts:
+    :return: None
 
-        **Examples**
+    **Examples**
 
-        .. code-block:: yaml
+    .. code-block:: yaml
 
-            - map:
-               - ...statements...
+        - map:
+           - ...statements...
 
-        Executes a set of statements in parallell (using a thread pool).
+    Executes a set of statements in parallell (using a thread pool).
 
     """
 
@@ -84,6 +105,7 @@ def _map(req, *opts):
         return ip.iprocess(ireq)
 
     from multiprocessing.pool import ThreadPool
+
     pool = ThreadPool()
     result = pool.map(_p, iter_entities(req.t), chunksize=10)
     log.info("processed {} entities".format(len(result)))
@@ -599,7 +621,8 @@ def load(req, *opts):
         r = x.split()
 
         assert len(r) in range(1, 8), PipeException(
-            "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]")
+            "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]"
+        )
 
         url = r.pop(0)
         params = {"via": [], "cleanup": [], "verify": None, "as": url}
@@ -614,7 +637,8 @@ def load(req, *opts):
                         params[elt] = r.pop(0)
                 else:
                     raise PipeException(
-                        "Usage: load resource [as url] [[verify] verification] [via pipeline]* [cleanup pipeline]*")
+                        "Usage: load resource [as url] [[verify] verification] [via pipeline]* [cleanup pipeline]*"
+                    )
             else:
                 params['verify'] = elt
 
@@ -730,12 +754,14 @@ def select(req, *opts):
 
         def _strings(elt):
             lst = []
-            for attr in ['{%s}DisplayName' % NS['mdui'],
-                         '{%s}ServiceName' % NS['md'],
-                         '{%s}OrganizationDisplayName' % NS['md'],
-                         '{%s}OrganizationName' % NS['md'],
-                         '{%s}Keywords' % NS['mdui'],
-                         '{%s}Scope' % NS['shibmd']]:
+            for attr in [
+                '{%s}DisplayName' % NS['mdui'],
+                '{%s}ServiceName' % NS['md'],
+                '{%s}OrganizationDisplayName' % NS['md'],
+                '{%s}OrganizationName' % NS['md'],
+                '{%s}Keywords' % NS['mdui'],
+                '{%s}Scope' % NS['shibmd'],
+            ]:
                 lst.extend([s.text for s in elt.iter(attr)])
             lst.append(elt.get('entityID'))
             return [item for item in lst if item is not None]
@@ -1005,10 +1031,12 @@ def stats(req, *opts):
 
     if req.t is not None:
         print("selected:       {:d}".format(len(req.t.xpath("//md:EntityDescriptor", namespaces=NS))))
-        print("          idps: {:d}".format(
-            len(req.t.xpath("//md:EntityDescriptor[md:IDPSSODescriptor]", namespaces=NS))))
         print(
-            "           sps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:SPSSODescriptor]", namespaces=NS))))
+            "          idps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:IDPSSODescriptor]", namespaces=NS)))
+        )
+        print(
+            "           sps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:SPSSODescriptor]", namespaces=NS)))
+        )
     print("---")
     return req.t
 
@@ -1188,7 +1216,8 @@ def check_xml_namespaces(req, *opts):
                     u = urlparse(uri)
                     if u.scheme not in ('http', 'https'):
                         raise MetadataException(
-                            "Namespace URIs must be be http(s) URIs ('{}' declared on {})".format(uri, elt.tag))
+                            "Namespace URIs must be be http(s) URIs ('{}' declared on {})".format(uri, elt.tag)
+                        )
 
     with_tree(root(req.t), _verify)
     return req.t
@@ -1261,12 +1290,10 @@ def certreport(req, *opts):
     warning_bits = int(req.args.get('warning_bits', "2048"))
 
     seen = {}
-    for eid in req.t.xpath("//md:EntityDescriptor/@entityID",
-                           namespaces=NS,
-                           smart_strings=False):
-        for cd in req.t.xpath("md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid,
-                              namespaces=NS,
-                              smart_strings=False):
+    for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS, smart_strings=False):
+        for cd in req.t.xpath(
+            "md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid, namespaces=NS, smart_strings=False
+        ):
             try:
                 cert_pem = cd.text
                 cert_der = base64.b64decode(cert_pem)
@@ -1280,50 +1307,58 @@ def certreport(req, *opts):
                     keysize = cdict['modulus'].bit_length()
                     cert = cdict['cert']
                     if keysize < error_bits:
-                        annotate_entity(entity_elt,
-                                        "certificate-error",
-                                        "keysize too small",
-                                        "%s has keysize of %s bits (less than %s)" % (cert.getSubject(),
-                                                                                      keysize,
-                                                                                      error_bits))
+                        annotate_entity(
+                            entity_elt,
+                            "certificate-error",
+                            "keysize too small",
+                            "%s has keysize of %s bits (less than %s)" % (cert.getSubject(), keysize, error_bits),
+                        )
                         log.error("%s has keysize of %s" % (eid, keysize))
                     elif keysize < warning_bits:
-                        annotate_entity(entity_elt,
-                                        "certificate-warning",
-                                        "keysize small",
-                                        "%s has keysize of %s bits (less than %s)" % (cert.getSubject(),
-                                                                                      keysize,
-                                                                                      warning_bits))
+                        annotate_entity(
+                            entity_elt,
+                            "certificate-warning",
+                            "keysize small",
+                            "%s has keysize of %s bits (less than %s)" % (cert.getSubject(), keysize, warning_bits),
+                        )
                         log.warn("%s has keysize of %s" % (eid, keysize))
 
                     notafter = cert.getNotAfter()
                     if notafter is None:
-                        annotate_entity(entity_elt,
-                                        "certificate-error",
-                                        "certificate has no expiration time",
-                                        "%s has no expiration time" % cert.getSubject())
+                        annotate_entity(
+                            entity_elt,
+                            "certificate-error",
+                            "certificate has no expiration time",
+                            "%s has no expiration time" % cert.getSubject(),
+                        )
                     else:
                         try:
                             et = datetime.strptime("%s" % notafter, "%y%m%d%H%M%SZ")
                             now = datetime.now()
                             dt = et - now
                             if total_seconds(dt) < error_seconds:
-                                annotate_entity(entity_elt,
-                                                "certificate-error",
-                                                "certificate has expired",
-                                                "%s expired %s ago" % (cert.getSubject(), -dt))
+                                annotate_entity(
+                                    entity_elt,
+                                    "certificate-error",
+                                    "certificate has expired",
+                                    "%s expired %s ago" % (cert.getSubject(), -dt),
+                                )
                                 log.error("%s expired %s ago" % (eid, -dt))
                             elif total_seconds(dt) < warning_seconds:
-                                annotate_entity(entity_elt,
-                                                "certificate-warning",
-                                                "certificate about to expire",
-                                                "%s expires in %s" % (cert.getSubject(), dt))
+                                annotate_entity(
+                                    entity_elt,
+                                    "certificate-warning",
+                                    "certificate about to expire",
+                                    "%s expires in %s" % (cert.getSubject(), dt),
+                                )
                                 log.warn("%s expires in %s" % (eid, dt))
                         except ValueError as ex:
-                            annotate_entity(entity_elt,
-                                            "certificate-error",
-                                            "certificate has unknown expiration time",
-                                            "%s unknown expiration time %s" % (cert.getSubject(), notafter))
+                            annotate_entity(
+                                entity_elt,
+                                "certificate-error",
+                                "certificate has unknown expiration time",
+                                "%s unknown expiration time %s" % (cert.getSubject(), notafter),
+                            )
 
                     req.store.update(entity_elt)
             except Exception as ex:

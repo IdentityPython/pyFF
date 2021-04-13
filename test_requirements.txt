@@ -8,3 +8,4 @@ pbr
 setuptools
 testfixtures
 wsgi_intercept
+isort

@@ -1,23 +1,23 @@
+import os
 import shutil
 import sys
 import tempfile
-import os
+
+import six
 import yaml
 from mako.lookup import TemplateLookup
 from mock import patch
-from pyff.repo import MDRepository
-from pyff.exceptions import MetadataException
-from pyff.pipes import plumbing, Plumbing, PipeException
-from pyff.test import ExitException
-from pyff.test import SignerTestCase
-from pyff.utils import hash_id, parse_xml, resource_filename, root
-from pyff.parse import ParserException
-from pyff.resource import ResourceException
-import six
-from pyff.store import make_store_instance
 
 # don't remove this - it only appears unused to static analysis
 from pyff import builtins
+from pyff.exceptions import MetadataException
+from pyff.parse import ParserException
+from pyff.pipes import PipeException, Plumbing, plumbing
+from pyff.repo import MDRepository
+from pyff.resource import ResourceException
+from pyff.store import make_store_instance
+from pyff.test import ExitException, SignerTestCase
+from pyff.utils import hash_id, parse_xml, resource_filename, root
 
 __author__ = 'leifj'
 
@@ -71,22 +71,27 @@ class StreamCapturing(object):
 class ParseTest(PipeLineTest):
     def parse_test(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
-                res, md = self.exec_pipeline("""
+                res, md = self.exec_pipeline(
+                    """
 - load:
     - %s/metadata
 - select
 - stats
-""" % self.datadir)
+"""
+                    % self.datadir
+                )
                 print(sys.stdout.captured)
                 print(sys.stderr.captured)
                 eIDs = [e.get('entityID') for e in md.store]
-                assert ('https://idp.example.com/saml2/idp/metadata.php1' not in eIDs)
-                assert ('https://idp.example.com/saml2/idp/metadata.php' in eIDs)
-                assert ("removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed" in str(l))
+                assert 'https://idp.example.com/saml2/idp/metadata.php1' not in eIDs
+                assert 'https://idp.example.com/saml2/idp/metadata.php' in eIDs
+                assert "removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed" in str(l)
 
 
 # To run all LoadErrorTests: ./setup.py test -s pyff.test.test_pipeline.LoadErrorTest
@@ -95,20 +100,25 @@ class LoadErrorTest(PipeLineTest):
     # A File that does not exist must throw an error with fail_on_error=True
     def test_fail_on_error_no_file(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
                 try:
-                    res, md = self.exec_pipeline("""
+                    res, md = self.exec_pipeline(
+                        """
     - load fail_on_error True:
         - %s/file_that_does_not_exist.xml
     - select
     - stats
-    """ % (self.datadir))
+    """
+                        % (self.datadir)
+                    )
                 except ResourceException as ex:
-                    print("----\n",ex,"\n++++")
-                    assert ("file_that_does_not_exist.xml" in str(ex))
+                    print("----\n", ex, "\n++++")
+                    assert "file_that_does_not_exist.xml" in str(ex)
                     return True
                 finally:
                     if os.path.isfile(self.output):
@@ -121,20 +131,25 @@ class LoadErrorTest(PipeLineTest):
     # A File that does not exist must throw an error with fail_on_error=True
     def test_fail_on_error_no_file_url(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
                 try:
-                    res, md = self.exec_pipeline("""
+                    res, md = self.exec_pipeline(
+                        """
     - load fail_on_error True:
         - file://%s/file_that_does_not_exist.xml
     - select
     - stats
-    """ % (self.datadir))
+    """
+                        % (self.datadir)
+                    )
                 except ResourceException as ex:
                     print(str(ex))
-                    assert ("file_that_does_not_exist.xml" in str(ex))
+                    assert "file_that_does_not_exist.xml" in str(ex)
                     return True
                 finally:
                     if os.path.isfile(self.output):
@@ -148,20 +163,24 @@ class LoadErrorTest(PipeLineTest):
     # Note: Due to load_url retries it takes 20s to complete this test
     def test_fail_on_error_no_url(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
                 try:
-                    res, md = self.exec_pipeline("""
+                    res, md = self.exec_pipeline(
+                        """
     - load fail_on_error True:
         - http://127.0.0.1/does_not_exist.xml
     - select
     - stats
-    """)
+    """
+                    )
                 except BaseException as ex:
                     print(ex)
-                    assert ("does_not_exist.xml" in str(ex))
+                    assert "does_not_exist.xml" in str(ex)
                     return True
                 finally:
                     if os.path.isfile(self.output):
@@ -174,18 +193,23 @@ class LoadErrorTest(PipeLineTest):
     # A file with invalid XML must throw an exception with fail_on_error True:
     def test_fail_on_error_invalid_file(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
                 try:
-                    res, md = self.exec_pipeline("""
+                    res, md = self.exec_pipeline(
+                        """
     - load fail_on_error True:
         - %s/metadata/test01.xml
         - %s/metadata/test02-invalid.xml
     - select
     - stats
-    """ % (self.datadir, self.datadir))
+    """
+                        % (self.datadir, self.datadir)
+                    )
                 except (MetadataException, ParserException, ResourceException) as ex:
                     print(ex)
                     return True
@@ -200,17 +224,22 @@ class LoadErrorTest(PipeLineTest):
     # A directory with a file with invalid metadata must throw an exception with fail_on_error True and filter_invalid False:
     def test_fail_on_error_invalid_dir(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
                 try:
-                    res, md = self.exec_pipeline("""
+                    res, md = self.exec_pipeline(
+                        """
     - load fail_on_error True filter_invalid False:
         - %s/metadata/
     - select
     - stats
-    """ % (self.datadir))
+    """
+                        % (self.datadir)
+                    )
                 except (MetadataException, ParserException, ResourceException) as ex:
                     print(ex)
                     return True
@@ -225,17 +254,22 @@ class LoadErrorTest(PipeLineTest):
     # A file with invalid XML must not throw an exception by default (fail_on_error False):
     def test_no_fail_on_error_invalid_file(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
-                res, md = self.exec_pipeline("""
+                res, md = self.exec_pipeline(
+                    """
     - load:
         - %s/metadata/test01.xml
         - %s/metadata/test02-invalid.xml
     - select
     - stats
-    """ % (self.datadir, self.datadir))
+    """
+                    % (self.datadir, self.datadir)
+                )
                 print(sys.stdout.captured)
                 print(sys.stderr.captured)
                 if os.path.isfile(self.output):
@@ -244,22 +278,27 @@ class LoadErrorTest(PipeLineTest):
     # Loading an xml file with an invalid entity must throw when filter_invalid False and fail_on_error True
     def test_fail_on_error_invalid_entity(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
                 try:
-                    res, md = self.exec_pipeline("""
+                    res, md = self.exec_pipeline(
+                        """
     - load fail_on_error True filter_invalid False:
         - %s/metadata/test01.xml
         - %s/metadata/test03-invalid.xml
     - select
     - stats
-    """ % (self.datadir, self.datadir))
+    """
+                        % (self.datadir, self.datadir)
+                    )
                 except (MetadataException, ParserException) as ex:
                     print(ex)
-                    assert (":SCHEMASV:" in str(ex))
-                    assert ("/metadata/test03-invalid.xml" in str(ex))
+                    assert ":SCHEMASV:" in str(ex)
+                    assert "/metadata/test03-invalid.xml" in str(ex)
                     return True
                 finally:
                     if os.path.isfile(self.output):
@@ -270,17 +309,22 @@ class LoadErrorTest(PipeLineTest):
     # Test default behaviour. Loading a file with an invalid entity must not raise an exception
     def test_no_fail_on_error_invalid_entity(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
-                res, md = self.exec_pipeline("""
+                res, md = self.exec_pipeline(
+                    """
     - load:
         - %s/metadata/test01.xml
         - %s/metadata/test03-invalid.xml
     - select
     - stats
-    """ % (self.datadir, self.datadir))
+    """
+                    % (self.datadir, self.datadir)
+                )
                 print(sys.stdout.captured)
                 print(sys.stderr.captured)
                 if os.path.isfile(self.output):
@@ -289,16 +333,21 @@ class LoadErrorTest(PipeLineTest):
     # A directory with a file with invalid metadata must not throw by default:
     def test_no_fail_on_error_invalid_dir(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
-                res, md = self.exec_pipeline("""
+                res, md = self.exec_pipeline(
+                    """
     - load:
         - %s/metadata/
     - select
     - stats
-    """ % (self.datadir))
+    """
+                    % (self.datadir)
+                )
                 if os.path.isfile(self.output):
                     os.unlink(self.output)
                 print(sys.stdout.captured)
@@ -319,21 +368,27 @@ class SortTest(PipeLineTest):
                     if not isinstance(e[1], bool):
                         raise TypeError
                     if not e[1]:
-                        keygen_fail_str = ("Sort pipe: unable to sort entity by '%s'. "
-                                           "Entity '%s' has no such value" % (sxp, e[0]))
+                        keygen_fail_str = (
+                            "Sort pipe: unable to sort entity by '%s'. " "Entity '%s' has no such value" % (sxp, e[0])
+                        )
                         try:
-                            assert (keygen_fail_str in str(l))
+                            assert keygen_fail_str in str(l)
                         except AssertionError:
-                            print("Test failed on expecting missing sort value from: '%s'.\nCould not find string "
-                                  "on the output: '%s'.\nOutput was:\n %s" % (e[0], keygen_fail_str,six.u(l)))
+                            print(
+                                "Test failed on expecting missing sort value from: '%s'.\nCould not find string "
+                                "on the output: '%s'.\nOutput was:\n %s" % (e[0], keygen_fail_str, six.u(l))
+                            )
                             raise
                 except (IndexError, TypeError):
-                    print("Test failed  for: '%s' due to 'order_by' xpath supplied without proper expectation tuple." %
-                          "".join(str(e)))
+                    print(
+                        "Test failed  for: '%s' due to 'order_by' xpath supplied without proper expectation tuple."
+                        % "".join(str(e))
+                    )
                     raise
 
         # Verify order
         from pyff.samlmd import iter_entities
+
         elts = list(iter_entities(res))
         print("elts: {}".format(elts))
         for i, me in enumerate(expected_order):
@@ -341,19 +396,26 @@ class SortTest(PipeLineTest):
             try:
                 assert elts[i].attrib.get("entityID") == me[0]
             except AssertionError:
-                print(("Test failed on verifying sort position %i.\nExpected: %s; Found: %s " %
-                       (i, me[0], elts[i].attrib.get("entityID"))))
+                print(
+                    (
+                        "Test failed on verifying sort position %i.\nExpected: %s; Found: %s "
+                        % (i, me[0], elts[i].attrib.get("entityID"))
+                    )
+                )
                 raise
 
     # Test sort by entityID only
     def test_sort(self):
         sxp = None
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
-                res, md = self.exec_pipeline("""
+                res, md = self.exec_pipeline(
+                    """
     - load:
         - %s/metadata/test01.xml
         - %s/metadata/sharav.abes.fr.xml
@@ -363,23 +425,28 @@ class SortTest(PipeLineTest):
     - sort
     - dump
     - stats
-    """ % (self.datadir, self.datadir, self.datadir))
+    """
+                    % (self.datadir, self.datadir, self.datadir)
+                )
             print(sys.stdout.captured)
             print(sys.stderr.captured)
 
             # tuple format (entityID, has value for 'order_by' xpath)
-            expected_order = [(self.EID1, ), (self.EID2, ), (self.EID3, )]
+            expected_order = [(self.EID1,), (self.EID2,), (self.EID3,)]
             self._run_sort_test(expected_order, sxp, res, l)
 
     # Test sort entries first by registrationAuthority
     def test_sort_by_ra(self):
         sxp = ".//md:Extensions/mdrpi:RegistrationInfo/@registrationAuthority"
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
-                res, md = self.exec_pipeline("""
+                res, md = self.exec_pipeline(
+                    """
     - load:
         - %s/metadata/test01.xml
         - %s/metadata/sharav.abes.fr.xml
@@ -388,8 +455,10 @@ class SortTest(PipeLineTest):
         - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - sort order_by %s
     - stats
-    """ % (self.datadir, self.datadir, self.datadir, sxp))
-            #print(l)
+    """
+                    % (self.datadir, self.datadir, self.datadir, sxp)
+                )
+            # print(l)
 
             # tuple format (entityID, has value for 'order_by' xpath)
             expected_order = [(self.EID3, True), (self.EID1, False), (self.EID2, False)]
@@ -399,11 +468,14 @@ class SortTest(PipeLineTest):
     def test_sort_group(self):
         sxp = ".//md:IDPSSODescriptor/md:NameIDFormat[./text()='urn:mace:shibboleth:1.0:nameIdentifier']"
         self.output = tempfile.NamedTemporaryFile('w').name
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout),
-                            stderr=StreamCapturing(sys.stderr)):
+        with patch.multiple(
+            "sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout), stderr=StreamCapturing(sys.stderr)
+        ):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
-                res, md = self.exec_pipeline("""
+                res, md = self.exec_pipeline(
+                    """
     - load:
         - %s/metadata/test01.xml
         - %s/metadata/sharav.abes.fr.xml
@@ -412,7 +484,9 @@ class SortTest(PipeLineTest):
         - "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - sort order_by %s
     - stats
-    """ % (self.datadir, self.datadir, self.datadir, sxp))
+    """
+                    % (self.datadir, self.datadir, self.datadir, sxp)
+                )
             print(sys.stdout.captured)
             print(sys.stderr.captured)
 
@@ -423,13 +497,12 @@ class SortTest(PipeLineTest):
 
 # noinspection PyUnresolvedReferences
 class SigningTest(PipeLineTest):
-
     def test_signing(self):
         self.output = tempfile.NamedTemporaryFile('w').name
         res, md, ctx = self.run_pipeline("signer.fd", self)
         eIDs = [e.get('entityID') for e in md.store]
-        assert ('https://idp.aco.net/idp/shibboleth' in eIDs)
-        assert ('https://skriptenforum.net/shibboleth' in eIDs)
+        assert 'https://idp.aco.net/idp/shibboleth' in eIDs
+        assert 'https://skriptenforum.net/shibboleth' in eIDs
         os.unlink(self.output)
 
     def test_signing_and_validation(self):
@@ -438,19 +511,19 @@ class SigningTest(PipeLineTest):
         res_v, md_v, ctx_v = self.run_pipeline("validator.fd", self)
 
         eIDs = [e.get('entityID') for e in md_v.store]
-        assert ('https://idp.aco.net/idp/shibboleth' in eIDs)
-        assert ('https://skriptenforum.net/shibboleth' in eIDs)
+        assert 'https://idp.aco.net/idp/shibboleth' in eIDs
+        assert 'https://skriptenforum.net/shibboleth' in eIDs
         os.unlink(self.output)
 
     def test_cert_report(self):
         self.output = tempfile.NamedTemporaryFile('w').name
         res, md, ctx = self.run_pipeline("certreport.fd", self)
         eIDs = [e.get('entityID') for e in md.store]
-        assert ('https://idp.aco.net/idp/shibboleth' in eIDs)
-        assert ('https://skriptenforum.net/shibboleth' in eIDs)
+        assert 'https://idp.aco.net/idp/shibboleth' in eIDs
+        assert 'https://skriptenforum.net/shibboleth' in eIDs
         with open(self.output, 'r') as fd:
             lines = fd.readline()
-            assert (len(lines) > 0)
+            assert len(lines) > 0
 
     def test_cert_report_swamid(self):
         self.output = tempfile.NamedTemporaryFile('w').name
@@ -461,25 +534,29 @@ class SigningTest(PipeLineTest):
     def test_info_and_dump(self):
         with patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - load:
   - http://mds.swamid.se/md/swamid-2.0.xml
 - select
 - dump
 - info
-""")
-                assert ('https://idp.nordu.net/idp/shibboleth' in sys.stdout.captured)
+"""
+                )
+                assert 'https://idp.nordu.net/idp/shibboleth' in sys.stdout.captured
             except IOError:
                 pass
 
     def test_end_exit(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - end:
     code: 22
     message: "slartibartifast"
-""")
+"""
+                )
                 assert False
             except IOError:
                 pass
@@ -490,22 +567,41 @@ class SigningTest(PipeLineTest):
     def test_single_dump(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - dump
-""")
-                assert '<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"/>' \
-                       in "".join(sys.stdout.captured)
+"""
+                )
+                assert '<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"/>' in "".join(
+                    sys.stdout.captured
+                )
             except IOError:
                 pass
 
     def test_missing_select(self):
-        for stmt in ('publish', 'signcerts', 'info', 'sign', 'store', 'finalize',
-                     'xslt', 'certreport', 'emit', 'finalize', 'first', 'setattr', 'stats'):
+        for stmt in (
+            'publish',
+            'signcerts',
+            'info',
+            'sign',
+            'store',
+            'finalize',
+            'xslt',
+            'certreport',
+            'emit',
+            'finalize',
+            'first',
+            'setattr',
+            'stats',
+        ):
             with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
                 try:
-                    self.exec_pipeline("""
+                    self.exec_pipeline(
+                        """
 - %s
-""" % stmt)
+"""
+                        % stmt
+                    )
                     assert False
                 except PipeException:
                     pass
@@ -516,13 +612,16 @@ class SigningTest(PipeLineTest):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             tmpfile = tempfile.NamedTemporaryFile('w').name
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - load:
    - file://%s/metadata/test01.xml
 - select as FOO:
 - first
 - publish: %s
-""" % (self.datadir, tmpfile))
+"""
+                    % (self.datadir, tmpfile)
+                )
                 t1 = parse_xml(resource_filename("metadata/test01.xml", self.datadir))
                 assert t1 is not None
                 entity_id = 'https://idp.example.com/saml2/idp/metadata.php'
@@ -544,14 +643,17 @@ class SigningTest(PipeLineTest):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             tmpfile = tempfile.NamedTemporaryFile('w').name
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - load:
    - file://%s/metadata/test01.xml
 - select
 - prune:
     - .//{urn:oasis:names:tc:SAML:metadata:ui}UIInfo
 - publish: %s
-""" % (self.datadir, tmpfile))
+"""
+                    % (self.datadir, tmpfile)
+                )
                 t1 = parse_xml(resource_filename("metadata/test01.xml", self.datadir))
                 uiinfo = t1.find(".//{urn:oasis:names:tc:SAML:metadata:ui}UIInfo")
                 assert uiinfo is not None
@@ -572,9 +674,11 @@ class SigningTest(PipeLineTest):
     def test_empty_store(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - store
-""")
+"""
+                )
                 assert False
             except PipeException:
                 pass
@@ -584,10 +688,12 @@ class SigningTest(PipeLineTest):
     def test_empty_store2(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - store:
    directory: /tmp
-""")
+"""
+                )
                 assert False
             except PipeException:
                 pass
@@ -597,12 +703,16 @@ class SigningTest(PipeLineTest):
     def test_empty_dir_error(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             from testfixtures import LogCapture
+
             with LogCapture() as l:
                 try:
-                    self.exec_pipeline("""
+                    self.exec_pipeline(
+                        """
 - load fail_on_error True:
    - %s/empty
-""" % self.datadir)
+"""
+                        % self.datadir
+                    )
                 except IOError:
                     pass
                 assert "no entities found in" in str(l)
@@ -612,13 +722,16 @@ class SigningTest(PipeLineTest):
             tmpdir = tempfile.mkdtemp()
             os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - load:
    - file://%s/metadata/test01.xml
 - select
 - store:
    directory: %s
-""" % (self.datadir, tmpdir))
+"""
+                    % (self.datadir, tmpdir)
+                )
                 t1 = parse_xml(resource_filename("metadata/test01.xml", self.datadir))
                 assert t1 is not None
                 entity_id = 'https://idp.example.com/saml2/idp/metadata.php'
@@ -637,9 +750,11 @@ class SigningTest(PipeLineTest):
     def test_empty_certreport(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - certreport
-""")
+"""
+                )
                 assert False
             except PipeException:
                 pass
@@ -650,13 +765,16 @@ class SigningTest(PipeLineTest):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             tmpfile = tempfile.NamedTemporaryFile('w').name
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - load validate False:
    - %s/metadata
 - pick:
    - https://idp.example.com/saml2/idp/metadata.php1
 - publish: %s
-""" % (self.datadir, tmpfile))
+"""
+                    % (self.datadir, tmpfile)
+                )
                 assert False
             except PipeException as ex:
                 print("".join(sys.stdout.captured))
@@ -674,7 +792,8 @@ class SigningTest(PipeLineTest):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             tmpfile = tempfile.NamedTemporaryFile('w').name
             try:
-                res, md = self.exec_pipeline("""
+                res, md = self.exec_pipeline(
+                    """
 - when batch:
     - load:
         - %s/metadata via blacklist_example
@@ -682,23 +801,28 @@ class SigningTest(PipeLineTest):
     - fork merge remove:
         - filter:
             - https://idp.example.com/saml2/idp/metadata.php
-""" % self.datadir)
+"""
+                    % self.datadir
+                )
             except IOError:
                 pass
             print(md.lookup('https://idp.example.com/saml2/idp/metadata.php'))
-            assert (not md.lookup('https://idp.example.com/saml2/idp/metadata.php'))
+            assert not md.lookup('https://idp.example.com/saml2/idp/metadata.php')
 
     def test_bad_namespace(self):
         with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
             tmpfile = tempfile.NamedTemporaryFile('w').name
             try:
-                res, md = self.exec_pipeline("""
+                res, md = self.exec_pipeline(
+                    """
 - when batch:
     - load:
         - %s/bad_metadata cleanup bad
 - when bad:
     - check_xml_namespaces
-""" % self.datadir)
+"""
+                    % self.datadir
+                )
             except ValueError:
                 pass
-            assert("Expected exception from bad namespace in")
+            assert "Expected exception from bad namespace in"

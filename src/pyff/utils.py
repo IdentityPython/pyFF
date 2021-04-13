@@ -6,49 +6,49 @@
 This module contains various utilities.
 
 """
+import base64
 import cgi
+import contextlib
 import hashlib
 import io
+import os
 import random
+import re
 import tempfile
+import threading
+import time
+import traceback
 from copy import copy
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from email.utils import parsedate
+from itertools import chain
 from threading import local
 from time import gmtime, strftime
 
+import iso8601
+import pkg_resources
+import requests
+import six
+import xmlsec
+import yaml
+from _collections_abc import Mapping, MutableMapping
+from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.jobstores.redis import RedisJobStore
-from six.moves.urllib_parse import urlparse, quote_plus
-from itertools import chain
-import yaml
-import xmlsec
-import iso8601
-import os
-import pkg_resources
-import re
-from lxml import etree
-from .constants import config, NS
-from .logs import get_log
-from .exceptions import *
-import requests
-from requests_file import FileAdapter
-from requests_cache import CachedSession
-import base64
-import time
-import six
-import traceback
-from . import __version__
-from requests.structures import CaseInsensitiveDict
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
-import contextlib
-import threading
-from cachetools import LRUCache
-from _collections_abc import MutableMapping, Mapping
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.executors.pool import ThreadPoolExecutor
-from requests.adapters import BaseAdapter, Response
+from cachetools import LRUCache
+from lxml import etree
+from requests.adapters import BaseAdapter, HTTPAdapter, Response
+from requests.packages.urllib3.util.retry import Retry
+from requests.structures import CaseInsensitiveDict
+from requests_cache import CachedSession
+from requests_file import FileAdapter
+from six.moves.urllib_parse import quote_plus, urlparse
+
+from . import __version__
+from .constants import NS, config
+from .exceptions import *
+from .logs import get_log
 
 try:
     from redis import StrictRedis
@@ -91,19 +91,19 @@ def trunc_str(x, l):
 
 def resource_string(name, pfx=None):
     """
-Attempt to load and return the contents (as a string) of the resource named by
-the first argument in the first location of:
+    Attempt to load and return the contents (as a string) of the resource named by
+    the first argument in the first location of:
 
-# as name in the current directory
-# as name in the `pfx` subdirectory of the current directory if provided
-# as name relative to the package
-# as pfx/name relative to the package
+    # as name in the current directory
+    # as name in the `pfx` subdirectory of the current directory if provided
+    # as name relative to the package
+    # as pfx/name relative to the package
 
-The last two alternatives is used to locate resources distributed in the package.
-This includes certain XSLT and XSD files.
+    The last two alternatives is used to locate resources distributed in the package.
+    This includes certain XSLT and XSD files.
 
-:param name: The string name of a resource
-:param pfx: An optional prefix to use in searching for name
+    :param name: The string name of a resource
+    :param pfx: An optional prefix to use in searching for name
 
     """
     name = os.path.expanduser(name)
@@ -124,19 +124,19 @@ This includes certain XSLT and XSD files.
 
 def resource_filename(name, pfx=None):
     """
-Attempt to find and return the filename of the resource named by the first argument
-in the first location of:
+    Attempt to find and return the filename of the resource named by the first argument
+    in the first location of:
 
-# as name in the current directory
-# as name in the `pfx` subdirectory of the current directory if provided
-# as name relative to the package
-# as pfx/name relative to the package
+    # as name in the current directory
+    # as name in the `pfx` subdirectory of the current directory if provided
+    # as name relative to the package
+    # as pfx/name relative to the package
 
-The last two alternatives is used to locate resources distributed in the package.
-This includes certain XSLT and XSD files.
+    The last two alternatives is used to locate resources distributed in the package.
+    This includes certain XSLT and XSD files.
 
-:param name: The string name of a resource
-:param pfx: An optional prefix to use in searching for name
+    :param name: The string name of a resource
+    :param pfx: An optional prefix to use in searching for name
 
     """
     if os.path.exists(name):
@@ -161,24 +161,25 @@ def totimestamp(dt, epoch=datetime(1970, 1, 1)):
 
 def dumptree(t, pretty_print=False, method='xml', xml_declaration=True):
     """
-Return a string representation of the tree, optionally pretty_print(ed) (default False)
+    Return a string representation of the tree, optionally pretty_print(ed) (default False)
 
-:param t: An ElemenTree to serialize
+    :param t: An ElemenTree to serialize
     """
-    return etree.tostring(t, encoding='UTF-8', method=method, xml_declaration=xml_declaration,
-                          pretty_print=pretty_print)
+    return etree.tostring(
+        t, encoding='UTF-8', method=method, xml_declaration=xml_declaration, pretty_print=pretty_print
+    )
 
 
 def iso_now():
     """
-Current time in ISO format
+    Current time in ISO format
     """
     return iso_fmt()
 
 
 def iso_fmt(tstamp=None):
     """
-Timestamp in ISO format
+    Timestamp in ISO format
     """
     return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(tstamp))
 
@@ -359,7 +360,8 @@ def with_tree(elt, cb):
 
 def duration2timedelta(period):
     regex = re.compile(
-        '(?P<sign>[-+]?)P(?:(?P<years>\d+)[Yy])?(?:(?P<months>\d+)[Mm])?(?:(?P<days>\d+)[Dd])?(?:T(?:(?P<hours>\d+)[Hh])?(?:(?P<minutes>\d+)[Mm])?(?:(?P<seconds>\d+)[Ss])?)?')
+        '(?P<sign>[-+]?)P(?:(?P<years>\d+)[Yy])?(?:(?P<months>\d+)[Mm])?(?:(?P<days>\d+)[Dd])?(?:T(?:(?P<hours>\d+)[Hh])?(?:(?P<minutes>\d+)[Mm])?(?:(?P<seconds>\d+)[Ss])?)?'
+    )
 
     # Fetch the match groups with default value of 0 (not None)
     m = regex.match(period)
@@ -369,10 +371,12 @@ def duration2timedelta(period):
     duration = m.groupdict(0)
 
     # Create the timedelta object from extracted groups
-    delta = timedelta(days=int(duration['days']) + (int(duration['months']) * 30) + (int(duration['years']) * 365),
-                      hours=int(duration['hours']),
-                      minutes=int(duration['minutes']),
-                      seconds=int(duration['seconds']))
+    delta = timedelta(
+        days=int(duration['days']) + (int(duration['months']) * 30) + (int(duration['years']) * 365),
+        hours=int(duration['hours']),
+        minutes=int(duration['minutes']),
+        seconds=int(duration['seconds']),
+    )
 
     if duration['sign'] == "-":
         delta *= -1
@@ -501,11 +505,9 @@ def hex_digest(data, hn='sha1'):
 
 def parse_xml(io, base_url=None):
     huge_xml = config.huge_xml
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(
-        resolve_entities=False,
-        collect_ids=False,
-        huge_tree=huge_xml
-    ))
+    return etree.parse(
+        io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False, collect_ids=False, huge_tree=huge_xml)
+    )
 
 
 def has_tag(t, tag):
@@ -573,6 +575,7 @@ def rreplace(s, old, new, occurrence):
 
 def load_callable(name):
     from importlib import import_module
+
     p, m = name.rsplit(':', 1)
     mod = import_module(p)
     return getattr(mod, m)
@@ -581,14 +584,17 @@ def load_callable(name):
 # semantics copied from https://github.com/lordal/md-summary/blob/master/md-summary
 # many thanks to Anders Lordahl & Scotty Logan for the idea
 def guess_entity_software(e):
-    for elt in chain(e.findall(".//{%s}SingleSignOnService" % NS['md']),
-                     e.findall(".//{%s}AssertionConsumerService" % NS['md'])):
+    for elt in chain(
+        e.findall(".//{%s}SingleSignOnService" % NS['md']), e.findall(".//{%s}AssertionConsumerService" % NS['md'])
+    ):
         location = elt.get('Location')
         if location:
-            if 'Shibboleth.sso' in location \
-                    or 'profile/SAML2/POST/SSO' in location \
-                    or 'profile/SAML2/Redirect/SSO' in location \
-                    or 'profile/Shibboleth/SSO' in location:
+            if (
+                'Shibboleth.sso' in location
+                or 'profile/SAML2/POST/SSO' in location
+                or 'profile/SAML2/Redirect/SSO' in location
+                or 'profile/Shibboleth/SSO' in location
+            ):
                 return 'Shibboleth'
             if location.endswith('saml2/idp/SSOService.php') or 'saml/sp/saml2-acs.php' in location:
                 return 'SimpleSAMLphp'
@@ -598,7 +604,11 @@ def guess_entity_software(e):
                 return 'ADFS'
             if '/oala/' in location or 'login.openathens.net' in location:
                 return 'OpenAthens'
-            if '/idp/SSO.saml2' in location or '/sp/ACS.saml2' in location or 'sso.connect.pingidentity.com' in location:
+            if (
+                '/idp/SSO.saml2' in location
+                or '/sp/ACS.saml2' in location
+                or 'sso.connect.pingidentity.com' in location
+            ):
                 return 'PingFederate'
             if 'idp/saml2/sso' in location:
                 return 'Authentic2'
@@ -608,14 +618,16 @@ def guess_entity_software(e):
                 return 'CASiteMinder'
             if 'FIM/sps' in location:
                 return 'IBMTivoliFIM'
-            if 'sso/post' in location \
-                    or 'sso/redirect' in location \
-                    or 'saml2/sp/acs' in location \
-                    or 'saml2/ls' in location \
-                    or 'saml2/acs' in location \
-                    or 'acs/redirect' in location \
-                    or 'acs/post' in location \
-                    or 'saml2/sp/ls/' in location:
+            if (
+                'sso/post' in location
+                or 'sso/redirect' in location
+                or 'saml2/sp/acs' in location
+                or 'saml2/ls' in location
+                or 'saml2/acs' in location
+                or 'acs/redirect' in location
+                or 'acs/post' in location
+                or 'saml2/sp/ls/' in location
+            ):
                 return 'PySAML'
             if 'engine.surfconext.nl' in location:
                 return 'SURFConext'
@@ -642,7 +654,7 @@ def is_text(x):
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
-        yield l[i:i + n]
+        yield l[i : i + n]
 
 
 class DirAdapter(BaseAdapter):
@@ -685,10 +697,12 @@ def url_get(url):
     else:
         retry = Retry(total=3, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
-        s = CachedSession(cache_name="pyff_cache",
-                          backend=config.request_cache_backend,
-                          expire_after=config.request_cache_time,
-                          old_data_on_error=True)
+        s = CachedSession(
+            cache_name="pyff_cache",
+            backend=config.request_cache_backend,
+            expire_after=config.request_cache_time,
+            old_data_on_error=True,
+        )
         s.mount('http://', adapter)
         s.mount('https://', adapter)
 
@@ -725,6 +739,7 @@ def safe_b64d(s):
 
 # data:&lt;class 'type'&gt;;base64,
 # data:<class 'type'>;base64,
+
 
 def img_to_data(data, content_type):
     """Convert a file (specified by a path) into a data URI."""
@@ -788,7 +803,6 @@ def json_serializer(o):
 
 
 class Lambda(object):
-
     def __init__(self, cb, *args, **kwargs):
         self._cb = cb
         self._args = [a for a in args]
@@ -818,13 +832,14 @@ def make_default_scheduler():
         jobstore = MemoryJobStore()
     else:
         raise ValueError("unknown or unsupported job store type '{}'".format(config.scheduler_job_store))
-    return BackgroundScheduler(executors={'default': ThreadPoolExecutor(config.worker_pool_size)},
-                               jobstores={'default': jobstore},
-                               job_defaults={'misfire_grace_time': config.update_frequency})
+    return BackgroundScheduler(
+        executors={'default': ThreadPoolExecutor(config.worker_pool_size)},
+        jobstores={'default': jobstore},
+        job_defaults={'misfire_grace_time': config.update_frequency},
+    )
 
 
 class MappingStack(Mapping):
-
     def __init__(self, *args):
         self._m = list(args)
 
@@ -851,7 +866,6 @@ class MappingStack(Mapping):
 
 
 class LRUProxyDict(MutableMapping):
-
     def __init__(self, proxy, *args, **kwargs):
         self._proxy = proxy
         self._cache = LRUCache(**kwargs)

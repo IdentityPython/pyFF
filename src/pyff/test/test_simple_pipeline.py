@@ -1,16 +1,15 @@
+import os
 import tempfile
 
-import os
 from mako.lookup import TemplateLookup
 
 from pyff.constants import NS
-from pyff.repo import MDRepository
 from pyff.pipes import plumbing
+from pyff.repo import MDRepository
 from pyff.test import SignerTestCase
 
 
 class SimplePipeLineTest(SignerTestCase):
-
     def setUp(self):
         super(SimplePipeLineTest, self).setUp()
         self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'simple-pipeline')])
@@ -31,29 +30,26 @@ class SimplePipeLineTest(SignerTestCase):
     def test_entityid_present(self):
         eids = [e.get('entityID') for e in self.md_signer.store]
         print(eids)
-        assert('https://idp.aco.net/idp/shibboleth' in eids)
-        assert('https://skriptenforum.net/shibboleth' in eids)
+        assert 'https://idp.aco.net/idp/shibboleth' in eids
+        assert 'https://skriptenforum.net/shibboleth' in eids
 
         eids = [e.get('entityID') for e in self.md_validator.store]
         print(eids)
-        assert('https://idp.aco.net/idp/shibboleth' in eids)
-        assert('https://skriptenforum.net/shibboleth' in eids)
+        assert 'https://idp.aco.net/idp/shibboleth' in eids
+        assert 'https://skriptenforum.net/shibboleth' in eids
 
     def test_non_zero_output(self):
-        assert(self.md_signer is not None)
-        assert(self.md_signer.store.size() == 2)
-        assert(self.md_validator is not None)
-        assert(self.md_validator.store.size() == 2)
-        assert(os.path.getsize(self.output) > 0)
+        assert self.md_signer is not None
+        assert self.md_signer.store.size() == 2
+        assert self.md_validator is not None
+        assert self.md_validator.store.size() == 2
+        assert os.path.getsize(self.output) > 0
 
     def test_select_single(self):
-        assert(self.validator_result is not None)
+        assert self.validator_result is not None
         entities = self.validator_result.findall('{%s}EntityDescriptor' % NS['md'])
-        assert(len(entities) == 1)
-        assert(entities[0].get('entityID') == 'https://idp.aco.net/idp/shibboleth')
+        assert len(entities) == 1
+        assert entities[0].get('entityID') == 'https://idp.aco.net/idp/shibboleth'
 
     def tear_down(self):
         super(SimplePipeLineTest, self).tearDown()
-
-
-

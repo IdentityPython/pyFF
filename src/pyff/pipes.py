@@ -3,11 +3,13 @@ Pipes and plumbing. Plumbing instances are sequences of pipes. Each pipe is call
 transform, sign or output SAML metadata.
 """
 
-import traceback
 import os
+import traceback
+
 import yaml
-from .utils import resource_string, PyffException, is_text
+
 from .logs import get_log
+from .utils import PyffException, is_text, resource_string
 
 log = get_log(__name__)
 
@@ -53,6 +55,7 @@ class PluginsRegistry(dict):
     Referencing this function as an entry_point using something = module:the_somethig_func in setup.py allows the
     function to be referenced as 'something' in a pipeline.
     """
+
     # def __init__(self):
     #    for entry_point in iter_entry_points('pyff.pipe'):
     #        if entry_point.name in self:
@@ -109,12 +112,14 @@ def load_pipe(d):
 
 class PipelineCallback(object):
     """
-A delayed pipeline callback used as a post for parse_saml_metadata
+    A delayed pipeline callback used as a post for parse_saml_metadata
     """
 
     def __init__(self, entry_point, req, store=None):
         self.entry_point = entry_point
-        self.plumbing = Plumbing(req.scope_of(entry_point).plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
+        self.plumbing = Plumbing(
+            req.scope_of(entry_point).plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point)
+        )
         self.req = req
         self.store = store
 
@@ -142,31 +147,31 @@ A delayed pipeline callback used as a post for parse_saml_metadata
 
 class Plumbing(object):
     """
-A plumbing instance represents a basic processing chain  for SAML metadata. A simple, yet reasonably complete example:
+    A plumbing instance represents a basic processing chain  for SAML metadata. A simple, yet reasonably complete example:
 
-.. code-block:: yaml
+    .. code-block:: yaml
 
-    - load:
-        - /var/metadata/registry
-        - http://md.example.com
-    - select:
-       - #md:EntityDescriptor[md:IDPSSODescriptor]
-    - xslt:
-        stylesheet: tidy.xsl
-    - fork:
-        - finalize:
-            Name: http://example.com/metadata.xml
-            cacheDuration: PT1H
-            validUntil: PT1D
-        - sign:
-           key: signer.key
-           cert: signer.crt
-       - publish: /var/metadata/public/metadata.xml
+        - load:
+            - /var/metadata/registry
+            - http://md.example.com
+        - select:
+           - #md:EntityDescriptor[md:IDPSSODescriptor]
+        - xslt:
+            stylesheet: tidy.xsl
+        - fork:
+            - finalize:
+                Name: http://example.com/metadata.xml
+                cacheDuration: PT1H
+                validUntil: PT1D
+            - sign:
+               key: signer.key
+               cert: signer.crt
+           - publish: /var/metadata/public/metadata.xml
 
-Running this plumbing would bake all metadata found in /var/metadata/registry and at http://md.example.com into an
-EntitiesDescriptor element with @Name http://example.com/metadata.xml, @cacheDuration set to 1hr and @validUntil
-1 day from the time the 'finalize' command was run. The tree woud be transformed using the "tidy" stylesheets and
-would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
+    Running this plumbing would bake all metadata found in /var/metadata/registry and at http://md.example.com into an
+    EntitiesDescriptor element with @Name http://example.com/metadata.xml, @cacheDuration set to 1hr and @validUntil
+    1 day from the time the 'finalize' command was run. The tree woud be transformed using the "tidy" stylesheets and
+    would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
     """
 
     def __init__(self, pipeline, pid):
@@ -192,11 +197,13 @@ would then be signed (using signer.key) and finally published in /var/metadata/p
 
     class Request(object):
         """
-Represents a single request. When processing a set of pipelines a single request is used. Any part of the pipeline
-may modify any of the fields.
+        Represents a single request. When processing a set of pipelines a single request is used. Any part of the pipeline
+        may modify any of the fields.
         """
 
-        def __init__(self, pl, md, t=None, name=None, args=None, state=None, store=None, scheduler=None, raise_exceptions=True):
+        def __init__(
+            self, pl, md, t=None, name=None, args=None, state=None, store=None, scheduler=None, raise_exceptions=True
+        ):
             if not state:
                 state = dict()
             if not args:
@@ -257,11 +264,13 @@ may modify any of the fields.
 
         :param req: The request to run through the pipeline
         """
-        #log.debug("Processing {}".format(self.pipeline))
+        # log.debug("Processing {}".format(self.pipeline))
         for p in self.pipeline:
             try:
                 pipefn, opts, name, args = load_pipe(p)
-                log.debug("{!s}: calling '{}' using args: {} and opts: {}".format(self.pipeline, name, repr(args), repr(opts)))
+                log.debug(
+                    "{!s}: calling '{}' using args: {} and opts: {}".format(self.pipeline, name, repr(args), repr(opts))
+                )
                 if is_text(args):
                     args = [args]
                 if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
@@ -299,23 +308,19 @@ may modify any of the fields.
         if not state:
             state = dict()
 
-        return Plumbing.Request(self, md,
-                                t=t,
-                                args=args,
-                                state=state,
-                                store=store,
-                                raise_exceptions=raise_exceptions,
-                                scheduler=scheduler).process(self)
+        return Plumbing.Request(
+            self, md, t=t, args=args, state=state, store=store, raise_exceptions=raise_exceptions, scheduler=scheduler
+        ).process(self)
 
 
 def plumbing(fn):
     """
-Create a new plumbing instance by parsing yaml from the filename.
+    Create a new plumbing instance by parsing yaml from the filename.
 
-:param fn: A filename containing the pipeline.
-:return: A plumbing object
+    :param fn: A filename containing the pipeline.
+    :return: A plumbing object
 
-This uses the resource framework to locate the yaml file which means that pipelines can be shipped as plugins.
+    This uses the resource framework to locate the yaml file which means that pipelines can be shipped as plugins.
     """
     pid = os.path.splitext(fn)[0]
     ystr = resource_string(fn)

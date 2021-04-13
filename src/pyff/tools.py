@@ -9,12 +9,14 @@ Usage: [-h|--help]
 import logging
 import sys
 import traceback
+
+from xmldiff.formatting import DiffFormatter
+from xmldiff.main import diff_trees
+
+from .constants import config, parse_options
+from .resource import Resource
 from .samlmd import diff, iter_entities
 from .store import MemoryStore
-from .resource import Resource
-from .constants import config, parse_options
-from xmldiff.main import diff_trees
-from xmldiff.formatting import DiffFormatter
 
 
 def difftool():
@@ -61,10 +63,12 @@ def difftool():
             s2[e2.get('entityID')] = e2
         formatter = DiffFormatter()
         for eid in set(s1.keys()).intersection(s2.keys()):
-            d = diff_trees(s1[eid],
-                           s2[eid],
-                           formatter=formatter,
-                           diff_options=dict(uniqueattrs=["{urn:oasis:names:tc:SAML:2.0:metadata}entityID"]))
+            d = diff_trees(
+                s1[eid],
+                s2[eid],
+                formatter=formatter,
+                diff_options=dict(uniqueattrs=["{urn:oasis:names:tc:SAML:2.0:metadata}entityID"]),
+            )
             if d:
                 status += 8
                 print(d)
@@ -73,4 +77,3 @@ def difftool():
         logging.debug(traceback.format_exc())
         logging.error(ex)
         sys.exit(-1)
-

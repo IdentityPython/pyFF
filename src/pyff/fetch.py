@@ -1,10 +1,10 @@
-
-from .logs import get_log
 import queue
 import threading
 from datetime import datetime
-from .utils import url_get, load_callable, Watchable
+
 from .constants import config
+from .logs import get_log
+from .utils import Watchable, load_callable, url_get
 
 log = get_log(__name__)
 
@@ -50,13 +50,18 @@ class Fetch(threading.Thread):
                         r = url_get(url)
                         if self.content_handler is not None:
                             r = self.content_handler(r)
-                        self.response.put({'response': r, 'url': url, 'exception': None, 'last_fetched': datetime.now()})
+                        self.response.put(
+                            {'response': r, 'url': url, 'exception': None, 'last_fetched': datetime.now()}
+                        )
                         log.info("successfully fetched {}".format(url))
                     except Exception as ex:
-                        self.response.put({'response': None, 'url': url, 'exception': ex, 'last_fetched': datetime.now()})
+                        self.response.put(
+                            {'response': None, 'url': url, 'exception': ex, 'last_fetched': datetime.now()}
+                        )
                         log.warn("error fetching {}".format(url))
                         log.warn(ex)
                         import traceback
+
                         log.debug(traceback.format_exc())
                     finally:
                         self.state('idle')
@@ -68,6 +73,7 @@ class Fetcher(threading.Thread, Watchable):
     The main threed managing a pool of Fetch threads. All Fetch instances are initiatlized with the same
     content handler callable.
     """
+
     def __init__(self, num_threads=config.worker_pool_size, name="Fetcher", content_handler=None):
         threading.Thread.__init__(self)
         Watchable.__init__(self)
@@ -77,7 +83,7 @@ class Fetcher(threading.Thread, Watchable):
         self.response = queue.Queue()
         self.pool = threading.BoundedSemaphore(num_threads)
         self.threads = []
-        for i in range(0,num_threads):
+        for i in range(0, num_threads):
             t = Fetch(self.request, self.response, self.pool, self._id, content_handler)
             t.start()
             self.threads.append(t)

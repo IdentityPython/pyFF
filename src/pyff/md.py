@@ -6,9 +6,10 @@ import importlib
 import logging
 import sys
 import traceback
-from .repo import MDRepository
-from .pipes import plumbing
+
 from .constants import config, parse_options
+from .pipes import plumbing
+from .repo import MDRepository
 
 
 def main():
