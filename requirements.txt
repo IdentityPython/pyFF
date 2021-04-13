@@ -1,26 +1,26 @@
-mako
-six
-redis
+accept_types >=0.4.1
+apscheduler
+cachetools
+gunicorn
+httplib2 >=0.7.7
 ipaddr
-lxml
-sphinx-pypi-upload
-sphinx
+iso8601 >=0.1.4
+lxml >=4.1.1
+mako
 nose
-httplib2
-iso8601
-requests
-simplejson
+pyXMLSecurity >=0.15
 pyconfig
-pyyaml
+pyramid
+pyyaml >=3.10
+redis
+redis-collections
+requests
 requests_cache
 requests_file
+simplejson >=2.6.2
+six>=1.11.0
+sphinx
+sphinx-pypi-upload
 whoosh
-accept_types
-pyramid
-six
 wsgi-intercept
-gunicorn
-apscheduler
-redis-collections
-cachetools
 xmldiff
