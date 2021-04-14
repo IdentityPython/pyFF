@@ -8,7 +8,6 @@ import yaml
 from mako.lookup import TemplateLookup
 from mock import patch
 
-# don't remove this - it only appears unused to static analysis
 from pyff import builtins
 from pyff.exceptions import MetadataException
 from pyff.parse import ParserException
@@ -20,6 +19,9 @@ from pyff.test import ExitException, SignerTestCase
 from pyff.utils import hash_id, parse_xml, resource_filename, root
 
 __author__ = 'leifj'
+
+# The 'builtins' import appears unused to static analysers, ensure it isn't removed
+assert builtins is not None
 
 
 class PipeLineTest(SignerTestCase):
