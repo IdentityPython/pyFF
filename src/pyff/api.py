@@ -116,8 +116,13 @@ def _fmt(data, accepter):
     raise exc.exception_response(406)
 
 
-def call(entry):
-    requests.post('{}/api/call/{}'.format(config.base_url, entry))
+def call(entry: str) -> None:
+    url = f'{config.base_url}/api/call/{entry}'
+    log.debug(f'Calling API endpoint at {url}')
+    resp = requests.post(url)
+    if resp.status_code >= 300:
+        log.error(f'POST request to API endpoint at {url} failed: {resp.status_code} {resp.reason}')
+    return None
 
 
 def request_handler(request):
