@@ -19,14 +19,13 @@ import threading
 import time
 import traceback
 from copy import copy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate
 from itertools import chain
 from threading import local
 from time import gmtime, strftime
-from typing import AnyStr, Optional, Union
+from typing import Optional, Union
 
-import iso8601
 import pkg_resources
 import requests
 import xmlsec
@@ -48,7 +47,6 @@ from . import __version__
 from .constants import NS, config
 from .exceptions import *
 from .logs import get_log
-
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -79,9 +77,9 @@ def trunc_str(x, l):
     return (x[:l] + '..') if len(x) > l else x
 
 
-def resource_string(name, pfx=None):
+def resource_string(name: str, pfx: Optional[str] = None) -> Optional[Union[str, bytes]]:
     """
-    Attempt to load and return the contents (as a string) of the resource named by
+    Attempt to load and return the contents (as a string, or bytes) of the resource named by
     the first argument in the first location of:
 
     # as name in the current directory
@@ -97,7 +95,7 @@ def resource_string(name, pfx=None):
 
     """
     name = os.path.expanduser(name)
-    data = None
+    data: Optional[Union[str, bytes]] = None
     if os.path.exists(name):
         with io.open(name) as fd:
             data = fd.read()
@@ -141,7 +139,7 @@ def resource_filename(name, pfx=None):
     return None
 
 
-def totimestamp(dt, epoch=datetime(1970, 1, 1)):
+def totimestamp(dt: datetime, epoch=datetime(1970, 1, 1)) -> int:
     epoch = epoch.replace(tzinfo=dt.tzinfo)
 
     td = dt - epoch
@@ -160,26 +158,37 @@ def dumptree(t, pretty_print=False, method='xml', xml_declaration=True):
     )
 
 
-def iso_now():
+def iso_now() -> str:
     """
     Current time in ISO format
     """
     return iso_fmt()
 
 
-def iso_fmt(tstamp=None):
+def iso_fmt(tstamp: Optional[float] = None) -> str:
     """
     Timestamp in ISO format
     """
     return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(tstamp))
 
 
-def ts_now():
+def ts_now() -> int:
     return int(time.time())
 
 
-def iso2datetime(s):
-    return iso8601.parse_date(s)
+def iso2datetime(s: str) -> datetime:
+    # TODO: All timestamps in SAML are supposed to be without offset from UTC - raise exception if it is not?
+    if s.endswith('Z'):
+        s = s[:-1] + '+00:00'
+    return datetime.fromisoformat(s)
+
+
+def datetime2iso(dt: datetime) -> str:
+    s = dt.replace(microsecond=0).isoformat()
+    # Use 'Z' instead of +00:00 suffix for UTC times
+    if s.endswith('+00:00'):
+        s = s[:-6] + 'Z'
+    return s
 
 
 def first_text(elt, tag, default=None):
@@ -350,9 +359,11 @@ def with_tree(elt, cb):
             with_tree(child, cb)
 
 
-def duration2timedelta(period):
+def duration2timedelta(period: str) -> Optional[timedelta]:
     regex = re.compile(
-        '(?P<sign>[-+]?)P(?:(?P<years>\d+)[Yy])?(?:(?P<months>\d+)[Mm])?(?:(?P<days>\d+)[Dd])?(?:T(?:(?P<hours>\d+)[Hh])?(?:(?P<minutes>\d+)[Mm])?(?:(?P<seconds>\d+)[Ss])?)?'
+        r'(?P<sign>[-+]?)'
+        r'P(?:(?P<years>\d+)[Yy])?(?:(?P<months>\d+)[Mm])?(?:(?P<days>\d+)[Dd])?'
+        r'(?:T(?:(?P<hours>\d+)[Hh])?(?:(?P<minutes>\d+)[Mm])?(?:(?P<seconds>\d+)[Ss])?)?'
     )
 
     # Fetch the match groups with default value of 0 (not None)
@@ -360,7 +371,8 @@ def duration2timedelta(period):
     if not m:
         return None
 
-    duration = m.groupdict(0)
+    # workaround error: Argument 1 to "groupdict" of "Match" has incompatible type "int"; expected "str"
+    duration = m.groupdict(0)  # type: ignore
 
     # Create the timedelta object from extracted groups
     delta = timedelta(
@@ -440,28 +452,32 @@ def xslt_transform(t, stylesheet, params=None):
         raise ex
 
 
-def valid_until_ts(elt, default_ts):
+# TODO: Unused function
+def valid_until_ts(elt, default_ts: int) -> int:
     ts = default_ts
     valid_until = elt.get("validUntil", None)
     if valid_until is not None:
-        dt = iso8601.parse_date(valid_until)
-        if dt is not None:
+        try:
+            dt = datetime.fromtimestamp(valid_until)
             ts = totimestamp(dt)
+        except Exception:
+            pass
 
     cache_duration = elt.get("cacheDuration", None)
     if cache_duration is not None:
-        dt = datetime.utcnow() + duration2timedelta(cache_duration)
-        if dt is not None:
+        _duration = duration2timedelta(cache_duration)
+        if _duration is not None:
+            dt = utc_now() + _duration
             ts = totimestamp(dt)
 
     return ts
 
 
-def total_seconds(dt):
+def total_seconds(dt: timedelta) -> float:
     if hasattr(dt, "total_seconds"):
         return dt.total_seconds()
-    else:
-        return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
+    # TODO: Remove? I guess this is for Python < 3
+    return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
 
 
 def etag(s):
@@ -951,3 +967,8 @@ class Watchable(object):
             except BaseException as ex:
                 log.debug(traceback.format_exc())
                 log.warn(ex)
+
+
+def utc_now() -> datetime:
+    """ Return current time with tz=UTC """
+    return datetime.now(tz=timezone.utc)

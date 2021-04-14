@@ -17,13 +17,12 @@ from distutils.util import strtobool
 import ipaddr
 import six
 import xmlsec
-from iso8601 import iso8601
 from lxml.etree import DocumentInvalid
 from six.moves.urllib_parse import quote_plus, urlparse
 
 from pyff.pipes import registry
 
-from .constants import NS, config
+from .constants import NS
 from .decorators import deprecated
 from .exceptions import MetadataException
 from .logs import get_log
@@ -42,12 +41,15 @@ from .samlmd import (
     sort_entities,
 )
 from .utils import (
+    datetime2iso,
     dumptree,
     duration2timedelta,
     hash_id,
+    iso2datetime,
     root,
     safe_write,
     total_seconds,
+    utc_now,
     validate_document,
     with_tree,
     xslt_transform,
@@ -1503,7 +1505,7 @@ def finalize(req, *opts):
         if name:
             e.set('Name', name)
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     mdid = req.args.get('ID', 'prefix _')
     if re.match('(\s)*prefix(\s)*', mdid):
@@ -1520,18 +1522,19 @@ def finalize(req, *opts):
         offset = duration2timedelta(valid_until)
         if offset is not None:
             dt = now + offset
-            e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+            e.set('validUntil', datetime2iso(dt))
         elif valid_until is not None:
+            # TODO: if validUntil was not present, valid_until will be the string 'None' here - never the literal None
             try:
-                dt = iso8601.parse_date(valid_until)
-                dt = dt.replace(tzinfo=None)  # make dt "naive" (tz-unaware)
+                dt = iso2datetime(valid_until)
                 offset = dt - now
-                e.set('validUntil', dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                e.set('validUntil', datetime2iso(dt))
             except ValueError as ex:
                 log.error("Unable to parse validUntil: %s (%s)" % (valid_until, ex))
 
-                # set a reasonable default: 50% of the validity
+        # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set
+        # TODO: offset can be None here, if validUntil is not a valid duration or ISO date
         req.state['cache'] = int(total_seconds(offset) / 50)
 
     cache_duration = req.args.get('cacheDuration', e.get('cacheDuration', None))

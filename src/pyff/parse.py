@@ -5,7 +5,7 @@ from xmlsec.crypto import CertDict
 
 from .constants import NS
 from .logs import get_log
-from .utils import find_matching_files, first_text, parse_xml, root, unicode_stream
+from .utils import find_matching_files, parse_xml, root, unicode_stream, utc_now
 
 __author__ = 'leifj'
 
@@ -66,7 +66,7 @@ class DirectoryParser(PyffParser):
 
         resource.never_expires = True
         resource.expire_time = None
-        resource.last_seen = datetime.now()
+        resource.last_seen = utc_now().replace(microsecond=0)
 
         return dict()
 
@@ -98,7 +98,7 @@ class XRDParser(PyffParser):
                     fp = fingerprints[0]
                 log.debug("XRD: {} verified by {}".format(link_href, fp))
                 resource.add_child(link_href, verify=fp)
-        resource.last_seen = datetime.now()
+        resource.last_seen = utc_now().replace(microsecond=0)
         resource.expire_time = None
         resource.never_expires = True
         return info
