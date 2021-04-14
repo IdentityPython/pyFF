@@ -407,7 +407,7 @@ def resources_handler(request):
 
 def pipeline_handler(request):
     """
-    Implements the /api/resources endpoint
+    Implements the /api/pipeline endpoint
 
     :param request: the HTTP request
     :return: a JSON representation of the active pipeline
