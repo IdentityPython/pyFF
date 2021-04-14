@@ -361,7 +361,9 @@ def with_tree(elt, cb):
 
 def duration2timedelta(period: str) -> Optional[timedelta]:
     regex = re.compile(
-        '(?P<sign>[-+]?)P(?:(?P<years>\d+)[Yy])?(?:(?P<months>\d+)[Mm])?(?:(?P<days>\d+)[Dd])?(?:T(?:(?P<hours>\d+)[Hh])?(?:(?P<minutes>\d+)[Mm])?(?:(?P<seconds>\d+)[Ss])?)?'
+        r'(?P<sign>[-+]?)'
+        r'P(?:(?P<years>\d+)[Yy])?(?:(?P<months>\d+)[Mm])?(?:(?P<days>\d+)[Dd])?'
+        r'(?:T(?:(?P<hours>\d+)[Hh])?(?:(?P<minutes>\d+)[Mm])?(?:(?P<seconds>\d+)[Ss])?)?'
     )
 
     # Fetch the match groups with default value of 0 (not None)
@@ -369,7 +371,8 @@ def duration2timedelta(period: str) -> Optional[timedelta]:
     if not m:
         return None
 
-    duration = m.groupdict(0)
+    # workaround error: Argument 1 to "groupdict" of "Match" has incompatible type "int"; expected "str"
+    duration = m.groupdict(0)  # type: ignore
 
     # Create the timedelta object from extracted groups
     delta = timedelta(
@@ -456,25 +459,25 @@ def valid_until_ts(elt, default_ts: int) -> int:
     if valid_until is not None:
         try:
             dt = datetime.fromtimestamp(valid_until)
-        except Exception:
-            dt = None
-        if dt is not None:
             ts = totimestamp(dt)
+        except Exception:
+            pass
 
     cache_duration = elt.get("cacheDuration", None)
     if cache_duration is not None:
-        dt = utc_now() + duration2timedelta(cache_duration)
-        if dt is not None:
+        _duration = duration2timedelta(cache_duration)
+        if _duration is not None:
+            dt = utc_now() + _duration
             ts = totimestamp(dt)
 
     return ts
 
 
-def total_seconds(dt: Union[datetime, timedelta]) -> float:
+def total_seconds(dt: timedelta) -> float:
     if hasattr(dt, "total_seconds"):
         return dt.total_seconds()
-    else:
-        return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
+    # TODO: Remove? I guess this is for Python < 3
+    return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
 
 
 def etag(s):
