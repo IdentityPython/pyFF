@@ -2,13 +2,17 @@
 Pipes and plumbing. Plumbing instances are sequences of pipes. Each pipe is called in order to load, select,
 transform, sign or output SAML metadata.
 """
+from __future__ import annotations
 
 import os
 import traceback
+from typing import Any, Dict, Optional
 
 import yaml
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from .logs import get_log
+from .repo import MDRepository
 from .utils import PyffException, is_text, resource_string
 
 log = get_log(__name__)
@@ -202,7 +206,16 @@ class Plumbing(object):
         """
 
         def __init__(
-            self, pl, md, t=None, name=None, args=None, state=None, store=None, scheduler=None, raise_exceptions=True
+            self,
+            pl: Plumbing,
+            md: MDRepository,
+            t=None,
+            name=None,
+            args=None,
+            state: Optional[Dict[str, Any]] = None,
+            store=None,
+            scheduler: Optional[BackgroundScheduler] = None,
+            raise_exceptions: bool = True,
         ):
             if not state:
                 state = dict()
@@ -313,7 +326,7 @@ class Plumbing(object):
         ).process(self)
 
 
-def plumbing(fn):
+def plumbing(fn: str) -> Plumbing:
     """
     Create a new plumbing instance by parsing yaml from the filename.
 

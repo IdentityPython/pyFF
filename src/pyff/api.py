@@ -2,6 +2,7 @@ import importlib
 import threading
 from datetime import datetime, timedelta
 from json import dumps
+from typing import Any, List, Mapping
 
 import pkg_resources
 import pyramid.httpexceptions as exc
@@ -21,6 +22,7 @@ from .exceptions import ResourceException
 from .logs import get_log
 from .pipes import plumbing
 from .repo import MDRepository
+from .resource import Resource
 from .samlmd import entity_display_name
 from .utils import b2u, dumptree, duration2timedelta, hash_id, json_serializer
 
@@ -387,7 +389,7 @@ def resources_handler(request):
     :return: a JSON representation of the set of resources currently loaded by the server
     """
 
-    def _info(r):
+    def _info(r: Resource) -> List[Mapping[str, Any]]:
         nfo = r.info
         nfo['Valid'] = r.is_valid()
         nfo['Parser'] = r.last_parser

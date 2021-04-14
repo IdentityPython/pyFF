@@ -220,13 +220,13 @@ class Resource(Watchable):
             for cn in c.walk():
                 yield cn
 
-    def is_expired(self):
+    def is_expired(self) -> bool:
         if self.never_expires:
             return False
         now = datetime.now()
         return self.expire_time is not None and self.expire_time < now
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return not self.is_expired() and self.last_seen is not None and self.last_parser is not None
 
     def add_info(self, info):
@@ -239,7 +239,7 @@ class Resource(Watchable):
                 return
         raise ValueError("Resource {} not present - use add_child".format(r.url))
 
-    def add_child(self, url, **kwargs):
+    def add_child(self, url: str, **kwargs) -> Resource:
         opts = deepcopy(self.opts)
         if 'as' in opts:
             del opts['as']
