@@ -596,7 +596,7 @@ def load(req, *opts):
     - max_workers <5> : Number of parallel threads to use for loading MD files
     - timeout <120> : Socket timeout when downloading files
     - validate <True*|False> : When true downloaded metadata files are validated (schema validation)
-    - fail_on_error <True|False*> : Control whether an error during download, parsing or (optional)validatation of a MD file
+    - fail_on_error <True|False*> : Control whether an error during download, parsing or (optional)validation of a MD file
                                     does not abort processing of the pipeline. When true a failure aborts and causes pyff
                                     to exit with a non zero exit code. Otherwise errors are logged but ignored.
     - filter_invalid <True*|False> : Controls validation behaviour. When true Entities that fail validation are filtered
@@ -713,7 +713,7 @@ def select(req, *opts):
     This would select all SPs
 
     Select statements are not cumulative - a select followed by another select in the plumbing resets the
-    working douments to the result of the second select.
+    working documents to the result of the second select.
 
     Most statements except local and remote depend on having a select somewhere in your plumbing and will
     stop the plumbing if the current working document is empty. For instance, running
@@ -799,7 +799,7 @@ def select(req, *opts):
         raise PipeException("empty select - stop")
 
     if req.plumbing.id != name:
-        log.debug("storing synthentic collection {}".format(name))
+        log.debug("storing synthetic collection {}".format(name))
         req.store.update(ot, name)
 
     return ot
@@ -886,7 +886,7 @@ def first(req, *opts):
     :return: returns the first entity descriptor if the working document only contains one
 
     Sometimes (eg when running an MDX pipeline) it is usually expected that if a single EntityDescriptor is being returned
-    then the outer EntitiesDescriptor is stripped. This method does exactly that:
+    then the outer EntitiesDescriptor is stripped. This method does exactly that.
 
     """
     if req.t is None:
@@ -918,7 +918,7 @@ def _discojson(req, *opts):
     cache & converted to data: URIs
 
     :param req: The request
-    :param opts: Options (unusued)
+    :param opts: Options (unused)
     :return: returns a JSON array
 
     """
@@ -1453,10 +1453,10 @@ def finalize(req, *opts):
     :return: returns the working document with @Name, @cacheDuration and @validUntil set
 
     Set Name, ID, cacheDuration and validUntil on the toplevel EntitiesDescriptor element of the working document.
-    Unlessexplicit provided the @Name is set from the request URI if the pipeline is executed in the pyFF server. The
+    Unless explicitly provided the @Name is set from the request URI if the pipeline is executed in the pyFF server. The
     @ID is set to a string representing the current date/time and will be prefixed with the string provided, which
     defaults to '_'. The @cacheDuration element must be a valid xsd duration (eg PT5H for 5 hrs) and @validUntil can
-    be either an absolute ISO 8601 time string or (more comonly) a relative time on the form
+    be either an absolute ISO 8601 time string or (more commonly) a relative time in the form
 
     .. code-block:: none
 

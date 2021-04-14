@@ -1,6 +1,6 @@
 """
 
-An abstraction layer for metadata fetchers. Supports both syncronous and asyncronous fetchers with cache.
+An abstraction layer for metadata fetchers. Supports both synchronous and asynchronous fetchers with cache.
 
 """
 
