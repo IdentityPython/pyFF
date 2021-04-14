@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from datetime import datetime, timezone
 
 import requests
 from mako.lookup import TemplateLookup
@@ -126,3 +127,78 @@ class PyFFAPITest(PipeLineTest):
             assert type(info) == dict
             assert info['title'] == 'NORDUnet'
             assert 'nordu.net' in info['scope']
+
+
+class PyFFAPITestResources(PipeLineTest):
+    """
+    Runs twill tests using the wsgi-intercept
+    """
+
+    mdx = None
+    mdx_template = None
+    app = None
+
+    @classmethod
+    def setUpClass(cls):
+        SignerTestCase.setUpClass()
+        cls.templates = TemplateLookup(directories=[os.path.join(cls.datadir, 'mdx')])
+        cls.mdx = tempfile.NamedTemporaryFile('w').name
+        # cls.mdx_template = cls.templates.get_template('mdx.fd')
+        cls.test01 = os.path.join(cls.datadir, 'metadata', 'test01.xml')
+        with open(cls.mdx, "w") as fd:
+            fd.write(
+                f"""
+- when update:
+    - load:
+        - {cls.test01}
+"""
+            )
+        with open(cls.mdx, 'r') as r:
+            print("".join(r.readlines()))
+        cls._app = mkapp(cls.mdx)
+        cls.app = lambda *args, **kwargs: cls._app
+
+    @classmethod
+    def tearDownClass(cls):
+        SignerTestCase.tearDownClass()
+        if os.path.exists(cls.mdx):
+            os.unlink(cls.mdx)
+
+    def test_api_resources(self):
+        """"""
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            r1 = requests.post(f'{url}/api/call/update')
+            assert r1.status_code == 200
+
+            r2 = requests.get(f'{url}/api/resources')
+            assert 'application/json' in r2.headers['content-type']
+            # assert "version" in r.text
+            assert r2.status_code == 200
+            data = r2.json()
+
+            expected = [
+                {
+                    'Resource': f'file://{self.test01}',
+                    'HTTP Response Headers': {'Content-Length': 3633},
+                    'Status Code': '200',
+                    'Reason': None,
+                    'Entities': ['https://idp.example.com/saml2/idp/metadata.php'],
+                    'Validation Errors': {},
+                    'Expiration Time': data[0]['Expiration Time'],  # '2021-04-14 15:21:33.150742',
+                    'Expired': False,
+                    'Valid': True,
+                    'Parser': 'SAML',
+                    'Last Seen': data[0]['Last Seen'],  # '2021-04-14 14:21:33.150781',
+                }
+            ]
+            assert data == expected
+
+            # Now check the timestamps
+            now = datetime.now(tz=timezone.utc)
+
+            exp = datetime.fromisoformat(data[0]['Expiration Time'])
+            assert (exp - now).total_seconds() > 3590
+            assert (exp - now).total_seconds() < 3610
+
+            last_seen = datetime.fromisoformat(data[0]['Last Seen'])
+            assert (last_seen - now).total_seconds() < 60
