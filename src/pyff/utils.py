@@ -50,15 +50,6 @@ from .constants import NS, config
 from .exceptions import *
 from .logs import get_log
 
-try:
-    from redis import StrictRedis
-except ImportError as ex:
-    StrictRedis = None
-
-try:
-    from PIL import Image
-except ImportError as ex:
-    Image = None
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -244,7 +235,9 @@ def redis():
     if not hasattr(thread_data, 'redis'):
         thread_data.redis = None
 
-    if StrictRedis is None:
+    try:
+        from redis import StrictRedis
+    except ImportError:
         raise ValueError("redis_py missing from dependencies")
 
     if thread_data.redis is None:
@@ -747,6 +740,11 @@ def img_to_data(data, content_type):
     data64 = None
     if len(data) > config.icon_maxsize:
         return None
+
+    try:
+        from PIL import Image
+    except ImportError:
+        Image = None
 
     if Image is not None:
         try:

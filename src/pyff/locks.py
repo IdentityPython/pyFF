@@ -106,7 +106,7 @@ class ReadWriteLock(object):
         finally:
             self.__condition.release()
 
-    @property
+    @property  # type: ignore
     @contextmanager
     def readlock(self):
         """Yields a read lock"""
@@ -116,7 +116,7 @@ class ReadWriteLock(object):
         finally:
             self.release()
 
-    @property
+    @property  # type: ignore
     @contextmanager
     def writelock(self):
         """Yields a write lock"""
