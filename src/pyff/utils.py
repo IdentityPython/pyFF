@@ -24,13 +24,12 @@ from email.utils import parsedate
 from itertools import chain
 from threading import local
 from time import gmtime, strftime
+from typing import AnyStr, Optional, Union
 
 import iso8601
 import pkg_resources
 import requests
-import six
 import xmlsec
-import yaml
 from _collections_abc import Mapping, MutableMapping
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
@@ -43,7 +42,7 @@ from requests.packages.urllib3.util.retry import Retry
 from requests.structures import CaseInsensitiveDict
 from requests_cache import CachedSession
 from requests_file import FileAdapter
-from six.moves.urllib_parse import quote_plus, urlparse
+from six.moves.urllib_parse import urlparse
 
 from . import __version__
 from .constants import NS, config
@@ -720,13 +719,13 @@ def url_get(url):
     return r
 
 
-def safe_b64e(data):
-    if not isinstance(data, six.binary_type):
+def safe_b64e(data: Union[str, bytes]) -> str:
+    if not isinstance(data, bytes):
         data = data.encode("utf-8")
     return base64.b64encode(data).decode('ascii')
 
 
-def safe_b64d(s):
+def safe_b64d(s: str) -> bytes:
     return base64.b64decode(s)
 
 
@@ -734,7 +733,7 @@ def safe_b64d(s):
 # data:<class 'type'>;base64,
 
 
-def img_to_data(data, content_type):
+def img_to_data(data: bytes, content_type: str) -> Optional[str]:
     """Convert a file (specified by a path) into a data URI."""
     mime_type, options = cgi.parse_header(content_type)
     data64 = None
