@@ -17,6 +17,7 @@ script:
    - coverage run --source=pyff setup.py test
    - mv .coverage .coverage.1
    - coverage combine
+   - make typecheck
 before_install:
    - sudo apt-get update -qq
    - sudo apt-get install -qq python-dev libyaml-dev libxml2-dev libxslt-dev libsofthsm softhsm opensc libengine-pkcs11-openssl
