@@ -1524,6 +1524,7 @@ def finalize(req, *opts):
             dt = now + offset
             e.set('validUntil', datetime2iso(dt))
         elif valid_until is not None:
+            # TODO: if validUntil was not present, valid_until will be the string 'None' here - never the literal None
             try:
                 dt = iso2datetime(valid_until)
                 offset = dt - now
@@ -1533,6 +1534,7 @@ def finalize(req, *opts):
 
         # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set
+        # TODO: offset can be None here, if validUntil is not a valid duration or ISO date
         req.state['cache'] = int(total_seconds(offset) / 50)
 
     cache_duration = req.args.get('cacheDuration', e.get('cacheDuration', None))
