@@ -4,7 +4,6 @@ cachetools
 gunicorn
 httplib2 >=0.7.7
 ipaddr
-iso8601 >=0.1.4
 lxml >=4.1.1
 mako
 nose

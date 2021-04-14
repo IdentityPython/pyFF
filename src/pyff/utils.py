@@ -26,7 +26,6 @@ from threading import local
 from time import gmtime, strftime
 from typing import Optional, Union
 
-import iso8601
 import pkg_resources
 import requests
 import xmlsec
@@ -177,8 +176,19 @@ def ts_now() -> int:
     return int(time.time())
 
 
-def iso2datetime(s):
-    return iso8601.parse_date(s)
+def iso2datetime(s: str) -> datetime:
+    # TODO: All timestamps in SAML are supposed to be without offset from UTC - raise exception if it is not?
+    if s.endswith('Z'):
+        s = s[:-1] + '+00:00'
+    return datetime.fromisoformat(s)
+
+
+def datetime2iso(dt: datetime) -> str:
+    s = dt.replace(microsecond=0).isoformat()
+    # Use 'Z' instead of +00:00 suffix for UTC times
+    if s.endswith('+00:00'):
+        s = s[:-6] + 'Z'
+    return s
 
 
 def first_text(elt, tag, default=None):
@@ -444,13 +454,16 @@ def valid_until_ts(elt, default_ts: int) -> int:
     ts = default_ts
     valid_until = elt.get("validUntil", None)
     if valid_until is not None:
-        dt = iso8601.parse_date(valid_until)
+        try:
+            dt = datetime.fromtimestamp(valid_until)
+        except Exception:
+            dt = None
         if dt is not None:
             ts = totimestamp(dt)
 
     cache_duration = elt.get("cacheDuration", None)
     if cache_duration is not None:
-        dt = datetime.utcnow() + duration2timedelta(cache_duration)
+        dt = utc_now() + duration2timedelta(cache_duration)
         if dt is not None:
             ts = totimestamp(dt)
 
@@ -951,3 +964,8 @@ class Watchable(object):
             except BaseException as ex:
                 log.debug(traceback.format_exc())
                 log.warn(ex)
+
+
+def utc_now() -> datetime:
+    """ Return current time with tz=UTC """
+    return datetime.now(tz=timezone.utc)

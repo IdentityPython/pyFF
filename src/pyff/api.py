@@ -24,7 +24,7 @@ from .pipes import plumbing
 from .repo import MDRepository
 from .resource import Resource
 from .samlmd import entity_display_name
-from .utils import b2u, dumptree, duration2timedelta, hash_id, json_serializer
+from .utils import b2u, dumptree, duration2timedelta, hash_id, json_serializer, utc_now
 
 log = get_log(__name__)
 
@@ -538,8 +538,7 @@ def mkapp(*args, **kwargs):
         ctx.add_route('request', '/*path', request_method='GET')
         ctx.add_view(request_handler, route_name='request')
 
-        start = datetime.utcnow() + timedelta(seconds=1)
-        log.debug(start)
+        start = utc_now() + timedelta(seconds=1)
         if config.update_frequency > 0:
             ctx.registry.scheduler.add_job(
                 call,

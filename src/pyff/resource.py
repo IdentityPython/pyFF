@@ -3,12 +3,14 @@
 An abstraction layer for metadata fetchers. Supports both synchronous and asynchronous fetchers with cache.
 
 """
+from __future__ import annotations
 
 import os
 from collections import deque
 from copy import deepcopy
 from datetime import datetime
 from threading import Condition, Lock
+from typing import Optional
 
 import requests
 
@@ -17,7 +19,7 @@ from .exceptions import ResourceException
 from .fetch import make_fetcher
 from .logs import get_log
 from .parse import parse_resource
-from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, url_get
+from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, url_get, utc_now
 
 requests.packages.urllib3.disable_warnings()
 
@@ -133,9 +135,9 @@ class Resource(Watchable):
         self.t = None
         self.type = "text/plain"
         self.etag = None
-        self.expire_time = None
-        self.never_expires = False
-        self.last_seen = None
+        self.expire_time: Optional[datetime] = None
+        self.never_expires: bool = False
+        self.last_seen: Optional[datetime] = None
         self.last_parser = None
         self._infos = deque(maxlen=config.info_buffer_size)
         self.children = deque()
@@ -223,7 +225,7 @@ class Resource(Watchable):
     def is_expired(self) -> bool:
         if self.never_expires:
             return False
-        now = datetime.now()
+        now = utc_now()
         return self.expire_time is not None and self.expire_time < now
 
     def is_valid(self) -> bool:
@@ -301,7 +303,7 @@ class Resource(Watchable):
             info.update(parse_info)
 
         if self.t is not None:
-            self.last_seen = datetime.now()
+            self.last_seen = utc_now().replace(microsecond=0)
             if self.post and isinstance(self.post, list):
                 for cb in self.post:
                     if self.t is not None:

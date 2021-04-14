@@ -17,6 +17,7 @@ from .utils import (
     Lambda,
     b2u,
     check_signature,
+    datetime2iso,
     dumptree,
     duration2timedelta,
     filter_lang,
@@ -34,6 +35,7 @@ from .utils import (
     subdomains,
     unicode_stream,
     url2host,
+    utc_now,
     validate_document,
     xml_error,
 )
@@ -172,7 +174,10 @@ class SAMLMetadataResourceParser(PyffParser):
         )
 
         if expire_time_offset is not None:
-            expire_time = datetime.now() + expire_time_offset
+            now = utc_now()
+            now = now.replace(microsecond=0)
+
+            expire_time = now + expire_time_offset
             resource.expire_time = expire_time
             info['Expiration Time'] = str(expire_time)
 
@@ -217,13 +222,13 @@ class MDServiceListParser(PyffParser):
             info['NextUpdate'] = next_update
             resource.expire_time = iso2datetime(next_update)
         elif config.respect_cache_duration:
-            now = datetime.utcnow()
+            now = utc_now()
             now = now.replace(microsecond=0)
             next_update = now + duration2timedelta(config.default_cache_duration)
             info['NextUpdate'] = next_update
             resource.expire_time = next_update
 
-        info['Expiration Time'] = str(resource.expire_time)
+        info['Expiration Time'] = 'None' if not resource.expire_time else resource.expire_time.isoformat()
         info['IssuerName'] = first_text(relt, "{%s}IssuerName" % NS['ser'])
         info['SchemeIdentifier'] = first_text(relt, "{%s}SchemeIdentifier" % NS['ser'])
         info['SchemeTerritory'] = first_text(relt, "{%s}SchemeTerritory" % NS['ser'])
@@ -266,7 +271,7 @@ class MDServiceListParser(PyffParser):
                         r.add_via(Lambda(_update_entities, **args))
 
         log.debug("Done parsing eIDAS MetadataServiceList")
-        resource.last_seen = datetime.now()
+        resource.last_seen = utc_now().replace(microsecond=0)
         resource.expire_time = None
         return info
 
@@ -280,10 +285,9 @@ def metadata_expiration(t):
         cache_duration = config.default_cache_duration
         valid_until = relt.get('validUntil', None)
         if valid_until is not None:
-            now = datetime.utcnow()
+            now = utc_now().replace(microsecond=0)
             vu = iso2datetime(valid_until)
-            now = now.replace(microsecond=0)
-            vu = vu.replace(microsecond=0, tzinfo=None)
+            vu = vu.replace(microsecond=0)
             return vu - now
         elif config.respect_cache_duration:
             cache_duration = relt.get('cacheDuration', config.default_cache_duration)
@@ -1037,8 +1041,7 @@ def set_pubinfo(e, publisher=None, creation_instant=None):
         raise MetadataException("At least publisher must be provided")
 
     if creation_instant is None:
-        now = datetime.utcnow()
-        creation_instant = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        creation_instant = datetime2iso(utc_now())
 
     ext = entity_extensions(e)
     pi = ext.find(".//{%s}PublicationInfo" % NS['mdrpi'])
@@ -1080,10 +1083,8 @@ def expiration(t):
         cache_duration = config.default_cache_duration
         valid_until = relt.get('validUntil', None)
         if valid_until is not None:
-            now = datetime.utcnow()
+            now = utc_now().replace(microsecond=0)
             vu = iso2datetime(valid_until)
-            now = now.replace(microsecond=0)
-            vu = vu.replace(microsecond=0, tzinfo=None)
             return vu - now
         elif config.respect_cache_duration:
             cache_duration = relt.get('cacheDuration', config.default_cache_duration)
