@@ -11,6 +11,7 @@ install:
    - "./setup.py develop"
    - "pip install coveralls"
    - "pip install nose"
+   - "pip install mypy"
 script: 
    - export PYTHONPATH=./src:$PYTHONPATH
    - coverage erase
