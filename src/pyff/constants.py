@@ -185,7 +185,7 @@ class ListSetting(BaseSetting):
 
     def __get__(self, instance, owner):
         if len(self.args) > 0:
-            return self.args[0].__get__(self)
+            return self.args[0].__get__(instance, owner)
         else:
             return None
 
@@ -453,6 +453,13 @@ class Config(object):
     xinclude = S("xinclude", default=True, typeconv=as_bool, info="process xinclude statements?")
 
     logger = S('logger', typeconv=as_string, info="python logger config - overides all other logging directives")
+
+    local_copy_dir = S(
+        'local_copy_dir',
+        typeconv=as_string,
+        info="the directory where local backup copies of metadata is stored",
+        default="/var/run/pyff/backup",
+    )
 
     @property
     def base_url(self):

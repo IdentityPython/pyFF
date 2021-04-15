@@ -2,7 +2,7 @@ import importlib
 import threading
 from datetime import datetime, timedelta
 from json import dumps
-from typing import Any, List, Mapping
+from typing import Any, List, Mapping, Iterator
 
 import pkg_resources
 import pyramid.httpexceptions as exc
@@ -389,6 +389,9 @@ def resources_handler(request):
     :return: a JSON representation of the set of resources currently loaded by the server
     """
 
+    def _infos(resources: Iterator[Resource]) -> List[Mapping[str, Any]]:
+        return list(filter(lambda i: 'State' in i and i['State'] is not None, [_info(r) for r in resources]))
+
     def _info(r: Resource) -> List[Mapping[str, Any]]:
         nfo = r.info
         nfo['Valid'] = r.is_valid()
@@ -396,12 +399,11 @@ def resources_handler(request):
         if r.last_seen is not None:
             nfo['Last Seen'] = r.last_seen
         if len(r.children) > 0:
-            nfo['Children'] = [_info(cr) for cr in r.children]
+            nfo['Children'] = _infos(r.children)
 
         return nfo
 
-    _resources = [_info(r) for r in request.registry.md.rm.children]
-    response = Response(dumps(_resources, default=json_serializer))
+    response = Response(dumps(_infos(request.registry.md.rm.children), default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
 
     return response

@@ -10,7 +10,7 @@ from collections import deque
 from copy import deepcopy
 from datetime import datetime
 from threading import Condition, Lock
-from typing import Optional
+from typing import Optional, Dict
 
 import requests
 
@@ -19,7 +19,19 @@ from .exceptions import ResourceException
 from .fetch import make_fetcher
 from .logs import get_log
 from .parse import parse_resource
-from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, url_get, utc_now
+
+from .utils import (
+    Watchable,
+    hex_digest,
+    img_to_data,
+    non_blocking_lock,
+    url_get,
+    utc_now,
+    resource_string,
+    resource_filename,
+    safe_write,
+    hash_id,
+)
 
 requests.packages.urllib3.disable_warnings()
 
@@ -170,6 +182,10 @@ class Resource(Watchable):
         raise ValueError("this object should not be unpickled")
 
     @property
+    def local_copy_fn(self):
+        return os.path.join(config.local_copy_dir, hash_id(self.url, 'sha256', False))
+
+    @property
     def post(self):
         return self.opts['via']
 
@@ -231,8 +247,12 @@ class Resource(Watchable):
     def is_valid(self) -> bool:
         return not self.is_expired() and self.last_seen is not None and self.last_parser is not None
 
-    def add_info(self, info):
+    def add_info(self) -> Dict:
+        info = dict()
+        info['State'] = None
+        info['Resource'] = self.url
         self._infos.append(info)
+        return info
 
     def _replace(self, r):
         for i in range(0, len(self.children)):
@@ -275,35 +295,76 @@ class Resource(Watchable):
         else:
             return []
 
-    def parse(self, getter):
-        info = dict()
-        info['Resource'] = self.url
-        self.add_info(info)
-        data = None
-        log.debug("getting {}".format(self.url))
-
-        r = getter(self.url)
-
-        info['HTTP Response Headers'] = r.headers
-        log.debug(
-            "got status_code={:d}, encoding={} from_cache={} from {}".format(
-                r.status_code, r.encoding, getattr(r, "from_cache", False), self.url
+    def load_backup(self, r):
+        try:
+            return resource_string(self.local_copy_fn)
+            log.warn("Got status={:d} while getting {}. Fallback to local copy.".format(r.status_code, self.url))
+        except IOError as ex:
+            log.warn(
+                "Caught an exception trying to load local backup for {} via {}: {}".format(
+                    r.url, self.local_copy_fn, ex
+                )
             )
-        )
-        info['Status Code'] = str(r.status_code)
-        info['Reason'] = r.reason
+            return None
 
-        if r.ok:
-            data = r.text
-        else:
+    def load_resource(self, getter):
+        info = self.add_info()
+        data: Optional[str] = None
+        status: Optional[int] = None
+
+        log.debug("Loading resource {}".format(self.url))
+
+        try:
+            r = getter(self.url)
+
+            info['HTTP Response Headers'] = r.headers
+            log.debug(
+                "got status_code={:d}, encoding={} from_cache={} from {}".format(
+                    r.status_code, r.encoding, getattr(r, "from_cache", False), self.url
+                )
+            )
+            status = r.status_code
+            info['Reason'] = r.reason
+
+            if r.ok:
+                data = r.text
+                self.etag = r.headers.get('ETag', None) or hex_digest(r.text, 'sha256')
+            elif self.local_copy_fn is not None:
+                data = self.load_backup(r)
+                if data is not None and len(data) > 0:
+                    info['Reason'] = "Retrieved from local cache because status: {} != 200".format(status)
+                    status = 218
+
+            info['Status Code'] = str(status)
+
+        except IOError as ex:
+            log.warn("caught exception from {}: {}".format(self.url, ex))
+            if self.local_copy_fn is not None:
+                data = self.load_backup(r)
+                if data is not None and len(data) > 0:
+                    info['Reason'] = "Retrieved from local cache because exception: {}".format(ex)
+                    status = 218
+
+        if data is None or not len(data) > 0:
             raise ResourceException("Got status={:d} while getting {}".format(r.status_code, self.url))
 
+        if status == 200:
+            self.last_seen = utc_now().replace(microsecond=0)
+            safe_write(self.local_copy_fn, data, True)
+
+        info['State'] = 'Fetched'
+
+        return data, info
+
+    def parse(self, getter):
+        data, info = self.load_resource(getter)
+        info['State'] = 'Parsing'
         parse_info = parse_resource(self, data)
         if parse_info is not None and isinstance(parse_info, dict):
             info.update(parse_info)
 
+        info['State'] = 'Parsed'
         if self.t is not None:
-            self.last_seen = utc_now().replace(microsecond=0)
             if self.post and isinstance(self.post, list):
                 for cb in self.post:
                     if self.t is not None:
@@ -318,6 +379,6 @@ class Resource(Watchable):
             for (eid, error) in list(info['Validation Errors'].items()):
                 log.error(error)
 
-            self.etag = r.headers.get('ETag', None) or hex_digest(r.text, 'sha256')
+        info['State'] = 'Ready'
 
         return self.children
