@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import os
 import traceback
-from typing import Any, Dict, Optional
+import functools
+from typing import Any, Dict, Optional, Callable, Type, Tuple
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -22,7 +23,34 @@ __author__ = 'leifj'
 registry = dict()
 
 
-def pipe(*args, **kwargs):
+def pipe(*args, **kwargs) -> Callable:
+    def pipe_decorator(f: Callable) -> Callable:
+        if 'name' in kwargs:  # called with the name argument @pipe(name=...) or as @pipe()
+            f_name = kwargs.get('name', f.__name__)
+            registry[f_name] = f
+
+        @functools.wraps(f)
+        def wrapper_pipe(*iargs, **ikwargs) -> Any:
+            opts_type: Optional[Type] = None
+            if 'opts' in f.__annotations__:
+                opts_type = f.__annotations__['opts']
+
+            if opts_type is not None:
+                opts_in = ikwargs.pop('opts')
+                ikwargs['opts'] = opts_type(**dict(list(zip(opts_in[::2], opts_in[1::2]))))
+
+            return f(*iargs, **ikwargs)
+
+        return wrapper_pipe
+
+    if len(args) == 1 and callable(args[0]):  # called without arguments @pipe
+        registry[args[0].__name__] = args[0]
+        return pipe_decorator(args[0])
+    else:
+        return pipe_decorator
+
+
+def pipe_old(*args, **kwargs):
     """
     Register the decorated function in the pyff pipe registry
     :param name: optional name - if None, use function name
