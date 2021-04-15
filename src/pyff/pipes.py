@@ -50,28 +50,6 @@ def pipe(*args, **kwargs) -> Callable:
         return pipe_decorator
 
 
-def pipe_old(*args, **kwargs):
-    """
-    Register the decorated function in the pyff pipe registry
-    :param name: optional name - if None, use function name
-    """
-
-    def deco_none(f):
-        return f
-
-    def deco_pipe(f):
-        f_name = kwargs.get('name', f.__name__)
-        registry[f_name] = f
-        return f
-
-    if 1 == len(args):
-        f = args[0]
-        registry[f.__name__] = f
-        return deco_none
-    else:
-        return deco_pipe
-
-
 class PipeException(PyffException):
     pass
 
