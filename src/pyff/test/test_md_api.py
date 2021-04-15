@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -10,6 +11,7 @@ from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
 from pyff.api import mkapp
 from pyff.test import SignerTestCase
 from pyff.test.test_pipeline import PipeLineTest
+from pyff.constants import config
 
 
 class PyFFAPITest(PipeLineTest):
@@ -141,6 +143,7 @@ class PyFFAPITestResources(PipeLineTest):
     @classmethod
     def setUpClass(cls):
         SignerTestCase.setUpClass()
+        config.local_copy_dir = tempfile.TemporaryDirectory()
         cls.templates = TemplateLookup(directories=[os.path.join(cls.datadir, 'mdx')])
         cls.mdx = tempfile.NamedTemporaryFile('w').name
         # cls.mdx_template = cls.templates.get_template('mdx.fd')
@@ -163,6 +166,8 @@ class PyFFAPITestResources(PipeLineTest):
         SignerTestCase.tearDownClass()
         if os.path.exists(cls.mdx):
             os.unlink(cls.mdx)
+        if os.path.exists(config.local_copy_dir):
+            shutil.rmtree(config.local_copy_dir)
 
     def test_api_resources(self):
         """"""
@@ -182,6 +187,7 @@ class PyFFAPITestResources(PipeLineTest):
                     'HTTP Response Headers': {'Content-Length': 3633},
                     'Status Code': '200',
                     'Reason': None,
+                    'State': 'Ready',
                     'Entities': ['https://idp.example.com/saml2/idp/metadata.php'],
                     'Validation Errors': {},
                     'Expiration Time': data[0]['Expiration Time'],  # '2021-04-14 15:21:33.150742',
