@@ -295,14 +295,14 @@ class Resource(Watchable):
         else:
             return []
 
-    def load_backup(self, r):
+    def load_backup(self):
         try:
             return resource_string(self.local_copy_fn)
             log.warn("Got status={:d} while getting {}. Fallback to local copy.".format(r.status_code, self.url))
         except IOError as ex:
             log.warn(
                 "Caught an exception trying to load local backup for {} via {}: {}".format(
-                    r.url, self.local_copy_fn, ex
+                    self.url, self.local_copy_fn, ex
                 )
             )
             return None
@@ -330,7 +330,7 @@ class Resource(Watchable):
                 data = r.text
                 self.etag = r.headers.get('ETag', None) or hex_digest(r.text, 'sha256')
             elif self.local_copy_fn is not None:
-                data = self.load_backup(r)
+                data = self.load_backup()
                 if data is not None and len(data) > 0:
                     info['Reason'] = "Retrieved from local cache because status: {} != 200".format(status)
                     status = 218
@@ -338,15 +338,17 @@ class Resource(Watchable):
             info['Status Code'] = str(status)
 
         except IOError as ex:
-            log.warn("caught exception from {}: {}".format(self.url, ex))
             if self.local_copy_fn is not None:
-                data = self.load_backup(r)
+                log.warn("caught exception from {} - trying local backup: {}".format(self.url, ex))
+                data = self.load_backup()
                 if data is not None and len(data) > 0:
                     info['Reason'] = "Retrieved from local cache because exception: {}".format(ex)
                     status = 218
+            if data is None or not len(data) > 0:
+                raise ex  # propagate exception if we can't find a backup
 
         if data is None or not len(data) > 0:
-            raise ResourceException("Got status={:d} while getting {}".format(r.status_code, self.url))
+            raise ResourceException("failed to fetch {} (status: {:d})".format(self.url, status))
 
         info['State'] = 'Fetched'
 
@@ -359,7 +361,7 @@ class Resource(Watchable):
         if parse_info is not None and isinstance(parse_info, dict):
             info.update(parse_info)
 
-        if status == 200:
+        if status != 218:  # write backup unless we just loaded from backup
             self.last_seen = utc_now().replace(microsecond=0)
             safe_write(self.local_copy_fn, data, True)
 
