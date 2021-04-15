@@ -1,4 +1,5 @@
 import os
+from abc import ABC
 from collections import deque
 from typing import Any, List, Mapping
 
@@ -24,9 +25,21 @@ class ParserException(Exception):
         raise self._wraped
 
 
-class PyffParser(object):
+class PyffParser(ABC):
     def to_json(self):
         return str(self)
+
+    def magic(self, content: str):
+        """Return True if this parser is applicable to this content"""
+        raise NotImplementedError()
+
+    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
+        """Initialise/update a resource based on this content, returning information about it
+        TODO: Determine what 'parse' actually means
+
+        TODO: Return something more structured than an arbitrary mapping
+        """
+        raise NotImplementedError()
 
 
 class NoParser(PyffParser):
