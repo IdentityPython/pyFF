@@ -392,7 +392,7 @@ def resources_handler(request):
     def _infos(resources: Iterator[Resource]) -> List[Mapping[str, Any]]:
         return list(filter(lambda i: 'State' in i and i['State'] is not None, [_info(r) for r in resources]))
 
-    def _info(r: Resource) -> List[Mapping[str, Any]]:
+    def _info(r: Resource) -> Mapping[str, Any]:
         nfo = r.info
         nfo['Valid'] = r.is_valid()
         nfo['Parser'] = r.last_parser

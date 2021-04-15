@@ -10,7 +10,7 @@ from collections import deque
 from copy import deepcopy
 from datetime import datetime
 from threading import Condition, Lock
-from typing import Optional, Dict
+from typing import Optional, Dict, Mapping, Any
 
 import requests
 
@@ -247,8 +247,8 @@ class Resource(Watchable):
     def is_valid(self) -> bool:
         return not self.is_expired() and self.last_seen is not None and self.last_parser is not None
 
-    def add_info(self) -> Dict:
-        info = dict()
+    def add_info(self) -> Mapping[str, Optional[Any]]:
+        info: Dict[str, Optional[Any]] = dict()
         info['State'] = None
         info['Resource'] = self.url
         self._infos.append(info)
@@ -319,7 +319,7 @@ class Resource(Watchable):
 
     def load_resource(self, getter):
         data: Optional[str] = None
-        status: Optional[int] = None
+        status: int = 500
         info = self.add_info()
 
         log.debug("Loading resource {}".format(self.url))
