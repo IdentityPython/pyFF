@@ -296,6 +296,9 @@ class Resource(Watchable):
             return []
 
     def load_backup(self):
+        if config.local_copy_dir is None:
+            return None
+
         try:
             return resource_string(self.local_copy_fn)
             log.warn("Got status={:d} while getting {}. Fallback to local copy.".format(r.status_code, self.url))
@@ -306,6 +309,13 @@ class Resource(Watchable):
                 )
             )
             return None
+
+    def save_backup(self):
+        if config.local_copy_dir is not None:
+            try:
+                safe_write(self.local_copy_fn, data, True)
+            except IOError as ex:
+                log.warn("unable to save backup copy of {}: {}".format(self.url, ex))
 
     def load_resource(self, getter):
         data: Optional[str] = None
@@ -363,7 +373,7 @@ class Resource(Watchable):
 
         if status != 218:  # write backup unless we just loaded from backup
             self.last_seen = utc_now().replace(microsecond=0)
-            safe_write(self.local_copy_fn, data, True)
+            self.save_backup()
 
         info['State'] = 'Parsed'
         if self.t is not None:
