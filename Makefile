@@ -1,4 +1,9 @@
-SOURCE=		src
+TOPDIR:=	$(abspath .)
+SRCDIR=		$(TOPDIR)/src
+SOURCE=		$(SRCDIR)/pyff
+
+test:
+	PYTHONPATH=$(SRCDIR) pytest
 
 reformat:
 	isort --line-width 120 --atomic --project eduid_scimapi --recursive $(SOURCE)

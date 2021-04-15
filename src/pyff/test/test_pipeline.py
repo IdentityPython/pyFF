@@ -3,6 +3,7 @@ import shutil
 import sys
 import tempfile
 
+import pytest
 import six
 import yaml
 from mako.lookup import TemplateLookup
@@ -24,6 +25,20 @@ assert builtins is not None
 
 
 class PipeLineTest(SignerTestCase):
+    @pytest.fixture(autouse=True)
+    def _capsys(self, capsys):
+        self.capsys = capsys
+
+    @property
+    def captured_stdout(self):
+        out, _err = self.capsys.readouterr()
+        return out
+
+    @property
+    def captured_stderr(self):
+        _out, err = self.capsys.readouterr()
+        return err
+
     def run_pipeline(self, pl_name, ctx=None, md=None):
         if ctx is None:
             ctx = dict()
@@ -54,19 +69,6 @@ class PipeLineTest(SignerTestCase):
     def setUp(self):
         SignerTestCase.setUpClass()
         self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'simple-pipeline')])
-
-
-class StreamCapturing(object):
-    def __init__(self, stream):
-        self.captured = []
-        self.stream = stream
-
-    def __getattr__(self, attr):
-        return getattr(self.stream, attr)
-
-    def write(self, data):
-        self.captured.append(data)
-        self.stream.write(data)
 
 
 class ParseTest(PipeLineTest):
@@ -456,23 +458,22 @@ class SigningTest(PipeLineTest):
             print(fd.read())
 
     def test_info_and_dump(self):
-        with patch("sys.stdout", StreamCapturing(sys.stdout)) as ctx:
-            try:
-                self.exec_pipeline(
-                    """
+        try:
+            self.exec_pipeline(
+                """
 - load:
   - http://mds.swamid.se/md/swamid-2.0.xml
 - select
 - dump
 - info
 """
-                )
-                assert 'https://idp.nordu.net/idp/shibboleth' in sys.stdout.captured
-            except IOError:
-                pass
+            )
+            assert 'https://idp.nordu.net/idp/shibboleth' in self.captured_stdout
+        except IOError:
+            pass
 
     def test_end_exit(self):
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit):
             try:
                 self.exec_pipeline(
                     """
@@ -486,21 +487,18 @@ class SigningTest(PipeLineTest):
                 pass
             except ExitException as ex:
                 assert ex.code == 22
-                assert "slartibartifast" in "".join(sys.stdout.captured)
+                assert "slartibartifast" in self.captured_stdout
 
     def test_single_dump(self):
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
-            try:
-                self.exec_pipeline(
-                    """
+        try:
+            self.exec_pipeline(
+                """
 - dump
 """
-                )
-                assert '<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"/>' in "".join(
-                    sys.stdout.captured
-                )
-            except IOError:
-                pass
+            )
+            assert '<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"/>' in self.captured_stdout
+        except IOError:
+            pass
 
     def test_missing_select(self):
         for stmt in (

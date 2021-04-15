@@ -1,11 +1,12 @@
 coverage
 fakeredis>=1.0.5
 funcsigs
+isort
 mako
 mock
-nose>=1.0
 pbr
+pytest
+pytest-cov
 setuptools
 testfixtures
 wsgi_intercept
-isort
