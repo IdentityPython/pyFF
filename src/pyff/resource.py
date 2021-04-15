@@ -310,7 +310,7 @@ class Resource(Watchable):
             )
             return None
 
-    def save_backup(self):
+    def save_backup(self, data):
         if config.local_copy_dir is not None:
             try:
                 safe_write(self.local_copy_fn, data, True)
@@ -373,7 +373,7 @@ class Resource(Watchable):
 
         if status != 218:  # write backup unless we just loaded from backup
             self.last_seen = utc_now().replace(microsecond=0)
-            self.save_backup()
+            self.save_backup(data)
 
         info['State'] = 'Parsed'
         if self.t is not None:
