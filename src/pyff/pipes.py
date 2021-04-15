@@ -170,7 +170,7 @@ class PipelineCallback(object):
 
 class Plumbing(object):
     """
-    A plumbing instance represents a basic processing chain  for SAML metadata. A simple, yet reasonably complete example:
+    A plumbing instance represents a basic processing chain for SAML metadata. A simple, yet reasonably complete example:
 
     .. code-block:: yaml
 
@@ -220,8 +220,8 @@ class Plumbing(object):
 
     class Request(object):
         """
-        Represents a single request. When processing a set of pipelines a single request is used. Any part of the pipeline
-        may modify any of the fields.
+        Represents a single request. When processing a set of pipelines a single request is used.
+        Any part of the pipeline may modify any of the fields.
         """
 
         def __init__(
