@@ -20,7 +20,7 @@ log = get_log(__name__)
 
 __author__ = 'leifj'
 
-registry = dict()
+registry: Dict[str, Callable] = dict()
 
 
 def pipe(*args, **kwargs) -> Callable:
@@ -251,7 +251,7 @@ class Plumbing(object):
             self._store = store
             self.scheduler = scheduler
             self.raise_exceptions = raise_exceptions
-            self.exception = None
+            self.exception: Optional[BaseException] = None
             self.parent = None
 
         def scope_of(self, entry_point):
@@ -284,14 +284,14 @@ class Plumbing(object):
                 return self._store
             return self.md.store
 
-        def process(self, pl):
+        def process(self, pl: Plumbing):
             """The inner request pipeline processor.
 
             :param pl: The plumbing to run this request through
             """
             return pl.iprocess(self)
 
-    def iprocess(self, req):
+    def iprocess(self, req: Plumbing.Request):
         """The inner request pipeline processor.
 
         :param req: The request to run through the pipeline

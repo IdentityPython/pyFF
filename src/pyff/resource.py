@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import logging
 import os
+import traceback
 from collections import deque
 from copy import deepcopy
 from datetime import datetime
 from threading import Condition, Lock
-from typing import Optional, Dict, Mapping, Any, Callable, Tuple
+from typing import Deque, Optional, Dict, Mapping, Any, Callable, Tuple
 from requests.adapters import Response
 
 import requests
@@ -43,7 +44,7 @@ log = get_log(__name__)
 class URLHandler(object):
     def __init__(self, *args, **kwargs):
         log.debug("create urlhandler {} {}".format(args, kwargs))
-        self.pending = {}
+        self.pending: Dict[str, Resource] = {}
         self.name = kwargs.pop('name', None)
         self.content_handler = kwargs.pop('content_handler', None)
         self._setup()
@@ -119,17 +120,18 @@ class IconHandler(URLHandler):
             else:
                 self.icon_store.update(url, None, info=dict(exception=exception))
         except BaseException as ex:
-            log.error(ex)
+            log.debug(traceback.format_exc())
+            log.error(f'Failed handling icon: {ex}')
 
 
 class ResourceHandler(URLHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
 
-    def thing_to_url(self, t):
+    def thing_to_url(self, t: Resource) -> Optional[str]:
         return t.url
 
-    def i_handle(self, t, url=None, response=None, exception=None, last_fetched=None):
+    def i_handle(self, t: Resource, url=None, response=None, exception=None, last_fetched=None):
         try:
             if exception is not None:
                 t.info['Exception'] = exception
@@ -137,7 +139,8 @@ class ResourceHandler(URLHandler):
                 children = t.parse(lambda u: response)
                 self.i_schedule(children)
         except BaseException as ex:
-            log.error(ex)
+            log.debug(traceback.format_exc())
+            log.error(f'Failed handling resource: {ex}')
             t.info['Exception'] = ex
 
 
@@ -152,9 +155,9 @@ class Resource(Watchable):
         self.expire_time: Optional[datetime] = None
         self.never_expires: bool = False
         self.last_seen: Optional[datetime] = None
-        self.last_parser = None
-        self._infos = deque(maxlen=config.info_buffer_size)
-        self.children = deque()
+        self.last_parser: Optional['PyffParser'] = None  # importing PyffParser in this module causes a loop
+        self._infos: Deque[Dict] = deque(maxlen=config.info_buffer_size)
+        self.children: Deque[Resource] = deque()
         self._setup()
 
     def _setup(self):
@@ -256,7 +259,7 @@ class Resource(Watchable):
         self._infos.append(info)
         return info
 
-    def _replace(self, r):
+    def _replace(self, r: Resource) -> None:
         for i in range(0, len(self.children)):
             if self.children[i].url == r.url:
                 self.children[i] = r
@@ -277,7 +280,7 @@ class Resource(Watchable):
         return r
 
     @property
-    def name(self):
+    def name(self) -> Optional[str]:
         if 'as' in self.opts:
             return self.opts['as']
         else:

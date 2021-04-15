@@ -1,10 +1,12 @@
 import os
-from datetime import datetime
+from collections import deque
+from typing import Any, List, Mapping
 
 from xmlsec.crypto import CertDict
 
 from .constants import NS
 from .logs import get_log
+from .resource import Resource
 from .utils import find_matching_files, parse_xml, root, unicode_stream, utc_now
 
 __author__ = 'leifj'
@@ -48,11 +50,11 @@ class DirectoryParser(PyffParser):
     def __str__(self):
         return "Directory"
 
-    def magic(self, content):
+    def magic(self, content: str) -> bool:
         return os.path.isdir(content)
 
-    def parse(self, resource, content):
-        resource.children = []
+    def parse(self, resource: Resource, content: str):
+        resource.children = deque()
         info = dict()
         info['Description'] = 'Directory'
         info['Expiration Time'] = 'never expires'
@@ -78,10 +80,10 @@ class XRDParser(PyffParser):
     def __str__(self):
         return "XRD"
 
-    def magic(self, content):
+    def magic(self, content: str) -> bool:
         return 'XRD' in content
 
-    def parse(self, resource, content):
+    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
         info = dict()
         info['Description'] = "XRD links"
         info['Expiration Time'] = 'never expires'
@@ -104,14 +106,14 @@ class XRDParser(PyffParser):
         return info
 
 
-_parsers = [XRDParser(), DirectoryParser(['xml']), NoParser()]
+_parsers: List[PyffParser] = [XRDParser(), DirectoryParser(['xml']), NoParser()]
 
 
 def add_parser(parser):
     _parsers.insert(0, parser)
 
 
-def parse_resource(resource, content):
+def parse_resource(resource: Resource, content: str):
     for parser in _parsers:
         if parser.magic(content):
             resource.last_parser = parser

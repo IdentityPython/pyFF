@@ -36,6 +36,7 @@ from apscheduler.jobstores.redis import RedisJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from cachetools import LRUCache
 from lxml import etree
+from requests import Session
 from requests.adapters import BaseAdapter, HTTPAdapter, Response
 from requests.packages.urllib3.util.retry import Retry
 from requests.structures import CaseInsensitiveDict
@@ -688,14 +689,14 @@ class DirAdapter(BaseAdapter):
         pass
 
 
-def url_get(url):
+def url_get(url: str) -> Response:
     """
     Download an URL using a cache and return the response object
     :param url:
     :return:
     """
 
-    s = None
+    s: Union[Session, CachedSession]
     if 'file://' in url:
         s = requests.session()
         s.mount('file://', FileAdapter())

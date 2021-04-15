@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import datetime
 from distutils.util import strtobool
 from itertools import chain
+from typing import Any, Dict, Mapping, Optional
 
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -13,6 +14,7 @@ from .constants import ATTRS, NF_URI, NS, config
 from .exceptions import *
 from .logs import get_log
 from .parse import PyffParser, add_parser
+from .resource import Resource
 from .utils import (
     Lambda,
     b2u,
@@ -156,11 +158,11 @@ class SAMLMetadataResourceParser(PyffParser):
     def __str__(self):
         return "SAML"
 
-    def magic(self, content):
+    def magic(self, content: str) -> bool:
         return "EntitiesDescriptor" in content or "EntityDescriptor" in content
 
-    def parse(self, resource, content):
-        info = dict()
+    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
+        info: Dict[str, Any] = dict()
         info['Validation Errors'] = dict()
         t, expire_time_offset, exception = parse_saml_metadata(
             unicode_stream(content),
@@ -205,10 +207,10 @@ class MDServiceListParser(PyffParser):
     def __str__(self):
         return "MDSL"
 
-    def magic(self, content):
+    def magic(self, content: str) -> bool:
         return 'MetadataServiceList' in content
 
-    def parse(self, resource, content):
+    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
         info = dict()
         info['Description'] = "eIDAS MetadataServiceList"
         t = parse_xml(unicode_stream(content))

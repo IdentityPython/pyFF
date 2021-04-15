@@ -57,7 +57,7 @@ class PyFFLogger(object):
         return self._log.isEnabledFor(lvl)
 
 
-def get_log(name):
+def get_log(name: str) -> PyFFLogger:
     return PyFFLogger(name)
 
 
