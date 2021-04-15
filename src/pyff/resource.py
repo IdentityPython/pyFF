@@ -5,36 +5,24 @@ An abstraction layer for metadata fetchers. Supports both synchronous and asynch
 """
 from __future__ import annotations
 
-import logging
 import os
 import traceback
 from collections import deque
 from copy import deepcopy
 from datetime import datetime
 from threading import Condition, Lock
-from typing import Deque, Optional, Dict, Mapping, Any, Callable, Tuple
-from requests.adapters import Response
+from typing import Any, Callable, Deque, Dict, Optional, Tuple
+from urllib.parse import quote as urlescape
 
 import requests
+from requests.adapters import Response
 
 from .constants import config
 from .exceptions import ResourceException
 from .fetch import make_fetcher
 from .logs import get_log
 from .parse import parse_resource
-from urllib.parse import quote as urlescape
-
-from .utils import (
-    Watchable,
-    hex_digest,
-    img_to_data,
-    non_blocking_lock,
-    url_get,
-    utc_now,
-    resource_string,
-    resource_filename,
-    safe_write,
-)
+from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, resource_string, safe_write, url_get, utc_now
 
 requests.packages.urllib3.disable_warnings()
 
@@ -244,10 +232,9 @@ class Resource(Watchable):
                 yield cn
 
     def is_expired(self) -> bool:
-        if self.never_expires:
+        if self.never_expires or self.expire_time is None:
             return False
-        now = utc_now()
-        return self.expire_time is not None and self.expire_time < now
+        return self.expire_time < utc_now()
 
     def is_valid(self) -> bool:
         return not self.is_expired() and self.last_seen is not None and self.last_parser is not None
