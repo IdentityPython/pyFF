@@ -308,9 +308,9 @@ class Resource(Watchable):
             return None
 
     def load_resource(self, getter):
-        info = self.add_info()
         data: Optional[str] = None
         status: Optional[int] = None
+        info = self.add_info()
 
         log.debug("Loading resource {}".format(self.url))
 
@@ -348,20 +348,20 @@ class Resource(Watchable):
         if data is None or not len(data) > 0:
             raise ResourceException("Got status={:d} while getting {}".format(r.status_code, self.url))
 
-        if status == 200:
-            self.last_seen = utc_now().replace(microsecond=0)
-            safe_write(self.local_copy_fn, data, True)
-
         info['State'] = 'Fetched'
 
-        return data, info
+        return data, status, info
 
     def parse(self, getter):
-        data, info = self.load_resource(getter)
+        data, status, info = self.load_resource(getter)
         info['State'] = 'Parsing'
         parse_info = parse_resource(self, data)
         if parse_info is not None and isinstance(parse_info, dict):
             info.update(parse_info)
+
+        if status == 200:
+            self.last_seen = utc_now().replace(microsecond=0)
+            safe_write(self.local_copy_fn, data, True)
 
         info['State'] = 'Parsed'
         if self.t is not None:
