@@ -8,5 +8,4 @@ pbr
 pytest
 pytest-cov
 setuptools
-testfixtures
 wsgi_intercept

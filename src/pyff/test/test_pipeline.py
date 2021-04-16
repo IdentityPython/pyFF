@@ -1,6 +1,5 @@
 import os
 import shutil
-import sys
 import tempfile
 
 import pytest
@@ -27,17 +26,28 @@ assert builtins is not None
 class PipeLineTest(SignerTestCase):
     @pytest.fixture(autouse=True)
     def _capsys(self, capsys):
-        self.capsys = capsys
+        self._capsys = capsys
 
     @property
-    def captured_stdout(self):
-        out, _err = self.capsys.readouterr()
+    def captured_stdout(self) -> str:
+        """ Return anything written to STDOUT during this test """
+        out, _err = self._capsys.readouterr()
         return out
 
     @property
-    def captured_stderr(self):
-        _out, err = self.capsys.readouterr()
+    def captured_stderr(self) -> str:
+        """ Return anything written to STDERR during this test """
+        _out, err = self._capsys.readouterr()
         return err
+
+    @pytest.fixture(autouse=True)
+    def _caplog(self, caplog):
+        """ Return anything written to the logging system during this test """
+        self._caplog = caplog
+
+    @property
+    def captured_log_text(self) -> str:
+        return self._caplog.text
 
     def run_pipeline(self, pl_name, ctx=None, md=None):
         if ctx is None:
@@ -72,23 +82,22 @@ class PipeLineTest(SignerTestCase):
 
 
 class ParseTest(PipeLineTest):
-    def parse_test(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            res, md = self.exec_pipeline(
-                f"""
+    def test_parse(self):
+        res, md = self.exec_pipeline(
+            f"""
 - load:
     - {self.datadir}/metadata
 - select
 - stats
 """
-            )
-            eIDs = [e.get('entityID') for e in md.store]
-            assert 'https://idp.example.com/saml2/idp/metadata.php1' not in eIDs
-            assert 'https://idp.example.com/saml2/idp/metadata.php' in eIDs
-            assert "removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed" in str(l)
+        )
+        eIDs = [e.get('entityID') for e in md.store]
+        assert 'https://idp.example.com/saml2/idp/metadata.php1' not in eIDs
+        assert 'https://idp.example.com/saml2/idp/metadata.php' in eIDs
+        assert (
+            "removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed"
+            in self.captured_log_text
+        )
 
 
 # To run all LoadErrorTests: ./setup.py test -s pyff.test.test_pipeline.LoadErrorTest
@@ -96,206 +105,154 @@ class ParseTest(PipeLineTest):
 class LoadErrorTest(PipeLineTest):
     # A File that does not exist must throw an error with fail_on_error=True
     def test_fail_on_error_no_file(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            try:
-                res, md = self.exec_pipeline(
-                    f"""
+        try:
+            res, md = self.exec_pipeline(
+                f"""
     - load fail_on_error True:
         - {self.datadir}/file_that_does_not_exist.xml
     - select
     - stats
     """
-                )
-            except ResourceException as ex:
-                print("----\n", ex, "\n++++")
-                assert "file_that_does_not_exist.xml" in str(ex)
-                return True
-            finally:
-                if os.path.isfile(self.output):
-                    os.unlink(self.output)
+            )
+        except ResourceException as ex:
+            print("----\n", ex, "\n++++")
+            assert "file_that_does_not_exist.xml" in str(ex)
+            return True
 
         assert "Expected PipeException or ResourceException" == False
 
     # A File that does not exist must throw an error with fail_on_error=True
     def test_fail_on_error_no_file_url(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            try:
-                res, md = self.exec_pipeline(
-                    f"""
+        try:
+            res, md = self.exec_pipeline(
+                f"""
     - load fail_on_error True:
         - file://{self.datadir}/file_that_does_not_exist.xml
     - select
     - stats
     """
-                )
-            except ResourceException as ex:
-                print(str(ex))
-                assert "file_that_does_not_exist.xml" in str(ex)
-                return True
-            finally:
-                if os.path.isfile(self.output):
-                    os.unlink(self.output)
+            )
+        except ResourceException as ex:
+            print(str(ex))
+            assert "file_that_does_not_exist.xml" in str(ex)
+            return True
 
         assert "Expected ResourceException" == False
 
     # An URL that cannot be downloaded must throw an error with fail_on_error=True
     # Note: Due to load_url retries it takes 20s to complete this test
     def test_fail_on_error_no_url(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            try:
-                res, md = self.exec_pipeline(
-                    """
+        try:
+            res, md = self.exec_pipeline(
+                """
     - load fail_on_error True:
         - http://127.0.0.1/does_not_exist.xml
     - select
     - stats
     """
-                )
-            except BaseException as ex:
-                print(ex)
-                assert "does_not_exist.xml" in str(ex)
-                return True
-            finally:
-                if os.path.isfile(self.output):
-                    os.unlink(self.output)
+            )
+        except BaseException as ex:
+            print(ex)
+            assert "does_not_exist.xml" in str(ex)
+            return True
 
         assert "Expected Exception" == False
 
     # A file with invalid XML must throw an exception with fail_on_error True:
     def test_fail_on_error_invalid_file(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            try:
-                res, md = self.exec_pipeline(
-                    f"""
+        try:
+            res, md = self.exec_pipeline(
+                f"""
     - load fail_on_error True:
         - {self.datadir}/metadata/test01.xml
         - {self.datadir}/metadata/test02-invalid.xml
     - select
     - stats
 """
-                )
-            except (MetadataException, ParserException, ResourceException) as ex:
-                print(ex)
-                return True
-            finally:
-                if os.path.isfile(self.output):
-                    os.unlink(self.output)
+            )
+        except (MetadataException, ParserException, ResourceException) as ex:
+            print(ex)
+            return True
 
         assert "Expected MetadataException or ParserException" == False
 
     # A directory with a file with invalid metadata must throw an exception with fail_on_error True and filter_invalid False:
     def test_fail_on_error_invalid_dir(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            try:
-                res, md = self.exec_pipeline(
-                    f"""
+        try:
+            res, md = self.exec_pipeline(
+                f"""
     - load fail_on_error True filter_invalid False:
         - {self.datadir}/metadata/
     - select
     - stats
     """
-                )
-            except (MetadataException, ParserException, ResourceException) as ex:
-                print(ex)
-                return True
-            finally:
-                if os.path.isfile(self.output):
-                    os.unlink(self.output)
+            )
+        except (MetadataException, ParserException, ResourceException) as ex:
+            print(ex)
+            return True
 
         assert "Expected MetadataException or ParserException" == False
 
     # A file with invalid XML must not throw an exception by default (fail_on_error False):
     def test_no_fail_on_error_invalid_file(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            res, md = self.exec_pipeline(
-                f"""
+        res, md = self.exec_pipeline(
+            f"""
     - load:
         - {self.datadir}/metadata/test01.xml
         - {self.datadir}/metadata/test02-invalid.xml
     - select
     - stats
     """
-            )
-            if os.path.isfile(self.output):
-                os.unlink(self.output)
+        )
+        # Test that the test01.xml was loaded
+        assert md.lookup('https://idp.example.com/saml2/idp/metadata.php')
 
     # Loading an xml file with an invalid entity must throw when filter_invalid False and fail_on_error True
     def test_fail_on_error_invalid_entity(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            try:
-                res, md = self.exec_pipeline(
-                    f"""
+        try:
+            res, md = self.exec_pipeline(
+                f"""
     - load fail_on_error True filter_invalid False:
         - {self.datadir}/metadata/test01.xml
         - {self.datadir}/metadata/test03-invalid.xml
     - select
     - stats
     """
-                )
-            except (MetadataException, ParserException) as ex:
-                print(ex)
-                assert ":SCHEMASV:" in str(ex)
-                assert "/metadata/test03-invalid.xml" in str(ex)
-                return True
-            finally:
-                if os.path.isfile(self.output):
-                    os.unlink(self.output)
+            )
+        except (MetadataException, ParserException) as ex:
+            print(ex)
+            assert ":SCHEMASV:" in str(ex)
+            assert "/metadata/test03-invalid.xml" in str(ex)
+            return True
+
+        assert "Expected MetadataException or ParserException" == False
 
     # Test default behaviour. Loading a file with an invalid entity must not raise an exception
     def test_no_fail_on_error_invalid_entity(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            res, md = self.exec_pipeline(
-                f"""
+        res, md = self.exec_pipeline(
+            f"""
     - load:
         - {self.datadir}/metadata/test01.xml
         - {self.datadir}/metadata/test03-invalid.xml
     - select
     - stats
     """
-            )
-            if os.path.isfile(self.output):
-                os.unlink(self.output)
+        )
+        # Test that the test01.xml was loaded
+        assert md.lookup('https://idp.example.com/saml2/idp/metadata.php')
 
     # A directory with a file with invalid metadata must not throw by default:
     def test_no_fail_on_error_invalid_dir(self):
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            res, md = self.exec_pipeline(
-                f"""
+        res, md = self.exec_pipeline(
+            f"""
     - load:
         - {self.datadir}/metadata/
     - select
     - stats
     """
-            )
-            if os.path.isfile(self.output):
-                os.unlink(self.output)
+        )
+        # Test that the test01.xml was loaded
+        assert md.lookup('https://idp.example.com/saml2/idp/metadata.php')
 
 
 class SortTest(PipeLineTest):
@@ -351,12 +308,8 @@ class SortTest(PipeLineTest):
     # Test sort by entityID only
     def test_sort(self):
         sxp = None
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            res, md = self.exec_pipeline(
-                f"""
+        res, md = self.exec_pipeline(
+            f"""
     - load:
         - {self.datadir}/metadata/test01.xml
         - {self.datadir}/metadata/sharav.abes.fr.xml
@@ -367,21 +320,17 @@ class SortTest(PipeLineTest):
     - dump
     - stats
     """
-            )
+        )
 
         # tuple format (entityID, has value for 'order_by' xpath)
         expected_order = [(self.EID1,), (self.EID2,), (self.EID3,)]
-        self._run_sort_test(expected_order, sxp, res, l)
+        self._run_sort_test(expected_order, sxp, res, self.captured_log_text)
 
     # Test sort entries first by registrationAuthority
     def test_sort_by_ra(self):
         sxp = ".//md:Extensions/mdrpi:RegistrationInfo/@registrationAuthority"
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            res, md = self.exec_pipeline(
-                f"""
+        res, md = self.exec_pipeline(
+            f"""
     - load:
         - {self.datadir}/metadata/test01.xml
         - {self.datadir}/metadata/sharav.abes.fr.xml
@@ -391,21 +340,17 @@ class SortTest(PipeLineTest):
     - sort order_by {sxp}
     - stats
     """
-            )
+        )
 
         # tuple format (entityID, has value for 'order_by' xpath)
         expected_order = [(self.EID3, True), (self.EID1, False), (self.EID2, False)]
-        self._run_sort_test(expected_order, sxp, res, l)
+        self._run_sort_test(expected_order, sxp, res, self.captured_log_text)
 
     # Test group entries by specific NameIDFormat support
     def test_sort_group(self):
         sxp = ".//md:IDPSSODescriptor/md:NameIDFormat[./text()='urn:mace:shibboleth:1.0:nameIdentifier']"
-        self.output = tempfile.NamedTemporaryFile('w').name
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            res, md = self.exec_pipeline(
-                f"""
+        res, md = self.exec_pipeline(
+            f"""
     - load:
         - {self.datadir}/metadata/test01.xml
         - {self.datadir}/metadata/sharav.abes.fr.xml
@@ -415,10 +360,10 @@ class SortTest(PipeLineTest):
     - sort order_by {sxp}
     - stats
     """
-            )
-            # tuple format (entityID, has value for 'order_by' xpath)
-            expected_order = [(self.EID1, True), (self.EID3, True), (self.EID2, False)]
-            self._run_sort_test(expected_order, sxp, res, l)
+        )
+        # tuple format (entityID, has value for 'order_by' xpath)
+        expected_order = [(self.EID1, True), (self.EID3, True), (self.EID2, False)]
+        self._run_sort_test(expected_order, sxp, res, self.captured_log_text)
 
 
 # noinspection PyUnresolvedReferences
@@ -615,19 +560,16 @@ class SigningTest(PipeLineTest):
             pass
 
     def test_empty_dir_error(self):
-        from testfixtures import LogCapture
-
-        with LogCapture() as l:
-            try:
-                self.exec_pipeline(
-                    f"""
+        try:
+            self.exec_pipeline(
+                f"""
 - load fail_on_error True:
    - {self.datadir}/empty
 """
-                )
-            except IOError:
-                pass
-            assert "no entities found in" in str(l)
+            )
+        except IOError:
+            pass
+        assert "no entities found in" in str(self.captured_log_text)
 
     def test_store_and_retrieve(self):
         tmpdir = tempfile.mkdtemp()
