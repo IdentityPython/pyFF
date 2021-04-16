@@ -374,7 +374,7 @@ class Config(object):
     store_name = S("store.name", long="store_name", default="pyff", info="the name of the store (mostly for redis)")
 
     update_frequency = S(
-        "update_frequency",
+        "frequency",
         default=300,
         typeconv=as_int,
         cmdline=['pyffd'],
