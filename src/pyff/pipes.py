@@ -24,6 +24,15 @@ registry = dict()
 
 
 def pipe(*args, **kwargs) -> Callable:
+    """
+    A decorator that registers a function as a pipeline in pyFF. Functions decorated *should* have the
+    following prototype:
+
+    @pipe
+    def foo(req: Plumbing.Request, *opts)
+        pass
+    """
+
     def pipe_decorator(f: Callable) -> Callable:
         if 'name' in kwargs:  # called with the name argument @pipe(name=...) or as @pipe()
             f_name = kwargs.get('name', f.__name__)
