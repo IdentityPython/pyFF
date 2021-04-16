@@ -31,6 +31,10 @@ def pipe(*args, **kwargs) -> Callable:
 
         @functools.wraps(f)
         def wrapper_pipe(*iargs, **ikwargs) -> Any:
+            # the 'opts' parameter gets special treatment:
+            # locate the type annotation of 'opts' and if it exists assume it refers to a pydantic dataclass
+            # before propagating the call to the wrapped function replace opts with the pydantic dataclass object
+            # created from the Tuple provided
             opts_type: Optional[Type] = None
             if 'opts' in f.__annotations__:
                 opts_type = f.__annotations__['opts']
