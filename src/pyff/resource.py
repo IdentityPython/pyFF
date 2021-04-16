@@ -117,7 +117,7 @@ class IconHandler(URLHandler):
             else:
                 self.icon_store.update(url, None, info=dict(exception=exception))
         except BaseException as ex:
-            log.warn(ex)
+            log.warning(ex)
 
 
 class ResourceHandler(URLHandler):
@@ -135,7 +135,7 @@ class ResourceHandler(URLHandler):
                 children = t.parse(lambda u: response)
                 self.i_schedule(children)
         except BaseException as ex:
-            log.warn(ex)
+            log.warning(ex)
             t.info['Exception'] = ex
 
 
@@ -299,11 +299,13 @@ class Resource(Watchable):
         if config.local_copy_dir is None:
             return None
 
+        log.warning(
+            "Got status={:d} while getting {}. Attempting fallback to local copy.".format(r.status_code, self.url)
+        )
         try:
             return resource_string(self.local_copy_fn)
-            log.warn("Got status={:d} while getting {}. Fallback to local copy.".format(r.status_code, self.url))
         except IOError as ex:
-            log.warn(
+            log.warning(
                 "Caught an exception trying to load local backup for {} via {}: {}".format(
                     self.url, self.local_copy_fn, ex
                 )
@@ -315,7 +317,7 @@ class Resource(Watchable):
             try:
                 safe_write(self.local_copy_fn, data, True)
             except IOError as ex:
-                log.warn("unable to save backup copy of {}: {}".format(self.url, ex))
+                log.warning("unable to save backup copy of {}: {}".format(self.url, ex))
 
     def load_resource(self, getter):
         data: Optional[str] = None
@@ -349,7 +351,7 @@ class Resource(Watchable):
 
         except IOError as ex:
             if self.local_copy_fn is not None:
-                log.warn("caught exception from {} - trying local backup: {}".format(self.url, ex))
+                log.warning("caught exception from {} - trying local backup: {}".format(self.url, ex))
                 data = self.load_backup()
                 if data is not None and len(data) > 0:
                     info['Reason'] = "Retrieved from local cache because exception: {}".format(ex)
