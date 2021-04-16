@@ -10,14 +10,11 @@ install:
    - "pip install -r test_requirements.txt"
    - "./setup.py develop"
    - "pip install coveralls"
-   - "pip install nose"
+   - "pip install pytest"
    - "pip install mypy"
-script: 
+script:
    - export PYTHONPATH=./src:$PYTHONPATH
-   - coverage erase
-   - coverage run --source=pyff setup.py test
-   - mv .coverage .coverage.1
-   - coverage combine
+   - make test_coverage
    - make typecheck
 before_install:
    - sudo apt-get update -qq
