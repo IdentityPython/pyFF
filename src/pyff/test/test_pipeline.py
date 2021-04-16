@@ -69,7 +69,8 @@ class PipeLineTest(SignerTestCase):
         md = MDRepository()
         p = yaml.safe_load(six.StringIO(pstr))
         print("\n{}".format(yaml.dump(p)))
-        res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}})
+        pl = Plumbing(p, pid="test")
+        res = pl.process(md, state={'batch': True, 'stats': {}})
         return res, md
 
     @classmethod

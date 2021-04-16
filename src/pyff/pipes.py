@@ -146,6 +146,9 @@ class PipelineCallback(object):
         self.req = req
         self.store = store
 
+    def __str__(self) -> str:
+        return f"<PipelineCallback to {self.req.plumbing}]>"
+
     def __copy__(self):
         return self
 
