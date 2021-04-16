@@ -14,10 +14,7 @@ install:
    - "pip install mypy"
 script:
    - export PYTHONPATH=./src:$PYTHONPATH
-   - coverage erase
-   - make test
-   - mv .coverage .coverage.1
-   - coverage combine
+   - make test_coverage
    - make typecheck
 before_install:
    - sudo apt-get update -qq

@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 
+import pytest
 import requests
 from mako.lookup import TemplateLookup
 from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
@@ -96,6 +97,7 @@ class PyFFAPITest(PipeLineTest):
                 assert link['rel'] not in 'urn:oasis:names:tc:SAML:2.0:metadata'
                 assert 'href' in link
 
+    @pytest.mark.skipif(os.environ.get('PYFF_SKIP_SLOW_TESTS') is not None, reason='Slow tests skipped')
     def test_load_and_query(self):
         with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
             r = requests.post("{}/api/call/update".format(url))
