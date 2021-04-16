@@ -31,13 +31,13 @@ class PipeLineTest(SignerTestCase):
     @property
     def captured_stdout(self) -> str:
         """ Return anything written to STDOUT during this test """
-        out, _err = self._capsys.readouterr()
+        out, _err = self._capsys.readouterr()  # type: ignore
         return out
 
     @property
     def captured_stderr(self) -> str:
         """ Return anything written to STDERR during this test """
-        _out, err = self._capsys.readouterr()
+        _out, err = self._capsys.readouterr()  # type: ignore
         return err
 
     @pytest.fixture(autouse=True)
@@ -47,7 +47,7 @@ class PipeLineTest(SignerTestCase):
 
     @property
     def captured_log_text(self) -> str:
-        return self._caplog.text
+        return self._caplog.text  # type: ignore
 
     def run_pipeline(self, pl_name, ctx=None, md=None):
         if ctx is None:
