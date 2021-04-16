@@ -637,22 +637,39 @@ class SigningTest(PipeLineTest):
                 pass
 
     def test_blacklist(self):
+        entity = 'https://idp.example.com/saml2/idp/metadata.php'
+
+        # First, load without a filter to ensure the entity is there
         try:
             res, md = self.exec_pipeline(
                 f"""
 - when batch:
     - load:
-        - {self.datadir}/metadata via blacklist_example
+        - {self.datadir}/metadata/test01.xml
+        """
+            )
+        except IOError:
+            pass
+        print(md.lookup(entity))
+        assert md.lookup(entity)
+
+        # Then, load with a filter and ensure the entity isn't there anymore
+        try:
+            res, md = self.exec_pipeline(
+                f"""
+- when batch:
+    - load:
+        - {self.datadir}/metadata/test01.xml via blacklist_example
 - when blacklist_example:
     - fork merge remove:
         - filter:
-            - https://idp.example.com/saml2/idp/metadata.php
+            - {entity}
 """
             )
         except IOError:
             pass
-        print(md.lookup('https://idp.example.com/saml2/idp/metadata.php'))
-        assert not md.lookup('https://idp.example.com/saml2/idp/metadata.php')
+        print(md.lookup(entity))
+        assert not md.lookup(entity)
 
     def test_bad_namespace(self):
         try:
