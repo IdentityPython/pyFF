@@ -20,6 +20,7 @@ from .exceptions import ResourceException
 from .fetch import make_fetcher
 from .logs import get_log
 from .parse import parse_resource
+from urllib.parse import quote as urlescape
 
 from .utils import (
     Watchable,
@@ -31,7 +32,6 @@ from .utils import (
     resource_string,
     resource_filename,
     safe_write,
-    hash_id,
 )
 
 requests.packages.urllib3.disable_warnings()
@@ -184,7 +184,7 @@ class Resource(Watchable):
 
     @property
     def local_copy_fn(self):
-        return os.path.join(config.local_copy_dir, hash_id(self.url, 'sha256', False))
+        return os.path.join(config.local_copy_dir, urlescape(self.url, True))
 
     @property
     def post(self):
