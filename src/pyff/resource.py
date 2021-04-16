@@ -5,6 +5,7 @@ An abstraction layer for metadata fetchers. Supports both synchronous and asynch
 """
 from __future__ import annotations
 
+import logging
 import os
 from collections import deque
 from copy import deepcopy
@@ -118,7 +119,7 @@ class IconHandler(URLHandler):
             else:
                 self.icon_store.update(url, None, info=dict(exception=exception))
         except BaseException as ex:
-            log.warning(ex)
+            log.error(ex)
 
 
 class ResourceHandler(URLHandler):
@@ -136,14 +137,14 @@ class ResourceHandler(URLHandler):
                 children = t.parse(lambda u: response)
                 self.i_schedule(children)
         except BaseException as ex:
-            log.warning(ex)
+            log.error(ex)
             t.info['Exception'] = ex
 
 
 class Resource(Watchable):
     def __init__(self, url=None, **kwargs):
         super().__init__()
-        self.url = url
+        self.url: str = url
         self.opts = kwargs
         self.t = None
         self.type = "text/plain"
@@ -184,7 +185,7 @@ class Resource(Watchable):
 
     @property
     def local_copy_fn(self):
-        return os.path.join(config.local_copy_dir, urlescape(self.url, True))
+        return os.path.join(config.local_copy_dir, urlescape(self.url))
 
     @property
     def post(self):
@@ -300,9 +301,6 @@ class Resource(Watchable):
         if config.local_copy_dir is None:
             return None
 
-        log.warning(
-            "Got status={:d} while getting {}. Attempting fallback to local copy.".format(r.status_code, self.url)
-        )
         try:
             return resource_string(self.local_copy_fn)
         except IOError as ex:
@@ -343,6 +341,11 @@ class Resource(Watchable):
                 data = r.text
                 self.etag = r.headers.get('ETag', None) or hex_digest(r.text, 'sha256')
             elif self.local_copy_fn is not None:
+                log.warning(
+                    "Got status={:d} while getting {}. Attempting fallback to local copy.".format(
+                        r.status_code, self.url
+                    )
+                )
                 data = self.load_backup()
                 if data is not None and len(data) > 0:
                     info['Reason'] = "Retrieved from local cache because status: {} != 200".format(status)
