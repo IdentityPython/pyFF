@@ -10,7 +10,8 @@ from collections import deque
 from copy import deepcopy
 from datetime import datetime
 from threading import Condition, Lock
-from typing import Optional, Dict, Mapping, Any
+from typing import Optional, Dict, Mapping, Any, Callable, Tuple
+from requests.adapters import Response
 
 import requests
 
@@ -247,8 +248,8 @@ class Resource(Watchable):
     def is_valid(self) -> bool:
         return not self.is_expired() and self.last_seen is not None and self.last_parser is not None
 
-    def add_info(self) -> Mapping[str, Optional[Any]]:
-        info: Dict[str, Optional[Any]] = dict()
+    def add_info(self) -> Dict[str, Any]:
+        info: Dict[str, Any] = dict()
         info['State'] = None
         info['Resource'] = self.url
         self._infos.append(info)
@@ -319,7 +320,7 @@ class Resource(Watchable):
             except IOError as ex:
                 log.warning("unable to save backup copy of {}: {}".format(self.url, ex))
 
-    def load_resource(self, getter):
+    def load_resource(self, getter: Callable[[str], Response]) -> Tuple[Optional[str], int, Dict[str, Any]]:
         data: Optional[str] = None
         status: int = 500
         info = self.add_info()
