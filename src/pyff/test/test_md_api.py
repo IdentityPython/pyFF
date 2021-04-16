@@ -13,6 +13,8 @@ from pyff.test import SignerTestCase
 from pyff.test.test_pipeline import PipeLineTest
 from pyff.constants import config
 
+from urllib.parse import quote as urlescape
+
 
 class PyFFAPITest(PipeLineTest):
     """
@@ -208,3 +210,5 @@ class PyFFAPITestResources(PipeLineTest):
 
             last_seen = datetime.fromisoformat(data[0]['Last Seen'])
             assert (last_seen - now).total_seconds() < 60
+
+            assert os.path.exists(os.path.join(config.local_copy_dir, urlescape(f'file://{self.test01}')))
