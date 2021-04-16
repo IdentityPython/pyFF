@@ -1324,7 +1324,7 @@ def certreport(req, *opts):
                             "keysize small",
                             "%s has keysize of %s bits (less than %s)" % (cert.getSubject(), keysize, warning_bits),
                         )
-                        log.warn("%s has keysize of %s" % (eid, keysize))
+                        log.warning("%s has keysize of %s" % (eid, keysize))
 
                     notafter = cert.getNotAfter()
                     if notafter is None:
@@ -1354,7 +1354,7 @@ def certreport(req, *opts):
                                     "certificate about to expire",
                                     "%s expires in %s" % (cert.getSubject(), dt),
                                 )
-                                log.warn("%s expires in %s" % (eid, dt))
+                                log.warning("%s expires in %s" % (eid, dt))
                         except ValueError as ex:
                             annotate_entity(
                                 entity_elt,

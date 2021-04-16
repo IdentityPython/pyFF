@@ -21,7 +21,7 @@ class TestLog(TestCase):
             logger.setLevel(logging.WARNING)
 
             log.info("info")
-            log.warn("warn")
+            log.warning("warn")
             log.warning("warning")
             log.error("error")
             log.critical("critical")
@@ -73,7 +73,7 @@ class TestSyslog(TestCase):
                 logger.setLevel(logging.WARNING)
 
                 log.info("info")
-                log.warn("warn")
+                log.warning("warn")
                 log.warning("warning")
                 log.error("error")
                 log.critical("critical")

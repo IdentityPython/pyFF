@@ -335,7 +335,7 @@ def safe_write(fn, data, mkdirs=False):
             try:
                 os.unlink(tmpn)
             except Exception as ex:
-                log.warn(ex)
+                log.warning(ex)
     return False
 
 
@@ -771,7 +771,7 @@ def img_to_data(data: bytes, content_type: str) -> Optional[str]:
                 assert data64
                 mime_type = "image/png"
         except BaseException as ex:
-            log.warn(ex)
+            log.warning(ex)
             log.debug(traceback.format_exc())
 
     if data64 is None or len(data64) == 0:
@@ -966,7 +966,7 @@ class Watchable(object):
                 cb(*args, **kwargs)
             except BaseException as ex:
                 log.debug(traceback.format_exc())
-                log.warn(ex)
+                log.warning(ex)
 
 
 def utc_now() -> datetime:

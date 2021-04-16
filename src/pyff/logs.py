@@ -19,8 +19,8 @@ class PyFFLogger(object):
             name = __name__
         self._log = logging.getLogger(name)
         self._loggers = {
-            logging.WARN: self._log.warn,
-            logging.WARNING: self._log.warn,
+            logging.WARN: self._log.warning,
+            logging.WARNING: self._log.warning,
             logging.CRITICAL: self._log.critical,
             logging.INFO: self._log.info,
             logging.DEBUG: self._log.debug,

@@ -555,7 +555,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         try:
             self.index = self.storage.open_index(schema=self.schema)
         except BaseException as ex:
-            log.warn(ex)
+            log.warning(ex)
             self.storage.create()
             self.index = self.storage.create_index(self.schema)
             self._reindex()

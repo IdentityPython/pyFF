@@ -304,7 +304,7 @@ def filter_invalids_from_document(t, base_url, validation_errors):
         if not xsd.validate(e):
             error = xml_error(xsd.error_log, m=base_url)
             entity_id = e.get("entityID", "(Missing entityID)")
-            log.warn('removing \'%s\': schema validation failed: %s' % (entity_id, xsd.error_log))
+            log.warning('removing \'%s\': schema validation failed: %s' % (entity_id, xsd.error_log))
             validation_errors[entity_id] = "{}".format(xsd.error_log)
             if e.getparent() is None:
                 return None
@@ -1115,7 +1115,7 @@ def sort_entities(t, sxp=None):
                 except AttributeError:
                     pass
             except IndexError:
-                log.warn("Sort pipe: unable to sort entity by '%s'. " "Entity '%s' has no such value" % (sxp, eid))
+                log.warning("Sort pipe: unable to sort entity by '%s'. " "Entity '%s' has no such value" % (sxp, eid))
         except TypeError:
             pass
 

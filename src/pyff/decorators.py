@@ -26,7 +26,7 @@ def deprecated(logger=log, reason="Complain to the developer about unspecified c
                 reason,
             )
             if logger:
-                logger.warn(msg)
+                logger.warning(msg)
             else:
                 print(msg)
 

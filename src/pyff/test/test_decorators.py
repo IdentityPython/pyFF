@@ -11,7 +11,7 @@ class Logger:
     def __init__(self):
         self.messages = []
 
-    def warn(self, message):
+    def warning(self, message):
         self.messages.append((logging.WARNING, message))
 
 

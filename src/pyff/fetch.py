@@ -58,8 +58,8 @@ class Fetch(threading.Thread):
                         self.response.put(
                             {'response': None, 'url': url, 'exception': ex, 'last_fetched': datetime.now()}
                         )
-                        log.warn("error fetching {}".format(url))
-                        log.warn(ex)
+                        log.warning("error fetching {}".format(url))
+                        log.warning(ex)
                         import traceback
 
                         log.debug(traceback.format_exc())

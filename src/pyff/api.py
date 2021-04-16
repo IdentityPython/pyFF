@@ -280,7 +280,7 @@ def process_handler(request):
         import traceback
 
         log.debug(traceback.format_exc())
-        log.warn(ex)
+        log.warning(ex)
         raise exc.exception_response(409)
     except BaseException as ex:
         import traceback
