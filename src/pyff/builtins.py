@@ -268,6 +268,7 @@ def fork(req, *opts):
     return req.t
 
 
+@deprecated(reason="any pipeline has been replace by other behaviour")
 @pipe(name='any')
 def _any(lst, d):
     for x in lst:

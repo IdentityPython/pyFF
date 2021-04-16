@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import os
 import traceback
-from typing import Any, Dict, Optional
+import functools
+from typing import Any, Dict, Optional, Callable, Type, Tuple
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -22,26 +23,44 @@ __author__ = 'leifj'
 registry = dict()
 
 
-def pipe(*args, **kwargs):
+def pipe(*args, **kwargs) -> Callable:
     """
-    Register the decorated function in the pyff pipe registry
-    :param name: optional name - if None, use function name
+    A decorator that registers a function as a pipeline in pyFF. Functions decorated *should* have the
+    following prototype:
+
+    @pipe
+    def foo(req: Plumbing.Request, *opts)
+        pass
     """
 
-    def deco_none(f):
-        return f
+    def pipe_decorator(f: Callable) -> Callable:
+        if 'name' in kwargs:  # called with the name argument @pipe(name=...) or as @pipe()
+            f_name = kwargs.get('name', f.__name__)
+            registry[f_name] = f
 
-    def deco_pipe(f):
-        f_name = kwargs.get('name', f.__name__)
-        registry[f_name] = f
-        return f
+        @functools.wraps(f)
+        def wrapper_pipe(*iargs, **ikwargs) -> Any:
+            # the 'opts' parameter gets special treatment:
+            # locate the type annotation of 'opts' and if it exists assume it refers to a pydantic dataclass
+            # before propagating the call to the wrapped function replace opts with the pydantic dataclass object
+            # created from the Tuple provided
+            opts_type: Optional[Type] = None
+            if 'opts' in f.__annotations__:
+                opts_type = f.__annotations__['opts']
 
-    if 1 == len(args):
-        f = args[0]
-        registry[f.__name__] = f
-        return deco_none
+            if opts_type is not None:
+                opts_in = ikwargs.pop('opts')
+                ikwargs['opts'] = opts_type(**dict(list(zip(opts_in[::2], opts_in[1::2]))))
+
+            return f(*iargs, **ikwargs)
+
+        return wrapper_pipe
+
+    if len(args) == 1 and callable(args[0]):  # called without arguments @pipe
+        registry[args[0].__name__] = args[0]
+        return pipe_decorator(args[0])
     else:
-        return deco_pipe
+        return pipe_decorator
 
 
 class PipeException(PyffException):
