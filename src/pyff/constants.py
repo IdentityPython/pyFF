@@ -259,9 +259,10 @@ class Config(object):
     google_api_key = S("google_api_key", deprecated=True)
     caching_delay = S("caching_delay", default=300, typeconv=as_int, short='D', deprecated=True)
     proxy = S("proxy", default=False, typeconv=as_bool, deprecated=True)
-    public_url = S("public_url", typeconv=as_string, deprecated=True)
     allow_shutdown = S("allow_shutdown", default=False, typeconv=as_bool, deprecated=True)
     ds_template = S("ds_template", default="ds.html", deprecated=True)
+
+    public_url = S("public_url", typeconv=as_string, info="the public URL of the service - not often needed")
 
     loglevel = S("loglevel", default=logging.WARN, info="set the loglevel")
 
@@ -460,6 +461,8 @@ class Config(object):
         info="the directory where local backup copies of metadata is stored",
         default="/var/run/pyff/backup",
     )
+
+    mdq_browser = S('mdq_browser', typeconv=as_string, info="the directory where mdq-browser can be found")
 
     @property
     def base_url(self):
