@@ -2,7 +2,7 @@ import random
 
 from .constants import config
 from .logs import get_log
-from .resource import IconHandler, Resource, ResourceOpts
+from .resource import Resource, ResourceOpts
 from .samlmd import entitiesdescriptor, root
 from .store import make_icon_store_instance, make_store_instance
 from .utils import is_text, make_default_scheduler
@@ -52,7 +52,7 @@ class MDRepository:
         :param xp: An optional xpath filter
         :type xp: basestring
         :param store: the store to operate on
-        :return: An interable of EntityDescriptor elements
+        :return: An iterable of EntityDescriptor elements
         :rtype: etree.Element
 
 
@@ -66,7 +66,7 @@ class MDRepository:
 
         The first form results in the intersection of the results of doing a lookup on the selectors. The second form
         results in the EntityDescriptor elements from the source (defaults to all EntityDescriptors) that match the
-        xpath expression. The attribute-value forms resuls in the EntityDescriptors that contain the specified entity
+        xpath expression. The attribute-value forms results in the EntityDescriptors that contain the specified entity
         attribute pair. If non of these forms apply, the lookup is done using either source ID (normally @Name from
         the EntitiesDescriptor) or the entityID of single EntityDescriptors. If member is a URI but isn't part of
         the metadata repository then it is fetched an treated as a list of (one per line) of selectors. If all else

@@ -7,7 +7,7 @@ from __future__ import annotations
 import functools
 import os
 import traceback
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, Optional
 from typing import Type
 
 import yaml

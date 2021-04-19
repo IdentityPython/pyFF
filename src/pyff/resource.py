@@ -10,7 +10,7 @@ import traceback
 from collections import deque
 from datetime import datetime
 from threading import Condition, Lock
-from typing import Any, Callable, Deque, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Any, Callable, Deque, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union
 from urllib.parse import quote as urlescape
 
 import requests
@@ -22,11 +22,22 @@ from .constants import config
 from .exceptions import ResourceException
 from .fetch import make_fetcher
 from .logs import get_log
-from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, resource_string, safe_write, url_get, utc_now
+
+from .utils import (
+    Watchable,
+    hex_digest,
+    img_to_data,
+    non_blocking_lock,
+    resource_string,
+    safe_write,
+    url_get,
+    utc_now,
+)
 
 if TYPE_CHECKING:
     from .parse import PyffParser
     from .pipes import PipelineCallback
+    from .utils import Lambda
 
 requests.packages.urllib3.disable_warnings()
 
@@ -140,14 +151,19 @@ class ResourceOpts(BaseModel):
     alias: Optional[str] = Field(None, alias='as')  # TODO: Rename to 'name'?
     # a certificate (file) or a SHA1 fingerprint to use for signature verification
     verify: Optional[str] = None
-    via: List[Any] = Field([])  # list of PipelineCallback
-    # A list of PipelineCallback that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
-    cleanup: List[Any] = Field([])  # list of PipelineCallback
+    # TODO: move classes to make the correct typing work: Iterable[Union[Lambda, PipelineCallback]] = Field([])
+    via: List[Callable] = Field([])
+    # A list of callbacks that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
+    # TODO: sort imports to make the correct typing work: Iterable[PipelineCallback] = Field([])
+    cleanup: List[Callable] = Field([])
     fail_on_error: bool = False
     # remove invalid EntityDescriptor elements rather than raise an error
     filter_invalid: bool = True
     # set to False to turn off all XML schema validation
     validate_schema: bool = Field(True, alias='validate')
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def to_dict(self) -> Dict[str, Any]:
         res = self.dict()
@@ -198,14 +214,17 @@ class Resource(Watchable):
         return os.path.join(config.local_copy_dir, urlescape(self.url))
 
     @property
-    def post(self) -> List['PipelineCallback']:
+    def post(
+        self,
+    ) -> Iterable[Callable]:  # TODO: move classes to make this work -> List[Union['Lambda', 'PipelineCallback']]:
         return self.opts.via
 
-    def add_via(self, callback: 'PipelineCallback') -> None:
+    def add_via(self, callback: Callable) -> None:
+        # TODO: move classes to be able to declare callback: Union['Lambda', 'PipelineCallback']
         self.opts.via.append(callback)
 
     @property
-    def cleanup(self) -> List['PipelineCallback']:
+    def cleanup(self) -> Iterable[Callable]:  # TODO: move classes to make this work -> Iterable['PipelineCallback']:
         return self.opts.cleanup
 
     def __str__(self):

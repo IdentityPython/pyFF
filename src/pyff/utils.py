@@ -24,7 +24,7 @@ from email.utils import parsedate
 from itertools import chain
 from threading import local
 from time import gmtime, strftime
-from typing import BinaryIO, Optional, Union
+from typing import Any, BinaryIO, Callable, Optional, Union
 
 import pkg_resources
 import requests
@@ -818,7 +818,7 @@ def json_serializer(o):
 
 
 class Lambda(object):
-    def __init__(self, cb, *args, **kwargs):
+    def __init__(self, cb: Callable, *args, **kwargs):
         self._cb = cb
         self._args = [a for a in args]
         self._kwargs = kwargs or {}
