@@ -1,13 +1,14 @@
 import traceback
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 from distutils.util import strtobool
+from io import BytesIO
 from itertools import chain
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from lxml import etree
 from lxml.builder import ElementMaker
-from lxml.etree import DocumentInvalid
+from lxml.etree import DocumentInvalid, ElementTree
 from xmlsec.crypto import CertDict
 
 from .constants import ATTRS, NF_URI, NS, config
@@ -80,15 +81,15 @@ def find_merge_strategy(strategy_name):
 
 
 def parse_saml_metadata(
-    source,
-    key=None,
-    base_url=None,
-    fail_on_error=False,
-    filter_invalid=True,
+    source: BytesIO,
+    key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    fail_on_error: bool = False,
+    filter_invalid: bool = True,
     cleanup=None,
-    validate=True,
-    validation_errors=None,
-):
+    validate: bool = True,
+    validation_errors: Optional[Dict[str, Any]] = None,
+) -> Tuple[ElementTree, Optional[timedelta], Optional[Exception]]:
     """Parse a piece of XML and return an EntitiesDescriptor element after validation.
 
     :param source: a file-like object containing SAML metadata
@@ -100,6 +101,7 @@ def parse_saml_metadata(
     :param validation_errors: A dict that will be used to return validation errors to the caller
     :param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
 
+    :return: Tuple with t (ElementTree), expire_time_offset, exception
     """
 
     if validation_errors is None:
@@ -283,7 +285,7 @@ class MDServiceListParser(PyffParser):
 add_parser(MDServiceListParser())
 
 
-def metadata_expiration(t):
+def metadata_expiration(t: ElementTree) -> Optional[timedelta]:
     relt = root(t)
     if relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
         cache_duration = config.default_cache_duration
@@ -316,7 +318,11 @@ def filter_invalids_from_document(t, base_url, validation_errors):
     return t
 
 
-def filter_or_validate(t, filter_invalid=False, base_url="", source=None, validation_errors=dict()):
+def filter_or_validate(
+    t, filter_invalid: bool = False, base_url: str = "", source=None, validation_errors: Optional[Dict[str, Any]] = None
+):
+    if validation_errors is None:
+        validation_errors = {}
     log.debug("Filtering invalids from {}".format(base_url))
     if filter_invalid:
         t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)

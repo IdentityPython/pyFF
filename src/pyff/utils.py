@@ -24,7 +24,7 @@ from email.utils import parsedate
 from itertools import chain
 from threading import local
 from time import gmtime, strftime
-from typing import Optional, Union
+from typing import BinaryIO, Optional, Union
 
 import pkg_resources
 import requests
@@ -36,6 +36,7 @@ from apscheduler.jobstores.redis import RedisJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from cachetools import LRUCache
 from lxml import etree
+from lxml.etree import ElementTree
 from requests import Session
 from requests.adapters import BaseAdapter, HTTPAdapter, Response
 from requests.packages.urllib3.util.retry import Retry
@@ -263,7 +264,7 @@ def redis():
     return thread_data.redis
 
 
-def check_signature(t, key, only_one_signature=False):
+def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool = False) -> ElementTree:
     if key is not None:
         log.debug("verifying signature using %s" % key)
         refs = xmlsec.verified(t, key, drop_signature=True)
@@ -512,7 +513,7 @@ def hex_digest(data, hn='sha1'):
     return m.hexdigest()
 
 
-def parse_xml(io, base_url=None):
+def parse_xml(io: BinaryIO, base_url: Optional[str] = None) -> ElementTree:
     huge_xml = config.huge_xml
     return etree.parse(
         io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False, collect_ids=False, huge_tree=huge_xml)
