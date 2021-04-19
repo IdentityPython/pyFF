@@ -27,6 +27,7 @@ from .decorators import deprecated
 from .exceptions import MetadataException
 from .logs import get_log
 from .pipes import PipeException, PipelineCallback, Plumbing, pipe
+from .resource import ResourceOpts
 from .samlmd import (
     annotate_entity,
     discojson_t,
@@ -352,7 +353,7 @@ def _pipe(req, *opts):
 
 
 @pipe
-def when(req, condition, *values):
+def when(req: Plumbing.Request, condition: str, *values):
     """
     Conditionally execute part of the pipeline.
 
@@ -377,6 +378,8 @@ def when(req, condition, *values):
     followed. If 'bar' is present in the state with the value 'bill' then the other branch is followed.
     """
     c = req.state.get(condition, None)
+    if c is None:
+        log.debug(f'Condition {repr(condition)} not present in state {req.state}')
     if c is not None and (not values or _any(values, c)):
         return Plumbing(pipeline=req.args, pid="%s.when" % req.plumbing.id).iprocess(req)
     return req.t
@@ -628,32 +631,37 @@ def load(req, *opts):
         )
 
         url = r.pop(0)
-        params = {"via": [], "cleanup": [], "verify": None, "as": url}
+
+        # Copy parent node opts as a starting point
+        child_opts = req.md.rm.opts.copy(update={"via": [], "cleanup": [], "verify": None, "alias": url})
 
         while len(r) > 0:
             elt = r.pop(0)
             if elt in ("as", "verify", "via", "cleanup"):
+                # These elements have an argument
                 if len(r) > 0:
-                    if elt in ("via", "cleanup"):
-                        params[elt].append(r.pop(0))
+                    value = r.pop(0)
+                    if elt == "as":
+                        child_opts.alias = value
+                    elif elt == "verify":
+                        child_opts.verify = value
+                    elif elt == "via":
+                        child_opts.via.append(PipelineCallback(value, req, store=req.md.store))
+                    elif elt == "cleanup":
+                        child_opts.cleanup.append(PipelineCallback(value, req, store=req.md.store))
                     else:
-                        params[elt] = r.pop(0)
+                        raise ValueError(f'Unhandled resource option {elt}')
                 else:
                     raise PipeException(
                         "Usage: load resource [as url] [[verify] verification] [via pipeline]* [cleanup pipeline]*"
                     )
             else:
-                params['verify'] = elt
+                child_opts.verify = elt
 
-        if params['via'] is not None:
-            params['via'] = [PipelineCallback(p, req, store=req.md.store) for p in params['via']]
+        # override anything in child_opts with what is in opts
+        child_opts = child_opts.copy(update=opts)
 
-        if params['cleanup'] is not None:
-            params['cleanup'] = [PipelineCallback(p, req, store=req.md.store) for p in params['cleanup']]
-
-        params.update(opts)
-
-        req.md.rm.add_child(url, **params)
+        req.md.rm.add_child(url, child_opts)
 
     log.debug("Refreshing all resources")
     req.md.rm.reload(fail_on_error=bool(opts['fail_on_error']))

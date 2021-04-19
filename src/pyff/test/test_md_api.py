@@ -3,6 +3,7 @@ import shutil
 import tempfile
 import unittest
 from datetime import datetime, timezone
+from urllib.parse import quote as urlescape
 
 import pytest
 import requests
@@ -10,11 +11,9 @@ from mako.lookup import TemplateLookup
 from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
 
 from pyff.api import mkapp
+from pyff.constants import config
 from pyff.test import SignerTestCase
 from pyff.test.test_pipeline import PipeLineTest
-from pyff.constants import config
-
-from urllib.parse import quote as urlescape
 
 
 class PyFFAPITest(PipeLineTest):

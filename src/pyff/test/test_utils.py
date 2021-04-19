@@ -8,7 +8,7 @@ import six
 
 from pyff import utils
 from pyff.constants import NS, as_list_of_string
-from pyff.resource import Resource
+from pyff.resource import Resource, ResourceOpts
 from pyff.samlmd import entities_list, find_entity
 from pyff.utils import (
     Lambda,
@@ -224,8 +224,8 @@ class TestImage(TestCase):
 
 class TestResource(TestCase):
     def test_cmp(self):
-        r1 = Resource("https://mds.edugain.org", via=lambda x: x)
-        r2 = Resource("https://mds.edugain.org")
+        r1 = Resource("https://mds.edugain.org", ResourceOpts(via=[lambda x: x]))
+        r2 = Resource("https://mds.edugain.org", ResourceOpts())
 
         assert r1 == r2
 
