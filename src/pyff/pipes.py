@@ -4,23 +4,25 @@ transform, sign or output SAML metadata.
 """
 from __future__ import annotations
 
+import functools
 import os
 import traceback
-import functools
-from typing import Any, Dict, Optional, Callable, Type, Tuple
+from typing import Any, Callable, Dict, Iterable, Optional, Type
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
+from lxml.etree import ElementTree
 
 from .logs import get_log
 from .repo import MDRepository
+from .store import SAMLStoreBase
 from .utils import PyffException, is_text, resource_string
 
 log = get_log(__name__)
 
 __author__ = 'leifj'
 
-registry = dict()
+registry: Dict[str, Callable] = dict()
 
 
 def pipe(*args, **kwargs) -> Callable:
@@ -140,11 +142,15 @@ class PipelineCallback(object):
 
     def __init__(self, entry_point, req, store=None):
         self.entry_point = entry_point
-        self.plumbing = Plumbing(
-            req.scope_of(entry_point).plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point)
-        )
+        self.plumbing = Plumbing(req.scope_of(entry_point).plumbing.pipeline, f"{req.plumbing.id}-via-{entry_point}")
         self.req = req
         self.store = store
+
+    def __str__(self) -> str:
+        return f"<PipelineCallback to {self.req.plumbing}>"
+
+    def __repr__(self) -> str:
+        return str(self)
 
     def __copy__(self):
         return self
@@ -170,7 +176,7 @@ class PipelineCallback(object):
 
 class Plumbing(object):
     """
-    A plumbing instance represents a basic processing chain  for SAML metadata. A simple, yet reasonably complete example:
+    A plumbing instance represents a basic processing chain for SAML metadata. A simple, yet reasonably complete example:
 
     .. code-block:: yaml
 
@@ -197,22 +203,23 @@ class Plumbing(object):
     would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
     """
 
-    def __init__(self, pipeline, pid):
+    def __init__(self, pipeline: Iterable[Dict[str, Any]], pid: str):
         self._id = pid
         self.pipeline = pipeline
 
-    def to_json(self):
+    def to_json(self) -> Iterable[Dict[str, Any]]:
+        # TODO: to_json seems like the wrong name for this function?
         return self.pipeline
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self._id
 
     @property
-    def pid(self):
+    def pid(self) -> str:
         return self._id
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[Dict[str, Any]]:
         return self.pipeline
 
     def __str__(self):
@@ -220,8 +227,8 @@ class Plumbing(object):
 
     class Request(object):
         """
-        Represents a single request. When processing a set of pipelines a single request is used. Any part of the pipeline
-        may modify any of the fields.
+        Represents a single request. When processing a set of pipelines a single request is used.
+        Any part of the pipeline may modify any of the fields.
         """
 
         def __init__(
@@ -240,19 +247,19 @@ class Plumbing(object):
                 state = dict()
             if not args:
                 args = []
-            self.plumbing = pl
-            self.md = md
-            self.t = t
+            self.plumbing: Plumbing = pl
+            self.md: MDRepository = md
+            self.t: ElementTree = t
             self._id = None
             self.name = name
-            self.args = args
-            self.state = state
-            self.done = False
-            self._store = store
-            self.scheduler = scheduler
-            self.raise_exceptions = raise_exceptions
-            self.exception = None
-            self.parent = None
+            self.args: Iterable[Dict[str, Any]] = args
+            self.state: Dict[str, Any] = state
+            self.done: bool = False
+            self._store: SAMLStoreBase = store
+            self.scheduler: Optional[BackgroundScheduler] = scheduler
+            self.raise_exceptions: bool = raise_exceptions
+            self.exception: Optional[BaseException] = None
+            self.parent: Optional[Plumbing.Request] = None
 
         def scope_of(self, entry_point):
             if 'with {}'.format(entry_point) in self.plumbing.pipeline:
@@ -279,19 +286,19 @@ class Plumbing(object):
             self.parent = _parent
 
         @property
-        def store(self):
+        def store(self) -> SAMLStoreBase:
             if self._store:
                 return self._store
             return self.md.store
 
-        def process(self, pl):
+        def process(self, pl: Plumbing):
             """The inner request pipeline processor.
 
             :param pl: The plumbing to run this request through
             """
             return pl.iprocess(self)
 
-    def iprocess(self, req):
+    def iprocess(self, req: Plumbing.Request):
         """The inner request pipeline processor.
 
         :param req: The request to run through the pipeline
@@ -301,7 +308,9 @@ class Plumbing(object):
             try:
                 pipefn, opts, name, args = load_pipe(p)
                 log.debug(
-                    "{!s}: calling '{}' using args: {} and opts: {}".format(self.pipeline, name, repr(args), repr(opts))
+                    "{!s}: calling '{}' using args:\n{} and opts:\n{}".format(
+                        self.pipeline, name, repr(args), repr(opts)
+                    )
                 )
                 if is_text(args):
                     args = [args]
@@ -323,7 +332,16 @@ class Plumbing(object):
                 break
         return req.t
 
-    def process(self, md, args=None, state=None, t=None, store=None, raise_exceptions=True, scheduler=None):
+    def process(
+        self,
+        md: MDRepository,
+        args=None,
+        state: Optional[Dict[str, Any]] = None,
+        t=None,
+        store=None,
+        raise_exceptions: bool = True,
+        scheduler=None,
+    ):
         """
         The main entrypoint for processing a request pipeline. Calls the inner processor.
 

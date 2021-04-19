@@ -1,18 +1,21 @@
 import traceback
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 from distutils.util import strtobool
+from io import BytesIO
 from itertools import chain
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from lxml import etree
 from lxml.builder import ElementMaker
-from lxml.etree import DocumentInvalid
+from lxml.etree import DocumentInvalid, ElementTree
 from xmlsec.crypto import CertDict
 
 from .constants import ATTRS, NF_URI, NS, config
 from .exceptions import *
 from .logs import get_log
 from .parse import PyffParser, add_parser
+from .resource import Resource, ResourceOpts
 from .utils import (
     Lambda,
     b2u,
@@ -78,26 +81,17 @@ def find_merge_strategy(strategy_name):
 
 
 def parse_saml_metadata(
-    source,
-    key=None,
-    base_url=None,
-    fail_on_error=False,
-    filter_invalid=True,
-    cleanup=None,
-    validate=True,
-    validation_errors=None,
+    source: BytesIO, opts: ResourceOpts, base_url=None, validation_errors: Optional[Dict[str, Any]] = None,
 ):
     """Parse a piece of XML and return an EntitiesDescriptor element after validation.
 
     :param source: a file-like object containing SAML metadata
-    :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
+    :param opts: ResourceOpts instance
     :param base_url: use this base url to resolve relative URLs for XInclude processing
-    :param fail_on_error: (default: False)
-    :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
-    :param validate: (default: True) set to False to turn off all XML schema validation
     :param validation_errors: A dict that will be used to return validation errors to the caller
     :param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
 
+    :return: Tuple with t (ElementTree), expire_time_offset, exception
     """
 
     if validation_errors is None:
@@ -110,10 +104,10 @@ def parse_saml_metadata(
 
         expire_time_offset = metadata_expiration(t)
 
-        t = check_signature(t, key)
+        t = check_signature(t, opts.verify)
 
-        if cleanup is not None and isinstance(cleanup, list):
-            for cb in cleanup:
+        if opts.cleanup is not None:
+            for cb in opts.cleanup:
                 t = cb(t)
         else:  # at least get rid of ID attribute
             for e in iter_entities(t):
@@ -122,10 +116,11 @@ def parse_saml_metadata(
 
         t = root(t)
 
-        if fail_on_error:
+        filter_invalid = opts.filter_invalid
+        if opts.fail_on_error:
             filter_invalid = False
 
-        if validate:
+        if opts.validate_schema:
             t = filter_or_validate(
                 t, filter_invalid=filter_invalid, base_url=base_url, source=source, validation_errors=validation_errors
             )
@@ -139,7 +134,7 @@ def parse_saml_metadata(
     except Exception as ex:
         log.debug(traceback.format_exc())
         log.error("Error parsing {}: {}".format(base_url, ex))
-        if fail_on_error:
+        if opts.fail_on_error:
             raise ex
 
         return None, None, ex
@@ -156,20 +151,16 @@ class SAMLMetadataResourceParser(PyffParser):
     def __str__(self):
         return "SAML"
 
-    def magic(self, content):
+    def magic(self, content: str) -> bool:
         return "EntitiesDescriptor" in content or "EntityDescriptor" in content
 
-    def parse(self, resource, content):
-        info = dict()
+    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
+        info: Dict[str, Any] = dict()
         info['Validation Errors'] = dict()
         t, expire_time_offset, exception = parse_saml_metadata(
             unicode_stream(content),
-            key=resource.opts['verify'],
             base_url=resource.url,
-            cleanup=resource.opts['cleanup'],
-            fail_on_error=resource.opts['fail_on_error'],
-            filter_invalid=resource.opts['filter_invalid'],
-            validate=resource.opts['validate'],
+            opts=resource.opts,
             validation_errors=info['Validation Errors'],
         )
 
@@ -205,10 +196,10 @@ class MDServiceListParser(PyffParser):
     def __str__(self):
         return "MDSL"
 
-    def magic(self, content):
+    def magic(self, content: str) -> bool:
         return 'MetadataServiceList' in content
 
-    def parse(self, resource, content):
+    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
         info = dict()
         info['Description'] = "eIDAS MetadataServiceList"
         t = parse_xml(unicode_stream(content))
@@ -222,9 +213,11 @@ class MDServiceListParser(PyffParser):
             info['NextUpdate'] = next_update
             resource.expire_time = iso2datetime(next_update)
         elif config.respect_cache_duration:
-            now = utc_now()
-            now = now.replace(microsecond=0)
-            next_update = now + duration2timedelta(config.default_cache_duration)
+            duration = duration2timedelta(config.default_cache_duration)
+            if not duration:
+                # TODO: what is the right action here?
+                raise ValueError(f'Invalid default cache duration: {config.default_cache_duration}')
+            next_update = utc_now().replace(microsecond=0) + duration
             info['NextUpdate'] = next_update
             resource.expire_time = next_update
 
@@ -253,7 +246,9 @@ class MDServiceListParser(PyffParser):
                                 info['SchemeTerritory'], location, fp, args.get('country_code')
                             )
                         )
-                        r = resource.add_child(location, verify=fp)
+                        child_opts = resource.opts.copy(update={'alias': None})
+                        child_opts.verify = fp
+                        r = resource.add_child(location, child_opts)
 
                         # this is specific post-processing for MDSL files
                         def _update_entities(_t, **kwargs):
@@ -279,7 +274,7 @@ class MDServiceListParser(PyffParser):
 add_parser(MDServiceListParser())
 
 
-def metadata_expiration(t):
+def metadata_expiration(t: ElementTree) -> Optional[timedelta]:
     relt = root(t)
     if relt.tag in ('{%s}EntityDescriptor' % NS['md'], '{%s}EntitiesDescriptor' % NS['md']):
         cache_duration = config.default_cache_duration
@@ -312,7 +307,11 @@ def filter_invalids_from_document(t, base_url, validation_errors):
     return t
 
 
-def filter_or_validate(t, filter_invalid=False, base_url="", source=None, validation_errors=dict()):
+def filter_or_validate(
+    t, filter_invalid: bool = False, base_url: str = "", source=None, validation_errors: Optional[Dict[str, Any]] = None
+):
+    if validation_errors is None:
+        validation_errors = {}
     log.debug("Filtering invalids from {}".format(base_url))
     if filter_invalid:
         t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
@@ -375,9 +374,9 @@ def entitiesdescriptor(
     :param cache_duration: an XML timedelta expression, eg PT1H for 1hr
     :param valid_until: a relative time eg 2w 4d 1h for 2 weeks, 4 days and 1hour from now.
     :param copy: set to False to avoid making a copy of all the entities in list. This may be dangerous.
-    :param validate: set to False to skip schema validation of the resulting EntitiesDesciptor element. This is dangerous!
-    :param filter_invalid: remove invalid entitiesdescriptor elements from aggregate
-    :param nsmap: additional namespace definitions to include in top level entitiesdescriptor element
+    :param validate: set to False to skip schema validation of the resulting EntitiesDescriptor element. This is dangerous!
+    :param filter_invalid: remove invalid EntitiesDescriptor elements from aggregate
+    :param nsmap: additional namespace definitions to include in top level EntitiesDescriptor element
 
     Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
     """
