@@ -3,7 +3,7 @@ from copy import deepcopy
 from datetime import datetime
 from distutils.util import strtobool
 from itertools import chain
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Mapping
 
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -224,9 +224,11 @@ class MDServiceListParser(PyffParser):
             info['NextUpdate'] = next_update
             resource.expire_time = iso2datetime(next_update)
         elif config.respect_cache_duration:
-            now = utc_now()
-            now = now.replace(microsecond=0)
-            next_update = now + duration2timedelta(config.default_cache_duration)
+            _duration = duration2timedelta(config.default_cache_duration)
+            if not _duration:
+                raise ValueError('Invalid default_cache_duration')
+            now = utc_now().replace(microsecond=0)
+            next_update = now + _duration
             info['NextUpdate'] = next_update
             resource.expire_time = next_update
 
@@ -377,9 +379,9 @@ def entitiesdescriptor(
     :param cache_duration: an XML timedelta expression, eg PT1H for 1hr
     :param valid_until: a relative time eg 2w 4d 1h for 2 weeks, 4 days and 1hour from now.
     :param copy: set to False to avoid making a copy of all the entities in list. This may be dangerous.
-    :param validate: set to False to skip schema validation of the resulting EntitiesDesciptor element. This is dangerous!
-    :param filter_invalid: remove invalid entitiesdescriptor elements from aggregate
-    :param nsmap: additional namespace definitions to include in top level entitiesdescriptor element
+    :param validate: set to False to skip schema validation of the resulting EntitiesDescriptor element. This is dangerous!
+    :param filter_invalid: remove invalid EntitiesDescriptor elements from aggregate
+    :param nsmap: additional namespace definitions to include in top level EntitiesDescriptor element
 
     Produce an EntityDescriptors set from a list of entities. Optional Name, cacheDuration and validUntil are affixed.
     """

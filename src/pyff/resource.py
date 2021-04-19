@@ -21,7 +21,6 @@ from .constants import config
 from .exceptions import ResourceException
 from .fetch import make_fetcher
 from .logs import get_log
-from .parse import parse_resource
 from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, resource_string, safe_write, url_get, utc_now
 
 requests.packages.urllib3.disable_warnings()
@@ -363,6 +362,9 @@ class Resource(Watchable):
     def parse(self, getter):
         data, status, info = self.load_resource(getter)
         info['State'] = 'Parsing'
+        # local import to avoid circular import
+        from .parse import parse_resource
+
         parse_info = parse_resource(self, data)
         if parse_info is not None and isinstance(parse_info, dict):
             info.update(parse_info)
