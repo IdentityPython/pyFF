@@ -21,6 +21,7 @@ from lxml.etree import DocumentInvalid
 from six.moves.urllib_parse import quote_plus, urlparse
 
 from pyff.pipes import registry
+
 from .constants import NS
 from .decorators import deprecated
 from .exceptions import MetadataException

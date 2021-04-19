@@ -10,29 +10,19 @@ import traceback
 from collections import deque
 from datetime import datetime
 from threading import Condition, Lock
-from typing import Any, Callable, Deque, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, Iterable, List, Optional, Tuple, Union
 from urllib.parse import quote as urlescape
 
 import requests
 from lxml.etree import ElementTree
-from requests.adapters import Response
 from pydantic import BaseModel, Field
+from requests.adapters import Response
 
 from .constants import config
 from .exceptions import ResourceException
 from .fetch import make_fetcher
 from .logs import get_log
-
-from .utils import (
-    Watchable,
-    hex_digest,
-    img_to_data,
-    non_blocking_lock,
-    resource_string,
-    safe_write,
-    url_get,
-    utc_now,
-)
+from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, resource_string, safe_write, url_get, utc_now
 
 if TYPE_CHECKING:
     from .parse import PyffParser

@@ -7,8 +7,7 @@ from __future__ import annotations
 import functools
 import os
 import traceback
-from typing import Any, Callable, Dict, Iterable, Optional
-from typing import Type
+from typing import Any, Callable, Dict, Iterable, Optional, Type
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
