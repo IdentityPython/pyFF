@@ -636,39 +636,62 @@ class SigningTest(PipeLineTest):
             except:
                 pass
 
-    def test_blacklist(self):
+    def test_blacklist_single_file(self):
         entity = 'https://idp.example.com/saml2/idp/metadata.php'
 
         # First, load without a filter to ensure the entity is there
-        try:
-            res, md = self.exec_pipeline(
-                f"""
+        res, md = self.exec_pipeline(
+            f"""
 - when batch:
     - load:
         - {self.datadir}/metadata/test01.xml
         """
-            )
-        except IOError:
-            pass
-        print(md.lookup(entity))
+        )
         assert md.lookup(entity)
 
         # Then, load with a filter and ensure the entity isn't there anymore
-        try:
-            res, md = self.exec_pipeline(
-                f"""
+        res, md = self.exec_pipeline(
+            f"""
 - when batch:
     - load:
-        - {self.datadir}/metadata/test01.xml via blacklist_example
+        - {self.datadir}/metadata/ via blacklist_example
 - when blacklist_example:
     - fork merge remove:
         - filter:
             - {entity}
 """
-            )
-        except IOError:
-            pass
-        print(md.lookup(entity))
+        )
+        assert not md.lookup(entity)
+
+    def test_blacklist_directory(self):
+        """ Test filter action when loading all metadata in a directory.
+
+        This test has the side effect of testing some resource option inheritance mechanisms.
+        """
+        entity = 'https://idp.example.com/saml2/idp/metadata.php'
+
+        # First, load without a filter to ensure the entity is there
+        res, md = self.exec_pipeline(
+            f"""
+- when batch:
+    - load:
+        - {self.datadir}/metadata/test01.xml
+        """
+        )
+        assert md.lookup(entity)
+
+        # Then, load with a filter and ensure the entity isn't there anymore
+        res, md = self.exec_pipeline(
+            f"""
+- when batch:
+    - load:
+        - {self.datadir}/metadata/ via blacklist_example
+- when blacklist_example:
+    - fork merge remove:
+        - filter:
+            - {entity}
+"""
+        )
         assert not md.lookup(entity)
 
     def test_bad_namespace(self):

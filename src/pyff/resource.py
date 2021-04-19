@@ -8,20 +8,24 @@ from __future__ import annotations
 import os
 import traceback
 from collections import deque
-from copy import deepcopy
 from datetime import datetime
 from threading import Condition, Lock
-from typing import Any, Callable, Deque, Dict, Optional, Tuple
+from typing import Any, Callable, Deque, Dict, List, Optional, TYPE_CHECKING, Tuple
 from urllib.parse import quote as urlescape
 
 import requests
 from requests.adapters import Response
+from pydantic import BaseModel, Field
 
 from .constants import config
 from .exceptions import ResourceException
 from .fetch import make_fetcher
 from .logs import get_log
 from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, resource_string, safe_write, url_get, utc_now
+
+if TYPE_CHECKING:
+    from .parse import PyffParser
+    from .pipes import PipelineCallback
 
 requests.packages.urllib3.disable_warnings()
 
@@ -131,11 +135,32 @@ class ResourceHandler(URLHandler):
             t.info['Exception'] = ex
 
 
+class ResourceOpts(BaseModel):
+    alias: Optional[str] = Field(None, alias='as')  # TODO: Rename to 'name'?
+    # a certificate (file) or a SHA1 fingerprint to use for signature verification
+    verify: Optional[str] = None
+    via: List[Any] = Field([])  # list of PipelineCallback
+    # A list of PipelineCallback that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
+    cleanup: List[Any] = Field([])  # list of PipelineCallback
+    fail_on_error: bool = False
+    # remove invalid EntityDescriptor elements rather than raise an error
+    filter_invalid: bool = True
+    # set to False to turn off all XML schema validation
+    validate_schema: bool = Field(True, alias='validate')
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = self.dict()
+        # Compensate for the 'alias' field options
+        res['as'] = res.pop('alias')
+        res['validate'] = res.pop('validate_schema')
+        return res
+
+
 class Resource(Watchable):
-    def __init__(self, url=None, **kwargs):
+    def __init__(self, url: Optional[str], opts: ResourceOpts):
         super().__init__()
         self.url: str = url
-        self.opts = kwargs
+        self.opts = opts
         self.t = None
         self.type = "text/plain"
         self.etag = None
@@ -148,12 +173,6 @@ class Resource(Watchable):
         self._setup()
 
     def _setup(self):
-        self.opts.setdefault('cleanup', [])
-        self.opts.setdefault('via', [])
-        self.opts.setdefault('fail_on_error', False)
-        self.opts.setdefault('verify', None)
-        self.opts.setdefault('filter_invalid', True)
-        self.opts.setdefault('validate', True)
         if self.url is not None:
             if "://" not in self.url:
                 pth = os.path.abspath(self.url)
@@ -178,20 +197,20 @@ class Resource(Watchable):
         return os.path.join(config.local_copy_dir, urlescape(self.url))
 
     @property
-    def post(self):
-        return self.opts['via']
+    def post(self) -> List['PipelineCallback']:
+        return self.opts.via
 
-    def add_via(self, callback):
-        self.opts['via'].append(callback)
+    def add_via(self, callback: 'PipelineCallback') -> None:
+        self.opts.via.append(callback)
 
     @property
-    def cleanup(self):
-        return self.opts['cleanup']
+    def cleanup(self) -> List['PipelineCallback']:
+        return self.opts.cleanup
 
     def __str__(self):
         return "Resource {} expires at {} using ".format(
             self.url if self.url is not None else "(root)", self.expire_time
-        ) + ",".join(["{}={}".format(k, v) for k, v in list(self.opts.items())])
+        ) + ",".join(["{}={}".format(k, v) for k, v in sorted(list(self.opts.dict().items()))])
 
     def reload(self, fail_on_error=False):
         with non_blocking_lock(self.lock):
@@ -252,25 +271,24 @@ class Resource(Watchable):
                 return
         raise ValueError("Resource {} not present - use add_child".format(r.url))
 
-    def add_child(self, url: str, **kwargs) -> Resource:
-        opts = deepcopy(self.opts)
-        if 'as' in opts:
-            del opts['as']
-        opts.update(kwargs)
-        r = Resource(url, **opts)
+    def add_child(self, url: str, opts: ResourceOpts) -> Resource:
+        r = Resource(url, opts)
         if r in self.children:
+            log.debug(f'\n\n{self}:\nURL {url}\nReplacing child {r}')
             self._replace(r)
         else:
+            log.debug(f'\n\n{self}:\nURL {url}\nAdding child {r}')
+            if not r.opts.via:
+                log.debug('Empty Via')
             self.children.append(r)
 
         return r
 
     @property
     def name(self) -> Optional[str]:
-        if 'as' in self.opts:
-            return self.opts['as']
-        else:
-            return self.url
+        if self.opts.alias:
+            return self.opts.alias
+        return self.url
 
     @property
     def info(self):
@@ -359,7 +377,7 @@ class Resource(Watchable):
 
         return data, status, info
 
-    def parse(self, getter):
+    def parse(self, getter: Callable[[str], Response]) -> Deque[Resource]:
         data, status, info = self.load_resource(getter)
         info['State'] = 'Parsing'
         # local import to avoid circular import
@@ -375,10 +393,10 @@ class Resource(Watchable):
 
         info['State'] = 'Parsed'
         if self.t is not None:
-            if self.post and isinstance(self.post, list):
+            if self.post:
                 for cb in self.post:
                     if self.t is not None:
-                        self.t = cb(self.t, **self.opts)
+                        self.t = cb(self.t, self.opts.dict())
 
             if self.is_expired():
                 info['Expired'] = True

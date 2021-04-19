@@ -15,7 +15,7 @@ from .constants import ATTRS, NF_URI, NS, config
 from .exceptions import *
 from .logs import get_log
 from .parse import PyffParser, add_parser
-from .resource import Resource
+from .resource import Resource, ResourceOpts
 from .utils import (
     Lambda,
     b2u,
@@ -81,23 +81,13 @@ def find_merge_strategy(strategy_name):
 
 
 def parse_saml_metadata(
-    source: BytesIO,
-    key: Optional[str] = None,
-    base_url: Optional[str] = None,
-    fail_on_error: bool = False,
-    filter_invalid: bool = True,
-    cleanup=None,
-    validate: bool = True,
-    validation_errors: Optional[Dict[str, Any]] = None,
-) -> Tuple[ElementTree, Optional[timedelta], Optional[Exception]]:
+    source: BytesIO, opts: ResourceOpts, base_url=None, validation_errors: Optional[Dict[str, Any]] = None,
+):
     """Parse a piece of XML and return an EntitiesDescriptor element after validation.
 
     :param source: a file-like object containing SAML metadata
-    :param key: a certificate (file) or a SHA1 fingerprint to use for signature verification
+    :param opts: ResourceOpts instance
     :param base_url: use this base url to resolve relative URLs for XInclude processing
-    :param fail_on_error: (default: False)
-    :param filter_invalid: (default True) remove invalid EntityDescriptor elements rather than raise an errror
-    :param validate: (default: True) set to False to turn off all XML schema validation
     :param validation_errors: A dict that will be used to return validation errors to the caller
     :param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
 
@@ -114,10 +104,10 @@ def parse_saml_metadata(
 
         expire_time_offset = metadata_expiration(t)
 
-        t = check_signature(t, key)
+        t = check_signature(t, opts.verify)
 
-        if cleanup is not None and isinstance(cleanup, list):
-            for cb in cleanup:
+        if opts.cleanup is not None:
+            for cb in opts.cleanup:
                 t = cb(t)
         else:  # at least get rid of ID attribute
             for e in iter_entities(t):
@@ -126,10 +116,11 @@ def parse_saml_metadata(
 
         t = root(t)
 
-        if fail_on_error:
+        filter_invalid = opts.filter_invalid
+        if opts.fail_on_error:
             filter_invalid = False
 
-        if validate:
+        if opts.validate_schema:
             t = filter_or_validate(
                 t, filter_invalid=filter_invalid, base_url=base_url, source=source, validation_errors=validation_errors
             )
@@ -143,7 +134,7 @@ def parse_saml_metadata(
     except Exception as ex:
         log.debug(traceback.format_exc())
         log.error("Error parsing {}: {}".format(base_url, ex))
-        if fail_on_error:
+        if opts.fail_on_error:
             raise ex
 
         return None, None, ex
@@ -168,12 +159,8 @@ class SAMLMetadataResourceParser(PyffParser):
         info['Validation Errors'] = dict()
         t, expire_time_offset, exception = parse_saml_metadata(
             unicode_stream(content),
-            key=resource.opts['verify'],
             base_url=resource.url,
-            cleanup=resource.opts['cleanup'],
-            fail_on_error=resource.opts['fail_on_error'],
-            filter_invalid=resource.opts['filter_invalid'],
-            validate=resource.opts['validate'],
+            opts=resource.opts,
             validation_errors=info['Validation Errors'],
         )
 
@@ -226,11 +213,11 @@ class MDServiceListParser(PyffParser):
             info['NextUpdate'] = next_update
             resource.expire_time = iso2datetime(next_update)
         elif config.respect_cache_duration:
-            _duration = duration2timedelta(config.default_cache_duration)
-            if not _duration:
-                raise ValueError('Invalid default_cache_duration')
-            now = utc_now().replace(microsecond=0)
-            next_update = now + _duration
+            duration = duration2timedelta(config.default_cache_duration)
+            if not duration:
+                # TODO: what is the right action here?
+                raise ValueError(f'Invalid default cache duration: {config.default_cache_duration}')
+            next_update = utc_now().replace(microsecond=0) + duration
             info['NextUpdate'] = next_update
             resource.expire_time = next_update
 
@@ -259,7 +246,9 @@ class MDServiceListParser(PyffParser):
                                 info['SchemeTerritory'], location, fp, args.get('country_code')
                             )
                         )
-                        r = resource.add_child(location, verify=fp)
+                        child_opts = resource.opts.copy(update={'alias': None})
+                        child_opts.verify = fp
+                        r = resource.add_child(location, child_opts)
 
                         # this is specific post-processing for MDSL files
                         def _update_entities(_t, **kwargs):

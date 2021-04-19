@@ -4,10 +4,11 @@ transform, sign or output SAML metadata.
 """
 from __future__ import annotations
 
+import functools
 import os
 import traceback
-import functools
-from typing import Any, Dict, Optional, Callable, Type, Tuple
+from typing import Any, Callable, Dict, List, Optional
+from typing import Type
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -140,14 +141,15 @@ class PipelineCallback(object):
 
     def __init__(self, entry_point, req, store=None):
         self.entry_point = entry_point
-        self.plumbing = Plumbing(
-            req.scope_of(entry_point).plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point)
-        )
+        self.plumbing = Plumbing(req.scope_of(entry_point).plumbing.pipeline, f"{req.plumbing.id}-via-{entry_point}")
         self.req = req
         self.store = store
 
     def __str__(self) -> str:
-        return f"<PipelineCallback to {self.req.plumbing}]>"
+        return f"<PipelineCallback to {self.req.plumbing}>"
+
+    def __repr__(self) -> str:
+        return str(self)
 
     def __copy__(self):
         return self
@@ -200,7 +202,7 @@ class Plumbing(object):
     would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
     """
 
-    def __init__(self, pipeline, pid):
+    def __init__(self, pipeline: List[Dict[str, Any]], pid: str):
         self._id = pid
         self.pipeline = pipeline
 
@@ -208,11 +210,11 @@ class Plumbing(object):
         return self.pipeline
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self._id
 
     @property
-    def pid(self):
+    def pid(self) -> str:
         return self._id
 
     def __iter__(self):
@@ -304,7 +306,9 @@ class Plumbing(object):
             try:
                 pipefn, opts, name, args = load_pipe(p)
                 log.debug(
-                    "{!s}: calling '{}' using args: {} and opts: {}".format(self.pipeline, name, repr(args), repr(opts))
+                    "{!s}: calling '{}' using args:\n{} and opts:\n{}".format(
+                        self.pipeline, name, repr(args), repr(opts)
+                    )
                 )
                 if is_text(args):
                     args = [args]
@@ -326,7 +330,16 @@ class Plumbing(object):
                 break
         return req.t
 
-    def process(self, md, args=None, state=None, t=None, store=None, raise_exceptions=True, scheduler=None):
+    def process(
+        self,
+        md: MDRepository,
+        args=None,
+        state: Optional[Dict[str, Any]] = None,
+        t=None,
+        store=None,
+        raise_exceptions: bool = True,
+        scheduler=None,
+    ):
         """
         The main entrypoint for processing a request pipeline. Calls the inner processor.
 

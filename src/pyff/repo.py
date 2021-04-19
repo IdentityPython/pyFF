@@ -2,7 +2,7 @@ import random
 
 from .constants import config
 from .logs import get_log
-from .resource import IconHandler, Resource
+from .resource import IconHandler, Resource, ResourceOpts
 from .samlmd import entitiesdescriptor, root
 from .store import make_icon_store_instance, make_store_instance
 from .utils import is_text, make_default_scheduler
@@ -15,7 +15,7 @@ class MDRepository:
 
     def __init__(self, scheduler=None):
         random.seed(self)
-        self.rm = Resource()  # root
+        self.rm = Resource(url=None, opts=ResourceOpts())  # root
         if scheduler is None:
             scheduler = make_default_scheduler()
             scheduler.start()
