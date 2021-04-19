@@ -10,10 +10,11 @@ import traceback
 from collections import deque
 from datetime import datetime
 from threading import Condition, Lock
-from typing import Any, Callable, Deque, Dict, List, Optional, TYPE_CHECKING, Tuple
+from typing import Any, Callable, Deque, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 from urllib.parse import quote as urlescape
 
 import requests
+from lxml.etree import ElementTree
 from requests.adapters import Response
 from pydantic import BaseModel, Field
 
@@ -159,11 +160,11 @@ class ResourceOpts(BaseModel):
 class Resource(Watchable):
     def __init__(self, url: Optional[str], opts: ResourceOpts):
         super().__init__()
-        self.url: str = url
-        self.opts = opts
-        self.t = None
-        self.type = "text/plain"
-        self.etag = None
+        self.url: Optional[str] = url
+        self.opts: ResourceOpts = opts
+        self.t: Optional[ElementTree] = None
+        self.type: str = "text/plain"
+        self.etag: Optional[str] = None
         self.expire_time: Optional[datetime] = None
         self.never_expires: bool = False
         self.last_seen: Optional[datetime] = None
@@ -304,12 +305,15 @@ class Resource(Watchable):
         else:
             return []
 
-    def load_backup(self):
+    def load_backup(self) -> Optional[str]:
         if config.local_copy_dir is None:
             return None
 
         try:
-            return resource_string(self.local_copy_fn)
+            res = resource_string(self.local_copy_fn)
+            if isinstance(res, bytes):
+                return res.decode('utf-8')
+            return res
         except IOError as ex:
             log.warning(
                 "Caught an exception trying to load local backup for {} via {}: {}".format(
@@ -318,7 +322,7 @@ class Resource(Watchable):
             )
             return None
 
-    def save_backup(self, data):
+    def save_backup(self, data: Optional[str]) -> None:
         if config.local_copy_dir is not None:
             try:
                 safe_write(self.local_copy_fn, data, True)
@@ -331,6 +335,10 @@ class Resource(Watchable):
         info = self.add_info()
 
         log.debug("Loading resource {}".format(self.url))
+
+        if not self.url:
+            log.error(f'No URL for resource {self}')
+            return data, status, info
 
         try:
             r = getter(self.url)
@@ -346,7 +354,10 @@ class Resource(Watchable):
 
             if r.ok:
                 data = r.text
-                self.etag = r.headers.get('ETag', None) or hex_digest(r.text, 'sha256')
+                _etag = r.headers.get('ETag', None)
+                if not _etag:
+                    _etag = hex_digest(r.text, 'sha256')
+                self.etag = _etag
             elif self.local_copy_fn is not None:
                 log.warning(
                     "Got status={:d} while getting {}. Attempting fallback to local copy.".format(
@@ -379,12 +390,16 @@ class Resource(Watchable):
 
     def parse(self, getter: Callable[[str], Response]) -> Deque[Resource]:
         data, status, info = self.load_resource(getter)
+
+        if not data:
+            raise ResourceException(f'Nothing to parse when loading resource {self}')
+
         info['State'] = 'Parsing'
         # local import to avoid circular import
         from .parse import parse_resource
 
         parse_info = parse_resource(self, data)
-        if parse_info is not None and isinstance(parse_info, dict):
+        if parse_info is not None:
             info.update(parse_info)
 
         if status != 218:  # write backup unless we just loaded from backup

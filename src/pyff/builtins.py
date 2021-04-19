@@ -632,7 +632,7 @@ def load(req, *opts):
         url = r.pop(0)
 
         # Copy parent node opts as a starting point
-        child_opts = req.md.rm.opts.copy(update={"via": [], "cleanup": [], "verify": None, "as": url})
+        child_opts = req.md.rm.opts.copy(update={"via": [], "cleanup": [], "verify": None, "alias": url})
 
         while len(r) > 0:
             elt = r.pop(0)

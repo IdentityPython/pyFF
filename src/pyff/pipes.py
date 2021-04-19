@@ -7,14 +7,16 @@ from __future__ import annotations
 import functools
 import os
 import traceback
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 from typing import Type
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
+from lxml.etree import ElementTree
 
 from .logs import get_log
 from .repo import MDRepository
+from .store import SAMLStoreBase
 from .utils import PyffException, is_text, resource_string
 
 log = get_log(__name__)
@@ -202,11 +204,12 @@ class Plumbing(object):
     would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
     """
 
-    def __init__(self, pipeline: List[Dict[str, Any]], pid: str):
+    def __init__(self, pipeline: Iterable[Dict[str, Any]], pid: str):
         self._id = pid
         self.pipeline = pipeline
 
-    def to_json(self):
+    def to_json(self) -> Iterable[Dict[str, Any]]:
+        # TODO: to_json seems like the wrong name for this function?
         return self.pipeline
 
     @property
@@ -217,7 +220,7 @@ class Plumbing(object):
     def pid(self) -> str:
         return self._id
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[Dict[str, Any]]:
         return self.pipeline
 
     def __str__(self):
@@ -245,19 +248,19 @@ class Plumbing(object):
                 state = dict()
             if not args:
                 args = []
-            self.plumbing = pl
-            self.md = md
-            self.t = t
+            self.plumbing: Plumbing = pl
+            self.md: MDRepository = md
+            self.t: ElementTree = t
             self._id = None
             self.name = name
-            self.args = args
-            self.state = state
-            self.done = False
-            self._store = store
-            self.scheduler = scheduler
-            self.raise_exceptions = raise_exceptions
+            self.args: Iterable[Dict[str, Any]] = args
+            self.state: Dict[str, Any] = state
+            self.done: bool = False
+            self._store: SAMLStoreBase = store
+            self.scheduler: Optional[BackgroundScheduler] = scheduler
+            self.raise_exceptions: bool = raise_exceptions
             self.exception: Optional[BaseException] = None
-            self.parent = None
+            self.parent: Optional[Plumbing.Request] = None
 
         def scope_of(self, entry_point):
             if 'with {}'.format(entry_point) in self.plumbing.pipeline:
@@ -284,7 +287,7 @@ class Plumbing(object):
             self.parent = _parent
 
         @property
-        def store(self):
+        def store(self) -> SAMLStoreBase:
             if self._store:
                 return self._store
             return self.md.store

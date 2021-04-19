@@ -1,7 +1,7 @@
 import os
 from abc import ABC
 from collections import deque
-from typing import Any, List, Mapping
+from typing import Any, AnyStr, Dict, List, Mapping, Optional, Union
 
 from xmlsec.crypto import CertDict
 
@@ -49,10 +49,10 @@ class NoParser(PyffParser):
     def __str__(self):
         return "Not a supported type"
 
-    def magic(self, content):
+    def magic(self, content: str) -> bool:
         return True
 
-    def parse(self, resource, content):
+    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
         raise ParserException("No matching parser found for %s" % resource.url)
 
 
@@ -66,7 +66,7 @@ class DirectoryParser(PyffParser):
     def magic(self, content: str) -> bool:
         return os.path.isdir(content)
 
-    def parse(self, resource: Resource, content: str):
+    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
         resource.children = deque()
         info = dict()
         info['Description'] = 'Directory'
@@ -128,8 +128,9 @@ def add_parser(parser):
     _parsers.insert(0, parser)
 
 
-def parse_resource(resource: Resource, content: str):
+def parse_resource(resource: Resource, content: str) -> Optional[Mapping[str, Any]]:
     for parser in _parsers:
         if parser.magic(content):
             resource.last_parser = parser
             return parser.parse(resource, content)
+    return None
