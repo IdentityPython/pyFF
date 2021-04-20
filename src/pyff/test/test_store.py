@@ -6,7 +6,6 @@ from unittest import TestCase
 import fakeredis
 
 from pyff.constants import ATTRS
-from pyff.samlmd import iter_entities
 from pyff.store import MemoryStore, RedisWhooshStore, SAMLStoreBase, entity_attribute_dict
 from pyff.utils import parse_xml, resource_filename, root
 

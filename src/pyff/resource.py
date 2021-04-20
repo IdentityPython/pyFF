@@ -38,6 +38,11 @@ if TYPE_CHECKING:
     from pyff.pipes import PipelineCallback
     from pyff.utils import Lambda
 
+    # ensure static analysis doesn't flag these as unused
+    assert PyffParser
+    assert PipelineCallback
+    assert Lambda
+
 requests.packages.urllib3.disable_warnings()
 
 log = get_log(__name__)

@@ -4,9 +4,6 @@
 from distutils.core import setup
 from pathlib import PurePath
 from platform import python_implementation
-from sys import version_info
-
-from os.path import abspath, dirname, join
 from typing import List
 
 from setuptools import find_packages

@@ -89,7 +89,6 @@ def parse_saml_metadata(
     :param opts: ResourceOpts instance
     :param base_url: use this base url to resolve relative URLs for XInclude processing
     :param validation_errors: A dict that will be used to return validation errors to the caller
-    :param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
 
     :return: Tuple with t (ElementTree), expire_time_offset, exception
     """
