@@ -1,14 +1,14 @@
 import os
 from abc import ABC
 from collections import deque
-from typing import Any, AnyStr, Dict, List, Mapping, Optional, Union
+from typing import Any, List, Mapping, Optional
 
 from xmlsec.crypto import CertDict
 
-from .constants import NS
-from .logs import get_log
-from .resource import Resource, ResourceOpts
-from .utils import find_matching_files, parse_xml, root, unicode_stream, utc_now
+from pyff.constants import NS
+from pyff.logs import get_log
+from pyff.resource import Resource
+from pyff.utils import find_matching_files, parse_xml, root, unicode_stream, utc_now
 
 __author__ = 'leifj'
 

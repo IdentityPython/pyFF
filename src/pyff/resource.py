@@ -10,7 +10,7 @@ import traceback
 from collections import deque
 from datetime import datetime
 from threading import Condition, Lock
-from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, Iterable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import quote as urlescape
 
 import requests
@@ -18,16 +18,25 @@ from lxml.etree import ElementTree
 from pydantic import BaseModel, Field
 from requests.adapters import Response
 
-from .constants import config
-from .exceptions import ResourceException
-from .fetch import make_fetcher
-from .logs import get_log
-from .utils import Watchable, hex_digest, img_to_data, non_blocking_lock, resource_string, safe_write, url_get, utc_now
+from pyff.constants import config
+from pyff.exceptions import ResourceException
+from pyff.fetch import make_fetcher
+from pyff.logs import get_log
+from pyff.utils import (
+    Watchable,
+    hex_digest,
+    img_to_data,
+    non_blocking_lock,
+    resource_string,
+    safe_write,
+    url_get,
+    utc_now,
+)
 
 if TYPE_CHECKING:
-    from .parse import PyffParser
-    from .pipes import PipelineCallback
-    from .utils import Lambda
+    from pyff.parse import PyffParser
+    from pyff.pipes import PipelineCallback
+    from pyff.utils import Lambda
 
 requests.packages.urllib3.disable_warnings()
 
@@ -405,7 +414,7 @@ class Resource(Watchable):
 
         info['State'] = 'Parsing'
         # local import to avoid circular import
-        from .parse import parse_resource
+        from pyff.parse import parse_resource
 
         parse_info = parse_resource(self, data)
         if parse_info is not None:

@@ -4,19 +4,19 @@ from datetime import datetime, timedelta
 from distutils.util import strtobool
 from io import BytesIO
 from itertools import chain
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional
 
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid, ElementTree
 from xmlsec.crypto import CertDict
 
-from .constants import ATTRS, NF_URI, NS, config
-from .exceptions import *
-from .logs import get_log
-from .parse import PyffParser, add_parser
-from .resource import Resource, ResourceOpts
-from .utils import (
+from pyff.constants import ATTRS, NF_URI, NS, config
+from pyff.exceptions import *
+from pyff.logs import get_log
+from pyff.parse import PyffParser, add_parser
+from pyff.resource import Resource, ResourceOpts
+from pyff.utils import (
     Lambda,
     b2u,
     check_signature,
