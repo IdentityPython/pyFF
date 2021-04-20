@@ -1,6 +1,6 @@
 import random
 
-from pyff.constants import config
+from pyff.constants import NS, config
 from pyff.logs import get_log
 from pyff.resource import Resource, ResourceOpts
 from pyff.samlmd import entitiesdescriptor, root
