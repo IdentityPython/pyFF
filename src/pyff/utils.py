@@ -24,7 +24,7 @@ from email.utils import parsedate
 from itertools import chain
 from threading import local
 from time import gmtime, strftime
-from typing import Any, BinaryIO, Callable, Optional, Union
+from typing import BinaryIO, Callable, Optional, Union
 
 import pkg_resources
 import requests
@@ -45,10 +45,10 @@ from requests_cache import CachedSession
 from requests_file import FileAdapter
 from six.moves.urllib_parse import urlparse
 
-from . import __version__
-from .constants import NS, config
-from .exceptions import *
-from .logs import get_log
+from pyff import __version__
+from pyff.constants import NS, config
+from pyff.exceptions import *
+from pyff.logs import get_log
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 

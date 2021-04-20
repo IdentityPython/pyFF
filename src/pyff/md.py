@@ -7,9 +7,9 @@ import logging
 import sys
 import traceback
 
-from .constants import config, parse_options
-from .pipes import plumbing
-from .repo import MDRepository
+from pyff.constants import config, parse_options
+from pyff.pipes import plumbing
+from pyff.repo import MDRepository
 
 
 def main():

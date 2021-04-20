@@ -17,12 +17,11 @@ from whoosh.filedb.filestore import FileStorage
 from whoosh.qparser import MultifieldParser, QueryParser
 from whoosh.writing import CLEAR
 
+from pyff import merge_strategies
+from pyff.constants import ATTRS, ATTRS_INV, NS, config
+from pyff.logs import get_log
 from pyff.resource import IconHandler
-
-from . import merge_strategies
-from .constants import ATTRS, ATTRS_INV, NS, config
-from .logs import get_log
-from .samlmd import (
+from pyff.samlmd import (
     EntitySet,
     discojson,
     entitiesdescriptor,
@@ -37,7 +36,7 @@ from .samlmd import (
     iter_entities,
     object_id,
 )
-from .utils import (
+from pyff.utils import (
     LRUProxyDict,
     avg_domain_distance,
     b2u,

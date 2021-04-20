@@ -13,10 +13,10 @@ import traceback
 from xmldiff.formatting import DiffFormatter
 from xmldiff.main import diff_trees
 
-from .constants import config, parse_options
-from .resource import Resource
-from .samlmd import diff, iter_entities
-from .store import MemoryStore
+from pyff.constants import config, parse_options
+from pyff.resource import Resource
+from pyff.samlmd import diff, iter_entities
+from pyff.store import MemoryStore
 
 
 def difftool():

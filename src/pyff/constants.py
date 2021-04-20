@@ -5,7 +5,6 @@ Useful constants for pyFF. Mostly XML namespace declarations.
 import getopt
 import json
 import logging
-import multiprocessing
 import os
 import re
 import sys
@@ -14,7 +13,7 @@ from distutils.util import strtobool
 import pyconfig
 import six
 
-from . import __version__ as pyff_version
+from pyff import __version__ as pyff_version
 
 __author__ = 'leifj'
 
@@ -230,7 +229,7 @@ class Config(object):
     The :py:const:`pyff.constants:config` object is a singleton instance of this Class and contains all
     configuration parameters available to pyFF. Each parameter can be set directly, via :py:mod:`pyconfig`
     or via environment variables by prefixing the setting name in upper case with "PYFF_". The setting
-    called "loglevel" then becomes "PYFF_LOGLEVEL" etc. Any occurence of '.' or '-' is also transscribed
+    called "loglevel" then becomes "PYFF_LOGLEVEL" etc. Any occurrence of '.' or '-' is also transcribed
     to '_' when the setting is referenced as an environment variable.
 
 
