@@ -18,14 +18,14 @@ from pyramid.static import static_view
 from six import b
 from six.moves.urllib_parse import quote_plus
 
-from .constants import config
-from .exceptions import ResourceException
-from .logs import get_log
-from .pipes import plumbing
-from .repo import MDRepository
-from .resource import Resource
-from .samlmd import entity_display_name
-from .utils import b2u, dumptree, duration2timedelta, hash_id, json_serializer, utc_now
+from pyff.constants import config
+from pyff.exceptions import ResourceException
+from pyff.logs import get_log
+from pyff.pipes import plumbing
+from pyff.repo import MDRepository
+from pyff.resource import Resource
+from pyff.samlmd import entity_display_name
+from pyff.utils import b2u, dumptree, duration2timedelta, hash_id, json_serializer, utc_now
 
 log = get_log(__name__)
 

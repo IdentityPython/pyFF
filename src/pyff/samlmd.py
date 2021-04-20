@@ -4,19 +4,19 @@ from datetime import datetime, timedelta
 from distutils.util import strtobool
 from io import BytesIO
 from itertools import chain
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional
 
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid, ElementTree
 from xmlsec.crypto import CertDict
 
-from .constants import ATTRS, NF_URI, NS, config
-from .exceptions import *
-from .logs import get_log
-from .parse import PyffParser, add_parser
-from .resource import Resource, ResourceOpts
-from .utils import (
+from pyff.constants import ATTRS, NF_URI, NS, config
+from pyff.exceptions import *
+from pyff.logs import get_log
+from pyff.parse import PyffParser, add_parser
+from pyff.resource import Resource, ResourceOpts
+from pyff.utils import (
     Lambda,
     b2u,
     check_signature,
@@ -89,7 +89,6 @@ def parse_saml_metadata(
     :param opts: ResourceOpts instance
     :param base_url: use this base url to resolve relative URLs for XInclude processing
     :param validation_errors: A dict that will be used to return validation errors to the caller
-    :param cleanup: A list of callables that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
 
     :return: Tuple with t (ElementTree), expire_time_offset, exception
     """

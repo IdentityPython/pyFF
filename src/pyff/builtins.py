@@ -20,15 +20,12 @@ import xmlsec
 from lxml.etree import DocumentInvalid
 from six.moves.urllib_parse import quote_plus, urlparse
 
-from pyff.pipes import registry
-
-from .constants import NS
-from .decorators import deprecated
-from .exceptions import MetadataException
-from .logs import get_log
-from .pipes import PipeException, PipelineCallback, Plumbing, pipe
-from .resource import ResourceOpts
-from .samlmd import (
+from pyff.constants import NS
+from pyff.decorators import deprecated
+from pyff.exceptions import MetadataException
+from pyff.logs import get_log
+from pyff.pipes import PipeException, PipelineCallback, Plumbing, pipe, registry
+from pyff.samlmd import (
     annotate_entity,
     discojson_t,
     entitiesdescriptor,
@@ -41,7 +38,7 @@ from .samlmd import (
     set_reginfo,
     sort_entities,
 )
-from .utils import (
+from pyff.utils import (
     datetime2iso,
     dumptree,
     duration2timedelta,

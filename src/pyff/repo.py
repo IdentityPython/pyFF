@@ -1,11 +1,11 @@
 import random
 
-from .constants import config
-from .logs import get_log
-from .resource import Resource, ResourceOpts
-from .samlmd import entitiesdescriptor, root
-from .store import make_icon_store_instance, make_store_instance
-from .utils import is_text, make_default_scheduler
+from pyff.constants import NS, config
+from pyff.logs import get_log
+from pyff.resource import Resource, ResourceOpts
+from pyff.samlmd import entitiesdescriptor, root
+from pyff.store import make_icon_store_instance, make_store_instance
+from pyff.utils import is_text, make_default_scheduler
 
 log = get_log(__name__)
 

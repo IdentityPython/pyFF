@@ -5,18 +5,15 @@ pyFFd is the SAML metadata aggregator daemon
 
 from __future__ import unicode_literals
 
-import importlib
-import logging
 import os
-import sys
 
 import gunicorn.app.base
 from six import iteritems
 
-from .api import mkapp
-from .constants import config, parse_options
-from .logs import get_log
-from .repo import MDRepository
+from pyff.api import mkapp
+from pyff.constants import config, parse_options
+from pyff.logs import get_log
+from pyff.repo import MDRepository
 
 log = get_log(__name__)
 

@@ -13,10 +13,10 @@ import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
 from lxml.etree import ElementTree
 
-from .logs import get_log
-from .repo import MDRepository
-from .store import SAMLStoreBase
-from .utils import PyffException, is_text, resource_string
+from pyff.logs import get_log
+from pyff.repo import MDRepository
+from pyff.store import SAMLStoreBase
+from pyff.utils import PyffException, is_text, resource_string
 
 log = get_log(__name__)
 

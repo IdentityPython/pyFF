@@ -24,7 +24,7 @@ from pyff.utils import (
     url_get,
 )
 
-from ..merge_strategies import remove, replace_existing
+from pyff.merge_strategies import remove, replace_existing
 
 
 class TestMetadata(TestCase):

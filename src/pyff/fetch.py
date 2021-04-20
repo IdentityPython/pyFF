@@ -2,9 +2,9 @@ import queue
 import threading
 from datetime import datetime
 
-from .constants import config
-from .logs import get_log
-from .utils import Watchable, load_callable, url_get
+from pyff.constants import config
+from pyff.logs import get_log
+from pyff.utils import Watchable, load_callable, url_get
 
 log = get_log(__name__)
 

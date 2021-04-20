@@ -1,6 +1,5 @@
 import logging
 import os
-import random
 import socket
 import subprocess
 import sys

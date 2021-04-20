@@ -5,7 +5,7 @@ isort
 mako
 mock
 pbr
-pytest
+pytest>=6.0.0
 pytest-cov
 setuptools
 wsgi_intercept
