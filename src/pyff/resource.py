@@ -9,8 +9,9 @@ import os
 import traceback
 from collections import deque
 from datetime import datetime
+from enum import Enum
 from threading import Condition, Lock
-from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, TYPE_CHECKING, Tuple
 from urllib.parse import quote as urlescape
 
 import requests
@@ -34,7 +35,7 @@ from pyff.utils import (
 )
 
 if TYPE_CHECKING:
-    from pyff.parse import PyffParser
+    from pyff.parse import ParserInfo, PyffParser
     from pyff.pipes import PipelineCallback
     from pyff.utils import Lambda
 
@@ -141,14 +142,14 @@ class ResourceHandler(URLHandler):
     def i_handle(self, t: Resource, url=None, response=None, exception=None, last_fetched=None):
         try:
             if exception is not None:
-                t.info['Exception'] = exception
+                t.info.exception = exception
             else:
                 children = t.parse(lambda u: response)
                 self.i_schedule(children)
         except BaseException as ex:
             log.debug(traceback.format_exc())
             log.error(f'Failed handling resource: {ex}')
-            t.info['Exception'] = ex
+            t.info.exception = ex
 
 
 class ResourceOpts(BaseModel):
@@ -177,6 +178,50 @@ class ResourceOpts(BaseModel):
         return res
 
 
+class ResourceLoadState(str, Enum):
+    Fetched = 'Fetched'
+    Parsing = 'Parsing'
+    Parsed = 'Parsed'
+    Ready = 'Ready'
+
+
+class ResourceInfo(BaseModel):
+    resource: str  # URL
+    state: Optional[ResourceLoadState] = None
+    http_headers: Dict[str, Any] = Field({})
+    reason: Optional[str] = None
+    status_code: Optional[str]  # HTTP status code as string. TODO: change to int
+    parser_info: Optional[ParserInfo] = None
+    expired: Optional[bool] = None
+    exception: Optional[BaseException] = None
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def to_dict(self):
+        def _format_key(k: str) -> str:
+            special = {'http_headers': 'HTTP Response Headers'}
+            if k in special:
+                return special[k]
+            # Turn validation_errors into 'Validation Errors'
+            return k.replace('_', ' ').title()
+
+        res = {_format_key(k): v for k, v in self.dict().items()}
+
+        if self.parser_info:
+            # Move contents from sub-dict to top of dict, for backwards compatibility
+            res.update(self.parser_info.to_dict())
+        del res['Parser Info']
+
+        # backwards compat
+        if res['Description'] == 'SAML Metadata':
+            del res['Description']
+        if res['Exception'] is None:
+            del res['Exception']
+
+        return res
+
+
 class Resource(Watchable):
     def __init__(self, url: Optional[str], opts: ResourceOpts):
         super().__init__()
@@ -189,7 +234,7 @@ class Resource(Watchable):
         self.never_expires: bool = False
         self.last_seen: Optional[datetime] = None
         self.last_parser: Optional['PyffParser'] = None  # importing PyffParser in this module causes a loop
-        self._infos: Deque[Dict] = deque(maxlen=config.info_buffer_size)
+        self._infos: Deque[ResourceInfo] = deque(maxlen=config.info_buffer_size)
         self.children: Deque[Resource] = deque()
         self._setup()
 
@@ -281,10 +326,8 @@ class Resource(Watchable):
     def is_valid(self) -> bool:
         return not self.is_expired() and self.last_seen is not None and self.last_parser is not None
 
-    def add_info(self) -> Dict[str, Any]:
-        info: Dict[str, Any] = dict()
-        info['State'] = None
-        info['Resource'] = self.url
+    def add_info(self) -> ResourceInfo:
+        info = ResourceInfo(resource=self.url)
         self._infos.append(info)
         return info
 
@@ -315,18 +358,19 @@ class Resource(Watchable):
         return self.url
 
     @property
-    def info(self):
+    def info(self) -> ResourceInfo:
         if self._infos is None or not self._infos:
-            return dict()
+            return ResourceInfo(resource=self.url)
         else:
             return self._infos[-1]
 
     @property
-    def errors(self):
-        if 'Validation Errors' in self.info:
-            return self.info['Validation Errors']
-        else:
-            return []
+    def errors(self) -> Mapping[str, Any]:
+        # TODO: Maybe caller should get the ResourceInfo instance instead? Why this shortcut?
+        parser_info = self.info.parser_info
+        if not parser_info:
+            return {}
+        return parser_info.validation_errors
 
     def load_backup(self) -> Optional[str]:
         if config.local_copy_dir is None:
@@ -352,7 +396,7 @@ class Resource(Watchable):
             except IOError as ex:
                 log.warning("unable to save backup copy of {}: {}".format(self.url, ex))
 
-    def load_resource(self, getter: Callable[[str], Response]) -> Tuple[Optional[str], int, Dict[str, Any]]:
+    def load_resource(self, getter: Callable[[str], Response]) -> Tuple[Optional[str], int, ResourceInfo]:
         data: Optional[str] = None
         status: int = 500
         info = self.add_info()
@@ -366,14 +410,14 @@ class Resource(Watchable):
         try:
             r = getter(self.url)
 
-            info['HTTP Response Headers'] = r.headers
+            info.http_headers = dict(r.headers)
             log.debug(
                 "got status_code={:d}, encoding={} from_cache={} from {}".format(
                     r.status_code, r.encoding, getattr(r, "from_cache", False), self.url
                 )
             )
             status = r.status_code
-            info['Reason'] = r.reason
+            info.reason = r.reason
 
             if r.ok:
                 data = r.text
@@ -389,17 +433,17 @@ class Resource(Watchable):
                 )
                 data = self.load_backup()
                 if data is not None and len(data) > 0:
-                    info['Reason'] = "Retrieved from local cache because status: {} != 200".format(status)
+                    info.reason = "Retrieved from local cache because status: {} != 200".format(status)
                     status = 218
 
-            info['Status Code'] = str(status)
+            info.status_code = str(status)
 
         except IOError as ex:
             if self.local_copy_fn is not None:
                 log.warning("caught exception from {} - trying local backup: {}".format(self.url, ex))
                 data = self.load_backup()
                 if data is not None and len(data) > 0:
-                    info['Reason'] = "Retrieved from local cache because exception: {}".format(ex)
+                    info.reason = "Retrieved from local cache because exception: {}".format(ex)
                     status = 218
             if data is None or not len(data) > 0:
                 raise ex  # propagate exception if we can't find a backup
@@ -407,7 +451,7 @@ class Resource(Watchable):
         if data is None or not len(data) > 0:
             raise ResourceException("failed to fetch {} (status: {:d})".format(self.url, status))
 
-        info['State'] = 'Fetched'
+        info.state = ResourceLoadState.Fetched
 
         return data, status, info
 
@@ -417,19 +461,17 @@ class Resource(Watchable):
         if not data:
             raise ResourceException(f'Nothing to parse when loading resource {self}')
 
-        info['State'] = 'Parsing'
+        info.state = ResourceLoadState.Parsing
         # local import to avoid circular import
         from pyff.parse import parse_resource
 
-        parse_info = parse_resource(self, data)
-        if parse_info is not None:
-            info.update(parse_info)
+        info.parser_info = parse_resource(self, data)
 
         if status != 218:  # write backup unless we just loaded from backup
             self.last_seen = utc_now().replace(microsecond=0)
             self.save_backup(data)
 
-        info['State'] = 'Parsed'
+        info.state = ResourceLoadState.Parsed
         if self.t is not None:
             if self.post:
                 for cb in self.post:
@@ -437,14 +479,15 @@ class Resource(Watchable):
                         self.t = cb(self.t, self.opts.dict())
 
             if self.is_expired():
-                info['Expired'] = True
+                info.expired = True
                 raise ResourceException("Resource at {} expired on {}".format(self.url, self.expire_time))
             else:
-                info['Expired'] = False
+                info.expired = False
 
-            for (eid, error) in list(info['Validation Errors'].items()):
-                log.error(error)
+            if info.parser_info:
+                for (eid, error) in list(info.parser_info.validation_errors.items()):
+                    log.error(error)
 
-        info['State'] = 'Ready'
+        info.state = ResourceLoadState.Ready
 
         return self.children
