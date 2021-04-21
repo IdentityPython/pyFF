@@ -23,7 +23,7 @@ from pyff.exceptions import ResourceException
 from pyff.logs import get_log
 from pyff.pipes import plumbing
 from pyff.repo import MDRepository
-from pyff.resource import Resource
+from pyff.resource import Resource, ResourceInfo
 from pyff.samlmd import entity_display_name
 from pyff.utils import b2u, dumptree, duration2timedelta, hash_id, json_serializer, utc_now
 
@@ -392,10 +392,10 @@ def resources_handler(request):
     """
 
     def _infos(resources: Iterable[Resource]) -> List[Mapping[str, Any]]:
-        return list(filter(lambda i: 'State' in i and i['State'] is not None, [_info(r) for r in resources]))
+        return [_info(r) for r in resources if r.info.state is not None]
 
     def _info(r: Resource) -> Mapping[str, Any]:
-        nfo = r.info
+        nfo = r.info.to_dict()
         nfo['Valid'] = r.is_valid()
         nfo['Parser'] = r.last_parser
         if r.last_seen is not None:

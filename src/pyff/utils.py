@@ -968,7 +968,7 @@ class Watchable(object):
                 cb(*args, **kwargs)
             except BaseException as ex:
                 log.debug(traceback.format_exc())
-                log.warning(ex)
+                log.warning(f'Callback {cb} failed: {ex}')
 
 
 def utc_now() -> datetime:

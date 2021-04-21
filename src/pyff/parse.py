@@ -1,8 +1,9 @@
 import os
 from abc import ABC
 from collections import deque
-from typing import Any, List, Mapping, Optional
+from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, Field
 from xmlsec.crypto import CertDict
 
 from pyff.constants import NS
@@ -13,6 +14,20 @@ from pyff.utils import find_matching_files, parse_xml, root, unicode_stream, utc
 __author__ = 'leifj'
 
 log = get_log(__name__)
+
+
+class ParserInfo(BaseModel):
+    description: str
+    expiration_time: str  # TODO: Change expiration_time into a datetime
+    validation_errors: Dict[str, Any] = Field({})
+
+    def to_dict(self):
+        def _format_key(k: str) -> str:
+            # Turn expiration_time into 'Expiration Time'
+            return k.replace('_', ' ').title()
+
+        res = {_format_key(k): v for k, v in self.dict().items()}
+        return res
 
 
 class ParserException(Exception):
@@ -33,12 +48,8 @@ class PyffParser(ABC):
         """Return True if this parser is applicable to this content"""
         raise NotImplementedError()
 
-    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
-        """Initialise/update a resource based on this content, returning information about it
-        TODO: Determine what 'parse' actually means
-
-        TODO: Return something more structured than an arbitrary mapping
-        """
+    def parse(self, resource: Resource, content: str) -> ParserInfo:
+        """Initialise/update a resource based on this content, returning information about it"""
         raise NotImplementedError()
 
 
@@ -52,7 +63,7 @@ class NoParser(PyffParser):
     def magic(self, content: str) -> bool:
         return True
 
-    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
+    def parse(self, resource: Resource, content: str) -> ParserInfo:
         raise ParserException("No matching parser found for %s" % resource.url)
 
 
@@ -66,11 +77,9 @@ class DirectoryParser(PyffParser):
     def magic(self, content: str) -> bool:
         return os.path.isdir(content)
 
-    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
+    def parse(self, resource: Resource, content: str) -> ParserInfo:
         resource.children = deque()
-        info = dict()
-        info['Description'] = 'Directory'
-        info['Expiration Time'] = 'never expires'
+        info = ParserInfo(description='Directory', expiration_time='never expires')
         n = 0
         for fn in find_matching_files(content, self.extensions):
             child_opts = resource.opts.copy(update={'alias': None})
@@ -84,7 +93,7 @@ class DirectoryParser(PyffParser):
         resource.expire_time = None
         resource.last_seen = utc_now().replace(microsecond=0)
 
-        return dict()
+        return info
 
 
 class XRDParser(PyffParser):
@@ -97,10 +106,8 @@ class XRDParser(PyffParser):
     def magic(self, content: str) -> bool:
         return 'XRD' in content
 
-    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
-        info = dict()
-        info['Description'] = "XRD links"
-        info['Expiration Time'] = 'never expires'
+    def parse(self, resource: Resource, content: str) -> ParserInfo:
+        info = ParserInfo(description='XRD links', expiration_time='never expires')
         t = parse_xml(unicode_stream(content))
 
         relt = root(t)
@@ -128,7 +135,7 @@ def add_parser(parser):
     _parsers.insert(0, parser)
 
 
-def parse_resource(resource: Resource, content: str) -> Optional[Mapping[str, Any]]:
+def parse_resource(resource: Resource, content: str) -> Optional[ParserInfo]:
     for parser in _parsers:
         if parser.magic(content):
             resource.last_parser = parser
