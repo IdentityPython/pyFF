@@ -487,7 +487,6 @@ class ExtensionPredicate:
 
     def __call__(self, info, request):
         match = info['match']
-        print(match)
         if match[self.segment_name] == '':
             return True
 
@@ -558,23 +557,20 @@ def mkapp(*args, **kwargs):
         if config.mdq_browser is not None and os.path.exists(config.mdq_browser):
             ctx.add_route('mdq_browser_config_json', '/config.json', request_method='GET')
             ctx.add_view(
-                lambda request: json_response({'pyff_apis': True, 'mdq_url': config.base_url}),
+                lambda request: json_response({'pyff_apis': True, 'mdq_url': config.base_url + "/entities/"}),
                 route_name='mdq_browser_config_json',
             )
             ctx.add_route_predicate('ext', ExtensionPredicate)
-            ctx.add_route(
-                'mdq_browser_list', '/list{path:.+}', request_method='GET', ext=('path', '.html', '.css', '.js')
-            )
-            ctx.add_route(
-                'mdq_browser_resources',
-                '/resources{path:.*}',
-                request_method='GET',
-                ext=('path', '.html', '.css', '.js'),
-            )
-            ctx.add_route('mdq_browser', '/{path:.*}', request_method='GET', ext=('path', '.html', '.css', '.js'))
-            ctx.add_view(static_view(config.mdq_browser, use_subpath=False), route_name='mdq_browser')
-            ctx.add_view(static_view(config.mdq_browser, use_subpath=False), route_name='mdq_browser_list')
-            ctx.add_view(static_view(config.mdq_browser, use_subpath=False), route_name='mdq_browser_resources')
+            for uri_part in ('/', '/status', '/list', '/resources', '/about', '/font'):
+                route = 'mdq_browser_{}'.format(uri_part)
+                path = '{:s}{{sep:/?}}{{path:.*}}'.format(uri_part)
+                ctx.add_route(
+                    route,
+                    path,
+                    request_method='GET',
+                    ext=('path', '.html', '.css', '.js', '.ico'),
+                )
+                ctx.add_view(static_view(config.mdq_browser, use_subpath=False), route_name=route)
 
         ctx.add_route('request', '/*path', request_method='GET')
         ctx.add_view(request_handler, route_name='request')
