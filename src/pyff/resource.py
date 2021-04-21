@@ -364,14 +364,6 @@ class Resource(Watchable):
         else:
             return self._infos[-1]
 
-    @property
-    def errors(self) -> Mapping[str, Any]:
-        # TODO: Maybe caller should get the ResourceInfo instance instead? Why this shortcut?
-        parser_info = self.info.parser_info
-        if not parser_info:
-            return {}
-        return parser_info.validation_errors
-
     def load_backup(self) -> Optional[str]:
         if config.local_copy_dir is None:
             return None
