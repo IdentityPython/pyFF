@@ -77,6 +77,7 @@ def find_merge_strategy(strategy_name):
     if '.' not in strategy_name:
         strategy_name = "pyff.merge_strategies:%s" % strategy_name
     if ':' not in strategy_name:
+        # TODO: BUG: Parameter 'occurrence' unfilled
         strategy_name = rreplace(strategy_name, '.', ':')  # backwards compat for old way of specifying these
     return load_callable(strategy_name)
 
