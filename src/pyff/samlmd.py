@@ -4,17 +4,18 @@ from datetime import datetime, timedelta
 from distutils.util import strtobool
 from io import BytesIO
 from itertools import chain
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid, ElementTree
+from pydantic import Field
 from xmlsec.crypto import CertDict
 
 from pyff.constants import ATTRS, NF_URI, NS, config
 from pyff.exceptions import *
 from pyff.logs import get_log
-from pyff.parse import PyffParser, add_parser
+from pyff.parse import ParserInfo, PyffParser, add_parser
 from pyff.resource import Resource, ResourceOpts
 from pyff.utils import (
     Lambda,
@@ -76,6 +77,7 @@ def find_merge_strategy(strategy_name):
     if '.' not in strategy_name:
         strategy_name = "pyff.merge_strategies:%s" % strategy_name
     if ':' not in strategy_name:
+        # TODO: BUG: Parameter 'occurrence' unfilled
         strategy_name = rreplace(strategy_name, '.', ':')  # backwards compat for old way of specifying these
     return load_callable(strategy_name)
 
@@ -143,6 +145,10 @@ def parse_saml_metadata(
     return t, expire_time_offset, None
 
 
+class SAMLParserInfo(ParserInfo):
+    entities: List[str] = Field([])  # list of entity ids
+
+
 class SAMLMetadataResourceParser(PyffParser):
     def __init__(self):
         pass
@@ -153,14 +159,13 @@ class SAMLMetadataResourceParser(PyffParser):
     def magic(self, content: str) -> bool:
         return "EntitiesDescriptor" in content or "EntityDescriptor" in content
 
-    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
-        info: Dict[str, Any] = dict()
-        info['Validation Errors'] = dict()
+    def parse(self, resource: Resource, content: str) -> SAMLParserInfo:
+        info = SAMLParserInfo(description='SAML Metadata', expiration_time='')
         t, expire_time_offset, exception = parse_saml_metadata(
             unicode_stream(content),
             base_url=resource.url,
             opts=resource.opts,
-            validation_errors=info['Validation Errors'],
+            validation_errors=info.validation_errors,
         )
 
         if expire_time_offset is not None:
@@ -169,23 +174,49 @@ class SAMLMetadataResourceParser(PyffParser):
 
             expire_time = now + expire_time_offset
             resource.expire_time = expire_time
-            info['Expiration Time'] = str(expire_time)
+            info.expiration_time = str(expire_time)
 
         if t is not None:
             resource.t = t
             resource.type = "application/samlmetadata+xml"
 
-            resource.info['Entities'] = []
             for e in iter_entities(t):
-                resource.info['Entities'].append(e.get('entityID'))
+                info.entities.append(e.get('entityID'))
 
         if exception is not None:
-            resource.info['Exception'] = exception
+            resource.info.exception = exception
 
         return info
 
 
 add_parser(SAMLMetadataResourceParser())
+
+
+class EidasMDParserInfo(ParserInfo):
+    version: Optional[str] = None
+    issue_date: Optional[str] = None  # TODO: change to datetime?
+    next_update: Optional[Union[str, datetime]] = None  # TODO: consistently use datetime
+    issuer_name: Optional[str] = None
+    scheme_identifier: Optional[str] = None
+    scheme_territory: Optional[str] = None
+
+    def to_dict(self):
+        def _format_key(k: str) -> str:
+            # TODO: Why don't these have space as word separator like the rest of ParserInfo?
+            special = {
+                'next_update': 'NextUpdate',
+                'issue_date': 'IssueDate',
+                'issuer_name': 'IssuerName',
+                'scheme_identifier': 'SchemeIdentifier',
+                'scheme_territory': 'SchemeTerritory',
+            }
+            if k in special:
+                return special[k]
+            # Turn expiration_time into 'Expiration Time'
+            return k.replace('_', ' ').title()
+
+        res = {_format_key(k): v for k, v in self.dict().items()}
+        return res
 
 
 class MDServiceListParser(PyffParser):
@@ -198,32 +229,29 @@ class MDServiceListParser(PyffParser):
     def magic(self, content: str) -> bool:
         return 'MetadataServiceList' in content
 
-    def parse(self, resource: Resource, content: str) -> Mapping[str, Any]:
-        info = dict()
-        info['Description'] = "eIDAS MetadataServiceList"
+    def parse(self, resource: Resource, content: str) -> EidasMDParserInfo:
+        info = EidasMDParserInfo(description='eIDAS MetadataServiceList', expiration_time='None')
         t = parse_xml(unicode_stream(content))
         if config.xinclude:
             t.xinclude()
         relt = root(t)
-        info['Version'] = relt.get('Version', '0')
-        info['IssueDate'] = relt.get('IssueDate')
-        next_update = relt.get('NextUpdate')
-        if next_update is not None:
-            info['NextUpdate'] = next_update
-            resource.expire_time = iso2datetime(next_update)
+        info.version = relt.get('Version', '0')
+        info.issue_date = relt.get('IssueDate')
+        info.next_update = relt.get('NextUpdate')
+        if isinstance(info.next_update, str):
+            resource.expire_time = iso2datetime(info.next_update)
         elif config.respect_cache_duration:
             duration = duration2timedelta(config.default_cache_duration)
             if not duration:
                 # TODO: what is the right action here?
                 raise ValueError(f'Invalid default cache duration: {config.default_cache_duration}')
-            next_update = utc_now().replace(microsecond=0) + duration
-            info['NextUpdate'] = next_update
-            resource.expire_time = next_update
+            info.next_update = utc_now().replace(microsecond=0) + duration
+            resource.expire_time = info.next_update
 
-        info['Expiration Time'] = 'None' if not resource.expire_time else resource.expire_time.isoformat()
-        info['IssuerName'] = first_text(relt, "{%s}IssuerName" % NS['ser'])
-        info['SchemeIdentifier'] = first_text(relt, "{%s}SchemeIdentifier" % NS['ser'])
-        info['SchemeTerritory'] = first_text(relt, "{%s}SchemeTerritory" % NS['ser'])
+        info.expiration_time = 'None' if not resource.expire_time else resource.expire_time.isoformat()
+        info.issuer_name = first_text(relt, "{%s}IssuerName" % NS['ser'])
+        info.scheme_identifier = first_text(relt, "{%s}SchemeIdentifier" % NS['ser'])
+        info.scheme_territory = first_text(relt, "{%s}SchemeTerritory" % NS['ser'])
         for mdl in relt.iter("{%s}MetadataList" % NS['ser']):
             for ml in mdl.iter("{%s}MetadataLocation" % NS['ser']):
                 location = ml.get('Location')
@@ -242,7 +270,7 @@ class MDServiceListParser(PyffParser):
                         )
                         log.debug(
                             "MDSL[{}]: {} verified by {} for country {}".format(
-                                info['SchemeTerritory'], location, fp, args.get('country_code')
+                                info.scheme_territory, location, fp, args.get('country_code')
                             )
                         )
                         child_opts = resource.opts.copy(update={'alias': None})
@@ -292,7 +320,7 @@ def metadata_expiration(t: ElementTree) -> Optional[timedelta]:
     return None
 
 
-def filter_invalids_from_document(t, base_url, validation_errors):
+def filter_invalids_from_document(t: ElementTree, base_url, validation_errors) -> ElementTree:
     xsd = schema()
     for e in iter_entities(t):
         if not xsd.validate(e):
@@ -307,8 +335,12 @@ def filter_invalids_from_document(t, base_url, validation_errors):
 
 
 def filter_or_validate(
-    t, filter_invalid: bool = False, base_url: str = "", source=None, validation_errors: Optional[Dict[str, Any]] = None
-):
+    t: ElementTree,
+    filter_invalid: bool = False,
+    base_url: str = "",
+    source=None,
+    validation_errors: Optional[Dict[str, Any]] = None,
+) -> ElementTree:
     if validation_errors is None:
         validation_errors = {}
     log.debug("Filtering invalids from {}".format(base_url))
