@@ -84,7 +84,7 @@ class DirectoryParser(PyffParser):
         resource.expire_time = None
         resource.last_seen = utc_now().replace(microsecond=0)
 
-        return dict()
+        return info
 
 
 class XRDParser(PyffParser):
