@@ -198,7 +198,7 @@ class ResourceInfo(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         def _format_key(k: str) -> str:
             special = {'http_headers': 'HTTP Response Headers'}
             if k in special:

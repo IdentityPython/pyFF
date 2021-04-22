@@ -2,7 +2,7 @@ import importlib
 import threading
 from datetime import datetime, timedelta
 from json import dumps
-from typing import Any, Iterable, List, Mapping
+from typing import Any, Dict, Generator, Iterable, List, Literal, Mapping, NoReturn, Optional, Sequence, Tuple
 
 import pkg_resources
 import pyramid.httpexceptions as exc
@@ -13,6 +13,7 @@ from cachetools import TTLCache
 from lxml import etree
 from pyramid.config import Configurator
 from pyramid.events import NewRequest
+from pyramid.request import Request
 from pyramid.response import Response
 from six import b
 from six.moves.urllib_parse import quote_plus
@@ -30,19 +31,21 @@ log = get_log(__name__)
 
 
 class NoCache(object):
-    def __init__(self):
+    """ Dummy implementation for when caching isn't enabled """
+
+    def __init__(self) -> None:
         pass
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Any) -> None:
         return None
 
-    def __setitem__(self, instance, value):
+    def __setitem__(self, instance: Any, value: Any) -> Any:
         return value
 
 
-def robots_handler(request):
+def robots_handler(request: Request) -> Response:
     """
-    Impelements robots.txt
+    Implements robots.txt
 
     :param request: the HTTP request
     :return: robots.txt
@@ -55,7 +58,7 @@ Disallow: /
     )
 
 
-def status_handler(request):
+def status_handler(request: Request) -> Response:
     """
     Implements the /api/status endpoint
 
@@ -80,34 +83,38 @@ def status_handler(request):
 
 
 class MediaAccept(object):
-    def __init__(self, accept):
+    def __init__(self, accept: str):
         self._type = AcceptableType(accept)
 
-    def has_key(self, key):
+    def has_key(self, key: Any) -> Literal[True]:
         return True
 
-    def get(self, item):
+    def get(self, item: Any) -> Any:
         return self._type.matches(item)
 
-    def __contains__(self, item):
+    def __contains__(self, item: Any) -> Any:
         return self._type.matches(item)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._type)
 
 
 xml_types = ('text/xml', 'application/xml', 'application/samlmetadata+xml')
 
 
-def _is_xml_type(accepter):
+def _is_xml_type(accepter: MediaAccept) -> bool:
     return any([x in accepter for x in xml_types])
 
 
-def _is_xml(data):
+def _is_xml(data: Any) -> bool:
     return isinstance(data, (etree._Element, etree._ElementTree))
 
 
-def _fmt(data, accepter):
+def _fmt(data: Any, accepter: MediaAccept) -> Tuple[str, str]:
+    """
+    Format data according to the accepted content type of the requester.
+    Return data as string (either XML or json) and a content-type.
+    """
     if data is None or len(data) == 0:
         return "", 'text/plain'
     if _is_xml(data) and _is_xml_type(accepter):
@@ -127,7 +134,7 @@ def call(entry: str) -> None:
     return None
 
 
-def request_handler(request):
+def request_handler(request: Request) -> Response:
     """
     The main GET request handler for pyFF. Implements caching and forwards the request to process_handler
 
@@ -146,7 +153,7 @@ def request_handler(request):
     return r
 
 
-def process_handler(request):
+def process_handler(request: Request) -> Response:
     """
     The main request handler for pyFF. Implements API call hooks and content negotiation.
 
@@ -155,7 +162,8 @@ def process_handler(request):
     """
     _ctypes = {'xml': 'application/samlmetadata+xml;application/xml;text/xml', 'json': 'application/json'}
 
-    def _d(x, do_split=True):
+    def _d(x: Optional[str], do_split: bool = True) -> Tuple[Optional[str], Optional[str]]:
+        """ Split a path into a base component and an extension. """
         if x is not None:
             x = x.strip()
 
@@ -293,7 +301,7 @@ def process_handler(request):
         raise exc.exception_response(404)
 
 
-def webfinger_handler(request):
+def webfinger_handler(request: Request) -> Response:
     """An implementation the webfinger protocol
     (http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-12)
     in order to provide information about up and downstream metadata available at
@@ -335,11 +343,11 @@ def webfinger_handler(request):
     if resource is None:
         resource = request.host_url
 
-    jrd = dict()
+    jrd: Dict[str, Any] = dict()
     dt = datetime.now() + duration2timedelta("PT1H")
     jrd['expires'] = dt.isoformat()
     jrd['subject'] = request.host_url
-    links = list()
+    links: List[Dict[str, Any]] = list()
     jrd['links'] = links
 
     _dflt_rels = {
@@ -352,7 +360,7 @@ def webfinger_handler(request):
     else:
         rel = [rel]
 
-    def _links(url, title=None):
+    def _links(url: str, title: Any = None) -> None:
         if url.startswith('/'):
             url = url.lstrip('/')
         for r in rel:
@@ -381,7 +389,7 @@ def webfinger_handler(request):
     return response
 
 
-def resources_handler(request):
+def resources_handler(request: Request) -> Response:
     """
     Implements the /api/resources endpoint
 
@@ -409,7 +417,7 @@ def resources_handler(request):
     return response
 
 
-def pipeline_handler(request):
+def pipeline_handler(request: Request) -> Response:
     """
     Implements the /api/pipeline endpoint
 
@@ -422,7 +430,7 @@ def pipeline_handler(request):
     return response
 
 
-def search_handler(request):
+def search_handler(request: Request) -> Response:
     """
     Implements the /api/search endpoint
 
@@ -438,7 +446,7 @@ def search_handler(request):
     log.debug("match={}".format(match))
     store = request.registry.md.store
 
-    def _response():
+    def _response() -> Generator[bytes, bytes, None]:
         yield b('[')
         in_loop = False
         entities = store.search(query=match.lower(), entity_filter=entity_filter)
@@ -454,8 +462,8 @@ def search_handler(request):
     return response
 
 
-def add_cors_headers_response_callback(event):
-    def cors_headers(request, response):
+def add_cors_headers_response_callback(event: NewRequest) -> None:
+    def cors_headers(request: Request, response: Response) -> None:
         response.headers.update(
             {
                 'Access-Control-Allow-Origin': '*',
@@ -469,7 +477,7 @@ def add_cors_headers_response_callback(event):
     event.request.add_response_callback(cors_headers)
 
 
-def launch_memory_usage_server(port=9002):
+def launch_memory_usage_server(port: int = 9002) -> None:
     import cherrypy
     import dowser
 
@@ -479,7 +487,7 @@ def launch_memory_usage_server(port=9002):
     cherrypy.engine.start()
 
 
-def mkapp(*args, **kwargs):
+def mkapp(*args: Any, **kwargs: Any) -> Any:
     md = kwargs.pop('md', None)
     if md is None:
         md = MDRepository()

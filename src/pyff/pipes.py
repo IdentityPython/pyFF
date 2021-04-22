@@ -7,11 +7,11 @@ from __future__ import annotations
 import functools
 import os
 import traceback
-from typing import Any, Callable, Dict, Iterable, Optional, Type
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
-from lxml.etree import ElementTree
+from lxml.etree import Element, ElementTree
 
 from pyff.logs import get_log
 from pyff.repo import MDRepository
@@ -90,7 +90,7 @@ class PluginsRegistry(dict):
     #            self[entry_point.name] = entry_point.load()
 
 
-def load_pipe(d):
+def load_pipe(d: Any) -> Tuple[Callable, Any, str, Any]:
     """Return a triple callable,name,args of the pipe specified by the object d.
 
     :param d: The following alternatives for d are allowed:
@@ -100,7 +100,7 @@ def load_pipe(d):
     - d is an iterable (eg tuple or list) in which case d[0] is treated as the pipe name and d[1:] becomes the args
     """
 
-    def _n(_d):
+    def _n(_d: str) -> Tuple[str, List[str]]:
         lst = _d.split()
         _name = lst[0]
         _opts = lst[1:]
@@ -140,7 +140,7 @@ class PipelineCallback(object):
     A delayed pipeline callback used as a post for parse_saml_metadata
     """
 
-    def __init__(self, entry_point, req, store=None):
+    def __init__(self, entry_point: str, req: Plumbing.Request, store: Optional[SAMLStoreBase] = None) -> None:
         self.entry_point = entry_point
         self.plumbing = Plumbing(req.scope_of(entry_point).plumbing.pipeline, f"{req.plumbing.id}-via-{entry_point}")
         self.req = req
@@ -152,13 +152,15 @@ class PipelineCallback(object):
     def __repr__(self) -> str:
         return str(self)
 
-    def __copy__(self):
+    def __copy__(self) -> PipelineCallback:
+        # TODO: This seems... dangerous. What's the need for this?
         return self
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo: Any) -> PipelineCallback:
+        # TODO: This seems... dangerous. What's the need for this?
         return self
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         log.debug("{!s}: called".format(self.plumbing))
         t = args[0]
         if t is None:
@@ -222,7 +224,7 @@ class Plumbing(object):
     def __iter__(self) -> Iterable[Dict[str, Any]]:
         return self.pipeline
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "PL[id={!s}]".format(self.pid)
 
     class Request(object):
@@ -250,7 +252,7 @@ class Plumbing(object):
             self.plumbing: Plumbing = pl
             self.md: MDRepository = md
             self.t: ElementTree = t
-            self._id = None
+            self._id: Optional[str] = None
             self.name = name
             self.args: Iterable[Dict[str, Any]] = args
             self.state: Dict[str, Any] = state
@@ -261,7 +263,7 @@ class Plumbing(object):
             self.exception: Optional[BaseException] = None
             self.parent: Optional[Plumbing.Request] = None
 
-        def scope_of(self, entry_point):
+        def scope_of(self, entry_point: str) -> Plumbing.Request:
             if 'with {}'.format(entry_point) in self.plumbing.pipeline:
                 return self
             elif self.parent is None:
@@ -270,7 +272,7 @@ class Plumbing(object):
                 return self.parent.scope_of(entry_point)
 
         @property
-        def id(self):
+        def id(self) -> Optional[str]:
             if self.t is None:
                 return None
             if self._id is None:
@@ -279,10 +281,10 @@ class Plumbing(object):
                 self._id = self.t.get('Name')
             return self._id
 
-        def set_id(self, _id):
+        def set_id(self, _id: str) -> None:
             self._id = _id
 
-        def set_parent(self, _parent):
+        def set_parent(self, _parent: Optional[Plumbing.Request]) -> None:
             self.parent = _parent
 
         @property
@@ -291,14 +293,14 @@ class Plumbing(object):
                 return self._store
             return self.md.store
 
-        def process(self, pl: Plumbing):
+        def process(self, pl: Plumbing) -> ElementTree:
             """The inner request pipeline processor.
 
             :param pl: The plumbing to run this request through
             """
             return pl.iprocess(self)
 
-    def iprocess(self, req: Plumbing.Request):
+    def iprocess(self, req: Plumbing.Request) -> ElementTree:
         """The inner request pipeline processor.
 
         :param req: The request to run through the pipeline
@@ -335,13 +337,13 @@ class Plumbing(object):
     def process(
         self,
         md: MDRepository,
-        args=None,
+        args: Any = None,
         state: Optional[Dict[str, Any]] = None,
-        t=None,
-        store=None,
+        t: Optional[ElementTree] = None,
+        store: Optional[SAMLStoreBase] = None,
         raise_exceptions: bool = True,
-        scheduler=None,
-    ):
+        scheduler: Optional[BackgroundScheduler] = None,
+    ) -> Optional[Element]:  # TODO: unsure about this return type
         """
         The main entrypoint for processing a request pipeline. Calls the inner processor.
 

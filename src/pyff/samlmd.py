@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from lxml import etree
 from lxml.builder import ElementMaker
-from lxml.etree import DocumentInvalid, ElementTree
+from lxml.etree import DocumentInvalid, Element, ElementTree
 from pydantic import Field
 from xmlsec.crypto import CertDict
 
@@ -740,7 +740,7 @@ def entity_extended_display(entity, langs=None):
     return display.strip(), info.strip()
 
 
-def entity_display_name(entity, langs=None):
+def entity_display_name(entity: Element, langs=None) -> str:
     """Utility-method for computing a displayable string for a given entity.
 
     :param entity: An EntityDescriptor element
