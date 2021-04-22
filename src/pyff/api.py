@@ -178,7 +178,7 @@ def process_handler(request: Request) -> Response:
 
         return x, None
 
-    log.debug(request)
+    log.debug(f'Processing request: {request}')
 
     if request.matchdict is None:
         raise exc.exception_response(400)
@@ -190,18 +190,18 @@ def process_handler(request: Request) -> Response:
             pass
 
     entry = request.matchdict.get('entry', 'request')
-    path = list(request.matchdict.get('path', []))
+    path_elem = list(request.matchdict.get('path', []))
     match = request.params.get('q', request.params.get('query', None))
 
     # Enable matching on scope.
     match = match.split('@').pop() if match and not match.endswith('@') else match
     log.debug("match={}".format(match))
 
-    if 0 == len(path):
-        path = ['entities']
+    if not path_elem:
+        path_elem = ['entities']
 
-    alias = path.pop(0)
-    path = '/'.join(path)
+    alias = path_elem.pop(0)
+    path = '/'.join(path_elem)
 
     # Ugly workaround bc WSGI drops double-slashes.
     path = path.replace(':/', '://')
@@ -234,23 +234,31 @@ def process_handler(request: Request) -> Response:
     accept = str(request.accept).split(',')[0]
     valid_accept = accept and not ('application/*' in accept or 'text/*' in accept or '*/*' in accept)
 
-    path_no_extension, extension = _d(path, True)
-    accept_from_extension = _ctypes.get(extension, accept)
+    new_path: Optional[str] = path
+    path_no_extension, extension = _d(new_path, True)
+    accept_from_extension = accept
+    if extension:
+        accept_from_extension = _ctypes.get(extension, accept)
 
     if policy == 'extension':
-        path = path_no_extension
+        new_path = path_no_extension
         if not valid_accept:
             accept = accept_from_extension
     elif policy == 'adaptive':
         if not valid_accept:
-            path = path_no_extension
+            new_path = path_no_extension
             accept = accept_from_extension
 
-    if pfx and path:
-        q = "{%s}%s" % (pfx, path)
-        path = "/%s/%s" % (alias, path)
+    if not accept:
+        log.warning('Could not determine accepted response type')
+        raise exc.exception_response(400)
+
+    q: Optional[str]
+    if pfx and new_path:
+        q = f'{{{pfx}}}{new_path}'
+        new_path = f'/{alias}/{new_path}'
     else:
-        q = path
+        q = new_path
 
     try:
         accepter = MediaAccept(accept)
@@ -262,18 +270,19 @@ def process_handler(request: Request) -> Response:
                 'url': request.current_route_url(),
                 'select': q,
                 'match': match.lower() if match else match,
-                'path': path,
+                'path': new_path,
                 'stats': {},
             }
 
             r = p.process(request.registry.md, state=state, raise_exceptions=True, scheduler=request.registry.scheduler)
-            log.debug(r)
+            log.debug(f'Plumbing process result: {r}')
             if r is None:
                 r = []
 
             response = Response()
-            response.headers.update(state.get('headers', {}))
-            ctype = state.get('headers').get('Content-Type', None)
+            _headers = state.get('headers', {})
+            response.headers.update(_headers)
+            ctype = _headers.get('Content-Type', None)
             if not ctype:
                 r, t = _fmt(r, accepter)
                 ctype = t
@@ -288,13 +297,13 @@ def process_handler(request: Request) -> Response:
         import traceback
 
         log.debug(traceback.format_exc())
-        log.warning(ex)
+        log.warning(f'Exception from processing pipeline: {ex}')
         raise exc.exception_response(409)
     except BaseException as ex:
         import traceback
 
         log.debug(traceback.format_exc())
-        log.error(ex)
+        log.error(f'Exception from processing pipeline: {ex}')
         raise exc.exception_response(500)
 
     if request.method == 'GET':
@@ -332,7 +341,7 @@ def webfinger_handler(request: Request) -> Response:
      "subject": "http://reep.refeds.org:8080"
     }
 
-    Depending on which version of pyFF your're running and the configuration you
+    Depending on which version of pyFF you're running and the configuration you
     may also see downstream metadata listed using the 'role' attribute to the link
     elements.
     """
@@ -344,7 +353,7 @@ def webfinger_handler(request: Request) -> Response:
         resource = request.host_url
 
     jrd: Dict[str, Any] = dict()
-    dt = datetime.now() + duration2timedelta("PT1H")
+    dt = datetime.now() + timedelta(hours=1)
     jrd['expires'] = dt.isoformat()
     jrd['subject'] = request.host_url
     links: List[Dict[str, Any]] = list()
@@ -509,7 +518,9 @@ def mkapp(*args: Any, **kwargs: Any) -> Any:
         for mn in config.modules:
             importlib.import_module(mn)
 
-        pipeline = args or None
+        pipeline = None
+        if args:
+            pipeline = list(args)
         if pipeline is None and config.pipeline:
             pipeline = [config.pipeline]
 

@@ -108,7 +108,7 @@ def load_pipe(d: Any) -> Tuple[Callable, Any, str, Any]:
 
     name = None
     args = None
-    opts = []
+    opts: List[str] = []
     if is_text(d):
         name, opts = _n(d)
     elif hasattr(d, '__iter__') and not type(d) is dict:
@@ -172,7 +172,7 @@ class PipelineCallback(object):
             return self.plumbing.process(self.req.md, store=self.store, state=state, t=t)
         except Exception as ex:
             log.debug(traceback.format_exc())
-            log.error(ex)
+            log.error(f'Got an exception executing the plumbing process: {ex}')
             raise ex
 
 
@@ -327,7 +327,7 @@ class Plumbing(object):
                     break
             except BaseException as ex:
                 log.debug(traceback.format_exc())
-                log.error(ex)
+                log.error(f'Got exception when loading/executing pipe: {ex}')
                 req.exception = ex
                 if req.raise_exceptions:
                     raise ex

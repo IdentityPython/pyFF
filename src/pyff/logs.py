@@ -3,7 +3,7 @@ __author__ = 'leifj'
 import logging
 import os
 import syslog
-from typing import Any
+from typing import Any, Optional
 
 import six
 
@@ -65,7 +65,7 @@ def get_log(name: str) -> PyFFLogger:
 log = get_log('pyff')
 
 
-def log_config_file(ini: str) -> None:
+def log_config_file(ini: Optional[str]) -> None:
     if ini is not None:
         import logging.config
 
@@ -76,7 +76,7 @@ def log_config_file(ini: str) -> None:
         logging.config.fileConfig(ini)
 
 
-log_config_file(os.getenv('PYFF_LOGGING', None))
+log_config_file(os.getenv('PYFF_LOGGING'))
 
 # http://www.aminus.org/blogs/index.php/2008/07/03/writing-high-efficiency-large-python-sys-1?blog=2
 # blog post explicitly gives permission for use

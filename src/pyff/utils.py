@@ -25,7 +25,7 @@ from email.utils import parsedate
 from itertools import chain
 from threading import local
 from time import gmtime, strftime
-from typing import Any, BinaryIO, Callable, List, Optional, Sequence, Set, Tuple, Union
+from typing import Any, BinaryIO, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 import pkg_resources
 import requests
@@ -390,17 +390,20 @@ def duration2timedelta(period: str) -> Optional[timedelta]:
     return delta
 
 
-def _lang(elt, default_lang):
+def _lang(elt: Element, default_lang: Optional[str]) -> Optional[str]:
     return elt.get("{http://www.w3.org/XML/1998/namespace}lang", default_lang)
 
 
-def lang_dict(elts, getter=lambda e: e, default_lang=None):
+def lang_dict(elts: Sequence[Element], getter=lambda e: e, default_lang: Optional[str] = None) -> Dict[str, Callable]:
     if default_lang is None:
         default_lang = config.langs[0]
 
     r = dict()
     for e in elts:
-        r[_lang(e, default_lang)] = getter(e)
+        _l = _lang(e, default_lang)
+        if not _l:
+            raise ValueError('Could not get lang from element, and no default provided')
+        r[_l] = getter(e)
     return r
 
 
@@ -421,6 +424,9 @@ def filter_lang(elts: Any, langs: Optional[Sequence[str]] = None) -> List[Elemen
 
     if len(elts) == 0:
         return []
+
+    if not langs:
+        raise RuntimeError('Configuration is missing langs')
 
     dflt = langs[0]
     lst = [find_lang(elts, l, dflt) for l in langs]
@@ -773,7 +779,7 @@ def img_to_data(data: bytes, content_type: str) -> Optional[str]:
                 assert data64
                 mime_type = "image/png"
         except BaseException as ex:
-            log.warning(ex)
+            log.warning(f'Exception when making Image: {ex}')
             log.debug(traceback.format_exc())
 
     if data64 is None or len(data64) == 0:
