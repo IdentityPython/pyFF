@@ -18,25 +18,25 @@ import tempfile
 import threading
 import time
 import traceback
+from _collections_abc import Mapping, MutableMapping
 from copy import copy
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate
 from itertools import chain
 from threading import local
 from time import gmtime, strftime
-from typing import BinaryIO, Callable, Optional, Union, Set
+from typing import Any, BinaryIO, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 import pkg_resources
 import requests
 import xmlsec
-from _collections_abc import Mapping, MutableMapping
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.jobstores.redis import RedisJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from cachetools import LRUCache
 from lxml import etree
-from lxml.etree import ElementTree
+from lxml.etree import Element, ElementTree
 from requests import Session
 from requests.adapters import BaseAdapter, HTTPAdapter, Response
 from requests.packages.urllib3.util.retry import Retry
@@ -151,11 +151,11 @@ def totimestamp(dt: datetime, epoch=datetime(1970, 1, 1)) -> int:
     return int(ts)
 
 
-def dumptree(t, pretty_print=False, method='xml', xml_declaration=True):
+def dumptree(t: ElementTree, pretty_print: bool = False, method: str = 'xml', xml_declaration: bool = True) -> str:
     """
     Return a string representation of the tree, optionally pretty_print(ed) (default False)
 
-    :param t: An ElemenTree to serialize
+    :param t: An ElementTree to serialize
     """
     return etree.tostring(
         t, encoding='UTF-8', method=method, xml_declaration=xml_declaration, pretty_print=pretty_print
@@ -392,25 +392,28 @@ def duration2timedelta(period: str) -> Optional[timedelta]:
     return delta
 
 
-def _lang(elt, default_lang):
+def _lang(elt: Element, default_lang: Optional[str]) -> Optional[str]:
     return elt.get("{http://www.w3.org/XML/1998/namespace}lang", default_lang)
 
 
-def lang_dict(elts, getter=lambda e: e, default_lang=None):
+def lang_dict(elts: Sequence[Element], getter=lambda e: e, default_lang: Optional[str] = None) -> Dict[str, Callable]:
     if default_lang is None:
         default_lang = config.langs[0]
 
     r = dict()
     for e in elts:
-        r[_lang(e, default_lang)] = getter(e)
+        _l = _lang(e, default_lang)
+        if not _l:
+            raise ValueError('Could not get lang from element, and no default provided')
+        r[_l] = getter(e)
     return r
 
 
-def find_lang(elts, lang, default_lang):
+def find_lang(elts: Sequence[Element], lang: str, default_lang: str) -> Element:
     return next((e for e in elts if _lang(e, default_lang) == lang), elts[0])
 
 
-def filter_lang(elts, langs=None):
+def filter_lang(elts: Any, langs: Optional[Sequence[str]] = None) -> List[Element]:
     if langs is None or type(langs) is not list:
         langs = config.langs
 
@@ -423,6 +426,9 @@ def filter_lang(elts, langs=None):
 
     if len(elts) == 0:
         return []
+
+    if not langs:
+        raise RuntimeError('Configuration is missing langs')
 
     dflt = langs[0]
     lst = [find_lang(elts, l, dflt) for l in langs]
@@ -488,7 +494,7 @@ def etag(s):
     return hex_digest(s, hn="sha256")
 
 
-def hash_id(entity, hn='sha1', prefix=True):
+def hash_id(entity: Element, hn: str = 'sha1', prefix: bool = True) -> str:
     entity_id = entity
     if hasattr(entity, 'get'):
         entity_id = entity.get('entityID')
@@ -659,7 +665,7 @@ def guess_entity_software(e):
     return 'other'
 
 
-def is_text(x):
+def is_text(x: Any) -> bool:
     return isinstance(x, six.string_types) or isinstance(x, six.text_type)
 
 
@@ -775,7 +781,7 @@ def img_to_data(data: bytes, content_type: str) -> Optional[str]:
                 assert data64
                 mime_type = "image/png"
         except BaseException as ex:
-            log.warning(ex)
+            log.warning(f'Exception when making Image: {ex}')
             log.debug(traceback.format_exc())
 
     if data64 is None or len(data64) == 0:
@@ -788,11 +794,11 @@ def short_id(data):
     return base64.urlsafe_b64encode(hasher.digest()[0:10]).rstrip('=')
 
 
-def unicode_stream(data):
+def unicode_stream(data: str) -> io.BytesIO:
     return six.BytesIO(data.encode('UTF-8'))
 
 
-def b2u(data):
+def b2u(data: Union[str, bytes, Tuple, List, Set]) -> Union[str, bytes, Tuple, List, Set]:
     if is_text(data):
         return data
     elif isinstance(data, six.binary_type):

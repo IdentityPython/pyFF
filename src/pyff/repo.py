@@ -13,7 +13,7 @@ log = get_log(__name__)
 class MDRepository:
     """A class representing a set of SAML metadata and the resources from where this metadata was loaded."""
 
-    def __init__(self, scheduler=None):
+    def __init__(self, scheduler=None) -> None:
         random.seed(self)
         self.rm = Resource(url=None, opts=ResourceOpts())  # root
         if scheduler is None:
