@@ -14,7 +14,7 @@ from xmldiff.formatting import DiffFormatter
 from xmldiff.main import diff_trees
 
 from pyff.constants import config, parse_options
-from pyff.resource import Resource
+from pyff.resource import Resource, ResourceOpts
 from pyff.samlmd import diff, iter_entities
 from pyff.store import MemoryStore
 
@@ -31,12 +31,12 @@ def difftool():
 
     try:
         rm = Resource()
-        r1 = Resource(args[0])
-        r2 = Resource(args[1])
         rm.add(r1)
         rm.add(r2)
         store = MemoryStore()
         rm.reload(store=store)
+        r1 = Resource(url=args[0], opts=ResourceOpts())
+        r2 = Resource(url=args[1], opts=ResourceOpts())
         status = 0
 
         if r1.t.get('Name') != r2.t.get('Name'):

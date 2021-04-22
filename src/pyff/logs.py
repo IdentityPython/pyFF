@@ -3,6 +3,7 @@ __author__ = 'leifj'
 import logging
 import os
 import syslog
+from typing import Any, Optional
 
 import six
 
@@ -35,25 +36,25 @@ class PyFFLogger(object):
         else:
             raise ValueError("unknown severity %s" % severity)
 
-    def warn(self, msg):
+    def warn(self, msg: str) -> Any:
         return self._l(logging.WARN, msg)
 
-    def warning(self, msg):
+    def warning(self, msg: str) -> Any:
         return self._l(logging.WARN, msg)
 
-    def info(self, msg):
+    def info(self, msg: str) -> Any:
         return self._l(logging.INFO, msg)
 
-    def error(self, msg):
+    def error(self, msg: str) -> Any:
         return self._l(logging.ERROR, msg)
 
-    def critical(self, msg):
+    def critical(self, msg: str) -> Any:
         return self._l(logging.CRITICAL, msg)
 
-    def debug(self, msg):
+    def debug(self, msg: str) -> Any:
         return self._l(logging.DEBUG, msg)
 
-    def isEnabledFor(self, lvl):
+    def isEnabledFor(self, lvl: Any) -> bool:
         return self._log.isEnabledFor(lvl)
 
 
@@ -64,7 +65,7 @@ def get_log(name: str) -> PyFFLogger:
 log = get_log('pyff')
 
 
-def log_config_file(ini):
+def log_config_file(ini: Optional[str]) -> None:
     if ini is not None:
         import logging.config
 
@@ -75,7 +76,7 @@ def log_config_file(ini):
         logging.config.fileConfig(ini)
 
 
-log_config_file(os.getenv('PYFF_LOGGING', None))
+log_config_file(os.getenv('PYFF_LOGGING'))
 
 # http://www.aminus.org/blogs/index.php/2008/07/03/writing-high-efficiency-large-python-sys-1?blog=2
 # blog post explicitly gives permission for use
