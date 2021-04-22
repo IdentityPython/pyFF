@@ -2,7 +2,7 @@ import importlib
 import threading
 from datetime import datetime, timedelta
 from json import dumps
-from typing import Any, Dict, Generator, Iterable, List, Literal, Mapping, NoReturn, Optional, Sequence, Tuple
+from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Tuple
 
 import pkg_resources
 import pyramid.httpexceptions as exc
@@ -23,9 +23,9 @@ from pyff.exceptions import ResourceException
 from pyff.logs import get_log
 from pyff.pipes import plumbing
 from pyff.repo import MDRepository
-from pyff.resource import Resource, ResourceInfo
+from pyff.resource import Resource
 from pyff.samlmd import entity_display_name
-from pyff.utils import b2u, dumptree, duration2timedelta, hash_id, json_serializer, utc_now
+from pyff.utils import b2u, dumptree, hash_id, json_serializer, utc_now
 
 log = get_log(__name__)
 
@@ -86,7 +86,7 @@ class MediaAccept(object):
     def __init__(self, accept: str):
         self._type = AcceptableType(accept)
 
-    def has_key(self, key: Any) -> Literal[True]:
+    def has_key(self, key: Any) -> bool:  # Literal[True]:
         return True
 
     def get(self, item: Any) -> Any:
