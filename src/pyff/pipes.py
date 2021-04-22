@@ -7,7 +7,7 @@ from __future__ import annotations
 import functools
 import os
 import traceback
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -90,14 +90,14 @@ class PluginsRegistry(dict):
     #            self[entry_point.name] = entry_point.load()
 
 
-def load_pipe(d: Any) -> Tuple[Callable, Any, str, Any]:
+def load_pipe(d: Any) -> Tuple[Callable, Any, str, Optional[Union[str, Dict, List]]]:
     """Return a triple callable,name,args of the pipe specified by the object d.
 
     :param d: The following alternatives for d are allowed:
 
     - d is a string (or unicode) in which case the pipe is named d called with None as args.
     - d is a dict of the form {name: args} (i.e one key) in which case the pipe named *name* is called with args
-    - d is an iterable (eg tuple or list) in which case d[0] is treated as the pipe name and d[1:] becomes the args
+    - d is an iterable (a list) in which case d[0] is treated as the pipe name and d[1:] becomes the args
     """
 
     def _n(_d: str) -> Tuple[str, List[str]]:
@@ -254,7 +254,7 @@ class Plumbing(object):
             self.t: ElementTree = t
             self._id: Optional[str] = None
             self.name = name
-            self.args: Iterable[Dict[str, Any]] = args
+            self.args: Optional[Union[str, Dict, List]] = args
             self.state: Dict[str, Any] = state
             self.done: bool = False
             self._store: SAMLStoreBase = store
@@ -281,7 +281,7 @@ class Plumbing(object):
                 self._id = self.t.get('Name')
             return self._id
 
-        def set_id(self, _id: str) -> None:
+        def set_id(self, _id: Optional[str]) -> None:
             self._id = _id
 
         def set_parent(self, _parent: Optional[Plumbing.Request]) -> None:
