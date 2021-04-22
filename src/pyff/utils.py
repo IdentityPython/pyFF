@@ -24,7 +24,7 @@ from email.utils import parsedate
 from itertools import chain
 from threading import local
 from time import gmtime, strftime
-from typing import BinaryIO, Callable, Optional, Union
+from typing import BinaryIO, Callable, Optional, Union, Set
 
 import pkg_resources
 import requests
@@ -49,6 +49,8 @@ from pyff import __version__
 from pyff.constants import NS, config
 from pyff.exceptions import *
 from pyff.logs import get_log
+
+from pydantic import BaseModel
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -974,3 +976,35 @@ class Watchable(object):
 def utc_now() -> datetime:
     """ Return current time with tz=UTC """
     return datetime.now(tz=timezone.utc)
+
+
+class FrontendApp(BaseModel):
+    name: str
+    directory: str
+    dirs: List[str] = []
+    exts: Set[str] = []
+
+    @staticmethod
+    def load(name: str, directory: str) -> FrontendApp:
+        fa = FrontendApp(name=name, directory=directory)
+        with os.scandir(fa.directory) as it:
+            for entry in it:
+                if not entry.name.startswith('.'):
+                    if entry.is_dir():
+                        fa.dirs.append(entry.name)
+                    else:
+                        fn, ext = os.path.splitext(entry.name)
+                        fa.exts.add(ext)
+        return fa
+
+    def add_route(self, ctx):
+        for uri_part in ["/"] + [d + "/" for d in self.dirs]:
+            route = '{}_{}'.format(self.name, uri_part)
+            path = '{:s}{{sep:/?}}{{path:.*}}'.format(uri_part)
+            ctx.add_route(
+                route,
+                path,
+                request_method='GET',
+                ext=['path'] + self.exts,
+            )
+            ctx.add_view(static_view(self.directory, use_subpath=False), route_name=route)

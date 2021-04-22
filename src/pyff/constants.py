@@ -462,6 +462,7 @@ class Config(object):
     )
 
     mdq_browser = S('mdq_browser', typeconv=as_string, info="the directory where mdq-browser can be found")
+    thiss = S('thiss', typeconv=as_string, info="the directory where thiss-js can be found")
 
     @property
     def base_url(self):

@@ -25,7 +25,7 @@ from pyff.pipes import plumbing
 from pyff.repo import MDRepository
 from pyff.resource import Resource, ResourceInfo
 from pyff.samlmd import entity_display_name
-from pyff.utils import b2u, dumptree, duration2timedelta, hash_id, json_serializer, utc_now
+from pyff.utils import b2u, dumptree, duration2timedelta, hash_id, json_serializer, utc_now, FrontendApp
 
 log = get_log(__name__)
 
@@ -554,23 +554,17 @@ def mkapp(*args, **kwargs):
         ctx.add_route('call', '/api/call/{entry}', request_method=['POST', 'PUT'])
         ctx.add_view(process_handler, route_name='call')
 
-        if config.mdq_browser is not None and os.path.exists(config.mdq_browser):
-            ctx.add_route('mdq_browser_config_json', '/config.json', request_method='GET')
-            ctx.add_view(
-                lambda request: json_response({'pyff_apis': True, 'mdq_url': config.base_url + "/entities/"}),
-                route_name='mdq_browser_config_json',
-            )
+        if config.mdq_browser or config.thiss:
             ctx.add_route_predicate('ext', ExtensionPredicate)
-            for uri_part in ('/', '/status', '/list', '/resources', '/about', '/font'):
-                route = 'mdq_browser_{}'.format(uri_part)
-                path = '{:s}{{sep:/?}}{{path:.*}}'.format(uri_part)
-                ctx.add_route(
-                    route,
-                    path,
-                    request_method='GET',
-                    ext=('path', '.html', '.css', '.js', '.ico'),
-                )
-                ctx.add_view(static_view(config.mdq_browser, use_subpath=False), route_name=route)
+
+            if config.mdq_browser:
+                os.environ['MDQ_URL'] = config.base_url + "/entities/"
+                FrontendApp.load(config.mdq_browser).add_route(ctx)
+
+            if config.thiss:
+                os.environ['BASE_URL'] = config.base_url
+                os.environ['STORAGE_DOMAIN'] = config.host  # TODO - make this configurable or grab from base_url
+                FrontendApp.load(config.thiss).add_route(ctx)
 
         ctx.add_route('request', '/*path', request_method='GET')
         ctx.add_view(request_handler, route_name='request')
