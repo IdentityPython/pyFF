@@ -1,6 +1,7 @@
 import importlib
 import threading
 from datetime import datetime, timedelta
+from enum import Enum
 from json import dumps
 from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Tuple
 
@@ -153,16 +154,36 @@ def request_handler(request: Request) -> Response:
     return r
 
 
-def process_handler(request: Request) -> Response:
-    """
-    The main request handler for pyFF. Implements API call hooks and content negotiation.
+class ContentNegPolicy(Enum):
+    extension = 'extension'  # current default
+    adaptive = 'adaptive'
+    header = 'header'  # future default
 
-    :param request: the HTTP request object
-    :return: the data to send to the client
+
+def _process_content_negotiate(
+    policy: ContentNegPolicy, alias: str, path: Optional[str], pfx, request: Request
+) -> Tuple[MediaAccept, Optional[str], Optional[str]]:
+    """
+    Determine requested content type, based on policy, Accept request header and path extension.
+
+    content_negotiation_policy is one of three values:
+
+        1. extension - current default, inspect the path and if it ends in
+           an extension, e.g. .xml or .json, always strip off the extension to
+           get the entityID and if no accept header or a wildcard header, then
+           use the extension to determine the return Content-Type.
+
+        2. adaptive - only if no accept header or if a wildcard, then inspect
+           the path and if it ends in an extension strip off the extension to
+           get the entityID and use the extension to determine the return
+           Content-Type.
+
+        3. header - future default, do not inspect the path for an extension and
+           use only the Accept header to determine the return Content-Type.
     """
     _ctypes = {'xml': 'application/samlmetadata+xml;application/xml;text/xml', 'json': 'application/json'}
 
-    def _d(x: Optional[str], do_split: bool = True) -> Tuple[Optional[str], Optional[str]]:
+    def _split_path(x: Optional[str], do_split: bool = True) -> Tuple[Optional[str], Optional[str]]:
         """ Split a path into a base component and an extension. """
         if x is not None:
             x = x.strip()
@@ -178,6 +199,45 @@ def process_handler(request: Request) -> Response:
 
         return x, None
 
+    # TODO - sometimes the client sends > 1 accept header value with ','.
+    accept = str(request.accept).split(',')[0]
+    valid_accept = accept and not ('application/*' in accept or 'text/*' in accept or '*/*' in accept)
+
+    path_no_extension, extension = _split_path(path, True)
+    accept_from_extension = accept
+    if extension:
+        accept_from_extension = _ctypes.get(extension, accept)
+
+    if policy == ContentNegPolicy.extension:
+        path = path_no_extension
+        if not valid_accept:
+            accept = accept_from_extension
+    elif policy == ContentNegPolicy.adaptive:
+        if not valid_accept:
+            path = path_no_extension
+            accept = accept_from_extension
+
+    if not accept:
+        log.warning('Could not determine accepted response type')
+        raise exc.exception_response(400)
+
+    q: Optional[str]
+    if pfx and path:
+        q = f'{{{pfx}}}{path}'
+        path = f'/{alias}/{path}'
+    else:
+        q = path
+
+    return MediaAccept(accept), path, q
+
+
+def process_handler(request: Request) -> Response:
+    """
+    The main request handler for pyFF. Implements API call hooks and content negotiation.
+
+    :param request: the HTTP request object
+    :return: the data to send to the client
+    """
     log.debug(f'Processing request: {request}')
 
     if request.matchdict is None:
@@ -215,58 +275,23 @@ def process_handler(request: Request) -> Response:
         if pfx is None:
             raise exc.exception_response(404)
 
-    # content_negotiation_policy is one of three values:
-    # 1. extension - current default, inspect the path and if it ends in
-    #    an extension, e.g. .xml or .json, always strip off the extension to
-    #    get the entityID and if no accept header or a wildcard header, then
-    #    use the extension to determine the return Content-Type.
-    #
-    # 2. adaptive - only if no accept header or if a wildcard, then inspect
-    #    the path and if it ends in an extension strip off the extension to
-    #    get the entityID and use the extension to determine the return
-    #    Content-Type.
-    #
-    # 3. header - future default, do not inspect the path for an extension and
-    #    use only the Accept header to determine the return Content-Type.
-    policy = config.content_negotiation_policy
+    try:
+        policy = ContentNegPolicy(config.content_negotiation_policy)
+    except ValueError:
+        log.debug(
+            f'Invalid value for config.content_negotiation_policy: {config.content_negotiation_policy}, '
+            f'defaulting to "extension"'
+        )
+        policy = ContentNegPolicy.extension
 
-    # TODO - sometimes the client sends > 1 accept header value with ','.
-    accept = str(request.accept).split(',')[0]
-    valid_accept = accept and not ('application/*' in accept or 'text/*' in accept or '*/*' in accept)
-
-    new_path: Optional[str] = path
-    path_no_extension, extension = _d(new_path, True)
-    accept_from_extension = accept
-    if extension:
-        accept_from_extension = _ctypes.get(extension, accept)
-
-    if policy == 'extension':
-        new_path = path_no_extension
-        if not valid_accept:
-            accept = accept_from_extension
-    elif policy == 'adaptive':
-        if not valid_accept:
-            new_path = path_no_extension
-            accept = accept_from_extension
-
-    if not accept:
-        log.warning('Could not determine accepted response type')
-        raise exc.exception_response(400)
-
-    q: Optional[str]
-    if pfx and new_path:
-        q = f'{{{pfx}}}{new_path}'
-        new_path = f'/{alias}/{new_path}'
-    else:
-        q = new_path
+    accept, new_path, q = _process_content_negotiate(policy, alias, path, pfx, request)
 
     try:
-        accepter = MediaAccept(accept)
         for p in request.registry.plumbings:
             state = {
                 entry: True,
                 'headers': {'Content-Type': None},
-                'accept': accepter,
+                'accept': accept,
                 'url': request.current_route_url(),
                 'select': q,
                 'match': match.lower() if match else match,
@@ -284,7 +309,7 @@ def process_handler(request: Request) -> Response:
             response.headers.update(_headers)
             ctype = _headers.get('Content-Type', None)
             if not ctype:
-                r, t = _fmt(r, accepter)
+                r, t = _fmt(r, accept)
                 ctype = t
 
             response.text = b2u(r)
