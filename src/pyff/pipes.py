@@ -264,12 +264,12 @@ class Plumbing(object):
             self.parent: Optional[Plumbing.Request] = None
 
         def scope_of(self, entry_point: str) -> Plumbing.Request:
-            if 'with {}'.format(entry_point) in self.plumbing.pipeline:
+            for _p in self.plumbing.pipeline:
+                if f'with {entry_point}' in _p:
+                    return self
+            if self.parent is None:
                 return self
-            elif self.parent is None:
-                return self
-            else:
-                return self.parent.scope_of(entry_point)
+            return self.parent.scope_of(entry_point)
 
         @property
         def id(self) -> Optional[str]:
