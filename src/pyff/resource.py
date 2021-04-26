@@ -264,7 +264,7 @@ class Resource(Watchable):
 
     @property
     def post(
-        self,
+            self,
     ) -> Iterable[Callable]:  # TODO: move classes to make this work -> List[Union['Lambda', 'PipelineCallback']]:
         return self.opts.via
 

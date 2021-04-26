@@ -6,6 +6,8 @@
 This module contains various utilities.
 
 """
+from __future__ import annotations
+
 import base64
 import cgi
 import contextlib
@@ -51,6 +53,8 @@ from pyff.exceptions import *
 from pyff.logs import get_log
 
 from pydantic import BaseModel
+from pyramid.static import static_view
+
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -985,14 +989,15 @@ def utc_now() -> datetime:
 
 
 class FrontendApp(BaseModel):
+    url_path: str
     name: str
     directory: str
     dirs: List[str] = []
-    exts: Set[str] = []
+    exts: Set[str] = set()
 
     @staticmethod
-    def load(name: str, directory: str) -> FrontendApp:
-        fa = FrontendApp(name=name, directory=directory)
+    def load(url_path: str, name: str, directory: str) -> FrontendApp:
+        fa = FrontendApp(url_path=url_path, name=name, directory=directory)
         with os.scandir(fa.directory) as it:
             for entry in it:
                 if not entry.name.startswith('.'):
@@ -1004,13 +1009,13 @@ class FrontendApp(BaseModel):
         return fa
 
     def add_route(self, ctx):
-        for uri_part in ["/"] + [d + "/" for d in self.dirs]:
+        for uri_part in [self.url_path] + [self.url_path + d + "/" for d in self.dirs]:
             route = '{}_{}'.format(self.name, uri_part)
             path = '{:s}{{sep:/?}}{{path:.*}}'.format(uri_part)
             ctx.add_route(
                 route,
                 path,
                 request_method='GET',
-                ext=['path'] + self.exts,
+                ext=['path'] + list(self.exts),
             )
             ctx.add_view(static_view(self.directory, use_subpath=False), route_name=route)

@@ -15,7 +15,6 @@ from pyramid.config import Configurator
 from pyramid.events import NewRequest
 from pyramid.request import Request
 from pyramid.response import Response
-from pyramid.static import static_view
 from six import b
 from six.moves.urllib_parse import quote_plus
 
@@ -26,7 +25,7 @@ from pyff.pipes import plumbing
 from pyff.repo import MDRepository
 from pyff.resource import Resource
 from pyff.samlmd import entity_display_name
-from pyff.utils import b2u, dumptree, hash_id, json_serializer, utc_now, FrontendApp
+from pyff.utils import b2u, dumptree, hash_id, json_serializer, utc_now, FrontendApp, resource_filename
 
 log = get_log(__name__)
 
@@ -63,6 +62,7 @@ def json_response(data) -> Response:
     response = Response(dumps(data, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
     return response
+
 
 def status_handler(request: Request) -> Response:
     """
@@ -572,17 +572,22 @@ def mkapp(*args: Any, **kwargs: Any) -> Any:
         ctx.add_route('call', '/api/call/{entry}', request_method=['POST', 'PUT'])
         ctx.add_view(process_handler, route_name='call')
 
-        if config.mdq_browser or config.thiss:
+        if config.mdq_browser is not None or config.thiss is not None:
             ctx.add_route_predicate('ext', ExtensionPredicate)
 
+            if config.mdq_browser is not None and len(config.mdq_browser) == 0:
+                config.mdq_browser = resource_filename('web/@sunet/mdq-browser')
+
             if config.mdq_browser:
-                os.environ['MDQ_URL'] = config.base_url + "/entities/"
-                FrontendApp.load(config.mdq_browser).add_route(ctx)
+                log.debug("serving mdq-browser from {}".format(config.mdq_browser))
+                FrontendApp.load('/', 'mdq_browser', config.mdq_browser).add_route(ctx)
+
+            if config.thiss is not None and len(config.thiss) == 0:
+                config.thiss = resource_filename('web/@theidentityselector/thiss')
 
             if config.thiss:
-                os.environ['BASE_URL'] = config.base_url
-                os.environ['STORAGE_DOMAIN'] = config.host  # TODO - make this configurable or grab from base_url
-                FrontendApp.load(config.thiss).add_route(ctx)
+                log.debug("serving thiss from {}".format(config.thiss))
+                FrontendApp.load('/thiss/', 'thiss', config.thiss).add_route(ctx)
 
         ctx.add_route('request', '/*path', request_method='GET')
         ctx.add_view(request_handler, route_name='request')

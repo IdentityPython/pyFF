@@ -2,14 +2,33 @@
 # -*- encoding: utf-8 -*-
 
 from distutils.core import setup
+from distutils.command.sdist import sdist
+from distutils.dir_util import copy_tree
 from pathlib import PurePath
 from platform import python_implementation
 from typing import List
-
+from tempfile import TemporaryDirectory
 from setuptools import find_packages
 
 __author__ = 'Leif Johansson'
-__version__ = '2.0.0'
+__version__ = '2.1.0dev0'
+
+
+class NPMSdist(sdist):
+    def run(self):
+        import subprocess
+
+        npm_modules = load_requirements(here.with_name('npm_modules.txt'))
+        with TemporaryDirectory() as tmp:
+            for npm_module in npm_modules:
+                subprocess.check_call(['npm', 'install', '--production', '--prefix', tmp, npm_module])
+            for npm_module in npm_modules:
+                (npm_module_path, _, _) = npm_module.rpartition('@')
+                copy_tree(
+                    "{}/node_modules/{}/dist".format(tmp, npm_module_path), './src/pyff/web/{}'.format(npm_module_path)
+                )
+
+        super().run()
 
 
 def load_requirements(path: PurePath) -> List[str]:
@@ -37,6 +56,7 @@ python_implementation_str = python_implementation()
 
 setup(
     name='pyFF',
+    cmdclass={'sdist': NPMSdist},
     version=__version__,
     description="Federation Feeder",
     long_description=README + '\n\n' + NEWS,
@@ -55,7 +75,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     include_package_data=True,
-    package_data={'pyff': ['xslt/*.xsl', 'schema/*.xsd']},
+    package_data={'pyff': ['xslt/*.xsl', 'schema/*.xsd', 'web/**/*']},
     zip_safe=False,
     install_requires=install_requires,
     scripts=['scripts/mirror-mdq.sh'],
@@ -64,6 +84,11 @@ setup(
         'paste.app_factory': ['pyffapp=pyff.wsgi:app_factory'],
         'paste.server_runner': ['pyffs=pyff.wsgi:server_runner'],
     },
-    message_extractors={'src': [('**.py', 'python', None), ('**/templates/**.html', 'mako', None),]},
+    message_extractors={
+        'src': [
+            ('**.py', 'python', None),
+            ('**/templates/**.html', 'mako', None),
+        ]
+    },
     python_requires='>=3.7',
 )

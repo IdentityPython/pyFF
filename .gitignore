@@ -25,3 +25,5 @@ localconfig.py
 .whoosh
 
 docs/code
+src/pyff/web
+MANIFEST
