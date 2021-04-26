@@ -22,7 +22,7 @@ from six.moves.urllib_parse import quote_plus
 from pyff.constants import config
 from pyff.exceptions import ResourceException
 from pyff.logs import get_log
-from pyff.pipes import plumbing
+from pyff.pipes import PipeState, plumbing
 from pyff.repo import MDRepository
 from pyff.resource import Resource
 from pyff.samlmd import entity_display_name
@@ -288,16 +288,16 @@ def process_handler(request: Request) -> Response:
 
     try:
         for p in request.registry.plumbings:
-            state = {
-                entry: True,
-                'headers': {'Content-Type': None},
-                'accept': accept,
-                'url': request.current_route_url(),
-                'select': q,
-                'match': match.lower() if match else match,
-                'path': new_path,
-                'stats': {},
-            }
+            state = PipeState(
+                entry_name=entry,
+                headers={'Content-Type': None},
+                accept=accept,
+                url=request.current_route_url(),
+                select=q,
+                match=match.lower() if match else match,
+                path=new_path,
+                stats={},
+            )
 
             r = p.process(request.registry.md, state=state, raise_exceptions=True, scheduler=request.registry.scheduler)
             log.debug(f'Plumbing process result: {r}')
@@ -305,9 +305,8 @@ def process_handler(request: Request) -> Response:
                 r = []
 
             response = Response()
-            _headers = state.get('headers', {})
-            response.headers.update(_headers)
-            ctype = _headers.get('Content-Type', None)
+            response.headers.update(state.headers)
+            ctype = state.headers.get('Content-Type', None)
             if not ctype:
                 r, t = _fmt(r, accept)
                 ctype = t
@@ -315,8 +314,7 @@ def process_handler(request: Request) -> Response:
             response.text = b2u(r)
             response.size = len(r)
             response.content_type = ctype
-            cache_ttl = int(state.get('cache', 0))
-            response.expires = datetime.now() + timedelta(seconds=cache_ttl)
+            response.expires = datetime.now() + timedelta(seconds=state.cache)
             return response
     except ResourceException as ex:
         import traceback

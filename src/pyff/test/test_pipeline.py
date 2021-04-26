@@ -11,7 +11,7 @@ from mock import patch
 from pyff import builtins
 from pyff.exceptions import MetadataException
 from pyff.parse import ParserException
-from pyff.pipes import PipeException, Plumbing, plumbing
+from pyff.pipes import PipeException, PipeState, Plumbing, plumbing
 from pyff.repo import MDRepository
 from pyff.resource import ResourceException
 from pyff.test import ExitException, SignerTestCase
@@ -61,7 +61,7 @@ class PipeLineTest(SignerTestCase):
         template = templates.get_template(pl_name)
         with open(pipeline, "w") as fd:
             fd.write(template.render(ctx=ctx))
-        res = plumbing(pipeline).process(md, state={'batch': True, 'stats': {}})
+        res = plumbing(pipeline).process(md, PipeState(entry_name='batch'))
         os.unlink(pipeline)
         return res, md, ctx
 
@@ -70,7 +70,7 @@ class PipeLineTest(SignerTestCase):
         p = yaml.safe_load(six.StringIO(pstr))
         print("\n{}".format(yaml.dump(p)))
         pl = Plumbing(p, pid="test")
-        res = pl.process(md, state={'batch': True, 'stats': {}})
+        res = pl.process(md, PipeState(entry_name='batch'))
         return res, md
 
     @classmethod

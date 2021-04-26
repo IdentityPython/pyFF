@@ -25,7 +25,7 @@ from pyff.constants import NS
 from pyff.decorators import deprecated
 from pyff.exceptions import MetadataException
 from pyff.logs import get_log
-from pyff.pipes import PipeException, PipelineCallback, Plumbing, pipe, registry
+from pyff.pipes import PipeException, PipeState, PipelineCallback, Plumbing, pipe, registry
 from pyff.samlmd import (
     annotate_entity,
     discojson_t,
@@ -383,14 +383,13 @@ def when(req: Plumbing.Request, condition: str, *values):
     The condition operates on the state: if 'foo' is present in the state (with any value), then the something branch is
     followed. If 'bar' is present in the state with the value 'bill' then the other branch is followed.
     """
-    c = req.state.get(condition, None)
-    if c is None:
+    if req.state.entry_name is None:
         log.debug(f'Condition {repr(condition)} not present in state {req.state}')
-    if c is not None and (not values or _any(values, c)):
+    if req.state.entry_name is not None and (not values or _any(values, req.state.entry_name)):
         if not isinstance(req.args, list):
             raise ValueError('Non-list arguments to "when" not allowed')
 
-        return Plumbing(pipeline=req.args, pid="%s.when" % req.plumbing.id).iprocess(req)
+        return Plumbing(pipeline=req.args, pid=f'{req.plumbing.id}.when').iprocess(req)
     return req.t
 
 
@@ -768,9 +767,9 @@ def select(req: Plumbing.Request, *opts):
 
     entities = resolve_entities(args, lookup_fn=req.md.store.select)
 
-    if req.state.get('match', None):  # TODO - allow this to be passed in via normal arguments
+    if req.state.match:  # TODO - allow this to be passed in via normal arguments
 
-        match = req.state['match']
+        match = req.state.match
 
         if isinstance(match, six.string_types):
             query = [match.lower()]
@@ -1435,11 +1434,11 @@ def emit(req: Plumbing.Request, ctype="application/xml", *opts):
         if not isinstance(d, six.binary_type):
             d = d.encode("utf-8")
         m.update(d)
-        req.state['headers']['ETag'] = m.hexdigest()
+        req.state.headers['ETag'] = m.hexdigest()
     else:
         raise PipeException("Empty")
 
-    req.state['headers']['Content-Type'] = ctype
+    req.state.headers['Content-Type'] = ctype
     if six.PY2:
         d = six.u(d)
     return d
@@ -1517,7 +1516,7 @@ def finalize(req: Plumbing.Request, *opts):
         if name is None or 0 == len(name):
             name = req.args.get('Name', None)
         if name is None or 0 == len(name):
-            name = req.state.get('url', None)
+            name = req.state.url
             if name and 'baseURL' in req.args:
 
                 try:
@@ -1569,7 +1568,7 @@ def finalize(req: Plumbing.Request, *opts):
         # TODO: offset can be None here, if validUntil is not a valid duration or ISO date
         #       What is the right action to take then?
         if offset:
-            req.state['cache'] = int(total_seconds(offset) / 50)
+            req.state.cache = int(total_seconds(offset) / 50)
 
     cache_duration = req.args.get('cacheDuration', e.get('cacheDuration', None))
     if cache_duration is not None and len(cache_duration) > 0:
@@ -1578,7 +1577,7 @@ def finalize(req: Plumbing.Request, *opts):
             raise PipeException("Unable to parse %s as xs:duration" % cache_duration)
 
         e.set('cacheDuration', cache_duration)
-        req.state['cache'] = int(total_seconds(offset))
+        req.state.cache = int(total_seconds(offset))
 
     return req.t
 

@@ -468,7 +468,13 @@ class Resource(Watchable):
             if self.post:
                 for cb in self.post:
                     if self.t is not None:
-                        self.t = cb(self.t, self.opts.dict())
+                        # TODO: This used to be
+                        #       self.t = cb(self.t, self.opts.dict())
+                        #       but passing self.opts does not seem to be what the callback expected.
+                        #       Don't know what to do really.
+                        from pyff.pipes import PipeState
+
+                        self.t = cb(self.t, PipeState())
 
             if self.is_expired():
                 info.expired = True
