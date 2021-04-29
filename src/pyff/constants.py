@@ -9,7 +9,7 @@ import os
 import re
 import sys
 from distutils.util import strtobool
-
+from typing import Tuple, Union, Any
 import pyconfig
 import six
 
@@ -523,12 +523,12 @@ class Config(object):
 config = Config()
 
 
-def opt_eq_split(s: str) -> str:
+def opt_eq_split(s: str) -> Tuple[Any, Any]:
     for sep in [':', '=']:
         d = tuple(s.rsplit(sep))
         if len(d) == 2:
-            return d
-    return (None, None)
+            return d[0], d[1]
+    return None, None
 
 
 def parse_options(program, docs):
