@@ -15,7 +15,7 @@ from datetime import datetime
 from distutils.util import strtobool
 from typing import Dict, Optional
 
-import ipaddr
+import ipaddress
 import six
 import xmlsec
 from lxml.etree import DocumentInvalid
@@ -790,7 +790,7 @@ def select(req: Plumbing.Request, *opts):
             return [item for item in lst if item is not None]
 
         def _ip_networks(elt):
-            return [ipaddr.IPNetwork(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
+            return [ipaddress.ip_network(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
 
         def _match(q, elt):
             q = q.strip()
@@ -798,9 +798,7 @@ def select(req: Plumbing.Request, *opts):
                 try:
                     nets = _ip_networks(elt)
                     for net in nets:
-                        if ':' in q and ipaddr.IPv6Address(q) in net:
-                            return net
-                        if '.' in q and ipaddr.IPv4Address(q) in net:
+                        if ipaddress.ip_adress(q) in net:
                             return net
                 except ValueError:
                     pass
