@@ -3,7 +3,6 @@ apscheduler
 cachetools
 gunicorn
 httplib2 >=0.7.7
-ipaddr
 lxml >=4.1.1
 mako
 pyXMLSecurity >=0.15
