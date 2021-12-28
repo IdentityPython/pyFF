@@ -430,9 +430,7 @@ class SAMLStoreBase(object):
                     try:
                         nets = _ip_networks(elt)
                         for net in nets:
-                            if ':' in q and ipaddress.IPv6Address(q) in net:
-                                return net
-                            if '.' in q and ipaddress.IPv4Address(q) in net:
+                            if ipaddress.ip_address(q) in net:
                                 return net
                     except ValueError:
                         pass
