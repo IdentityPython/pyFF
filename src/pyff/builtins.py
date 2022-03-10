@@ -805,10 +805,10 @@ def select(req: Plumbing.Request, *opts):
 
             if q is not None and len(q) > 0:
                 tokens = _strings(elt)
+                p = re.compile(r'\b{}'.format(q), re.IGNORECASE)
                 for tstr in tokens:
-                    for tpart in tstr.split():
-                        if tpart.lower().startswith(q):
-                            return tstr
+                    if p.search(tstr):
+                        return tstr
             return None
 
         log.debug("matching {} in {} entities".format(match, len(entities)))
