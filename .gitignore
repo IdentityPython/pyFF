@@ -27,3 +27,4 @@ localconfig.py
 docs/code
 src/pyff/web
 MANIFEST
+.vscode
