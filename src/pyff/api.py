@@ -2,8 +2,8 @@ import importlib
 import threading
 from datetime import datetime, timedelta
 from json import dumps
+import os
 from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Tuple
-
 import pkg_resources
 import pyramid.httpexceptions as exc
 import pytz
@@ -25,7 +25,7 @@ from pyff.pipes import plumbing
 from pyff.repo import MDRepository
 from pyff.resource import Resource
 from pyff.samlmd import entity_display_name
-from pyff.utils import b2u, dumptree, hash_id, json_serializer, utc_now
+from pyff.utils import b2u, dumptree, hash_id, json_serializer, utc_now, FrontendApp, resource_filename
 
 log = get_log(__name__)
 
@@ -58,6 +58,12 @@ Disallow: /
     )
 
 
+def json_response(data) -> Response:
+    response = Response(dumps(data, default=json_serializer))
+    response.headers['Content-Type'] = 'application/json'
+    return response
+
+
 def status_handler(request: Request) -> Response:
     """
     Implements the /api/status endpoint
@@ -77,9 +83,7 @@ def status_handler(request: Request) -> Response:
         threads=[t.name for t in threading.enumerate()],
         store=dict(size=request.registry.md.store.size()),
     )
-    response = Response(dumps(_status, default=json_serializer))
-    response.headers['Content-Type'] = 'application/json'
-    return response
+    return json_response(_status)
 
 
 class MediaAccept(object):
@@ -392,10 +396,7 @@ def webfinger_handler(request: Request) -> Response:
         for v in request.registry.md.store.attribute(aliases[a]):
             _links('%s/%s' % (a, quote_plus(v)))
 
-    response = Response(dumps(jrd, default=json_serializer))
-    response.headers['Content-Type'] = 'application/json'
-
-    return response
+    return json_response(jrd)
 
 
 def resources_handler(request: Request) -> Response:
@@ -420,10 +421,7 @@ def resources_handler(request: Request) -> Response:
 
         return nfo
 
-    response = Response(dumps(_infos(request.registry.md.rm.children), default=json_serializer))
-    response.headers['Content-Type'] = 'application/json'
-
-    return response
+    return json_response(_infos(request.registry.md.rm.children))
 
 
 def pipeline_handler(request: Request) -> Response:
@@ -433,10 +431,7 @@ def pipeline_handler(request: Request) -> Response:
     :param request: the HTTP request
     :return: a JSON representation of the active pipeline
     """
-    response = Response(dumps(request.registry.plumbings, default=json_serializer))
-    response.headers['Content-Type'] = 'application/json'
-
-    return response
+    return json_response(request.registry.plumbings)
 
 
 def search_handler(request: Request) -> Response:
@@ -494,6 +489,27 @@ def launch_memory_usage_server(port: int = 9002) -> None:
     cherrypy.config.update({'environment': 'embedded', 'server.socket_port': port})
 
     cherrypy.engine.start()
+
+
+class ExtensionPredicate:
+    def __init__(self, val, info):
+        self.segment_name = val[0]
+        self.extensions = tuple(val[0:])
+
+    def text(self):
+        return "extensions = {}".format(self.extensions)
+
+    phash = text
+
+    def __call__(self, info, request):
+        match = info['match']
+        if match[self.segment_name] == '':
+            return True
+
+        for ext in self.extensions:
+            if match[self.segment_name].endswith(ext):
+                return True
+        return False
 
 
 def mkapp(*args: Any, **kwargs: Any) -> Any:
@@ -555,6 +571,23 @@ def mkapp(*args: Any, **kwargs: Any) -> Any:
 
         ctx.add_route('call', '/api/call/{entry}', request_method=['POST', 'PUT'])
         ctx.add_view(process_handler, route_name='call')
+
+        if config.mdq_browser is not None or config.thiss is not None:
+            ctx.add_route_predicate('ext', ExtensionPredicate)
+
+            if config.mdq_browser is not None and len(config.mdq_browser) == 0:
+                config.mdq_browser = resource_filename('web/@sunet/mdq-browser')
+
+            if config.mdq_browser:
+                log.debug("serving mdq-browser from {}".format(config.mdq_browser))
+                FrontendApp.load('/', 'mdq_browser', config.mdq_browser).add_route(ctx)
+
+            if config.thiss is not None and len(config.thiss) == 0:
+                config.thiss = resource_filename('web/@theidentityselector/thiss')
+
+            if config.thiss:
+                log.debug("serving thiss from {}".format(config.thiss))
+                FrontendApp.load('/thiss/', 'thiss', config.thiss).add_route(ctx)
 
         ctx.add_route('request', '/*path', request_method='GET')
         ctx.add_view(request_handler, route_name='request')

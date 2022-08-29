@@ -51,6 +51,7 @@ def main():
         'workers': config.worker_pool_size,
         'loglevel': config.loglevel,
         'preload_app': True,
+        'env': config.environ,
         'daemon': config.daemonize,
         'capture_output': False,
         'timeout': config.worker_timeout,

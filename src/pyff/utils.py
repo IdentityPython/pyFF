@@ -6,6 +6,8 @@
 This module contains various utilities.
 
 """
+from __future__ import annotations
+
 import base64
 import cgi
 import contextlib
@@ -26,7 +28,8 @@ from itertools import chain
 from threading import local
 from time import gmtime, strftime
 from typing import Any, BinaryIO, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
-
+from pyramid.request import Request as PyramidRequest
+from pyramid.response import Response as PyramidResponse
 import pkg_resources
 import requests
 import xmlsec
@@ -49,6 +52,10 @@ from pyff import __version__
 from pyff.constants import NS, config
 from pyff.exceptions import *
 from pyff.logs import get_log
+
+from pydantic import BaseModel
+from pyramid.static import static_view
+
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -980,3 +987,48 @@ class Watchable(object):
 def utc_now() -> datetime:
     """ Return current time with tz=UTC """
     return datetime.now(tz=timezone.utc)
+
+
+class FrontendApp(BaseModel):
+    url_path: str
+    name: str
+    directory: str
+    dirs: List[str] = []
+    exts: Set[str] = set()
+    env: Dict[str, str] = dict()
+
+    @staticmethod
+    def load(url_path: str, name: str, directory: str, env: Optional[Mapping[str, str]] = None) -> FrontendApp:
+        if env is None:
+            env = config.environ
+        fa = FrontendApp(url_path=url_path, name=name, directory=directory, env=env)
+        with os.scandir(fa.directory) as it:
+            for entry in it:
+                if not entry.name.startswith('.'):
+                    if entry.is_dir():
+                        fa.dirs.append(entry.name)
+                    else:
+                        fn, ext = os.path.splitext(entry.name)
+                        fa.exts.add(ext)
+        return fa
+
+    def env_js_handler(self, request: PyramidRequest) -> PyramidResponse:
+        env_js = "window.env = {" + ",".join([f"{k}: '{v}'" for (k, v) in self.env.items()]) + "};"
+        response = PyramidResponse(env_js)
+        response.headers['Content-Type'] = 'text/javascript'
+        return response
+
+    def add_route(self, ctx):
+        env_route = '{}_env_js'.format(self.name)
+        ctx.add_route(env_route, '/env.js', request_method='GET')
+        ctx.add_view(self.env_js_handler, route_name=env_route)
+        for uri_part in [self.url_path] + [self.url_path + d for d in self.dirs]:
+            route = '{}_{}'.format(self.name, uri_part)
+            path = '{:s}{{sep:/?}}{{path:.*}}'.format(uri_part)
+            ctx.add_route(
+                route,
+                path,
+                request_method='GET',
+                ext=['path'] + list(self.exts),
+            )
+            ctx.add_view(static_view(self.directory, use_subpath=False), route_name=route)

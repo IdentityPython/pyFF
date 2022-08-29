@@ -9,7 +9,7 @@ import os
 import re
 import sys
 from distutils.util import strtobool
-
+from typing import Tuple, Union, Any
 import pyconfig
 import six
 
@@ -253,14 +253,16 @@ class Config(object):
     version = DummySetting('version', info="Show pyff version information", short='v', typeconv=as_bool)
     module = DummySetting("module", info="load additional plugins from the specified module", short='m')
     alias = DummySetting('alias', info="add an alias to the server - argument must be on the form alias=uri", short='A')
+    env = DummySetting('env', info='add an environment variable to the server', short='E')
 
     # deprecated settings
     google_api_key = S("google_api_key", deprecated=True)
     caching_delay = S("caching_delay", default=300, typeconv=as_int, short='D', deprecated=True)
     proxy = S("proxy", default=False, typeconv=as_bool, deprecated=True)
-    public_url = S("public_url", typeconv=as_string, deprecated=True)
     allow_shutdown = S("allow_shutdown", default=False, typeconv=as_bool, deprecated=True)
     ds_template = S("ds_template", default="ds.html", deprecated=True)
+
+    public_url = S("public_url", typeconv=as_string, info="the public URL of the service - not often needed")
 
     loglevel = S("loglevel", default=logging.WARN, info="set the loglevel")
 
@@ -310,6 +312,15 @@ class Config(object):
         cmdline=['pyffd'],
         hidden=True,
         info="a set of aliases to add to the server",
+    )
+
+    environ = S(
+        "environ",
+        default=dict(),
+        typeconv=as_dict_of_string,
+        cmdline=['pyffd'],
+        hidden=True,
+        info="a set of environement variables to add to the server",
     )
 
     base_dir = S("base_dir", info="change to this directory before executing the pipeline")
@@ -460,6 +471,9 @@ class Config(object):
         default="/var/run/pyff/backup",
     )
 
+    mdq_browser = S('mdq_browser', typeconv=as_string, info="the directory where mdq-browser can be found")
+    thiss = S('thiss', typeconv=as_string, info="the directory where thiss-js can be found")
+
     @property
     def base_url(self):
         if self.public_url:
@@ -509,6 +523,14 @@ class Config(object):
 config = Config()
 
 
+def opt_eq_split(s: str) -> Tuple[Any, Any]:
+    for sep in [':', '=']:
+        d = tuple(s.rsplit(sep))
+        if len(d) == 2:
+            return d[0], d[1]
+    return None, None
+
+
 def parse_options(program, docs):
     (short_args, long_args) = config.args(program)
     docs += config.help(program)
@@ -524,6 +546,9 @@ def parse_options(program, docs):
 
     if config.aliases is None or len(config.aliases) == 0:
         config.aliases = dict(metadata=entities)
+
+    if config.environ is None or len(config.environ) == 0:
+        config.environ = dict()
 
     if config.modules is None:
         config.modules = []
@@ -541,6 +566,10 @@ def parse_options(program, docs):
                 assert colon == ':'
                 if a and uri:
                     config.aliases[a] = uri
+            elif o in ('-E', '--env'):
+                (k, v) = opt_eq_split(a)
+                if k and v:
+                    config.environ[k] = v
             elif o in ('-m', '--module'):
                 config.modules.append(a)
             else:
