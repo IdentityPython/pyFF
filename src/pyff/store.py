@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from threading import ThreadError
 
-import ipaddr
+import ipaddress
 import six
 from cachetools.func import ttl_cache
 from redis_collections import Dict, Set
@@ -421,7 +421,7 @@ class SAMLStoreBase(object):
             return [item for item in lst if item is not None]
 
         def _ip_networks(elt):
-            return [ipaddr.IPNetwork(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
+            return [ipaddress.ip_network(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
 
         def _match(qq, elt):
             for q in qq:
@@ -430,9 +430,7 @@ class SAMLStoreBase(object):
                     try:
                         nets = _ip_networks(elt)
                         for net in nets:
-                            if ':' in q and ipaddr.IPv6Address(q) in net:
-                                return net
-                            if '.' in q and ipaddr.IPv4Address(q) in net:
+                            if ipaddress.ip_address(q) in net:
                                 return net
                     except ValueError:
                         pass
