@@ -155,10 +155,11 @@ def dumptree(t: ElementTree, pretty_print: bool = False, method: str = 'xml', xm
 
     :param t: An ElementTree to serialize
     """
-    if pretty_print:
+    if pretty_print and callable(getattr(etree, 'indent', None)):
+        # indent() function was added in lxml 4.5
         etree.indent(t)
     return etree.tostring(
-        t, encoding='UTF-8', method=method, xml_declaration=xml_declaration
+        t, encoding='UTF-8', method=method, xml_declaration=xml_declaration, pretty_print=pretty_print
     )
 
 
