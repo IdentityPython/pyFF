@@ -468,6 +468,7 @@ def publish(req: Plumbing.Request, *opts):
         - publish:
              output: output
              raw: false
+             pretty_print: false
              urlencode_filenames: false
              hash_link: false
              update_store: true
@@ -489,13 +490,14 @@ def publish(req: Plumbing.Request, *opts):
     if not isinstance(req.args, dict):
         req.args = dict(output=req.args[0])
 
-    for t in ('raw', 'update_store', 'hash_link', 'urlencode_filenames'):
+    for t in ('raw', 'pretty_print', 'update_store', 'hash_link', 'urlencode_filenames'):
         if t in req.args and type(req.args[t]) is not bool:
             req.args[t] = strtobool(str(req.args[t]))
 
     req.args.setdefault('ext', '.xml')
     req.args.setdefault('output_file', 'output')
     req.args.setdefault('raw', False)
+    req.args.setdefault('pretty_print', False)
     req.args.setdefault('update_store', True)
     req.args.setdefault('hash_link', False)
     req.args.setdefault('urlencode_filenames', False)
@@ -526,7 +528,7 @@ def publish(req: Plumbing.Request, *opts):
         out = output_file
         data = req.t
         if not req.args.get('raw'):
-            data = dumptree(req.t)
+            data = dumptree(req.t, pretty_print=req.args.get('pretty_print'))
 
         if os.path.isdir(output_file):
             file_name = "{}{}".format(enc(req.id), req.args.get('ext'))
