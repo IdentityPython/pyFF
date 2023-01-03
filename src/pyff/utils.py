@@ -155,8 +155,10 @@ def dumptree(t: ElementTree, pretty_print: bool = False, method: str = 'xml', xm
 
     :param t: An ElementTree to serialize
     """
+    if pretty_print:
+        etree.indent(t)
     return etree.tostring(
-        t, encoding='UTF-8', method=method, xml_declaration=xml_declaration, pretty_print=pretty_print
+        t, encoding='UTF-8', method=method, xml_declaration=xml_declaration
     )
 
 
