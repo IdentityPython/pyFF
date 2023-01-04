@@ -477,7 +477,8 @@ def publish(req: Plumbing.Request, *opts):
 
     If output is an existing directory, publish will write the working tree to a filename in the directory
     based on the @entityID or @Name attribute. Unless 'raw' is set to true the working tree will be serialized
-    to a string before writing. If true, 'hash_link' will generate a symlink based on the hash id (sha1) for
+    to a string before writing, with minimal formatting if 'pretty_print' is true (see 'indent' action for more
+    extensive control). If true, 'hash_link' will generate a symlink based on the hash id (sha1) for
     compatibility with MDQ. Unless false, 'update_store' will cause the the current store to be updated with
     the published artifact. Setting 'ext' allows control over the file extension.
     """
