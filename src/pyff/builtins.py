@@ -18,6 +18,7 @@ from typing import Dict, Optional
 import ipaddress
 import six
 import xmlsec
+from lxml import etree
 from lxml.etree import DocumentInvalid
 from six.moves.urllib_parse import quote_plus, urlparse
 
@@ -1156,6 +1157,42 @@ def xslt(req: Plumbing.Request, *opts):
     except Exception as ex:
         log.debug(traceback.format_exc())
         raise ex
+
+@pipe
+def indent(req: Plumbing.Request, *opts):
+    """
+
+    Transform the working document using proper indentation. Requires lxml >= 4.5
+
+    :param req: The request
+    :param opts: Options (unused)
+    :return: the transformation result
+
+    Indent the working document.
+
+    **Examples**
+
+    .. code-block:: yaml
+
+        - indent:
+            space: '    '
+
+    """
+    if req.t is None:
+        raise PipeException("Your plumbing is missing a select statement.")
+
+    if not req.args:
+        req.args = {}
+
+    if not isinstance(req.args, dict):
+        raise PipeException("usage: indent {space: '    '}")
+
+    space = req.args.get('space', '  ')
+
+    if callable(getattr(etree, 'indent', None)):
+        return etree.indent(req.t, space=space)
+    else:
+        raise PipeException("lxml version >= 4.5 required.")
 
 
 @pipe
