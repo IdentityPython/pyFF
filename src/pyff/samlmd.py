@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from distutils.util import strtobool
 from io import BytesIO
 from itertools import chain
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
+from xmlrpc.client import boolean
 
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -760,7 +761,6 @@ def entity_display_name(entity: Element, langs=None) -> str:
 
     return entity.get('entityID').strip()
 
-
 def sub_domains(e):
     lst = []
     domains = entity_domains(e)
@@ -777,6 +777,43 @@ def entity_scopes(e):
         return None
     return [s.text for s in elt]
 
+def entity_trust_resolve_trusted_entities(elt:Element) -> Tuple[set, bool]:
+    return set([e['entityID'] for e in elt.findall(elt['select'])]), elt['include'].lower() not in ['false','off','0']
+
+def entity_trust_profile_trusted_entities(elt:Element) -> set:
+    t = set([e.text for e in elt.findall('.//{%s}TrustedEntity' % NS['ti'])])
+    for e in elt.findall('.//{%s}TrustedEntities'% NS['ti']):
+        s,inc = entity_trust_resolve_trusted_entities(e)
+        if inc:
+            t.update(s)
+        else:
+            t.difference_update(s)
+    return t
+    
+def entity_trust_profile(e:Element) -> dict:
+    return dict(
+        name = e['name'],
+        strict = e['strict'],
+        display_name_langs=lang_dict(e.findall('.//{%s}DisplayName', NS['ti']), lambda e: e.text),
+        trusted_entities=[
+            dict(include=elt['include'].lower() not in ['false','off','0'], match=elt['match'], value=elt.text) 
+                for elt in e.findall('.//{%s}TrustedEntity' % NS['ti'])
+        ]
+    )
+
+def entity_trust_info(e: Element) -> dict:
+    elt = e.findall('.//{%s}SPSSODescriptor/{%s}Extensions/{%s}/TrustInfo' % (NS['md'], NS['md'],NS['ti']))
+    if elt is None or len(elt) != 1:
+        return None
+    elt = elt[0]
+    d = dict(
+        metadata_source=[e.text for e in elt.findall('.//{%s}MetadataSource' % NS['ti'])],
+        trust_profile=[entity_trust_profile(e) for e in elt.findall('.//{%s}TrustProfile' % NS['ti'])],
+    )
+    fallback_handler = [e.text for e in elt.findall('.//{%s}FallbackHandler' % NS['ti'])]
+    if len(fallback_handler) == 1:
+        d['fallback_handler'] = fallback_handler[0]
+    return d
 
 def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     if e is None:
@@ -831,6 +868,8 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     geo = entity_geoloc(e)
     if geo:
         d['geo'] = geo
+
+    d['trust_info'] = entity_trust_info(e)
 
     return d
 
