@@ -4,7 +4,7 @@ import tempfile
 from mako.lookup import TemplateLookup
 
 from pyff.constants import NS
-from pyff.pipes import plumbing
+from pyff.pipes import PipeState, plumbing
 from pyff.repo import MDRepository
 from pyff.test import SignerTestCase
 
@@ -24,8 +24,8 @@ class SimplePipeLineTest(SignerTestCase):
             fd.write(self.signer_template.render(ctx=self))
         with open(self.validator, "w") as fd:
             fd.write(self.validator_template.render(ctx=self))
-        self.signer_result = plumbing(self.signer).process(self.md_signer, state={'batch': True, 'stats': {}})
-        self.validator_result = plumbing(self.validator).process(self.md_validator, state={'batch': True, 'stats': {}})
+        self.signer_result = plumbing(self.signer).process(self.md_signer, state=PipeState(batch=True))
+        self.validator_result = plumbing(self.validator).process(self.md_validator, state=PipeState(batch=True))
 
     def test_entityid_present(self):
         eids = [e.get('entityID') for e in self.md_signer.store]

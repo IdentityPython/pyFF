@@ -7,16 +7,24 @@ from __future__ import annotations
 import functools
 import os
 import traceback
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Type
+from typing import Union
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
 from lxml.etree import Element, ElementTree
+from pydantic import BaseModel, Field
 
 from pyff.logs import get_log
 from pyff.repo import MDRepository
 from pyff.store import SAMLStoreBase
 from pyff.utils import PyffException, is_text, resource_string
+
+if TYPE_CHECKING:
+    from pyff.api import MediaAccept
+
+    # Avoid static analysers flagging this import as unused
+    assert MediaAccept
 
 log = get_log(__name__)
 
@@ -77,7 +85,7 @@ class PluginsRegistry(dict):
     def the_something_func(req,*opts):
         pass
 
-    Referencing this function as an entry_point using something = module:the_somethig_func in setup.py allows the
+    Referencing this function as an entry_point using something = module:the_something_func in setup.py allows the
     function to be referenced as 'something' in a pipeline.
     """
 
@@ -160,20 +168,35 @@ class PipelineCallback(object):
         # TODO: This seems... dangerous. What's the need for this?
         return self
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, t: ElementTree, state: Optional[PipeState] = None) -> Any:
         log.debug("{!s}: called".format(self.plumbing))
-        t = args[0]
+        if state is None:
+            state = PipeState()
         if t is None:
             raise ValueError("PipelineCallback must be called with a parse-tree argument")
+        if not isinstance(state, PipeState):
+            raise ValueError(f'PipelineCallback called with invalid state ({type(state)}')
         try:
-            state = kwargs
-            state[self.entry_point] = True
-            log.debug("state: {}".format(repr(state)))
+            state.entry_name = self.entry_point
+            log.debug("state: {}".format(state))
             return self.plumbing.process(self.req.md, store=self.store, state=state, t=t)
         except Exception as ex:
             log.debug(traceback.format_exc())
             log.error(f'Got an exception executing the plumbing process: {ex}')
             raise ex
+
+
+class PipeState(BaseModel):
+    batch: bool = False
+    entry_name: Optional[str] = None
+    headers: Dict[str, Any] = Field({})
+    accept: Any = None  # TODO: Re-arrange classes so that type 'MediaAccept' works
+    url: str = ''
+    select: str = ''
+    match: str = ''
+    path: str = ''
+    stats: Dict[str, Any] = Field({})
+    cache: int = 0  # cache_ttl
 
 
 class Plumbing(object):
@@ -201,7 +224,7 @@ class Plumbing(object):
 
     Running this plumbing would bake all metadata found in /var/metadata/registry and at http://md.example.com into an
     EntitiesDescriptor element with @Name http://example.com/metadata.xml, @cacheDuration set to 1hr and @validUntil
-    1 day from the time the 'finalize' command was run. The tree woud be transformed using the "tidy" stylesheets and
+    1 day from the time the 'finalize' command was run. The tree would be transformed using the "tidy" stylesheets and
     would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
     """
 
@@ -237,27 +260,25 @@ class Plumbing(object):
             self,
             pl: Plumbing,
             md: MDRepository,
-            t=None,
-            name=None,
-            args=None,
-            state: Optional[Dict[str, Any]] = None,
-            store=None,
+            state: Optional[PipeState] = None,
+            t: Optional[ElementTree] = None,
+            name: Optional[str] = None,
+            args: Optional[Union[str, Dict, List]] = None,
+            store: Optional[SAMLStoreBase] = None,
             scheduler: Optional[BackgroundScheduler] = None,
             raise_exceptions: bool = True,
         ):
-            if not state:
-                state = dict()
             if not args:
                 args = []
             self.plumbing: Plumbing = pl
             self.md: MDRepository = md
             self.t: ElementTree = t
             self._id: Optional[str] = None
-            self.name = name
+            self.name: Optional[str] = name
             self.args: Optional[Union[str, Dict, List]] = args
-            self.state: Dict[str, Any] = state
+            self.state: PipeState = state if state else PipeState()
             self.done: bool = False
-            self._store: SAMLStoreBase = store
+            self._store: Optional[SAMLStoreBase] = store
             self.scheduler: Optional[BackgroundScheduler] = scheduler
             self.raise_exceptions: bool = raise_exceptions
             self.exception: Optional[BaseException] = None
@@ -337,8 +358,8 @@ class Plumbing(object):
     def process(
         self,
         md: MDRepository,
+        state: PipeState,
         args: Any = None,
-        state: Optional[Dict[str, Any]] = None,
         t: Optional[ElementTree] = None,
         store: Optional[SAMLStoreBase] = None,
         raise_exceptions: bool = True,
@@ -357,9 +378,6 @@ class Plumbing(object):
         :param args: Pipeline arguments
         :return: The result of applying the processing pipeline to t.
         """
-        if not state:
-            state = dict()
-
         return Plumbing.Request(
             self, md, t=t, args=args, state=state, store=store, raise_exceptions=raise_exceptions, scheduler=scheduler
         ).process(self)
