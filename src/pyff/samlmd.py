@@ -1,7 +1,7 @@
 import traceback
 from copy import deepcopy
 from datetime import datetime, timedelta
-from distutils.util import strtobool
+from str2bool import str2bool
 from io import BytesIO
 from itertools import chain
 from typing import Any, Dict, List, Optional, Union
@@ -266,7 +266,7 @@ class MDServiceListParser(PyffParser):
                     if ep is not None and fp is not None:
                         args = dict(
                             country_code=mdl.get('Territory'),
-                            hide_from_discovery=strtobool(ep.get('HideFromDiscovery', 'false')),
+                            hide_from_discovery=str2bool(ep.get('HideFromDiscovery', 'false')),
                         )
                         log.debug(
                             "MDSL[{}]: {} verified by {} for country {}".format(

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-from distutils.core import setup
+from setuptools import setup
 from pathlib import PurePath
 from platform import python_implementation
 from typing import List

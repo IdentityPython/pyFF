@@ -37,7 +37,7 @@ class Fetch(threading.Thread):
         self.state('idle')
 
     def state(self, state):
-        self.setName("{} ({})".format(self._id, state))
+        self.name = "{} ({})".format(self._id, state)
 
     def run(self):
         while not self.halt:

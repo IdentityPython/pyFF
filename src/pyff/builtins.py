@@ -12,7 +12,7 @@ import sys
 import traceback
 from copy import deepcopy
 from datetime import datetime
-from distutils.util import strtobool
+from str2bool import str2bool
 from typing import Dict, Optional
 
 import ipaddress
@@ -494,7 +494,7 @@ def publish(req: Plumbing.Request, *opts):
 
     for t in ('raw', 'pretty_print', 'update_store', 'hash_link', 'urlencode_filenames'):
         if t in req.args and type(req.args[t]) is not bool:
-            req.args[t] = strtobool(str(req.args[t]))
+            req.args[t] = str2bool(str(req.args[t]))
 
     req.args.setdefault('ext', '.xml')
     req.args.setdefault('output_file', 'output')
@@ -630,9 +630,9 @@ def load(req: Plumbing.Request, *opts):
     _opts.setdefault('validate', "True")
     _opts.setdefault('fail_on_error', "False")
     _opts.setdefault('filter_invalid', "True")
-    _opts['validate'] = bool(strtobool(_opts['validate']))
-    _opts['fail_on_error'] = bool(strtobool(_opts['fail_on_error']))
-    _opts['filter_invalid'] = bool(strtobool(_opts['filter_invalid']))
+    _opts['validate'] = bool(str2bool(_opts['validate']))
+    _opts['fail_on_error'] = bool(str2bool(_opts['fail_on_error']))
+    _opts['filter_invalid'] = bool(str2bool(_opts['filter_invalid']))
 
     if not isinstance(req.args, list):
         raise ValueError('Non-list args to "load" not allowed')

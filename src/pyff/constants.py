@@ -8,7 +8,7 @@ import logging
 import os
 import re
 import sys
-from distutils.util import strtobool
+from str2bool import str2bool
 
 import pyconfig
 import six
@@ -87,7 +87,7 @@ def as_dict_of_string(o):
 
 def as_bool(o):
     if type(o) not in ('bool',):
-        o = bool(strtobool(str(o)))
+        o = bool(str2bool(str(o)))
     return o
 
 

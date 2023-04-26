@@ -96,7 +96,7 @@ class TestReadWriteLock(TestCase):
             self.exceptions[current_thread().name] = ex
 
     def _raise(self, t):
-        assert not t.isAlive()
+        assert not t.is_alive()
         if t.name in self.exceptions:
             raise self.exceptions[t.name]
 
