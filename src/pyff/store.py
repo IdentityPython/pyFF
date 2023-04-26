@@ -303,8 +303,12 @@ class SAMLStoreBase(object):
         scheduler = kwargs.pop('scheduler', None)
         if watched is not None and scheduler is not None:
             for r in watched.walk():
+                if r.t is None and len(r.children) > 0:
+                    r.t = entitiesdescriptor(list(filter(lambda c: c is not None, [c.t for c in r.children])), name=r.name, validate=True, filter_invalid=True)
                 if r.t is not None:
                     self.update(r.t, tid=r.name, etag=r.etag)
+                else:
+                    log.debug(f'Nothing to update for resource {r.name} with {len(r.children)} children')
 
     def select(self, member, xp=None):
         """
