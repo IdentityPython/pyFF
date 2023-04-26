@@ -313,6 +313,7 @@ class Config(object):
     )
 
     base_dir = S("base_dir", info="change to this directory before executing the pipeline")
+    compat_dir = S("dir", hidden=True, info="cf base_dir")
 
     modules = S("modules", default=[], typeconv=as_list_of_string, hidden=True, info="modules providing plugins")
 
@@ -553,6 +554,9 @@ def parse_options(program, docs):
                         setattr(s, 'value', a)
                 else:
                     raise ValueError("Unknown option {}".format(o))
+
+        #if config.compat_dir and not config.base_dir:
+        #    config.base_dir = config.compat_dir
 
     except Exception as ex:
         print(ex)

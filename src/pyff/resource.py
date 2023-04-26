@@ -89,8 +89,9 @@ class URLHandler(object):
 
     def i_schedule(self, things):
         for t in things:
-            self.pending[self.thing_to_url(t)] = t
-            self.fetcher.schedule(self.thing_to_url(t))
+            url = self.thing_to_url(t)
+            self.pending[url] = t
+            self.fetcher.schedule(url)
 
     def i_handle(self, t, url=None, response=None, exception=None, last_fetched=None):
         raise NotImplementedError()
@@ -145,6 +146,8 @@ class ResourceHandler(URLHandler):
                 t.info.exception = exception
             else:
                 children = t.parse(lambda u: response)
+                if t.t is None:
+                    log.debug(f'no thing while i_handle {url}')
                 self.i_schedule(children)
         except BaseException as ex:
             log.debug(traceback.format_exc())
@@ -296,7 +299,6 @@ class Resource(Watchable):
                     rp.done.release()
                 rp.fetcher.stop()
                 rp.fetcher.join()
-
             self.notify()
 
     def __len__(self):
@@ -468,7 +470,10 @@ class Resource(Watchable):
             if self.post:
                 for cb in self.post:
                     if self.t is not None:
-                        self.t = cb(self.t, self.opts.dict())
+                        n_t = cb(self.t, self.opts.dict())
+                        if n_t is None:
+                            log.warn(f'callback did not return anything when parsing {self.url} {info}')
+                        self.t = n_t
 
             if self.is_expired():
                 info.expired = True
@@ -479,6 +484,8 @@ class Resource(Watchable):
             if info.parser_info:
                 for (eid, error) in list(info.parser_info.validation_errors.items()):
                     log.error(error)
+        else:
+            log.debug(f'Parser did not produce anything (probably ok) when parsing {self.url} {info}')
 
         info.state = ResourceLoadState.Ready
 

@@ -53,7 +53,7 @@ class Fetch(threading.Thread):
                         self.response.put(
                             {'response': r, 'url': url, 'exception': None, 'last_fetched': datetime.now()}
                         )
-                        log.info("successfully fetched {}".format(url))
+                        log.debug("successfully fetched {}".format(url))
                     except Exception as ex:
                         self.response.put(
                             {'response': None, 'url': url, 'exception': ex, 'last_fetched': datetime.now()}
@@ -78,7 +78,7 @@ class Fetcher(threading.Thread, Watchable):
         threading.Thread.__init__(self)
         Watchable.__init__(self)
         self._id = name
-        self.setName('{} (master)'.format(self._id))
+        self.name = '{} (master)'.format(self._id)
         self.request = queue.Queue()
         self.response = queue.Queue()
         self.pool = threading.BoundedSemaphore(num_threads)
@@ -96,7 +96,7 @@ class Fetcher(threading.Thread, Watchable):
         :param url: the url to fetch
         :return: nothing is returned.
         """
-        log.info("scheduling fetch of {}".format(url))
+        log.debug("scheduling fetch of {}".format(url))
         self.request.put(url)
 
     def stop(self):

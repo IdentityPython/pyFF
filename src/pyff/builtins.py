@@ -57,7 +57,7 @@ from pyff.utils import (
 
 __author__ = 'leifj'
 
-FILESPEC_REGEX = "([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)"
+FILESPEC_REGEX = r'([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)'
 log = get_log(__name__)
 
 
@@ -1578,8 +1578,8 @@ def finalize(req: Plumbing.Request, *opts):
     now = utc_now()
 
     mdid = req.args.get('ID', 'prefix _')
-    if re.match('(\s)*prefix(\s)*', mdid):
-        prefix = re.sub('^(\s)*prefix(\s)*', '', mdid)
+    if re.match(r'(\s)*prefix(\s)*', mdid):
+        prefix = re.sub(r'^(\s)*prefix(\s)*', '', mdid)
         _id = now.strftime(prefix + "%Y%m%dT%H%M%SZ")
     else:
         _id = mdid
