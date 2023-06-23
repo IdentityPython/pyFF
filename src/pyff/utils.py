@@ -696,7 +696,7 @@ class DirAdapter(BaseAdapter):
         pass
 
 
-def url_get(url: str) -> Response:
+def url_get(url: str, verify_tls: bool) -> Response:
     """
     Download an URL using a cache and return the response object
     :param url:
@@ -727,10 +727,10 @@ def url_get(url: str) -> Response:
     if _etag is not None:
         headers['If-None-Match'] = _etag
     try:
-        r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+        r = s.get(url, headers=headers, verify=verify_tls, timeout=config.request_timeout)
     except IOError as ex:
         s = requests.Session()
-        r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+        r = s.get(url, headers=headers, verify=verify_tls, timeout=config.request_timeout)
 
     if six.PY2:
         r.encoding = "utf-8"

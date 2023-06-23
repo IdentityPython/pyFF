@@ -145,7 +145,7 @@ class ResourceHandler(URLHandler):
             if exception is not None:
                 t.info.exception = exception
             else:
-                children = t.parse(lambda u: response)
+                children = t.parse(lambda u, v: response)
                 if t.t is None:
                     log.debug(f'no thing while i_handle {url}')
                 self.i_schedule(children)
@@ -169,6 +169,7 @@ class ResourceOpts(BaseModel):
     filter_invalid: bool = True
     # set to False to turn off all XML schema validation
     validate_schema: bool = Field(True, alias='validate')
+    verify_tls: bool = False
 
     class Config:
         arbitrary_types_allowed = True
@@ -394,6 +395,7 @@ class Resource(Watchable):
         data: Optional[str] = None
         status: int = 500
         info = self.add_info()
+        verify_tls = self.opts.verify_tls
 
         log.debug("Loading resource {}".format(self.url))
 
@@ -402,7 +404,7 @@ class Resource(Watchable):
             return data, status, info
 
         try:
-            r = getter(self.url)
+            r = getter(self.url, verify_tls)
 
             info.http_headers = dict(r.headers)
             log.debug(

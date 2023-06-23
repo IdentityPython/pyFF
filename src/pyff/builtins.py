@@ -630,9 +630,11 @@ def load(req: Plumbing.Request, *opts):
     _opts.setdefault('validate', "True")
     _opts.setdefault('fail_on_error', "False")
     _opts.setdefault('filter_invalid', "True")
+    _opts.setdefault('verify_tls', "False")
     _opts['validate'] = bool(str2bool(_opts['validate']))
     _opts['fail_on_error'] = bool(str2bool(_opts['fail_on_error']))
     _opts['filter_invalid'] = bool(str2bool(_opts['filter_invalid']))
+    _opts['verify_tls'] = bool(str2bool(_opts['verify_tls']))
 
     if not isinstance(req.args, list):
         raise ValueError('Non-list args to "load" not allowed')
