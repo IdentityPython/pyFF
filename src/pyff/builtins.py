@@ -623,6 +623,7 @@ def load(req: Plumbing.Request, *opts):
                                      I.e. are not loaded. When false the entire metadata file is either loaded, or not.
                                      fail_on_error controls whether failure to validating the entire MD file will abort
                                      processing of the pipeline.
+    - verify_tls <True|False*>     : Controls the validation of the host's TLS certificate on fetching the resources
     """
     _opts = dict(list(zip(opts[::2], opts[1::2])))
     _opts.setdefault('timeout', 120)
