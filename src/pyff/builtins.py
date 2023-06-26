@@ -599,7 +599,7 @@ def load(req: Plumbing.Request, *opts):
 
     Supports both remote and local resources. Fetching remote resources is done in parallel using threads.
 
-    Note: When downloading remote files over HTTPS the TLS server certificate is not validated.
+    Note: When downloading remote files over HTTPS the TLS server certificate is not validated by default
     Note: Default behaviour is to ignore metadata files or entities in MD files that cannot be loaded
 
     Options are put directly after "load". E.g:
