@@ -599,7 +599,7 @@ def load(req: Plumbing.Request, *opts):
 
     Supports both remote and local resources. Fetching remote resources is done in parallel using threads.
 
-    Note: When downloading remote files over HTTPS the TLS server certificate is not validated.
+    Note: When downloading remote files over HTTPS the TLS server certificate is not validated by default
     Note: Default behaviour is to ignore metadata files or entities in MD files that cannot be loaded
 
     Options are put directly after "load". E.g:
@@ -623,6 +623,7 @@ def load(req: Plumbing.Request, *opts):
                                      I.e. are not loaded. When false the entire metadata file is either loaded, or not.
                                      fail_on_error controls whether failure to validating the entire MD file will abort
                                      processing of the pipeline.
+    - verify_tls <True|False*>     : Controls the validation of the host's TLS certificate on fetching the resources
     """
     _opts = dict(list(zip(opts[::2], opts[1::2])))
     _opts.setdefault('timeout', 120)
@@ -630,9 +631,11 @@ def load(req: Plumbing.Request, *opts):
     _opts.setdefault('validate', "True")
     _opts.setdefault('fail_on_error', "False")
     _opts.setdefault('filter_invalid', "True")
+    _opts.setdefault('verify_tls', "False")
     _opts['validate'] = bool(str2bool(_opts['validate']))
     _opts['fail_on_error'] = bool(str2bool(_opts['fail_on_error']))
     _opts['filter_invalid'] = bool(str2bool(_opts['filter_invalid']))
+    _opts['verify_tls'] = bool(str2bool(_opts['verify_tls']))
 
     if not isinstance(req.args, list):
         raise ValueError('Non-list args to "load" not allowed')
