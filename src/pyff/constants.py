@@ -34,7 +34,8 @@ NS = dict(md="urn:oasis:names:tc:SAML:2.0:metadata",
           xs="http://www.w3.org/2001/XMLSchema",
           xsi="http://www.w3.org/2001/XMLSchema-instance",
           ser="http://eidas.europa.eu/metadata/servicelist",
-          eidas="http://eidas.europa.eu/saml-extensions")
+          eidas="http://eidas.europa.eu/saml-extensions",
+          ti="urn:oasis:names:tc:SAML:metadata:trustinfo")
 
 #: These are the attribute aliases pyFF knows about. These are used to build URI paths, populate the index
 #: and simplify lookup expressions involving boolean or set logic.

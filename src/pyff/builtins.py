@@ -24,7 +24,8 @@ from .pipes import Plumbing, PipeException, PipelineCallback, pipe
 from .utils import total_seconds, dumptree, safe_write, root, with_tree, duration2timedelta, xslt_transform, \
     validate_document, hash_id
 from .samlmd import sort_entities, iter_entities, annotate_entity, set_entity_attributes, \
-    discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities
+    discojson_t, set_pubinfo, set_reginfo, find_in_document, entitiesdescriptor, set_nodecountry, resolve_entities, \
+    tinfojson_t
 from six.moves.urllib_parse import urlparse
 from .exceptions import MetadataException
 import six
@@ -902,6 +903,66 @@ def _discojson(req, *opts):
 
     res = discojson_t(req.t, icon_store=req.md.icon_store)
     res.sort(key=operator.itemgetter('title'))
+
+    return json.dumps(res)
+
+
+@pipe(name='tinfojson')
+def _tinfojson(req, *opts):
+    """
+
+    Return a json representation of the trust information
+
+    .. code-block:: yaml
+      tinfojson:
+
+    The returned json doc will have the following structure.
+
+    The root is a dictionary, in which the keys are the entityID's
+    of the SP entities that have trust information in their metadata,
+    and the values are a representation of that trust information.
+
+    For the XML structure of the trust information see the XML Schema
+    in this repo at `/src/pyff/schema/saml-metadata-trustinfo-v1.0.xsd`.
+
+    For each SP with trust information, the representation of
+    that information is as follows.
+
+    If there are MetadataSource elements, there will be a key
+    'extra_md' pointing to a list of the metadata from those additional
+    sources with the format provided by the discojson function above.
+
+    Then there will be a key 'profiles' pointing to a dictionary
+    in which the keys are the names of the trust profiles, and the values
+    are json representations of those trust profiles.
+
+    Each trust profile will have the following keys.
+
+    If the trust profile includes a FallbackHandler element, there will
+    be a key 'fallback_handler' pointing to a dict with 2 keys, 'profile'
+    which by default is 'href', and handler which is a string, commonly a URL.
+
+    Then there will be an 'entity' key pointing to a list of representations of
+    individual trusted entities, each of them a dictionary, with 2 keys:
+    'entity_id' pointing to a string with the entityID, and 'include',
+    pointing to a boolean.
+
+    Finally there will be a key 'entities' pointing to a list of representations
+    of groups of trusted entities, each of them a dictionary with 3 keys:
+    a 'match' key pointing to the property of the entities by which they will be selected,
+    by default 'registrationAuthority', a key 'select' with the value that will be used
+    to select the 'match' property, and 'include', pointing to a boolean.
+
+    :param req: The request
+    :param opts: Options (unusued)
+    :return: returns a JSON doc
+
+    """
+
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    res = tinfojson_t(req.t)
 
     return json.dumps(res)
 

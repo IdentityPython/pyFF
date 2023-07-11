@@ -1,3 +1,4 @@
+import json
 import shutil
 import sys
 import tempfile
@@ -702,3 +703,35 @@ class SigningTest(PipeLineTest):
             except ValueError:
                 pass
             assert("Expected exception from bad namespace in")
+
+    def test_tinfojson(self):
+        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+            tmpdir = tempfile.mkdtemp()
+            os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
+            try:
+                self.exec_pipeline("""
+- load:
+   - file://%s/metadata/test02-sp.xml
+- select
+- tinfojson
+- publish:
+    output: %s/tinfo.json
+    raw: true
+    update_store: false
+""" % (self.datadir, tmpdir))
+                fn = "%s/tinfo.json" % tmpdir
+                assert os.path.exists(fn)
+                with open(fn, 'r') as f:
+                    tinfo_json = json.load(f)
+
+                assert 'https://example.com.com/shibboleth' in tinfo_json
+                example_tinfo = tinfo_json['https://example.com.com/shibboleth']
+                assert 'customer' in example_tinfo['profiles']
+                customer_tinfo = example_tinfo['profiles']['customer']
+                assert customer_tinfo['entity'][0] == {'entity_id': 'https://example.org/idp.xml', 'include': True}
+                assert customer_tinfo['entities'][0] == {'select': 'http://www.swamid.se/', 'match': 'registrationAuthority', 'include': True}
+                assert customer_tinfo['fallback_handler'] == {'profile': 'href', 'handler': 'https://www.example.org/about'}
+            except IOError:
+                pass
+            finally:
+                shutil.rmtree(tmpdir)
