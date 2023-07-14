@@ -698,6 +698,11 @@ def entity_extended_display_i18n(entity, default_lang=None):
     return name_dict, desc_dict
 
 
+def registration_authority(entity):
+    regauth_el = entity.find(".//{%s}RegistrationInfo" % NS['mdrpi'])
+    return regauth_el.attrib.get('registrationAuthority')
+
+
 def entity_extended_display(entity, langs=None):
     """Utility-method for computing a displayable string for a given entity.
 
@@ -786,6 +791,7 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     title, descr = entity_extended_display(e)
     entity_id = e.get('entityID')
     title_langs, descr_langs = entity_extended_display_i18n(e)
+    registrationAuthority = registration_authority(e)
 
     d = dict(
         title=title,
@@ -795,6 +801,7 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
         auth='saml',
         entity_id=entity_id,
         entityID=entity_id,
+        registrationAuthority=registrationAuthority,
     )
 
     eattr = entity_attribute_dict(e)
@@ -861,7 +868,11 @@ def fetch_mdjson(urls):
 
     ot = entitiesdescriptor(entities, 'extra-sources')
 
-    entities_json = discojson_t(ot)
+    entities_json_list = discojson_t(ot)
+
+    entities_json = {}
+    for e in entities_json_list:
+        entities_json[e['entityID']] = e
 
     return entities_json
 
@@ -871,7 +882,9 @@ def tinfojson(e):
 
     tinfo_el = e.find('.//{%s}TrustInfo' % NS['ti'])
     if tinfo_el is None:
-        return tinfo
+        return None
+
+    tinfo['entityID'] = e.get('entityID', None)
 
     # grab metadata sources, download metadata, and translate to json
     md_source_urls = [el.text for el in tinfo_el.findall('.//{%s}MetadataSource' % NS['ti'])]
@@ -893,26 +906,26 @@ def tinfojson(e):
         for entity_el in profile_el.findall('.//{%s}TrustedEntity' % NS['ti']):
             entity_id = entity_el.text
             include = entity_el.attrib.get('include', True)
+            include = include if type(include) is bool else include in ('t', 'T', 'true', 'True')
             tinfo['profiles'][name]['entity'].append({'entity_id': entity_id, 'include': include})
 
         for entities_el in profile_el.findall('.//{%s}TrustedEntities' % NS['ti']):
             select = entities_el.text
             match = entities_el.attrib.get('match', 'registrationAuthority')
             include = entities_el.attrib.get('include', True)
+            include = include if type(include) is bool else include in ('t', 'T', 'true', 'True')
             tinfo['profiles'][name]['entities'].append({'select': select, 'match': match, 'include': include})
 
     return tinfo
 
 
 def tinfojson_t(t):
-    d = {}
+    d = []
 
     for e in iter_entities(t):
         tinfo = tinfojson(e)
-        if tinfo:
-            entity_id = e.get('entityID', None)
-            if entity_id is not None:
-                d[entity_id] = tinfo
+        if tinfo is not None:
+            d.append(tinfo)
 
     return d
 

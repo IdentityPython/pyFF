@@ -1004,8 +1004,9 @@ def _tinfojson(req, *opts):
     that information is as follows.
 
     If there are MetadataSource elements, there will be a key
-    'extra_md' pointing to a list of the metadata from those additional
-    sources with the format provided by the discojson function above.
+    'extra_md' pointing to a dictionary of the metadata from those additional
+    sources, with entityIDs as keys and entities (with the format provided by
+    the discojson function above) as values.
 
     Then there will be a key 'profiles' pointing to a dictionary
     in which the keys are the names of the trust profiles, and the values
@@ -1018,12 +1019,12 @@ def _tinfojson(req, *opts):
     which by default is 'href', and handler which is a string, commonly a URL.
 
     Then there will be an 'entity' key pointing to a list of representations of
-    individual trusted entities, each of them a dictionary, with 2 keys:
+    individual trusted/untrusted entities, each of them a dictionary, with 2 keys:
     'entity_id' pointing to a string with the entityID, and 'include',
     pointing to a boolean.
 
     Finally there will be a key 'entities' pointing to a list of representations
-    of groups of trusted entities, each of them a dictionary with 3 keys:
+    of groups of trusted/untrusted entities, each of them a dictionary with 3 keys:
     a 'match' key pointing to the property of the entities by which they will be selected,
     by default 'registrationAuthority', a key 'select' with the value that will be used
     to select the 'match' property, and 'include', pointing to a boolean.
