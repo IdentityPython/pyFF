@@ -889,7 +889,10 @@ def tinfojson(e):
     # grab metadata sources, download metadata, and translate to json
     md_source_urls = [el.text for el in tinfo_el.findall('.//{%s}MetadataSource' % NS['ti'])]
     if len(md_source_urls) > 0:
-        tinfo['extra_md'] = fetch_mdjson(md_source_urls)
+        try:
+            tinfo['extra_md'] = fetch_mdjson(md_source_urls)
+        except Exception as e:
+            raise ValueError(f"Problem interpreting metadata at {md_source_urls}: {e}")
 
     tinfo['profiles'] = {}
     # Grab trust profile emements, and translate to json
