@@ -1,19 +1,19 @@
-
 import logging
+import os
+import socket
 import subprocess
 import sys
 import tempfile
 from unittest import TestCase
-import os
+
 import pkg_resources
 import six
-import socket
-import random
 
 from pyff import __version__ as pyffversion
 
 # range of ports where available ports can be found
 PORT_RANGE = [33000, 60000]
+
 
 class ExitException(Exception):
     def __init__(self, code):
@@ -49,7 +49,8 @@ def run_cmdline(script, *args):
     starter = tempfile.NamedTemporaryFile('w').name
     print("starting %s using %s" % (script, starter))
     with open(starter, 'w') as fd:
-        fd.write("""#!%s
+        fd.write(
+            """#!%s
 import sys
 import coverage
 import os
@@ -68,7 +69,9 @@ if __name__ == '__main__':
         os.rename('.coverage','.coverage.%%d' %% os.getpid())
     sys.exit(rv)
 
-""" % (sys.executable, pyffversion, script))
+"""
+            % (sys.executable, pyffversion, script)
+        )
     os.chmod(starter, 0o700)
 
     argv.insert(0, starter)
@@ -129,15 +132,22 @@ class SignerTestCase(TestCase):
         cls.private_keyspec = tempfile.NamedTemporaryFile('w').name
         cls.public_keyspec = tempfile.NamedTemporaryFile('w').name
 
-        _p(['openssl', 'genrsa',
-            '2048'], outf=cls.private_keyspec, ignore_exit=True)
-        _p(['openssl', 'req',
-            '-x509',
-            '-sha1',
-            '-new',
-            '-subj', '/CN=Signer',
-            '-key', cls.private_keyspec,
-            '-out', cls.public_keyspec])
+        _p(['openssl', 'genrsa', '2048'], outf=cls.private_keyspec, ignore_exit=True)
+        _p(
+            [
+                'openssl',
+                'req',
+                '-x509',
+                '-sha1',
+                '-new',
+                '-subj',
+                '/CN=Signer',
+                '-key',
+                cls.private_keyspec,
+                '-out',
+                cls.public_keyspec,
+            ]
+        )
 
     @classmethod
     def tearDownClass(cls):

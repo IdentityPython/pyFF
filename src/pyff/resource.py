@@ -1,21 +1,48 @@
 """
 
-An abstraction layer for metadata fetchers. Supports both syncronous and asyncronous fetchers with cache.
+An abstraction layer for metadata fetchers. Supports both synchronous and asynchronous fetchers with cache.
 
 """
+from __future__ import annotations
 
-from .logs import get_log
 import os
-import requests
-from .constants import config
-from datetime import datetime
+import traceback
 from collections import deque
-from .parse import parse_resource
-from .exceptions import ResourceException
-from .utils import url_get, non_blocking_lock, hex_digest, img_to_data, Watchable
-from copy import deepcopy
-from threading import Lock, Condition
-from .fetch import make_fetcher
+from datetime import datetime
+from enum import Enum
+from threading import Condition, Lock
+from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, TYPE_CHECKING, Tuple
+from urllib.parse import quote as urlescape
+
+import requests
+from lxml.etree import ElementTree
+from pydantic import BaseModel, Field
+from requests.adapters import Response
+
+from pyff.constants import config
+from pyff.exceptions import ResourceException
+from pyff.fetch import make_fetcher
+from pyff.logs import get_log
+from pyff.utils import (
+    Watchable,
+    hex_digest,
+    img_to_data,
+    non_blocking_lock,
+    resource_string,
+    safe_write,
+    url_get,
+    utc_now,
+)
+
+if TYPE_CHECKING:
+    from pyff.parse import ParserInfo, PyffParser
+    from pyff.pipes import PipelineCallback
+    from pyff.utils import Lambda
+
+    # ensure static analysis doesn't flag these as unused
+    assert PyffParser
+    assert PipelineCallback
+    assert Lambda
 
 requests.packages.urllib3.disable_warnings()
 
@@ -25,7 +52,7 @@ log = get_log(__name__)
 class URLHandler(object):
     def __init__(self, *args, **kwargs):
         log.debug("create urlhandler {} {}".format(args, kwargs))
-        self.pending = {}
+        self.pending: Dict[str, Resource] = {}
         self.name = kwargs.pop('name', None)
         self.content_handler = kwargs.pop('content_handler', None)
         self._setup()
@@ -62,8 +89,9 @@ class URLHandler(object):
 
     def i_schedule(self, things):
         for t in things:
-            self.pending[self.thing_to_url(t)] = t
-            self.fetcher.schedule(self.thing_to_url(t))
+            url = self.thing_to_url(t)
+            self.pending[url] = t
+            self.fetcher.schedule(url)
 
     def i_handle(self, t, url=None, response=None, exception=None, last_fetched=None):
         raise NotImplementedError()
@@ -101,52 +129,120 @@ class IconHandler(URLHandler):
             else:
                 self.icon_store.update(url, None, info=dict(exception=exception))
         except BaseException as ex:
-            log.warn(ex)
+            log.debug(traceback.format_exc())
+            log.error(f'Failed handling icon: {ex}')
 
 
 class ResourceHandler(URLHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
 
-    def thing_to_url(self, t):
+    def thing_to_url(self, t: Resource) -> Optional[str]:
         return t.url
 
-    def i_handle(self, t, url=None, response=None, exception=None, last_fetched=None):
+    def i_handle(self, t: Resource, url=None, response=None, exception=None, last_fetched=None):
         try:
             if exception is not None:
-                t.info['Exception'] = exception
+                t.info.exception = exception
             else:
-                children = t.parse(lambda u: response)
+                children = t.parse(lambda u, v: response)
+                if t.t is None:
+                    log.debug(f'no thing while i_handle {url}')
                 self.i_schedule(children)
         except BaseException as ex:
-            log.warn(ex)
-            t.info['Exception'] = ex
+            log.debug(traceback.format_exc())
+            log.error(f'Failed handling resource: {ex}')
+            t.info.exception = ex
+
+
+class ResourceOpts(BaseModel):
+    alias: Optional[str] = Field(None, alias='as')  # TODO: Rename to 'name'?
+    # a certificate (file) or a SHA1 fingerprint to use for signature verification
+    verify: Optional[str] = None
+    # TODO: move classes to make the correct typing work: Iterable[Union[Lambda, PipelineCallback]] = Field([])
+    via: List[Callable] = Field([])
+    # A list of callbacks that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
+    # TODO: sort imports to make the correct typing work: Iterable[PipelineCallback] = Field([])
+    cleanup: List[Callable] = Field([])
+    fail_on_error: bool = False
+    # remove invalid EntityDescriptor elements rather than raise an error
+    filter_invalid: bool = True
+    # set to False to turn off all XML schema validation
+    validate_schema: bool = Field(True, alias='validate')
+    verify_tls: bool = False
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = self.dict()
+        # Compensate for the 'alias' field options
+        res['as'] = res.pop('alias')
+        res['validate'] = res.pop('validate_schema')
+        return res
+
+
+class ResourceLoadState(str, Enum):
+    Fetched = 'Fetched'
+    Parsing = 'Parsing'
+    Parsed = 'Parsed'
+    Ready = 'Ready'
+
+
+class ResourceInfo(BaseModel):
+    resource: str  # URL
+    state: Optional[ResourceLoadState] = None
+    http_headers: Dict[str, Any] = Field({})
+    reason: Optional[str] = None
+    status_code: Optional[str]  # HTTP status code as string. TODO: change to int
+    parser_info: Optional[ParserInfo] = None
+    expired: Optional[bool] = None
+    exception: Optional[BaseException] = None
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        def _format_key(k: str) -> str:
+            special = {'http_headers': 'HTTP Response Headers'}
+            if k in special:
+                return special[k]
+            # Turn validation_errors into 'Validation Errors'
+            return k.replace('_', ' ').title()
+
+        res = {_format_key(k): v for k, v in self.dict().items()}
+
+        if self.parser_info:
+            # Move contents from sub-dict to top of dict, for backwards compatibility
+            res.update(self.parser_info.to_dict())
+        del res['Parser Info']
+
+        # backwards compat
+        if res['Description'] == 'SAML Metadata':
+            del res['Description']
+        if res['Exception'] is None:
+            del res['Exception']
+
+        return res
 
 
 class Resource(Watchable):
-    def __init__(self, url=None, **kwargs):
+    def __init__(self, url: Optional[str], opts: ResourceOpts):
         super().__init__()
-        self.url = url
-        self.opts = kwargs
-        self.t = None
-        self.type = "text/plain"
-        self.etag = None
-        self.expire_time = None
-        self.never_expires = False
-        self.last_seen = None
-        self.last_parser = None
-        self._infos = deque(maxlen=config.info_buffer_size)
-        self.children = deque()
+        self.url: Optional[str] = url
+        self.opts: ResourceOpts = opts
+        self.t: Optional[ElementTree] = None
+        self.type: str = "text/plain"
+        self.etag: Optional[str] = None
+        self.expire_time: Optional[datetime] = None
+        self.never_expires: bool = False
+        self.last_seen: Optional[datetime] = None
+        self.last_parser: Optional['PyffParser'] = None  # importing PyffParser in this module causes a loop
+        self._infos: Deque[ResourceInfo] = deque(maxlen=config.info_buffer_size)
+        self.children: Deque[Resource] = deque()
         self._setup()
 
     def _setup(self):
-        self.opts.setdefault('cleanup', [])
-        self.opts.setdefault('via', [])
-        self.opts.setdefault('fail_on_error', False)
-        self.opts.setdefault('verify', None)
-        self.opts.setdefault('filter_invalid', True)
-        self.opts.setdefault('validate', True)
         if self.url is not None:
             if "://" not in self.url:
                 pth = os.path.abspath(self.url)
@@ -167,19 +263,27 @@ class Resource(Watchable):
         raise ValueError("this object should not be unpickled")
 
     @property
-    def post(self):
-        return self.opts['via']
-
-    def add_via(self, callback):
-        self.opts['via'].append(callback)
+    def local_copy_fn(self):
+        return os.path.join(config.local_copy_dir, urlescape(self.url))
 
     @property
-    def cleanup(self):
-        return self.opts['cleanup']
+    def post(
+        self,
+    ) -> Iterable[Callable]:  # TODO: move classes to make this work -> List[Union['Lambda', 'PipelineCallback']]:
+        return self.opts.via
+
+    def add_via(self, callback: Callable) -> None:
+        # TODO: move classes to be able to declare callback: Union['Lambda', 'PipelineCallback']
+        self.opts.via.append(callback)
+
+    @property
+    def cleanup(self) -> Iterable[Callable]:  # TODO: move classes to make this work -> Iterable['PipelineCallback']:
+        return self.opts.cleanup
 
     def __str__(self):
-        return "Resource {} expires at {} using ".format(self.url if self.url is not None else "(root)", self.expire_time) + \
-               ",".join(["{}={}".format(k, v) for k, v in list(self.opts.items())])
+        return "Resource {} expires at {} using ".format(
+            self.url if self.url is not None else "(root)", self.expire_time
+        ) + ",".join(["{}={}".format(k, v) for k, v in sorted(list(self.opts.dict().items()))])
 
     def reload(self, fail_on_error=False):
         with non_blocking_lock(self.lock):
@@ -196,7 +300,6 @@ class Resource(Watchable):
                     rp.done.release()
                 rp.fetcher.stop()
                 rp.fetcher.join()
-
             self.notify()
 
     def __len__(self):
@@ -218,99 +321,174 @@ class Resource(Watchable):
             for cn in c.walk():
                 yield cn
 
-    def is_expired(self):
-        if self.never_expires:
+    def is_expired(self) -> bool:
+        if self.never_expires or self.expire_time is None:
             return False
-        now = datetime.now()
-        return self.expire_time is not None and self.expire_time < now
+        return self.expire_time < utc_now()
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return not self.is_expired() and self.last_seen is not None and self.last_parser is not None
 
-    def add_info(self, info):
+    def add_info(self) -> ResourceInfo:
+        info = ResourceInfo(resource=self.url)
         self._infos.append(info)
+        return info
 
-    def _replace(self, r):
+    def _replace(self, r: Resource) -> None:
         for i in range(0, len(self.children)):
             if self.children[i].url == r.url:
                 self.children[i] = r
                 return
         raise ValueError("Resource {} not present - use add_child".format(r.url))
 
-    def add_child(self, url, **kwargs):
-        opts = deepcopy(self.opts)
-        if 'as' in opts:
-            del opts['as']
-        opts.update(kwargs)
-        r = Resource(url, **opts)
+    def add_child(self, url: str, opts: ResourceOpts) -> Resource:
+        r = Resource(url, opts)
         if r in self.children:
+            log.debug(f'\n\n{self}:\nURL {url}\nReplacing child {r}')
             self._replace(r)
         else:
+            log.debug(f'\n\n{self}:\nURL {url}\nAdding child {r}')
+            if not r.opts.via:
+                log.debug('Empty Via')
             self.children.append(r)
 
         return r
 
     @property
-    def name(self):
-        if 'as' in self.opts:
-            return self.opts['as']
-        else:
-            return self.url
+    def name(self) -> Optional[str]:
+        if self.opts.alias:
+            return self.opts.alias
+        return self.url
 
     @property
-    def info(self):
+    def info(self) -> ResourceInfo:
         if self._infos is None or not self._infos:
-            return dict()
+            return ResourceInfo(resource=self.url)
         else:
             return self._infos[-1]
 
-    @property
-    def errors(self):
-        if 'Validation Errors' in self.info:
-            return self.info['Validation Errors']
-        else:
-            return []
+    def load_backup(self) -> Optional[str]:
+        if config.local_copy_dir is None:
+            return None
 
-    def parse(self, getter):
-        info = dict()
-        info['Resource'] = self.url
-        self.add_info(info)
-        data = None
-        log.debug("getting {}".format(self.url))
+        try:
+            res = resource_string(self.local_copy_fn)
+            if isinstance(res, bytes):
+                return res.decode('utf-8')
+            return res
+        except IOError as ex:
+            log.warning(
+                "Caught an exception trying to load local backup for {} via {}: {}".format(
+                    self.url, self.local_copy_fn, ex
+                )
+            )
+            return None
 
-        r = getter(self.url)
+    def save_backup(self, data: Optional[str]) -> None:
+        if config.local_copy_dir is not None:
+            try:
+                safe_write(self.local_copy_fn, data, True)
+            except IOError as ex:
+                log.warning("unable to save backup copy of {}: {}".format(self.url, ex))
 
-        info['HTTP Response Headers'] = r.headers
-        log.debug("got status_code={:d}, encoding={} from_cache={} from {}".
-                  format(r.status_code, r.encoding, getattr(r, "from_cache", False), self.url))
-        info['Status Code'] = str(r.status_code)
-        info['Reason'] = r.reason
+    def load_resource(self, getter: Callable[[str], Response]) -> Tuple[Optional[str], int, ResourceInfo]:
+        data: Optional[str] = None
+        status: int = 500
+        info = self.add_info()
+        verify_tls = self.opts.verify_tls
 
-        if r.ok:
-            data = r.text
-        else:
-            raise ResourceException("Got status={:d} while getting {}".format(r.status_code, self.url))
+        log.debug("Loading resource {}".format(self.url))
 
-        parse_info = parse_resource(self, data)
-        if parse_info is not None and isinstance(parse_info, dict):
-            info.update(parse_info)
+        if not self.url:
+            log.error(f'No URL for resource {self}')
+            return data, status, info
 
+        try:
+            r = getter(self.url, verify_tls)
+
+            info.http_headers = dict(r.headers)
+            log.debug(
+                "got status_code={:d}, encoding={} from_cache={} from {}".format(
+                    r.status_code, r.encoding, getattr(r, "from_cache", False), self.url
+                )
+            )
+            status = r.status_code
+            info.reason = r.reason
+
+            if r.ok:
+                data = r.text
+                _etag = r.headers.get('ETag', None)
+                if not _etag:
+                    _etag = hex_digest(r.text, 'sha256')
+                self.etag = _etag
+            elif self.local_copy_fn is not None:
+                log.warning(
+                    "Got status={:d} while getting {}. Attempting fallback to local copy.".format(
+                        r.status_code, self.url
+                    )
+                )
+                data = self.load_backup()
+                if data is not None and len(data) > 0:
+                    info.reason = "Retrieved from local cache because status: {} != 200".format(status)
+                    status = 218
+
+            info.status_code = str(status)
+
+        except IOError as ex:
+            if self.local_copy_fn is not None:
+                log.warning("caught exception from {} - trying local backup: {}".format(self.url, ex))
+                data = self.load_backup()
+                if data is not None and len(data) > 0:
+                    info.reason = "Retrieved from local cache because exception: {}".format(ex)
+                    status = 218
+            if data is None or not len(data) > 0:
+                raise ex  # propagate exception if we can't find a backup
+
+        if data is None or not len(data) > 0:
+            raise ResourceException("failed to fetch {} (status: {:d})".format(self.url, status))
+
+        info.state = ResourceLoadState.Fetched
+
+        return data, status, info
+
+    def parse(self, getter: Callable[[str], Response]) -> Deque[Resource]:
+        data, status, info = self.load_resource(getter)
+
+        if not data:
+            raise ResourceException(f'Nothing to parse when loading resource {self}')
+
+        info.state = ResourceLoadState.Parsing
+        # local import to avoid circular import
+        from pyff.parse import parse_resource
+
+        info.parser_info = parse_resource(self, data)
+
+        if status != 218:  # write backup unless we just loaded from backup
+            self.last_seen = utc_now().replace(microsecond=0)
+            self.save_backup(data)
+
+        info.state = ResourceLoadState.Parsed
         if self.t is not None:
-            self.last_seen = datetime.now()
-            if self.post and isinstance(self.post, list):
+            if self.post:
                 for cb in self.post:
                     if self.t is not None:
-                        self.t = cb(self.t, **self.opts)
+                        n_t = cb(self.t, self.opts.dict())
+                        if n_t is None:
+                            log.warn(f'callback did not return anything when parsing {self.url} {info}')
+                        self.t = n_t
 
             if self.is_expired():
-                info['Expired'] = True
+                info.expired = True
                 raise ResourceException("Resource at {} expired on {}".format(self.url, self.expire_time))
             else:
-                info['Expired'] = False
+                info.expired = False
 
-            for (eid, error) in list(info['Validation Errors'].items()):
-                log.error(error)
+            if info.parser_info:
+                for (eid, error) in list(info.parser_info.validation_errors.items()):
+                    log.error(error)
+        else:
+            log.debug(f'Parser did not produce anything (probably ok) when parsing {self.url} {info}')
 
-            self.etag = r.headers.get('ETag', None) or hex_digest(r.text, 'sha256')
+        info.state = ResourceLoadState.Ready
 
         return self.children

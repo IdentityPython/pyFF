@@ -1,10 +1,8 @@
 """
 Various decorators used in pyFF.
 """
-import functools
-from collections import namedtuple
-import time
-from .logs import get_log
+
+from pyff.logs import get_log
 
 __author__ = 'leifj'
 
@@ -18,11 +16,14 @@ def deprecated(logger=log, reason="Complain to the developer about unspecified c
 
     def decorating(func):
         def new_func(*args, **kwargs):
-            msg = "Call to deprecated function %s at %s:%d\nReason: %s" % (func.__name__,
-                                                                           func.__code__.co_filename,
-                                                                           func.__code__.co_firstlineno + 1, reason)
+            msg = "Call to deprecated function %s at %s:%d\nReason: %s" % (
+                func.__name__,
+                func.__code__.co_filename,
+                func.__code__.co_firstlineno + 1,
+                reason,
+            )
             if logger:
-                logger.warn(msg)
+                logger.warning(msg)
             else:
                 print(msg)
 

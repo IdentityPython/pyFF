@@ -2,40 +2,67 @@
 Pipes and plumbing. Plumbing instances are sequences of pipes. Each pipe is called in order to load, select,
 transform, sign or output SAML metadata.
 """
+from __future__ import annotations
 
-import traceback
+import functools
 import os
+import traceback
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
+
 import yaml
-from .utils import resource_string, PyffException, is_text
-from .logs import get_log
+from apscheduler.schedulers.background import BackgroundScheduler
+from lxml.etree import Element, ElementTree
+
+from pyff.logs import get_log
+from pyff.repo import MDRepository
+from pyff.store import SAMLStoreBase
+from pyff.utils import PyffException, is_text, resource_string
 
 log = get_log(__name__)
 
 __author__ = 'leifj'
 
-registry = dict()
+registry: Dict[str, Callable] = dict()
 
 
-def pipe(*args, **kwargs):
+def pipe(*args, **kwargs) -> Callable:
     """
-    Register the decorated function in the pyff pipe registry
-    :param name: optional name - if None, use function name
+    A decorator that registers a function as a pipeline in pyFF. Functions decorated *should* have the
+    following prototype:
+
+    @pipe
+    def foo(req: Plumbing.Request, *opts)
+        pass
     """
 
-    def deco_none(f):
-        return f
+    def pipe_decorator(f: Callable) -> Callable:
+        if 'name' in kwargs:  # called with the name argument @pipe(name=...) or as @pipe()
+            f_name = kwargs.get('name', f.__name__)
+            registry[f_name] = f
 
-    def deco_pipe(f):
-        f_name = kwargs.get('name', f.__name__)
-        registry[f_name] = f
-        return f
+        @functools.wraps(f)
+        def wrapper_pipe(*iargs, **ikwargs) -> Any:
+            # the 'opts' parameter gets special treatment:
+            # locate the type annotation of 'opts' and if it exists assume it refers to a pydantic dataclass
+            # before propagating the call to the wrapped function replace opts with the pydantic dataclass object
+            # created from the Tuple provided
+            opts_type: Optional[Type] = None
+            if 'opts' in f.__annotations__:
+                opts_type = f.__annotations__['opts']
 
-    if 1 == len(args):
-        f = args[0]
-        registry[f.__name__] = f
-        return deco_none
+            if opts_type is not None:
+                opts_in = ikwargs.pop('opts')
+                ikwargs['opts'] = opts_type(**dict(list(zip(opts_in[::2], opts_in[1::2]))))
+
+            return f(*iargs, **ikwargs)
+
+        return wrapper_pipe
+
+    if len(args) == 1 and callable(args[0]):  # called without arguments @pipe
+        registry[args[0].__name__] = args[0]
+        return pipe_decorator(args[0])
     else:
-        return deco_pipe
+        return pipe_decorator
 
 
 class PipeException(PyffException):
@@ -53,6 +80,7 @@ class PluginsRegistry(dict):
     Referencing this function as an entry_point using something = module:the_somethig_func in setup.py allows the
     function to be referenced as 'something' in a pipeline.
     """
+
     # def __init__(self):
     #    for entry_point in iter_entry_points('pyff.pipe'):
     #        if entry_point.name in self:
@@ -62,17 +90,17 @@ class PluginsRegistry(dict):
     #            self[entry_point.name] = entry_point.load()
 
 
-def load_pipe(d):
+def load_pipe(d: Any) -> Tuple[Callable, Any, str, Optional[Union[str, Dict, List]]]:
     """Return a triple callable,name,args of the pipe specified by the object d.
 
     :param d: The following alternatives for d are allowed:
 
     - d is a string (or unicode) in which case the pipe is named d called with None as args.
     - d is a dict of the form {name: args} (i.e one key) in which case the pipe named *name* is called with args
-    - d is an iterable (eg tuple or list) in which case d[0] is treated as the pipe name and d[1:] becomes the args
+    - d is an iterable (a list) in which case d[0] is treated as the pipe name and d[1:] becomes the args
     """
 
-    def _n(_d):
+    def _n(_d: str) -> Tuple[str, List[str]]:
         lst = _d.split()
         _name = lst[0]
         _opts = lst[1:]
@@ -80,7 +108,7 @@ def load_pipe(d):
 
     name = None
     args = None
-    opts = []
+    opts: List[str] = []
     if is_text(d):
         name, opts = _n(d)
     elif hasattr(d, '__iter__') and not type(d) is dict:
@@ -109,22 +137,30 @@ def load_pipe(d):
 
 class PipelineCallback(object):
     """
-A delayed pipeline callback used as a post for parse_saml_metadata
+    A delayed pipeline callback used as a post for parse_saml_metadata
     """
 
-    def __init__(self, entry_point, req, store=None):
+    def __init__(self, entry_point: str, req: Plumbing.Request, store: Optional[SAMLStoreBase] = None) -> None:
         self.entry_point = entry_point
-        self.plumbing = Plumbing(req.scope_of(entry_point).plumbing.pipeline, "%s-via-%s" % (req.plumbing.id, entry_point))
+        self.plumbing = Plumbing(req.scope_of(entry_point).plumbing.pipeline, f"{req.plumbing.id}-via-{entry_point}")
         self.req = req
         self.store = store
 
-    def __copy__(self):
+    def __str__(self) -> str:
+        return f"<PipelineCallback to {self.req.plumbing}>"
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    def __copy__(self) -> PipelineCallback:
+        # TODO: This seems... dangerous. What's the need for this?
         return self
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo: Any) -> PipelineCallback:
+        # TODO: This seems... dangerous. What's the need for this?
         return self
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         log.debug("{!s}: called".format(self.plumbing))
         t = args[0]
         if t is None:
@@ -136,95 +172,107 @@ A delayed pipeline callback used as a post for parse_saml_metadata
             return self.plumbing.process(self.req.md, store=self.store, state=state, t=t)
         except Exception as ex:
             log.debug(traceback.format_exc())
-            log.error(ex)
+            log.error(f'Got an exception executing the plumbing process: {ex}')
             raise ex
 
 
 class Plumbing(object):
     """
-A plumbing instance represents a basic processing chain  for SAML metadata. A simple, yet reasonably complete example:
+    A plumbing instance represents a basic processing chain for SAML metadata. A simple, yet reasonably complete example:
 
-.. code-block:: yaml
+    .. code-block:: yaml
 
-    - load:
-        - /var/metadata/registry
-        - http://md.example.com
-    - select:
-       - #md:EntityDescriptor[md:IDPSSODescriptor]
-    - xslt:
-        stylesheet: tidy.xsl
-    - fork:
-        - finalize:
-            Name: http://example.com/metadata.xml
-            cacheDuration: PT1H
-            validUntil: PT1D
-        - sign:
-           key: signer.key
-           cert: signer.crt
-       - publish: /var/metadata/public/metadata.xml
+        - load:
+            - /var/metadata/registry
+            - http://md.example.com
+        - select:
+           - #md:EntityDescriptor[md:IDPSSODescriptor]
+        - xslt:
+            stylesheet: tidy.xsl
+        - fork:
+            - finalize:
+                Name: http://example.com/metadata.xml
+                cacheDuration: PT1H
+                validUntil: PT1D
+            - sign:
+               key: signer.key
+               cert: signer.crt
+           - publish: /var/metadata/public/metadata.xml
 
-Running this plumbing would bake all metadata found in /var/metadata/registry and at http://md.example.com into an
-EntitiesDescriptor element with @Name http://example.com/metadata.xml, @cacheDuration set to 1hr and @validUntil
-1 day from the time the 'finalize' command was run. The tree woud be transformed using the "tidy" stylesheets and
-would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
+    Running this plumbing would bake all metadata found in /var/metadata/registry and at http://md.example.com into an
+    EntitiesDescriptor element with @Name http://example.com/metadata.xml, @cacheDuration set to 1hr and @validUntil
+    1 day from the time the 'finalize' command was run. The tree woud be transformed using the "tidy" stylesheets and
+    would then be signed (using signer.key) and finally published in /var/metadata/public/metadata.xml
     """
 
-    def __init__(self, pipeline, pid):
+    def __init__(self, pipeline: Iterable[Dict[str, Any]], pid: str):
         self._id = pid
         self.pipeline = pipeline
 
-    def to_json(self):
+    def to_json(self) -> Iterable[Dict[str, Any]]:
+        # TODO: to_json seems like the wrong name for this function?
         return self.pipeline
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self._id
 
     @property
-    def pid(self):
+    def pid(self) -> str:
         return self._id
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[Dict[str, Any]]:
         return self.pipeline
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "PL[id={!s}]".format(self.pid)
 
     class Request(object):
         """
-Represents a single request. When processing a set of pipelines a single request is used. Any part of the pipeline
-may modify any of the fields.
+        Represents a single request. When processing a set of pipelines a single request is used.
+        Any part of the pipeline may modify any of the fields.
         """
 
-        def __init__(self, pl, md, t=None, name=None, args=None, state=None, store=None, scheduler=None, raise_exceptions=True):
+        def __init__(
+            self,
+            pl: Plumbing,
+            md: MDRepository,
+            t=None,
+            name=None,
+            args=None,
+            state: Optional[Dict[str, Any]] = None,
+            store=None,
+            scheduler: Optional[BackgroundScheduler] = None,
+            raise_exceptions: bool = True,
+        ):
             if not state:
                 state = dict()
             if not args:
                 args = []
-            self.plumbing = pl
-            self.md = md
-            self.t = t
-            self._id = None
+            self.plumbing: Plumbing = pl
+            self.md: MDRepository = md
+            self.t: ElementTree = t
+            self._id: Optional[str] = None
             self.name = name
-            self.args = args
-            self.state = state
-            self.done = False
-            self._store = store
-            self.scheduler = scheduler
-            self.raise_exceptions = raise_exceptions
-            self.exception = None
-            self.parent = None
+            self.args: Optional[Union[str, Dict, List]] = args
+            self.state: Dict[str, Any] = state
+            self.done: bool = False
+            self._store: SAMLStoreBase = store
+            self.scheduler: Optional[BackgroundScheduler] = scheduler
+            self.raise_exceptions: bool = raise_exceptions
+            self.exception: Optional[BaseException] = None
+            self.parent: Optional[Plumbing.Request] = None
 
-        def scope_of(self, entry_point):
-            if 'with {}'.format(entry_point) in self.plumbing.pipeline:
+        def scope_of(self, entry_point: str) -> Plumbing.Request:
+            for _p in self.plumbing.pipeline:
+                if f'with {entry_point}' in _p:
+                    return self
+            if self.parent is None:
                 return self
-            elif self.parent is None:
-                return self
-            else:
-                return self.parent.scope_of(entry_point)
+            return self.parent.scope_of(entry_point)
 
         @property
-        def id(self):
+        def id(self) -> Optional[str]:
             if self.t is None:
                 return None
             if self._id is None:
@@ -233,35 +281,39 @@ may modify any of the fields.
                 self._id = self.t.get('Name')
             return self._id
 
-        def set_id(self, _id):
+        def set_id(self, _id: Optional[str]) -> None:
             self._id = _id
 
-        def set_parent(self, _parent):
+        def set_parent(self, _parent: Optional[Plumbing.Request]) -> None:
             self.parent = _parent
 
         @property
-        def store(self):
+        def store(self) -> SAMLStoreBase:
             if self._store:
                 return self._store
             return self.md.store
 
-        def process(self, pl):
+        def process(self, pl: Plumbing) -> ElementTree:
             """The inner request pipeline processor.
 
             :param pl: The plumbing to run this request through
             """
             return pl.iprocess(self)
 
-    def iprocess(self, req):
+    def iprocess(self, req: Plumbing.Request) -> ElementTree:
         """The inner request pipeline processor.
 
         :param req: The request to run through the pipeline
         """
-        #log.debug("Processing {}".format(self.pipeline))
+        # log.debug("Processing {}".format(self.pipeline))
         for p in self.pipeline:
             try:
                 pipefn, opts, name, args = load_pipe(p)
-                log.debug("{!s}: calling '{}' using args: {} and opts: {}".format(self.pipeline, name, repr(args), repr(opts)))
+                log.debug(
+                    "{!s}: calling '{}' using args:\n{} and opts:\n{}".format(
+                        self.pipeline, name, repr(args), repr(opts)
+                    )
+                )
                 if is_text(args):
                     args = [args]
                 if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
@@ -275,14 +327,23 @@ may modify any of the fields.
                     break
             except BaseException as ex:
                 log.debug(traceback.format_exc())
-                log.error(ex)
+                log.error(f'Got exception when loading/executing pipe: {ex}')
                 req.exception = ex
                 if req.raise_exceptions:
                     raise ex
                 break
         return req.t
 
-    def process(self, md, args=None, state=None, t=None, store=None, raise_exceptions=True, scheduler=None):
+    def process(
+        self,
+        md: MDRepository,
+        args: Any = None,
+        state: Optional[Dict[str, Any]] = None,
+        t: Optional[ElementTree] = None,
+        store: Optional[SAMLStoreBase] = None,
+        raise_exceptions: bool = True,
+        scheduler: Optional[BackgroundScheduler] = None,
+    ) -> Optional[Element]:  # TODO: unsure about this return type
         """
         The main entrypoint for processing a request pipeline. Calls the inner processor.
 
@@ -299,23 +360,19 @@ may modify any of the fields.
         if not state:
             state = dict()
 
-        return Plumbing.Request(self, md,
-                                t=t,
-                                args=args,
-                                state=state,
-                                store=store,
-                                raise_exceptions=raise_exceptions,
-                                scheduler=scheduler).process(self)
+        return Plumbing.Request(
+            self, md, t=t, args=args, state=state, store=store, raise_exceptions=raise_exceptions, scheduler=scheduler
+        ).process(self)
 
 
-def plumbing(fn):
+def plumbing(fn: str) -> Plumbing:
     """
-Create a new plumbing instance by parsing yaml from the filename.
+    Create a new plumbing instance by parsing yaml from the filename.
 
-:param fn: A filename containing the pipeline.
-:return: A plumbing object
+    :param fn: A filename containing the pipeline.
+    :return: A plumbing object
 
-This uses the resource framework to locate the yaml file which means that pipelines can be shipped as plugins.
+    This uses the resource framework to locate the yaml file which means that pipelines can be shipped as plugins.
     """
     pid = os.path.splitext(fn)[0]
     ystr = resource_string(fn)

@@ -9,9 +9,8 @@ Released under the BSD-license.
 """
 
 from contextlib import contextmanager
-from threading import Condition, Lock, currentThread
+from threading import Condition, Lock, current_thread
 from time import time
-
 
 # Read write lock
 # ---------------
@@ -61,10 +60,10 @@ class ReadWriteLock(object):
 
     def acquireRead(self, blocking=True, timeout=None):
         """Acquire a read lock for the current thread, waiting at most timeout seconds or doing a
-        non-blocking check in case timeout is <= 0.
+            non-blocking check in case timeout is <= 0.
 
-    * In case timeout is None, the call to acquireRead blocks until the lock request can be serviced.
-    * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
+        * In case timeout is None, the call to acquireRead blocks until the lock request can be serviced.
+        * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
 
         if not blocking:
             endtime = -1
@@ -72,7 +71,7 @@ class ReadWriteLock(object):
             endtime = time() + timeout
         else:
             endtime = None
-        me = currentThread()
+        me = current_thread()
         self.__condition.acquire()
         try:
             if self.__writer is me:
@@ -107,22 +106,20 @@ class ReadWriteLock(object):
         finally:
             self.__condition.release()
 
-    @property
+    @property  # type: ignore
     @contextmanager
     def readlock(self):
-        """Yields a read lock
-        """
+        """Yields a read lock"""
         self.acquireRead()
         try:
             yield
         finally:
             self.release()
 
-    @property
+    @property  # type: ignore
     @contextmanager
     def writelock(self):
-        """Yields a write lock
-        """
+        """Yields a write lock"""
         self.acquireWrite()
         try:
             yield
@@ -131,16 +128,16 @@ class ReadWriteLock(object):
 
     def acquireWrite(self, timeout=None):
         """Acquire a write lock for the current thread, waiting at most timeout seconds or doing a non-blocking
-        check in case timeout is <= 0.
+            check in case timeout is <= 0.
 
-    * In case the write lock cannot be serviced due to the deadlock condition mentioned above, a ValueError is raised.
-    * In case timeout is None, the call to acquireWrite blocks until the lock request can be serviced.
-    * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
+        * In case the write lock cannot be serviced due to the deadlock condition mentioned above, a ValueError is raised.
+        * In case timeout is None, the call to acquireWrite blocks until the lock request can be serviced.
+        * In case the timeout expires before the lock could be serviced, a RuntimeError is thrown."""
 
         endtime = None
         if timeout is not None:
             endtime = time() + timeout
-        me, upgradewriter = currentThread(), False
+        me, upgradewriter = current_thread(), False
         self.__condition.acquire()
         try:
             if self.__writer is me:
@@ -155,9 +152,7 @@ class ReadWriteLock(object):
                     # else also wants to upgrade, there is no way we can do
                     # this except if one of us releases all his read locks.
                     # Signal this to user.
-                    raise ValueError(
-                        "Inevitable dead lock, denying write lock"
-                    )
+                    raise ValueError("Inevitable dead lock, denying write lock")
                 upgradewriter = True
                 self.__upgradewritercount = self.__readers.pop(me)
             else:
@@ -215,9 +210,9 @@ class ReadWriteLock(object):
     def release(self):
         """Release the currently held lock.
 
-    * In case the current thread holds no lock, a ValueError is thrown."""
+        * In case the current thread holds no lock, a ValueError is thrown."""
 
-        me = currentThread()
+        me = current_thread()
         self.__condition.acquire()
         try:
             if self.__writer is me:
@@ -227,7 +222,7 @@ class ReadWriteLock(object):
                     # No more write locks; take our writer position away and
                     # notify waiters of the new circumstances.
                     self.__writer = None
-                    self.__condition.notifyAll()
+                    self.__condition.notify_all()
             elif me in self.__readers:
                 # We are a reader currently, take one nesting depth away.
                 self.__readers[me] -= 1
@@ -237,7 +232,7 @@ class ReadWriteLock(object):
                     if not self.__readers:
                         # No more readers, notify waiters of the new
                         # circumstances.
-                        self.__condition.notifyAll()
+                        self.__condition.notify_all()
             else:
                 raise ValueError("Trying to release unheld lock")
         finally:

@@ -1,26 +1,27 @@
+urllib3==1.26.5
+pytz
+accept_types >=0.4.1
+apscheduler==3.6.3
+cachetools
+gunicorn
+httplib2 >=0.7.7
+lxml >=4.1.1
 mako
-six
-redis
-ipaddr
-lxml
-sphinx-pypi-upload
-sphinx
-nose
-httplib2
-iso8601
-requests
-simplejson
+pyXMLSecurity >=0.15
 pyconfig
-pyyaml
+pydantic
+pyramid
+pyyaml >=3.10
+redis
+redis-collections
+requests
 requests_cache
 requests_file
+simplejson >=2.6.2
+six>=1.11.0
+sphinx
+sphinx-pypi-upload
 whoosh
-accept_types
-pyramid
-six
 wsgi-intercept
-gunicorn
-apscheduler
-redis-collections
-cachetools
 xmldiff
+str2bool

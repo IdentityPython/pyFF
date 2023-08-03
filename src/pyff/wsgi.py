@@ -1,6 +1,7 @@
 from wsgiref.simple_server import make_server
-from .api import mkapp
-from .repo import MDRepository
+
+from pyff.api import mkapp
+from pyff.repo import MDRepository
 
 md = MDRepository()
 app = mkapp(md=md)
@@ -26,4 +27,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

@@ -1,14 +1,16 @@
 __author__ = 'leifj'
 
 import logging
-import syslog
-import six
 import os
+import syslog
+from typing import Any, Optional
+
+import six
 
 try:
     import cherrypy
 except ImportError as e:
-    print("cherrypy logging disabled")
+    logging.debug("cherrypy logging disabled")
     cherrypy = None
 
 
@@ -17,12 +19,14 @@ class PyFFLogger(object):
         if name is None:
             name = __name__
         self._log = logging.getLogger(name)
-        self._loggers = {logging.WARN: self._log.warn,
-                         logging.WARNING: self._log.warn,
-                         logging.CRITICAL: self._log.critical,
-                         logging.INFO: self._log.info,
-                         logging.DEBUG: self._log.debug,
-                         logging.ERROR: self._log.error}
+        self._loggers = {
+            logging.WARN: self._log.warning,
+            logging.WARNING: self._log.warning,
+            logging.CRITICAL: self._log.critical,
+            logging.INFO: self._log.info,
+            logging.DEBUG: self._log.debug,
+            logging.ERROR: self._log.error,
+        }
 
     def _l(self, severity, msg):
         if cherrypy is not None and '' in cherrypy.tree.apps:
@@ -32,38 +36,39 @@ class PyFFLogger(object):
         else:
             raise ValueError("unknown severity %s" % severity)
 
-    def warn(self, msg):
+    def warn(self, msg: str) -> Any:
         return self._l(logging.WARN, msg)
 
-    def warning(self, msg):
+    def warning(self, msg: str) -> Any:
         return self._l(logging.WARN, msg)
 
-    def info(self, msg):
+    def info(self, msg: str) -> Any:
         return self._l(logging.INFO, msg)
 
-    def error(self, msg):
+    def error(self, msg: str) -> Any:
         return self._l(logging.ERROR, msg)
 
-    def critical(self, msg):
+    def critical(self, msg: str) -> Any:
         return self._l(logging.CRITICAL, msg)
 
-    def debug(self, msg):
+    def debug(self, msg: str) -> Any:
         return self._l(logging.DEBUG, msg)
 
-    def isEnabledFor(self, lvl):
+    def isEnabledFor(self, lvl: Any) -> bool:
         return self._log.isEnabledFor(lvl)
 
 
-def get_log(name):
+def get_log(name: str) -> PyFFLogger:
     return PyFFLogger(name)
 
 
 log = get_log('pyff')
 
 
-def log_config_file(ini):
+def log_config_file(ini: Optional[str]) -> None:
     if ini is not None:
         import logging.config
+
         if not os.path.isabs(ini):
             ini = os.path.join(os.getcwd(), ini)
         if not os.path.exists(ini):
@@ -71,7 +76,7 @@ def log_config_file(ini):
         logging.config.fileConfig(ini)
 
 
-log_config_file(os.getenv('PYFF_LOGGING', None))
+log_config_file(os.getenv('PYFF_LOGGING'))
 
 # http://www.aminus.org/blogs/index.php/2008/07/03/writing-high-efficiency-large-python-sys-1?blog=2
 # blog post explicitly gives permission for use
@@ -79,6 +84,7 @@ log_config_file(os.getenv('PYFF_LOGGING', None))
 
 class SysLogLibHandler(logging.Handler):
     """A logging handler that emits messages to syslog.syslog."""
+
     priority_map = {
         10: syslog.LOG_NOTICE,
         20: syslog.LOG_NOTICE,

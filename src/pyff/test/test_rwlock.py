@@ -25,7 +25,7 @@ class TestReadWriteLock(TestCase):
     def timeout_writer(self, timeout=1):
         try:
             for tries in range(1, 10):
-                self.lock.acquireRead(timeout=timeout, blocking=False)   # get a read
+                self.lock.acquireRead(timeout=timeout, blocking=False)  # get a read
             for tries in range(1, 10):
                 self.lock.acquireWrite(timeout=timeout, blocking=False)  # upgrade to write
 
@@ -47,11 +47,11 @@ class TestReadWriteLock(TestCase):
     def timeout_reader(self, to_wait_for, timeout=1):
         try:
             self.lock.acquireRead(timeout=timeout)
-            assert(not self.writer_active)
+            assert not self.writer_active
             print("thread (reader): %s starting" % current_thread().name)
             self.readers += 1
             while to_wait_for - self.readers > 0:
-                assert(not self.writer_active)
+                assert not self.writer_active
                 print("waiting for %d more readers" % (to_wait_for - self.readers))
                 sleep(0.1)
         except Exception as ex:
@@ -84,11 +84,11 @@ class TestReadWriteLock(TestCase):
     def reader(self, to_wait_for):
         try:
             with self.lock.readlock:
-                assert(not self.writer_active)
+                assert not self.writer_active
                 print("thread (reader): %s starting" % current_thread().name)
                 self.readers += 1
                 while to_wait_for - self.readers > 0:
-                    assert(not self.writer_active)
+                    assert not self.writer_active
                     print("waiting for %d more readers" % (to_wait_for - self.readers))
                     sleep(0.1)
             print("thread (reader): %s exiting" % current_thread().name)
@@ -96,7 +96,7 @@ class TestReadWriteLock(TestCase):
             self.exceptions[current_thread().name] = ex
 
     def _raise(self, t):
-        assert (not t.isAlive())
+        assert not t.is_alive()
         if t.name in self.exceptions:
             raise self.exceptions[t.name]
 

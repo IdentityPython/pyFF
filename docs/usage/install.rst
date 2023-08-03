@@ -18,7 +18,7 @@ and if you're on a centos system (or other yum-based systems):
 .. code-block:: bash
 
   # yum install python-devel  libxml2-devel libxslt-devel libyaml-devel
-  # easy_install pyyaml # bug in pip install pyyaml
+  # pip install pyyaml
   # yum install make gcc kernel-devel kernel-headers glibc-headers
 
 If you want to use OS packages instead of python packages from pypi then consider also 

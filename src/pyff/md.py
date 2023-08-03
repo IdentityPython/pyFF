@@ -1,26 +1,22 @@
 """
 pyFF is the SAML metadata aggregator
 
-Usage: [-h|--help]
-       [-R]
-       [--loglevel=<level>]
-       [--logfile=<file>]
-       [--version]
 """
 import importlib
 import logging
 import sys
 import traceback
-from .repo import MDRepository
-from .pipes import plumbing
-from .constants import config, parse_options
+
+from pyff.constants import config, parse_options
+from pyff.pipes import plumbing
+from pyff.repo import MDRepository
 
 
 def main():
     """
     The main entrypoint for the pyFF cmdline tool.
     """
-    args = parse_options("pyff", __doc__, 'hm:', ['help', 'loglevel=', 'logfile=', 'version', 'module='])
+    args = parse_options("pyff", __doc__)
 
     log_args = {'level': config.loglevel}
     if config.logfile is not None:

@@ -6,59 +6,49 @@
 This module contains various utilities.
 
 """
+import base64
 import cgi
+import contextlib
 import hashlib
 import io
+import os
 import random
+import re
 import tempfile
+import threading
+import time
+import traceback
+from _collections_abc import Mapping, MutableMapping
 from copy import copy
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate
+from itertools import chain
 from threading import local
 from time import gmtime, strftime
+from typing import Any, BinaryIO, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
 
+import pkg_resources
+import requests
+import xmlsec
+from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.jobstores.redis import RedisJobStore
-from six.moves.urllib_parse import urlparse, quote_plus
-from itertools import chain
-import yaml
-import xmlsec
-import iso8601
-import os
-import pkg_resources
-import re
-from lxml import etree
-from .constants import config, NS
-from .logs import get_log
-from .exceptions import *
-import requests
-from requests_file import FileAdapter
-from requests_cache import CachedSession
-import base64
-import time
-import six
-import traceback
-from . import __version__
-from requests.structures import CaseInsensitiveDict
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
-import contextlib
-import threading
-from cachetools import LRUCache
-from _collections_abc import MutableMapping, Mapping
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.executors.pool import ThreadPoolExecutor
-from requests.adapters import BaseAdapter, Response
+from cachetools import LRUCache
+from lxml import etree
+from lxml.etree import Element, ElementTree
+from requests import Session
+from requests.adapters import BaseAdapter, HTTPAdapter, Response
+from requests.packages.urllib3.util.retry import Retry
+from requests.structures import CaseInsensitiveDict
+from requests_cache import CachedSession
+from requests_file import FileAdapter
+from six.moves.urllib_parse import urlparse
 
-try:
-    from redis import StrictRedis
-except ImportError as ex:
-    StrictRedis = None
-
-try:
-    from PIL import Image
-except ImportError as ex:
-    Image = None
+from pyff import __version__
+from pyff.constants import NS, config
+from pyff.exceptions import *
+from pyff.logs import get_log
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
 
@@ -89,25 +79,25 @@ def trunc_str(x, l):
     return (x[:l] + '..') if len(x) > l else x
 
 
-def resource_string(name, pfx=None):
+def resource_string(name: str, pfx: Optional[str] = None) -> Optional[Union[str, bytes]]:
     """
-Attempt to load and return the contents (as a string) of the resource named by
-the first argument in the first location of:
+    Attempt to load and return the contents (as a string, or bytes) of the resource named by
+    the first argument in the first location of:
 
-# as name in the current directory
-# as name in the `pfx` subdirectory of the current directory if provided
-# as name relative to the package
-# as pfx/name relative to the package
+    # as name in the current directory
+    # as name in the `pfx` subdirectory of the current directory if provided
+    # as name relative to the package
+    # as pfx/name relative to the package
 
-The last two alternatives is used to locate resources distributed in the package.
-This includes certain XSLT and XSD files.
+    The last two alternatives is used to locate resources distributed in the package.
+    This includes certain XSLT and XSD files.
 
-:param name: The string name of a resource
-:param pfx: An optional prefix to use in searching for name
+    :param name: The string name of a resource
+    :param pfx: An optional prefix to use in searching for name
 
     """
     name = os.path.expanduser(name)
-    data = None
+    data: Optional[Union[str, bytes]] = None
     if os.path.exists(name):
         with io.open(name) as fd:
             data = fd.read()
@@ -124,19 +114,19 @@ This includes certain XSLT and XSD files.
 
 def resource_filename(name, pfx=None):
     """
-Attempt to find and return the filename of the resource named by the first argument
-in the first location of:
+    Attempt to find and return the filename of the resource named by the first argument
+    in the first location of:
 
-# as name in the current directory
-# as name in the `pfx` subdirectory of the current directory if provided
-# as name relative to the package
-# as pfx/name relative to the package
+    # as name in the current directory
+    # as name in the `pfx` subdirectory of the current directory if provided
+    # as name relative to the package
+    # as pfx/name relative to the package
 
-The last two alternatives is used to locate resources distributed in the package.
-This includes certain XSLT and XSD files.
+    The last two alternatives is used to locate resources distributed in the package.
+    This includes certain XSLT and XSD files.
 
-:param name: The string name of a resource
-:param pfx: An optional prefix to use in searching for name
+    :param name: The string name of a resource
+    :param pfx: An optional prefix to use in searching for name
 
     """
     if os.path.exists(name):
@@ -151,7 +141,7 @@ This includes certain XSLT and XSD files.
     return None
 
 
-def totimestamp(dt, epoch=datetime(1970, 1, 1)):
+def totimestamp(dt: datetime, epoch=datetime(1970, 1, 1)) -> int:
     epoch = epoch.replace(tzinfo=dt.tzinfo)
 
     td = dt - epoch
@@ -159,36 +149,48 @@ def totimestamp(dt, epoch=datetime(1970, 1, 1)):
     return int(ts)
 
 
-def dumptree(t, pretty_print=False, method='xml', xml_declaration=True):
+def dumptree(t: ElementTree, pretty_print: bool = False, method: str = 'xml', xml_declaration: bool = True) -> str:
     """
-Return a string representation of the tree, optionally pretty_print(ed) (default False)
+    Return a string representation of the tree, optionally pretty_print(ed) (default False)
 
-:param t: An ElemenTree to serialize
+    :param t: An ElementTree to serialize
     """
-    return etree.tostring(t, encoding='UTF-8', method=method, xml_declaration=xml_declaration,
-                          pretty_print=pretty_print)
+    return etree.tostring(
+        t, encoding='UTF-8', method=method, xml_declaration=xml_declaration, pretty_print=pretty_print
+    )
 
 
-def iso_now():
+def iso_now() -> str:
     """
-Current time in ISO format
+    Current time in ISO format
     """
     return iso_fmt()
 
 
-def iso_fmt(tstamp=None):
+def iso_fmt(tstamp: Optional[float] = None) -> str:
     """
-Timestamp in ISO format
+    Timestamp in ISO format
     """
     return strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(tstamp))
 
 
-def ts_now():
+def ts_now() -> int:
     return int(time.time())
 
 
-def iso2datetime(s):
-    return iso8601.parse_date(s)
+def iso2datetime(s: str) -> datetime:
+    # TODO: All timestamps in SAML are supposed to be without offset from UTC - raise exception if it is not?
+    if s.endswith('Z'):
+        s = s[:-1] + '+00:00'
+    return datetime.fromisoformat(s)
+
+
+def datetime2iso(dt: datetime) -> str:
+    s = dt.replace(microsecond=0).isoformat()
+    # Use 'Z' instead of +00:00 suffix for UTC times
+    if s.endswith('+00:00'):
+        s = s[:-6] + 'Z'
+    return s
 
 
 def first_text(elt, tag, default=None):
@@ -243,7 +245,9 @@ def redis():
     if not hasattr(thread_data, 'redis'):
         thread_data.redis = None
 
-    if StrictRedis is None:
+    try:
+        from redis import StrictRedis
+    except ImportError:
         raise ValueError("redis_py missing from dependencies")
 
     if thread_data.redis is None:
@@ -260,7 +264,7 @@ def redis():
     return thread_data.redis
 
 
-def check_signature(t, key, only_one_signature=False):
+def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool = False) -> ElementTree:
     if key is not None:
         log.debug("verifying signature using %s" % key)
         refs = xmlsec.verified(t, key, drop_signature=True)
@@ -333,7 +337,7 @@ def safe_write(fn, data, mkdirs=False):
             try:
                 os.unlink(tmpn)
             except Exception as ex:
-                log.warn(ex)
+                log.warning(ex)
     return False
 
 
@@ -357,22 +361,28 @@ def with_tree(elt, cb):
             with_tree(child, cb)
 
 
-def duration2timedelta(period):
+def duration2timedelta(period: str) -> Optional[timedelta]:
     regex = re.compile(
-        '(?P<sign>[-+]?)P(?:(?P<years>\d+)[Yy])?(?:(?P<months>\d+)[Mm])?(?:(?P<days>\d+)[Dd])?(?:T(?:(?P<hours>\d+)[Hh])?(?:(?P<minutes>\d+)[Mm])?(?:(?P<seconds>\d+)[Ss])?)?')
+        r'(?P<sign>[-+]?)'
+        r'P(?:(?P<years>\d+)[Yy])?(?:(?P<months>\d+)[Mm])?(?:(?P<days>\d+)[Dd])?'
+        r'(?:T(?:(?P<hours>\d+)[Hh])?(?:(?P<minutes>\d+)[Mm])?(?:(?P<seconds>\d+)[Ss])?)?'
+    )
 
     # Fetch the match groups with default value of 0 (not None)
     m = regex.match(period)
     if not m:
         return None
 
-    duration = m.groupdict(0)
+    # workaround error: Argument 1 to "groupdict" of "Match" has incompatible type "int"; expected "str"
+    duration = m.groupdict(0)  # type: ignore
 
     # Create the timedelta object from extracted groups
-    delta = timedelta(days=int(duration['days']) + (int(duration['months']) * 30) + (int(duration['years']) * 365),
-                      hours=int(duration['hours']),
-                      minutes=int(duration['minutes']),
-                      seconds=int(duration['seconds']))
+    delta = timedelta(
+        days=int(duration['days']) + (int(duration['months']) * 30) + (int(duration['years']) * 365),
+        hours=int(duration['hours']),
+        minutes=int(duration['minutes']),
+        seconds=int(duration['seconds']),
+    )
 
     if duration['sign'] == "-":
         delta *= -1
@@ -380,25 +390,28 @@ def duration2timedelta(period):
     return delta
 
 
-def _lang(elt, default_lang):
+def _lang(elt: Element, default_lang: Optional[str]) -> Optional[str]:
     return elt.get("{http://www.w3.org/XML/1998/namespace}lang", default_lang)
 
 
-def lang_dict(elts, getter=lambda e: e, default_lang=None):
+def lang_dict(elts: Sequence[Element], getter=lambda e: e, default_lang: Optional[str] = None) -> Dict[str, Callable]:
     if default_lang is None:
         default_lang = config.langs[0]
 
     r = dict()
     for e in elts:
-        r[_lang(e, default_lang)] = getter(e)
+        _l = _lang(e, default_lang)
+        if not _l:
+            raise ValueError('Could not get lang from element, and no default provided')
+        r[_l] = getter(e)
     return r
 
 
-def find_lang(elts, lang, default_lang):
+def find_lang(elts: Sequence[Element], lang: str, default_lang: str) -> Element:
     return next((e for e in elts if _lang(e, default_lang) == lang), elts[0])
 
 
-def filter_lang(elts, langs=None):
+def filter_lang(elts: Any, langs: Optional[Sequence[str]] = None) -> List[Element]:
     if langs is None or type(langs) is not list:
         langs = config.langs
 
@@ -411,6 +424,9 @@ def filter_lang(elts, langs=None):
 
     if len(elts) == 0:
         return []
+
+    if not langs:
+        raise RuntimeError('Configuration is missing langs')
 
     dflt = langs[0]
     lst = [find_lang(elts, l, dflt) for l in langs]
@@ -444,35 +460,39 @@ def xslt_transform(t, stylesheet, params=None):
         raise ex
 
 
-def valid_until_ts(elt, default_ts):
+# TODO: Unused function
+def valid_until_ts(elt, default_ts: int) -> int:
     ts = default_ts
     valid_until = elt.get("validUntil", None)
     if valid_until is not None:
-        dt = iso8601.parse_date(valid_until)
-        if dt is not None:
+        try:
+            dt = datetime.fromtimestamp(valid_until)
             ts = totimestamp(dt)
+        except Exception:
+            pass
 
     cache_duration = elt.get("cacheDuration", None)
     if cache_duration is not None:
-        dt = datetime.utcnow() + duration2timedelta(cache_duration)
-        if dt is not None:
+        _duration = duration2timedelta(cache_duration)
+        if _duration is not None:
+            dt = utc_now() + _duration
             ts = totimestamp(dt)
 
     return ts
 
 
-def total_seconds(dt):
+def total_seconds(dt: timedelta) -> float:
     if hasattr(dt, "total_seconds"):
         return dt.total_seconds()
-    else:
-        return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
+    # TODO: Remove? I guess this is for Python < 3
+    return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
 
 
 def etag(s):
     return hex_digest(s, hn="sha256")
 
 
-def hash_id(entity, hn='sha1', prefix=True):
+def hash_id(entity: Element, hn: str = 'sha1', prefix: bool = True) -> str:
     entity_id = entity
     if hasattr(entity, 'get'):
         entity_id = entity.get('entityID')
@@ -499,13 +519,11 @@ def hex_digest(data, hn='sha1'):
     return m.hexdigest()
 
 
-def parse_xml(io, base_url=None):
+def parse_xml(io: BinaryIO, base_url: Optional[str] = None) -> ElementTree:
     huge_xml = config.huge_xml
-    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(
-        resolve_entities=False,
-        collect_ids=False,
-        huge_tree=huge_xml
-    ))
+    return etree.parse(
+        io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False, collect_ids=False, huge_tree=huge_xml)
+    )
 
 
 def has_tag(t, tag):
@@ -573,6 +591,7 @@ def rreplace(s, old, new, occurrence):
 
 def load_callable(name):
     from importlib import import_module
+
     p, m = name.rsplit(':', 1)
     mod = import_module(p)
     return getattr(mod, m)
@@ -581,14 +600,17 @@ def load_callable(name):
 # semantics copied from https://github.com/lordal/md-summary/blob/master/md-summary
 # many thanks to Anders Lordahl & Scotty Logan for the idea
 def guess_entity_software(e):
-    for elt in chain(e.findall(".//{%s}SingleSignOnService" % NS['md']),
-                     e.findall(".//{%s}AssertionConsumerService" % NS['md'])):
+    for elt in chain(
+        e.findall(".//{%s}SingleSignOnService" % NS['md']), e.findall(".//{%s}AssertionConsumerService" % NS['md'])
+    ):
         location = elt.get('Location')
         if location:
-            if 'Shibboleth.sso' in location \
-                    or 'profile/SAML2/POST/SSO' in location \
-                    or 'profile/SAML2/Redirect/SSO' in location \
-                    or 'profile/Shibboleth/SSO' in location:
+            if (
+                'Shibboleth.sso' in location
+                or 'profile/SAML2/POST/SSO' in location
+                or 'profile/SAML2/Redirect/SSO' in location
+                or 'profile/Shibboleth/SSO' in location
+            ):
                 return 'Shibboleth'
             if location.endswith('saml2/idp/SSOService.php') or 'saml/sp/saml2-acs.php' in location:
                 return 'SimpleSAMLphp'
@@ -598,7 +620,11 @@ def guess_entity_software(e):
                 return 'ADFS'
             if '/oala/' in location or 'login.openathens.net' in location:
                 return 'OpenAthens'
-            if '/idp/SSO.saml2' in location or '/sp/ACS.saml2' in location or 'sso.connect.pingidentity.com' in location:
+            if (
+                '/idp/SSO.saml2' in location
+                or '/sp/ACS.saml2' in location
+                or 'sso.connect.pingidentity.com' in location
+            ):
                 return 'PingFederate'
             if 'idp/saml2/sso' in location:
                 return 'Authentic2'
@@ -608,14 +634,16 @@ def guess_entity_software(e):
                 return 'CASiteMinder'
             if 'FIM/sps' in location:
                 return 'IBMTivoliFIM'
-            if 'sso/post' in location \
-                    or 'sso/redirect' in location \
-                    or 'saml2/sp/acs' in location \
-                    or 'saml2/ls' in location \
-                    or 'saml2/acs' in location \
-                    or 'acs/redirect' in location \
-                    or 'acs/post' in location \
-                    or 'saml2/sp/ls/' in location:
+            if (
+                'sso/post' in location
+                or 'sso/redirect' in location
+                or 'saml2/sp/acs' in location
+                or 'saml2/ls' in location
+                or 'saml2/acs' in location
+                or 'acs/redirect' in location
+                or 'acs/post' in location
+                or 'saml2/sp/ls/' in location
+            ):
                 return 'PySAML'
             if 'engine.surfconext.nl' in location:
                 return 'SURFConext'
@@ -635,14 +663,14 @@ def guess_entity_software(e):
     return 'other'
 
 
-def is_text(x):
+def is_text(x: Any) -> bool:
     return isinstance(x, six.string_types) or isinstance(x, six.text_type)
 
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
-        yield l[i:i + n]
+        yield l[i : i + n]
 
 
 class DirAdapter(BaseAdapter):
@@ -668,14 +696,14 @@ class DirAdapter(BaseAdapter):
         pass
 
 
-def url_get(url):
+def url_get(url: str, verify_tls: bool) -> Response:
     """
     Download an URL using a cache and return the response object
     :param url:
     :return:
     """
 
-    s = None
+    s: Union[Session, CachedSession]
     if 'file://' in url:
         s = requests.session()
         s.mount('file://', FileAdapter())
@@ -685,10 +713,12 @@ def url_get(url):
     else:
         retry = Retry(total=3, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
-        s = CachedSession(cache_name="pyff_cache",
-                          backend=config.request_cache_backend,
-                          expire_after=config.request_cache_time,
-                          old_data_on_error=True)
+        s = CachedSession(
+            cache_name="pyff_cache",
+            backend=config.request_cache_backend,
+            expire_after=config.request_cache_time,
+            old_data_on_error=True,
+        )
         s.mount('http://', adapter)
         s.mount('https://', adapter)
 
@@ -697,10 +727,10 @@ def url_get(url):
     if _etag is not None:
         headers['If-None-Match'] = _etag
     try:
-        r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+        r = s.get(url, headers=headers, verify=verify_tls, timeout=config.request_timeout)
     except IOError as ex:
         s = requests.Session()
-        r = s.get(url, headers=headers, verify=False, timeout=config.request_timeout)
+        r = s.get(url, headers=headers, verify=verify_tls, timeout=config.request_timeout)
 
     if six.PY2:
         r.encoding = "utf-8"
@@ -713,25 +743,31 @@ def url_get(url):
     return r
 
 
-def safe_b64e(data):
-    if not isinstance(data, six.binary_type):
+def safe_b64e(data: Union[str, bytes]) -> str:
+    if not isinstance(data, bytes):
         data = data.encode("utf-8")
     return base64.b64encode(data).decode('ascii')
 
 
-def safe_b64d(s):
+def safe_b64d(s: str) -> bytes:
     return base64.b64decode(s)
 
 
 # data:&lt;class 'type'&gt;;base64,
 # data:<class 'type'>;base64,
 
-def img_to_data(data, content_type):
+
+def img_to_data(data: bytes, content_type: str) -> Optional[str]:
     """Convert a file (specified by a path) into a data URI."""
     mime_type, options = cgi.parse_header(content_type)
     data64 = None
     if len(data) > config.icon_maxsize:
         return None
+
+    try:
+        from PIL import Image
+    except ImportError:
+        Image = None
 
     if Image is not None:
         try:
@@ -743,7 +779,7 @@ def img_to_data(data, content_type):
                 assert data64
                 mime_type = "image/png"
         except BaseException as ex:
-            log.warn(ex)
+            log.warning(f'Exception when making Image: {ex}')
             log.debug(traceback.format_exc())
 
     if data64 is None or len(data64) == 0:
@@ -756,11 +792,11 @@ def short_id(data):
     return base64.urlsafe_b64encode(hasher.digest()[0:10]).rstrip('=')
 
 
-def unicode_stream(data):
+def unicode_stream(data: str) -> io.BytesIO:
     return six.BytesIO(data.encode('UTF-8'))
 
 
-def b2u(data):
+def b2u(data: Union[str, bytes, Tuple, List, Set]) -> Union[str, bytes, Tuple, List, Set]:
     if is_text(data):
         return data
     elif isinstance(data, six.binary_type):
@@ -788,8 +824,7 @@ def json_serializer(o):
 
 
 class Lambda(object):
-
-    def __init__(self, cb, *args, **kwargs):
+    def __init__(self, cb: Callable, *args, **kwargs):
         self._cb = cb
         self._args = [a for a in args]
         self._kwargs = kwargs or {}
@@ -818,13 +853,14 @@ def make_default_scheduler():
         jobstore = MemoryJobStore()
     else:
         raise ValueError("unknown or unsupported job store type '{}'".format(config.scheduler_job_store))
-    return BackgroundScheduler(executors={'default': ThreadPoolExecutor(config.worker_pool_size)},
-                               jobstores={'default': jobstore},
-                               job_defaults={'misfire_grace_time': config.update_frequency})
+    return BackgroundScheduler(
+        executors={'default': ThreadPoolExecutor(config.worker_pool_size)},
+        jobstores={'default': jobstore},
+        job_defaults={'misfire_grace_time': config.update_frequency},
+    )
 
 
 class MappingStack(Mapping):
-
     def __init__(self, *args):
         self._m = list(args)
 
@@ -851,7 +887,6 @@ class MappingStack(Mapping):
 
 
 class LRUProxyDict(MutableMapping):
-
     def __init__(self, proxy, *args, **kwargs):
         self._proxy = proxy
         self._cache = LRUCache(**kwargs)
@@ -939,4 +974,9 @@ class Watchable(object):
                 cb(*args, **kwargs)
             except BaseException as ex:
                 log.debug(traceback.format_exc())
-                log.warn(ex)
+                log.warning(f'Callback {cb} failed: {ex}')
+
+
+def utc_now() -> datetime:
+    """ Return current time with tz=UTC """
+    return datetime.now(tz=timezone.utc)

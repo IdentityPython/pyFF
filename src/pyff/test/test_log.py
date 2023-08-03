@@ -1,14 +1,13 @@
-
-
 import logging
-from six import StringIO
 from unittest import TestCase
+
 from mock import patch
-from pyff.logs import log, SysLogLibHandler
+from six import StringIO
+
+from pyff.logs import SysLogLibHandler, log
 
 
 class TestLog(TestCase):
-
     def test_log_plain(self):
         try:
             logfile = StringIO()
@@ -22,7 +21,7 @@ class TestLog(TestCase):
             logger.setLevel(logging.WARNING)
 
             log.info("info")
-            log.warn("warn")
+            log.warning("warn")
             log.warning("warning")
             log.error("error")
             log.critical("critical")
@@ -30,12 +29,12 @@ class TestLog(TestCase):
 
             lines = logfile.getvalue().split("\n")
 
-            assert("info" not in lines)
-            assert("warn" in lines)
-            assert("warning" in lines)
-            assert("critical" in lines)
-            assert("error" in lines)
-            assert("debug" not in lines)
+            assert "info" not in lines
+            assert "warn" in lines
+            assert "warning" in lines
+            assert "critical" in lines
+            assert "error" in lines
+            assert "debug" not in lines
         finally:
             logger.removeHandler(test_handler)
             for hdl in old_handlers:
@@ -43,7 +42,6 @@ class TestLog(TestCase):
 
 
 class TestSyslog(TestCase):
-
     def setUp(self):
         self._syslog = StringIO()
 
@@ -59,8 +57,8 @@ class TestSyslog(TestCase):
 
     def test_kern_syslog(self):
         kern = SysLogLibHandler(0)
-        assert (kern is not None)
-        assert (isinstance(kern, SysLogLibHandler))
+        assert kern is not None
+        assert isinstance(kern, SysLogLibHandler)
 
     def test_log_syslog(self):
         with patch('syslog.syslog', new=self.dummy_syslog):
@@ -75,7 +73,7 @@ class TestSyslog(TestCase):
                 logger.setLevel(logging.WARNING)
 
                 log.info("info")
-                log.warn("warn")
+                log.warning("warn")
                 log.warning("warning")
                 log.error("error")
                 log.critical("critical")
@@ -83,12 +81,12 @@ class TestSyslog(TestCase):
 
                 lines = self._syslog.getvalue().split("\n")
 
-                assert("info" not in lines)
-                assert("12:warn" in lines)
-                assert("12:warning" in lines)
-                assert("10:critical" in lines)
-                assert("11:error" in lines)
-                assert("debug" not in lines)
+                assert "info" not in lines
+                assert "12:warn" in lines
+                assert "12:warning" in lines
+                assert "10:critical" in lines
+                assert "11:error" in lines
+                assert "debug" not in lines
             finally:
                 logger.removeHandler(test_handler)
                 for hdl in old_handlers:
