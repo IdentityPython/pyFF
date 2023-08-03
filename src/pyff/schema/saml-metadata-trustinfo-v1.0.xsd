@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema  
+ targetNamespace="urn:oasis:names:tc:SAML:metadata:trustinfo"
+ xmlns="http://www.w3.org/2001/XMLSchema"
+ xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
+ xmlns:ti="urn:oasis:names:tc:SAML:metadata:trustinfo"
+ elementFormDefault="unqualified"
+ attributeFormDefault="unqualified"
+ blockDefault="substitution"
+ version="1.0">
+
+ <annotation>
+   <documentation>
+     Document title: Metadata Extension Schema for SAML V2.0 Metadata Extensions for Trust Information 1.0
+     Document identifier: metadata-trustinfo-v1.0.xsd
+     Location: http://docs.oasis-open.org/security/saml/Post2.0/
+     Revision history:
+   </documentation>
+ </annotation>
+
+ <import namespace="urn:oasis:names:tc:SAML:2.0:metadata"
+   schemaLocation="saml-schema-metadata-2.0.xsd"/>
+ <import namespace="http://www.w3.org/XML/1998/namespace"
+   schemaLocation="xml.xsd"/>
+
+ <element name="TrustInfo" type="ti:TrustInfoType"/>
+ <complexType name="TrustInfoType">
+   <sequence>
+     <element ref="ti:MetadataSource" minOccurs="0" maxOccurs="unbounded"/>
+     <element ref="ti:TrustProfile" minOccurs="0" maxOccurs="unbounded"/>
+     <element ref="ti:TrustProfileRef" minOccurs="0" maxOccurs="unbounded"/>
+   </sequence>
+ </complexType>
+
+ <element name="MetadataSource" type="anyURI"/>
+
+ <element name="TrustProfileRef" type="anyURI"/>
+
+ <element name="TrustProfile" type="ti:TrustProfileType"/>
+ <complexType name="TrustProfileType">
+    <sequence minOccurs="0">
+       <element ref="ti:DisplayName" minOccurs="0" maxOccurs="unbounded"/>
+       <element ref="ti:FallbackHandler" minOccurs="0" maxOccurs="1"/>
+       <element ref="ti:TrustedEntity" minOccurs="0" maxOccurs="unbounded"/>
+       <element ref="ti:TrustedEntities" minOccurs="0" maxOccurs="unbounded"/>
+    </sequence>
+    <attribute name="name" type="string" use="required"/>
+    <attribute name="strict" type="boolean" default="false"/>
+ </complexType>
+
+ <element name="DisplayName" type="md:localizedNameType"/>
+
+ <element name="FallbackHandler" type="ti:FallbackHandlerType"/>
+ <complexType name="FallbackHandlerType">
+    <simpleContent>
+      <extension base="anyURI">
+        <attribute name="profile" type="string" default="href"/>
+      </extension>
+    </simpleContent>
+ </complexType>
+
+ <element name="TrustedEntity" type="ti:TrustedEntityType"/>
+ <complexType name="TrustedEntityType">
+    <simpleContent>
+      <extension base="anyURI">
+        <attribute name="include" type="boolean" default="true"/> 
+      </extension>
+    </simpleContent>
+ </complexType>
+ 
+ <element name="TrustedEntities" type="ti:TrustedEntitiesType"/>
+ <complexType name="TrustedEntitiesType">
+    <simpleContent>
+      <extension base="anyURI">
+        <attribute name="match" type="string" default="registrationAuthority"/>
+        <attribute name="include" type="boolean" default="true"/>
+      </extension>
+    </simpleContent>
+ </complexType>  
+
+</schema>

@@ -11,6 +11,7 @@ from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid, Element, ElementTree
 from pydantic import Field
 from xmlsec.crypto import CertDict
+from .resource import Resource, ResourceHandler
 
 from pyff.constants import ATTRS, NF_URI, NS, config
 from pyff.exceptions import *
@@ -697,6 +698,11 @@ def entity_extended_display_i18n(entity, default_lang=None):
     return name_dict, desc_dict
 
 
+def registration_authority(entity):
+    regauth_el = entity.find(".//{%s}RegistrationInfo" % NS['mdrpi'])
+    return regauth_el.attrib.get('registrationAuthority')
+
+
 def entity_extended_display(entity, langs=None):
     """Utility-method for computing a displayable string for a given entity.
 
@@ -785,6 +791,7 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     title, descr = entity_extended_display(e)
     entity_id = e.get('entityID')
     title_langs, descr_langs = entity_extended_display_i18n(e)
+    registrationAuthority = registration_authority(e)
 
     d = dict(
         title=title,
@@ -794,6 +801,7 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
         auth='saml',
         entity_id=entity_id,
         entityID=entity_id,
+        registrationAuthority=registrationAuthority
     )
 
     eattr = entity_attribute_dict(e)
@@ -837,6 +845,89 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
 
 def discojson_t(t, icon_store=None):
     return [discojson(en, icon_store=icon_store) for en in iter_entities(t)]
+
+
+def fetch_mdjson(urls):
+    resource = Resource()
+    for url in urls:
+        resource.add_child(url)
+
+    rp = ResourceHandler(name="Metadata")
+    rp.schedule(resource.children)
+    try:
+        rp.done.acquire()
+        rp.done.wait()
+    finally:
+        rp.done.release()
+    rp.fetcher.stop()
+    rp.fetcher.join()
+
+    entities = []
+    for child in resource.children:
+        entities.extend(child.t.findall(".//{%s}EntityDescriptor" % NS['md']))
+
+    ot = entitiesdescriptor(entities, 'extra-sources')
+
+    entities_json_list = discojson_t(ot)
+
+    entities_json = {}
+    for e in entities_json_list:
+        entities_json[e['entityID']] = e
+
+    return entities_json
+
+
+def tinfojson(e):
+    tinfo = {}
+
+    tinfo_el = e.find('.//{%s}TrustInfo' % NS['ti'])
+    if tinfo_el is None:
+        return None
+
+    tinfo['entityID'] = e.get('entityID', None)
+
+    # grab metadata sources, download metadata, and translate to json
+    md_source_urls = [el.text for el in tinfo_el.findall('.//{%s}MetadataSource' % NS['ti'])]
+    if len(md_source_urls) > 0:
+        tinfo['extra_md'] = fetch_mdjson(md_source_urls)
+
+    tinfo['profiles'] = {}
+    # Grab trust profile emements, and translate to json
+    for profile_el in tinfo_el.findall('.//{%s}TrustProfile' % NS['ti']):
+        name = profile_el.attrib['name']
+        tinfo['profiles'][name] = {'entity': [], 'entities': []}
+
+        fallback_handler = tinfo_el.find('.//{%s}FallbackHandler' % NS['ti'])
+        if fallback_handler is not None:
+            prof = fallback_handler.attrib.get('profile', 'href')
+            handler = fallback_handler.text
+            tinfo['profiles'][name]['fallback_handler'] = {'profile': prof, 'handler': handler}
+
+        for entity_el in profile_el.findall('.//{%s}TrustedEntity' % NS['ti']):
+            entity_id = entity_el.text
+            include = entity_el.attrib.get('include', True)
+            include = include if type(include) is bool else include in ('t', 'T', 'true', 'True')
+            tinfo['profiles'][name]['entity'].append({'entity_id': entity_id, 'include': include})
+
+        for entities_el in profile_el.findall('.//{%s}TrustedEntities' % NS['ti']):
+            select = entities_el.text
+            match = entities_el.attrib.get('match', 'registrationAuthority')
+            include = entities_el.attrib.get('include', True)
+            include = include if type(include) is bool else include in ('t', 'T', 'true', 'True')
+            tinfo['profiles'][name]['entities'].append({'select': select, 'match': match, 'include': include})
+
+    return tinfo
+
+
+def tinfojson_t(t):
+    d = []
+
+    for e in iter_entities(t):
+        tinfo = tinfojson(e)
+        if tinfo is not None:
+            d.append(tinfo)
+
+    return d
 
 
 def sha1_id(e):
