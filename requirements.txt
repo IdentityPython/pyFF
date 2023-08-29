@@ -7,7 +7,7 @@ gunicorn
 httplib2 >=0.7.7
 lxml >=4.1.1
 mako
-pyXMLSecurity >=0.15
+pyXMLSecurity >=1.0.0
 pyconfig
 pydantic
 pyramid
