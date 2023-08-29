@@ -727,7 +727,7 @@ class SigningTest(PipeLineTest):
         assert md.lookup(entity)
 
     def test_tinfojson(self):
-        with patch.multiple("sys", exit=self.sys_exit, stdout=StreamCapturing(sys.stdout)):
+        with patch.multiple("sys", exit=self.sys_exit):
             tmpdir = tempfile.mkdtemp()
             os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
             try:
@@ -746,8 +746,8 @@ class SigningTest(PipeLineTest):
                 with open(fn, 'r') as f:
                     tinfo_json = json.load(f)
 
-                assert 'https://example.com.com/shibboleth' in tinfo_json
-                example_tinfo = tinfo_json['https://example.com.com/shibboleth']
+                assert 'https://example.com.com/shibboleth' in str(tinfo_json)
+                example_tinfo = tinfo_json[0]
                 assert 'customer' in example_tinfo['profiles']
                 customer_tinfo = example_tinfo['profiles']['customer']
                 assert customer_tinfo['entity'][0] == {'entity_id': 'https://example.org/idp.xml', 'include': True}
