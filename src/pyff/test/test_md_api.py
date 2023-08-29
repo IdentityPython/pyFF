@@ -10,7 +10,7 @@ import requests
 from mako.lookup import TemplateLookup
 from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
 
-from pyff.api import mkapp
+from pyff.api import mkapp 
 from pyff.constants import config
 from pyff.test import SignerTestCase
 from pyff.test.test_pipeline import PipeLineTest
@@ -20,29 +20,32 @@ class PyFFAPITest(PipeLineTest):
     """
     Runs twill tests using the wsgi-intercept
     """
-
     mdx = None
     mdx_template = None
     app = None
+    tmp = None
 
     @classmethod
     def setUpClass(cls):
         SignerTestCase.setUpClass()
         cls.templates = TemplateLookup(directories=[os.path.join(cls.datadir, 'mdx')])
-        cls.mdx = tempfile.NamedTemporaryFile('w').name
-        cls.mdx_template = cls.templates.get_template('mdx.fd')
-        with open(cls.mdx, "w") as fd:
-            fd.write(cls.mdx_template.render(ctx=cls))
-        with open(cls.mdx, 'r') as r:
-            print("".join(r.readlines()))
-        cls._app = mkapp(cls.mdx)
-        cls.app = lambda *args, **kwargs: cls._app
+        with tempfile.TemporaryDirectory() as td:
+            cls.tmp = td
+            cls.mdx = os.path.join(td,'mdx.fd')
+            cls.mdx_template = cls.templates.get_template('mdx.fd')
+            with open(cls.mdx, "w+") as fd:
+                fd.write(cls.mdx_template.render(ctx=cls))
+            with open(cls.mdx, 'r') as r:
+                print("".join(r.readlines()))
+            config.local_copy_dir = td
+            cls._app = mkapp(cls.mdx)
+            cls.app = lambda *args, **kwargs: cls._app
 
     @classmethod
     def tearDownClass(cls):
         SignerTestCase.tearDownClass()
-        if os.path.exists(cls.mdx):
-            os.unlink(cls.mdx)
+        if os.path.exists(cls.tmp):
+            shutil.rmtree(cls.tmp)
 
     def test_status(self):
         with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
