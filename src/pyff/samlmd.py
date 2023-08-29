@@ -11,7 +11,7 @@ from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid, Element, ElementTree
 from pydantic import Field
 from xmlsec.crypto import CertDict
-from .resource import Resource, ResourceHandler
+from .resource import Resource, ResourceHandler, ResourceOpts
 
 from pyff.constants import ATTRS, NF_URI, NS, config
 from pyff.exceptions import *
@@ -848,9 +848,10 @@ def discojson_t(t, icon_store=None):
 
 
 def fetch_mdjson(urls):
-    resource = Resource()
+    opts = ResourceOpts()
+    resource = Resource(None, opts)
     for url in urls:
-        resource.add_child(url)
+        resource.add_child(url, opts)
 
     rp = ResourceHandler(name="Metadata")
     rp.schedule(resource.children)
