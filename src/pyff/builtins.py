@@ -40,6 +40,7 @@ from pyff.samlmd import (
     set_pubinfo,
     set_reginfo,
     sort_entities,
+    tinfojson_t,
 )
 from pyff.utils import (
     datetime2iso,
