@@ -9,7 +9,7 @@ lxml >=4.1.1
 mako
 pyXMLSecurity >=1.0.0
 pyconfig
-pydantic
+pydantic==1.*
 pyramid
 pyyaml >=3.10
 redis
