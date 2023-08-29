@@ -1,0 +1,32 @@
+- when clean:
+    - xslt:
+       stylesheet: tidy.xsl
+    - check_xml_namespaces
+    - break
+- when update:
+    - load fail_on_error=true:
+        - /home/leifj/work/swamid.se/swamid-metadata/swamid-2.0 as kaka cleanup clean
+    - select
+    - fork:
+      - select as swamid-edugain-1.0:
+         - "kaka!//md:EntityDescriptor[md:IDPSSODescriptor]"
+      - break
+    - break
+- when request:
+    - select
+    - pipe:
+        - when accept application/samlmetadata+xml application/xml:
+           - xslt:
+               stylesheet: tidy.xsl
+           - pubinfo:
+               publisher: https://mdx.qa.swamid.se/
+           - first
+           - finalize:
+               baseURL: https://mdx.qa.swamid.se/
+               cacheDuration: PT5H
+               validUntil: P10D
+           - sign:
+               key: sign.key
+               cert: sign.crt
+           - emit application/xml
+           - break
