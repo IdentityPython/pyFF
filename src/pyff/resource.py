@@ -194,7 +194,7 @@ class ResourceInfo(BaseModel):
     state: Optional[ResourceLoadState] = None
     http_headers: Dict[str, Any] = Field({})
     reason: Optional[str] = None
-    status_code: Optional[str]  # HTTP status code as string. TODO: change to int
+    status_code: Optional[str] = None # HTTP status code as string. TODO: change to int
     parser_info: Optional[ParserInfo] = None
     expired: Optional[bool] = None
     exception: Optional[BaseException] = None
@@ -224,7 +224,6 @@ class ResourceInfo(BaseModel):
             del res['Exception']
 
         return res
-
 
 class Resource(Watchable):
     def __init__(self, url: Optional[str], opts: ResourceOpts):

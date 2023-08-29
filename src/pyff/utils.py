@@ -696,7 +696,7 @@ class DirAdapter(BaseAdapter):
         pass
 
 
-def url_get(url: str, verify_tls: bool) -> Response:
+def url_get(url: str, verify_tls: Optional[bool] = False) -> Response:
     """
     Download an URL using a cache and return the response object
     :param url:

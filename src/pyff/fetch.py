@@ -47,7 +47,7 @@ class Fetch(threading.Thread):
                 if url is not None:
                     try:
                         self.state(url)
-                        r = url_get(url)
+                        r = url_get(url,verify_tls=False)
                         if self.content_handler is not None:
                             r = self.content_handler(r)
                         self.response.put(
