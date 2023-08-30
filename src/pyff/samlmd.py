@@ -700,7 +700,8 @@ def entity_extended_display_i18n(entity, default_lang=None):
 
 def registration_authority(entity):
     regauth_el = entity.find(".//{%s}RegistrationInfo" % NS['mdrpi'])
-    return regauth_el.attrib.get('registrationAuthority')
+    if regauth_el is not None:
+        return regauth_el.attrib.get('registrationAuthority')
 
 
 def entity_extended_display(entity, langs=None):
@@ -801,8 +802,9 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
         auth='saml',
         entity_id=entity_id,
         entityID=entity_id,
-        registrationAuthority=registrationAuthority,
     )
+    if registrationAuthority is not None:
+        d['registrationAuthority'] = registrationAuthority
 
     eattr = entity_attribute_dict(e)
     if 'idp' in eattr[ATTRS['role']]:
