@@ -40,7 +40,7 @@ from pyff.samlmd import (
     set_pubinfo,
     set_reginfo,
     sort_entities,
-    tinfojson_t,
+    discojson_sp_t,
 )
 from pyff.utils import (
     datetime2iso,
@@ -983,14 +983,14 @@ def _discojson(req: Plumbing.Request, *opts):
     return json.dumps(res)
 
 
-@pipe(name='tinfojson')
-def _tinfojson(req, *opts):
+@pipe(name='discojson_sp')
+def _discojson_sp(req, *opts):
     """
 
     Return a json representation of the trust information
 
     .. code-block:: yaml
-      tinfojson:
+      discojson_sp:
 
     The returned json doc will have the following structure.
 
@@ -1039,7 +1039,7 @@ def _tinfojson(req, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    res = tinfojson_t(req.t)
+    res = discojson_sp_t(req.t)
 
     return json.dumps(res)
 

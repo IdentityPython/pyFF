@@ -726,7 +726,7 @@ class SigningTest(PipeLineTest):
         assert "Expected exception from bad namespace in"
         assert md.lookup(entity)
 
-    def test_tinfojson(self):
+    def test_discojson_sp(self):
         with patch.multiple("sys", exit=self.sys_exit):
             tmpdir = tempfile.mkdtemp()
             os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
@@ -735,21 +735,21 @@ class SigningTest(PipeLineTest):
 - load:
    - file://%s/metadata/test02-sp.xml
 - select
-- tinfojson
+- discojson_sp
 - publish:
-    output: %s/tinfo.json
+    output: %s/disco_sp.json
     raw: true
     update_store: false
 """ % (self.datadir, tmpdir))
-                fn = "%s/tinfo.json" % tmpdir
+                fn = "%s/disco_sp.json" % tmpdir
                 assert os.path.exists(fn)
                 with open(fn, 'r') as f:
-                    tinfo_json = json.load(f)
+                    sp_json = json.load(f)
 
-                assert 'https://example.com.com/shibboleth' in str(tinfo_json)
-                example_tinfo = tinfo_json[0]
-                assert 'customer' in example_tinfo['profiles']
-                customer_tinfo = example_tinfo['profiles']['customer']
+                assert 'https://example.com.com/shibboleth' in str(sp_json)
+                example_sp_json = sp_json[0]
+                assert 'customer' in example_sp_json['profiles']
+                customer_tinfo = example_sp_json['profiles']['customer']
                 assert customer_tinfo['entity'][0] == {'entity_id': 'https://example.org/idp.xml', 'include': True}
                 assert customer_tinfo['entities'][0] == {'select': 'http://www.swamid.se/', 'match': 'registrationAuthority', 'include': True}
                 assert customer_tinfo['fallback_handler'] == {'profile': 'href', 'handler': 'https://www.example.org/about'}

@@ -880,58 +880,58 @@ def fetch_mdjson(urls):
     return entities_json
 
 
-def tinfojson(e):
-    tinfo = {}
+def discojson_sp(e):
+    sp = {}
 
     tinfo_el = e.find('.//{%s}TrustInfo' % NS['ti'])
     if tinfo_el is None:
         return None
 
-    tinfo['entityID'] = e.get('entityID', None)
+    sp['entityID'] = e.get('entityID', None)
 
     # grab metadata sources, download metadata, and translate to json
     md_source_urls = [el.text for el in tinfo_el.findall('.//{%s}MetadataSource' % NS['ti'])]
     if len(md_source_urls) > 0:
         try:
-            tinfo['extra_md'] = fetch_mdjson(md_source_urls)
+            sp['extra_md'] = fetch_mdjson(md_source_urls)
         except Exception as e:
             raise ValueError(f"Problem interpreting metadata at {md_source_urls}: {e}")
 
-    tinfo['profiles'] = {}
+    sp['profiles'] = {}
     # Grab trust profile emements, and translate to json
     for profile_el in tinfo_el.findall('.//{%s}TrustProfile' % NS['ti']):
         name = profile_el.attrib['name']
-        tinfo['profiles'][name] = {'entity': [], 'entities': []}
+        sp['profiles'][name] = {'entity': [], 'entities': []}
 
         fallback_handler = tinfo_el.find('.//{%s}FallbackHandler' % NS['ti'])
         if fallback_handler is not None:
             prof = fallback_handler.attrib.get('profile', 'href')
             handler = fallback_handler.text
-            tinfo['profiles'][name]['fallback_handler'] = {'profile': prof, 'handler': handler}
+            sp['profiles'][name]['fallback_handler'] = {'profile': prof, 'handler': handler}
 
         for entity_el in profile_el.findall('.//{%s}TrustedEntity' % NS['ti']):
             entity_id = entity_el.text
             include = entity_el.attrib.get('include', True)
             include = include if type(include) is bool else include in ('t', 'T', 'true', 'True')
-            tinfo['profiles'][name]['entity'].append({'entity_id': entity_id, 'include': include})
+            sp['profiles'][name]['entity'].append({'entity_id': entity_id, 'include': include})
 
         for entities_el in profile_el.findall('.//{%s}TrustedEntities' % NS['ti']):
             select = entities_el.text
             match = entities_el.attrib.get('match', 'registrationAuthority')
             include = entities_el.attrib.get('include', True)
             include = include if type(include) is bool else include in ('t', 'T', 'true', 'True')
-            tinfo['profiles'][name]['entities'].append({'select': select, 'match': match, 'include': include})
+            sp['profiles'][name]['entities'].append({'select': select, 'match': match, 'include': include})
 
-    return tinfo
+    return sp
 
 
-def tinfojson_t(t):
+def discojson_sp_t(t):
     d = []
 
     for e in iter_entities(t):
-        tinfo = tinfojson(e)
-        if tinfo is not None:
-            d.append(tinfo)
+        sp = discojson_sp(e)
+        if sp is not None:
+            d.append(sp)
 
     return d
 
