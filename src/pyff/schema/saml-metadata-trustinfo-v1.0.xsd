@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schema  
- targetNamespace="urn:oasis:names:tc:SAML:metadata:trustinfo"
+ targetNamespace="https://seamlessaccess.org/NS/trustinfo"
  xmlns="http://www.w3.org/2001/XMLSchema"
  xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
- xmlns:ti="urn:oasis:names:tc:SAML:metadata:trustinfo"
+ xmlns:ti="https://seamlessaccess.org/NS/trustinfo"
  elementFormDefault="unqualified"
  attributeFormDefault="unqualified"
  blockDefault="substitution"

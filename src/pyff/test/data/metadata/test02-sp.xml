@@ -43,7 +43,7 @@
       <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://example.com/Shibboleth.sso/Login" index="1"/>
 
 
-<ti:TrustInfo xmlns:ti="urn:oasis:names:tc:SAML:metadata:trustinfo">
+<ti:TrustInfo xmlns:ti="https://seamlessaccess.org/NS/trustinfo">
    <ti:TrustProfile name="customer" strict="true">
      <ti:DisplayName xml:lang="en">Customer Access</ti:DisplayName>
      <ti:DisplayName xml:lang="sv">Kundinloggning</ti:DisplayName>
