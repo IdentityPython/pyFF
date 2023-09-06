@@ -708,3 +708,21 @@ class SigningTest(PipeLineTest):
         except ValueError:
             pass
         assert "Expected exception from bad namespace in"
+
+    def test_parsecopy_(self):
+        entity = 'https://idp.example.com/saml2/idp/metadata.php'
+        res, md = self.exec_pipeline(
+            f"""
+- when batch:
+    - load:
+        - {self.datadir}/metadata/test01.xml
+- map:
+     - fork:
+       - publish:
+"""
+        )
+        assert "Expected exception from bad namespace in"
+        assert md.lookup(entity)
+
+
+
