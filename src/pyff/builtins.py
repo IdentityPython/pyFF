@@ -12,6 +12,7 @@ import sys
 import traceback
 from copy import deepcopy
 from datetime import datetime
+from io import BytesIO
 from str2bool import str2bool
 from typing import Dict, Optional
 
@@ -46,6 +47,7 @@ from pyff.utils import (
     duration2timedelta,
     hash_id,
     iso2datetime,
+    parse_xml,
     root,
     safe_write,
     total_seconds,
@@ -249,10 +251,30 @@ def fork(req: Plumbing.Request, *opts):
             - setattr:
                 attribute: value
 
+    **parsecopy**
+
+    Due to a hard to find bug, fork which uses deepcopy can lose some namespaces. The parsecopy argument is a workaround.
+    It uses a brute force serialisation and deserialisation to get around the bug. 
+
+    .. code-block:: yaml
+
+        - select  # select all entities
+        - fork parsecopy:
+            - certreport
+            - publish:
+                 output: "/tmp/annotated.xml"
+        - fork:
+            - xslt:
+                 stylesheet: tidy.xml
+            - publish:
+                 output: "/tmp/clean.xml"
     """
     nt = None
     if req.t is not None:
-        nt = deepcopy(req.t)
+        if 'parsecopy' in opts:
+            nt = root(parse_xml(BytesIO(dumptree(req.t))))
+        else:
+            nt = deepcopy(req.t)
 
     if not isinstance(req.args, list):
         raise ValueError('Non-list arguments to "fork" not allowed')
