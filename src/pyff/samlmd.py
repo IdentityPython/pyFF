@@ -938,7 +938,13 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
         strict = profile_el.attrib.get('strict', True)
         sp['profiles'][name] = {'strict': strict, 'entity': [], 'entities': []}
 
-        fallback_handler = tinfo_el.find('.//{%s}FallbackHandler' % NS['ti'])
+        display_name = {}
+        for dname in profile_el.iterfind('.//{%s}DisplayName' % NS['ti']):
+            lang = dname.attrib['{%s}lang' % NS['xml']]
+            display_name[lang] = dname.text
+        sp['profiles'][name]['display_name'] = display_name
+
+        fallback_handler = profile_el.find('.//{%s}FallbackHandler' % NS['ti'])
         if fallback_handler is not None:
             prof = fallback_handler.attrib.get('profile', 'href')
             handler = fallback_handler.text
