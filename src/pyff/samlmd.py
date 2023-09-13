@@ -93,7 +93,7 @@ def parse_saml_metadata(
     :param base_url: use this base url to resolve relative URLs for XInclude processing
     :param validation_errors: A dict that will be used to return validation errors to the caller
 
-    :return: Tuple with t (ElementTree), expire_time_offset, exception
+    :return: Tuple with t (ElementTree), trust_info, expire_time_offset, exception
     """
 
     if validation_errors is None:
@@ -107,6 +107,9 @@ def parse_saml_metadata(
         expire_time_offset = metadata_expiration(t)
 
         t = check_signature(t, opts.verify)
+
+        trust_info = None
+        extensions = t.find('{%s}Extensions' % NS['md'])
 
         if opts.cleanup is not None:
             for cb in opts.cleanup:
@@ -132,6 +135,8 @@ def parse_saml_metadata(
                 t = entitiesdescriptor(
                     [t], base_url, copy=False, validate=True, filter_invalid=filter_invalid, nsmap=t.nsmap
                 )
+            elif t.tag == "{%s}EntitiesDescriptor" % NS['md'] and extensions is not None:
+                trust_info = discojson_sp(extensions)
 
     except Exception as ex:
         log.debug(traceback.format_exc())
@@ -139,11 +144,11 @@ def parse_saml_metadata(
         if opts.fail_on_error:
             raise ex
 
-        return None, None, ex
+        return None, None, None, ex
 
     log.debug("returning %d valid entities" % len(list(iter_entities(t))))
 
-    return t, expire_time_offset, None
+    return t, trust_info, expire_time_offset, None
 
 
 class SAMLParserInfo(ParserInfo):
@@ -162,7 +167,7 @@ class SAMLMetadataResourceParser(PyffParser):
 
     def parse(self, resource: Resource, content: str) -> SAMLParserInfo:
         info = SAMLParserInfo(description='SAML Metadata', expiration_time='')
-        t, expire_time_offset, exception = parse_saml_metadata(
+        t, trust_info, expire_time_offset, exception = parse_saml_metadata(
             unicode_stream(content),
             base_url=resource.url,
             opts=resource.opts,
@@ -183,6 +188,9 @@ class SAMLMetadataResourceParser(PyffParser):
 
             for e in iter_entities(t):
                 info.entities.append(e.get('entityID'))
+
+        if trust_info is not None:
+            resource.trust_info = trust_info
 
         if exception is not None:
             resource.info.exception = exception
@@ -890,7 +898,8 @@ def fetch_mdjson(urls):
 
     entities = []
     for child in resource.children:
-        entities.extend(child.t.findall(".//{%s}EntityDescriptor" % NS['md']))
+        if child.t is not None:
+            entities.extend(child.t.findall(".//{%s}EntityDescriptor" % NS['md']))
 
     ot = entitiesdescriptor(entities, 'extra-sources')
 
@@ -903,7 +912,7 @@ def fetch_mdjson(urls):
     return entities_json
 
 
-def discojson_sp(e):
+def discojson_sp(e, global_trust_info=None, global_md_sources=None):
     sp = {}
 
     tinfo_el = e.find('.//{%s}TrustInfo' % NS['ti'])
@@ -945,14 +954,26 @@ def discojson_sp(e):
             include = include if type(include) is bool else include in ('t', 'T', 'true', 'True')
             sp['profiles'][name]['entities'].append({'select': select, 'match': match, 'include': include})
 
+    if global_trust_info is not None and global_md_sources is not None:
+        for profileref_el in tinfo_el.findall('.//{%s}TrustProfileRef' % NS['ti']):
+            refname = profileref_el.text
+            sources = global_md_sources[sp['entityID']]
+            for source in sources:
+                if refname in global_trust_info[source]:
+                    sp['profiles'][refname] = global_trust_info[source][refname]
+                    break
+
     return sp
 
 
-def discojson_sp_t(t):
+def discojson_sp_t(req):
     d = []
+    t = req.t
+    global_tinfo = req.md.rm.global_trust_info()
+    global_sources = req.md.rm.global_md_sources()
 
     for e in iter_entities(t):
-        sp = discojson_sp(e)
+        sp = discojson_sp(e, global_trust_info=global_tinfo, global_md_sources=global_sources)
         if sp is not None:
             d.append(sp)
 

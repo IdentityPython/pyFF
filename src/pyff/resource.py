@@ -239,6 +239,7 @@ class Resource(Watchable):
         self.last_parser: Optional['PyffParser'] = None  # importing PyffParser in this module causes a loop
         self._infos: Deque[ResourceInfo] = deque(maxlen=config.info_buffer_size)
         self.children: Deque[Resource] = deque()
+        self.trust_info: Optional[dict] = None
         self.md_sources: Optional[dict] = None
         self._setup()
 
@@ -492,6 +493,13 @@ class Resource(Watchable):
         info.state = ResourceLoadState.Ready
 
         return self.children
+
+    def global_trust_info(self):
+        trust_info = {}
+        for r in self.walk():
+            if r.url and r.trust_info is not None:
+                trust_info[r.url] = r.trust_info['profiles']
+        return trust_info
 
     def global_md_sources(self):
         from pyff.samlmd import SAMLParserInfo

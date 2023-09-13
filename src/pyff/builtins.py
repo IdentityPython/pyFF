@@ -1039,7 +1039,7 @@ def _discojson_sp(req, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    res = discojson_sp_t(req.t)
+    res = discojson_sp_t(req)
 
     return json.dumps(res)
 
