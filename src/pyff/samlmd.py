@@ -824,7 +824,7 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
         entityID=entity_id,
     )
     if reg_auth is not None:
-        d['registration_authority'] = reg_auth
+        d['registrationAuthority'] = reg_auth
 
     if cats is not None:
         d['entity_categories'] = cats
