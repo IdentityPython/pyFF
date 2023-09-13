@@ -935,7 +935,8 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
     # Grab trust profile emements, and translate to json
     for profile_el in tinfo_el.findall('.//{%s}TrustProfile' % NS['ti']):
         name = profile_el.attrib['name']
-        sp['profiles'][name] = {'entity': [], 'entities': []}
+        strict = profile_el.attrib.get('strict', True)
+        sp['profiles'][name] = {'strict': strict, 'entity': [], 'entities': []}
 
         fallback_handler = tinfo_el.find('.//{%s}FallbackHandler' % NS['ti'])
         if fallback_handler is not None:
