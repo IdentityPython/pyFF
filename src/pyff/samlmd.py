@@ -793,7 +793,7 @@ def entity_scopes(e):
     return [s.text for s in elt]
 
 
-def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
+def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store=None):
     if e is None:
         return dict()
 
@@ -818,6 +818,9 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
 
     if cats is not None:
         d['entity_categories'] = cats
+
+    if sources is not None:
+        d['md_sources'] = sources
 
     eattr = entity_attribute_dict(e)
     if 'idp' in eattr[ATTRS['role']]:
@@ -858,8 +861,15 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     return d
 
 
-def discojson_t(t, icon_store=None):
-    return [discojson(en, icon_store=icon_store) for en in iter_entities(t)]
+def discojson_t(t, resource, icon_store=None):
+    md_sources = resource.global_md_sources()
+    entities = []
+    for en in iter_entities(t):
+        entity_id = en.attrib['entityID']
+        sources = md_sources[entity_id]
+        entity = discojson(en, sources=sources, icon_store=icon_store)
+        entities.append(entity)
+    return entities
 
 
 def fetch_mdjson(urls):
@@ -884,7 +894,7 @@ def fetch_mdjson(urls):
 
     ot = entitiesdescriptor(entities, 'extra-sources')
 
-    entities_json_list = discojson_t(ot)
+    entities_json_list = discojson_t(ot, resource)
 
     entities_json = {}
     for e in entities_json_list:

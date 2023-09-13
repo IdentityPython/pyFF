@@ -977,7 +977,7 @@ def _discojson(req: Plumbing.Request, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    res = discojson_t(req.t, icon_store=req.md.icon_store)
+    res = discojson_t(req.t, req.md.rm, icon_store=req.md.icon_store)
     res.sort(key=operator.itemgetter('title'))
 
     return json.dumps(res)

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 import traceback
-from collections import deque
+from collections import deque, defaultdict
 from datetime import datetime
 from enum import Enum
 from threading import Condition, Lock
@@ -239,6 +239,7 @@ class Resource(Watchable):
         self.last_parser: Optional['PyffParser'] = None  # importing PyffParser in this module causes a loop
         self._infos: Deque[ResourceInfo] = deque(maxlen=config.info_buffer_size)
         self.children: Deque[Resource] = deque()
+        self.md_sources: Optional[dict] = None
         self._setup()
 
     def _setup(self):
@@ -491,3 +492,15 @@ class Resource(Watchable):
         info.state = ResourceLoadState.Ready
 
         return self.children
+
+    def global_md_sources(self):
+        from pyff.samlmd import SAMLParserInfo
+
+        md_sources = defaultdict(list)
+        for r in self.walk():
+            if r.url:
+                for info in r._infos:
+                    if isinstance(info.parser_info, SAMLParserInfo):
+                        for entity_id in info.parser_info.entities:
+                            md_sources[entity_id].append(r.url)
+        return md_sources
