@@ -698,6 +698,14 @@ def entity_extended_display_i18n(entity, default_lang=None):
     return name_dict, desc_dict
 
 
+def entity_categories(entity):
+    cats = None
+    cats_els = entity.findall('.//{%s}EntityAttributes/{%s}Attribute[@Name="http://macedir.org/entity-category"]/{%s}AttributeValue' % (NS['mdattr'], NS['saml'], NS['saml']))
+    if len(cats_els) > 0:
+        cats = [el.text for el in cats_els]
+    return cats
+
+
 def registration_authority(entity):
     regauth_el = entity.find(".//{%s}RegistrationInfo" % NS['mdrpi'])
     if regauth_el is not None:
@@ -792,7 +800,8 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     title, descr = entity_extended_display(e)
     entity_id = e.get('entityID')
     title_langs, descr_langs = entity_extended_display_i18n(e)
-    registrationAuthority = registration_authority(e)
+    reg_auth = registration_authority(e)
+    cats = entity_categories(e)
 
     d = dict(
         title=title,
@@ -802,9 +811,13 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
         auth='saml',
         entity_id=entity_id,
         entityID=entity_id,
+
     )
-    if registrationAuthority is not None:
-        d['registrationAuthority'] = registrationAuthority
+    if reg_auth is not None:
+        d['registration_authority'] = reg_auth
+
+    if cats is not None:
+        d['entity_categories'] = cats
 
     eattr = entity_attribute_dict(e)
     if 'idp' in eattr[ATTRS['role']]:
