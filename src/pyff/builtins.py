@@ -30,6 +30,7 @@ from pyff.logs import get_log
 from pyff.pipes import PipeException, PipelineCallback, Plumbing, pipe, registry
 from pyff.samlmd import (
     annotate_entity,
+    discojson_sp_t,
     discojson_t,
     entitiesdescriptor,
     find_in_document,
@@ -40,7 +41,6 @@ from pyff.samlmd import (
     set_pubinfo,
     set_reginfo,
     sort_entities,
-    discojson_sp_t,
 )
 from pyff.utils import (
     datetime2iso,

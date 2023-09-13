@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import os
 import traceback
-from collections import deque, defaultdict
+from collections import defaultdict, deque
 from datetime import datetime
 from enum import Enum
 from threading import Condition, Lock
-from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, Tuple
 from urllib.parse import quote as urlescape
 
 import requests

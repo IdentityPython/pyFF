@@ -708,7 +708,10 @@ def entity_extended_display_i18n(entity, default_lang=None):
 
 def entity_categories(entity):
     cats = None
-    cats_els = entity.findall('.//{%s}EntityAttributes/{%s}Attribute[@Name="http://macedir.org/entity-category"]/{%s}AttributeValue' % (NS['mdattr'], NS['saml'], NS['saml']))
+    cats_els = entity.findall(
+        './/{%s}EntityAttributes/{%s}Attribute[@Name="http://macedir.org/entity-category"]/{%s}AttributeValue'
+        % (NS['mdattr'], NS['saml'], NS['saml'])
+    )
     if len(cats_els) > 0:
         cats = [el.text for el in cats_els]
     return cats
@@ -819,7 +822,6 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
         auth='saml',
         entity_id=entity_id,
         entityID=entity_id,
-
     )
     if reg_auth is not None:
         d['registration_authority'] = reg_auth
