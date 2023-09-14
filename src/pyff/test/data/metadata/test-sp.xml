@@ -65,13 +65,13 @@
           <ti:DisplayName xml:lang="en">Other Access</ti:DisplayName>
           <ti:DisplayName xml:lang="sv">Other Access sv</ti:DisplayName>
           <ti:FallbackHandler profile="href">https://www.example.org/other</ti:FallbackHandler>
-          <ti:TrustedEntity include="true">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+          <ti:TrustedEntity include="true">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
         </ti:TrustProfile>
         <ti:TrustProfile name="another" strict="true">
           <ti:DisplayName xml:lang="en">Another Access</ti:DisplayName>
           <ti:DisplayName xml:lang="sv">Another Access</ti:DisplayName>
           <ti:FallbackHandler profile="href">https://www.example.org/another</ti:FallbackHandler>
-          <ti:TrustedEntity include="false">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+          <ti:TrustedEntity include="false">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
         </ti:TrustProfile>
         <ti:TrustProfileRef>global1</ti:TrustProfileRef>
       </ti:TrustInfo>
@@ -187,25 +187,25 @@ D265cqy6Le/toVg=</ds:X509Certificate>
           <ti:DisplayName xml:lang="en">Other Access</ti:DisplayName>
           <ti:DisplayName xml:lang="sv">Other Access sv</ti:DisplayName>
           <ti:FallbackHandler profile="href">https://www.example.org/other</ti:FallbackHandler>
-          <ti:TrustedEntity include="true">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+          <ti:TrustedEntity include="true">https://kimlik.29mayis.edu.tr/simplesaml/saml2/idp/metadata.php</ti:TrustedEntity>
         </ti:TrustProfile>
         <ti:TrustProfile name="another" strict="true">
           <ti:DisplayName xml:lang="en">Another Access</ti:DisplayName>
           <ti:DisplayName xml:lang="sv">Another Access sv</ti:DisplayName>
           <ti:FallbackHandler profile="href">https://www.example.org/another</ti:FallbackHandler>
-          <ti:TrustedEntity include="false">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+          <ti:TrustedEntity include="false">https://kimlik.29mayis.edu.tr/simplesaml/saml2/idp/metadata.php</ti:TrustedEntity>
         </ti:TrustProfile>
         <ti:TrustProfile name="yetanother" strict="false">
           <ti:DisplayName xml:lang="en">yet Another Access</ti:DisplayName>
           <ti:DisplayName xml:lang="sv">yet Another Access sv</ti:DisplayName>
           <ti:FallbackHandler profile="href">https://www.example.org/another</ti:FallbackHandler>
-          <ti:TrustedEntity include="false">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+          <ti:TrustedEntity include="false">https://kimlik.29mayis.edu.tr/simplesaml/saml2/idp/metadata.php</ti:TrustedEntity>
         </ti:TrustProfile>
         <ti:TrustProfile name="yetanotherone" strict="true">
           <ti:DisplayName xml:lang="en">yet Another one Access</ti:DisplayName>
           <ti:DisplayName xml:lang="sv">yet Another one Access sv</ti:DisplayName>
           <ti:FallbackHandler profile="href">https://www.example.org/another</ti:FallbackHandler>
-          <ti:TrustedEntity include="true">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+          <ti:TrustedEntity include="true">https://kimlik.29mayis.edu.tr/simplesaml/saml2/idp/metadata.php</ti:TrustedEntity>
         </ti:TrustProfile>
         <ti:TrustProfileRef>global2</ti:TrustProfileRef>
       </ti:TrustInfo>
