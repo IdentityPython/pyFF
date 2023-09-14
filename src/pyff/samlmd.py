@@ -936,6 +936,7 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
     for profile_el in tinfo_el.findall('.//{%s}TrustProfile' % NS['ti']):
         name = profile_el.attrib['name']
         strict = profile_el.attrib.get('strict', True)
+        strict = strict if type(strict) is bool else strict in ('t', 'T', 'true', 'True')
         sp['profiles'][name] = {'strict': strict, 'entity': [], 'entities': []}
 
         display_name = {}
