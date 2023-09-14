@@ -1,0 +1,906 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<md:EntitiesDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute" xmlns:mdrpi="urn:oasis:names:tc:SAML:metadata:rpi" xmlns:shibmd="urn:mace:shibboleth:metadata:1.0" xmlns:xrd="http://docs.oasis-open.org/ns/xri/xrd-1.0" xmlns:pyff="http://pyff.io/NS" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ser="http://eidas.europa.eu/metadata/servicelist" xmlns:eidas="http://eidas.europa.eu/saml-extensions" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" xmlns:samla="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:init="urn:oasis:names:tc:SAML:profiles:SSO:request-init" xmlns:idpdisc="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" xmlns:wayf="http://sdss.ac.uk/2006/06/WAYF" xmlns:req-attr="urn:oasis:names:tc:SAML:protcol:ext:req-attr" Name="test">
+    <md:Extensions>
+      <ti:TrustInfo xmlns:ti="https://seamlessaccess.org/NS/trustinfo">
+         <ti:TrustProfile name="global1" strict="true">
+           <ti:DisplayName xml:lang="en">Global 1 en</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Global 1 sv</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about1</ti:FallbackHandler>
+           <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="global2" strict="true">
+           <ti:DisplayName xml:lang="en">Global 2 en</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Global 2 sv</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about2</ti:FallbackHandler>
+           <ti:TrustedEntity>https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
+         </ti:TrustProfile>
+      </ti:TrustInfo>
+    </md:Extensions>
+  <md:EntityDescriptor entityID="https://cpauth.icos-cp.eu/saml/cpauth">
+  <md:Extensions>
+    <mdrpi:RegistrationInfo registrationAuthority="http://www.swamid.se/" registrationInstant="2015-02-11T11:09:51Z">
+      <mdrpi:RegistrationPolicy xml:lang="en">http://swamid.se/policy/mdrps</mdrpi:RegistrationPolicy>
+    </mdrpi:RegistrationInfo>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha512"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#sha384"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#sha224"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha224"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha384"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2009/xmldsig11#dsa-sha256"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2000/09/xmldsig#dsa-sha1"/>
+    <mdattr:EntityAttributes>
+      <saml:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" Name="http://macedir.org/entity-category">
+        <saml:AttributeValue>http://www.geant.net/uri/dataprotection-code-of-conduct/v1</saml:AttributeValue>
+      </saml:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <ti:TrustInfo xmlns:ti="https://seamlessaccess.org/NS/trustinfo">
+        <ti:MetadataSource>https://login.uleam.cedia.edu.ec/saml2/idp/metadata.php</ti:MetadataSource>
+        <ti:TrustProfile name="customer" strict="true">
+          <ti:DisplayName xml:lang="en">Customer Access</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">Kundinloggning</ti:DisplayName>
+          <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+          <ti:TrustedEntity include="true">https://login.uleam.cedia.edu.ec/saml2/idp/metadata.php</ti:TrustedEntity>
+          <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
+        </ti:TrustProfile>
+        <ti:TrustProfile name="provider" strict="true">
+          <ti:DisplayName xml:lang="en">Provider Access</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">loggning</ti:DisplayName>
+          <ti:FallbackHandler profile="href">https://www.example.org/provider</ti:FallbackHandler>
+          <ti:TrustedEntity>https://cafe.usf.edu.br/idp/shibboleth</ti:TrustedEntity>
+          <ti:TrustedEntity>https://idp.u-picardie.fr/idp/shibboleth</ti:TrustedEntity>
+        </ti:TrustProfile>
+        <ti:TrustProfile name="other" strict="false">
+          <ti:DisplayName xml:lang="en">Other Access</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">Other Access sv</ti:DisplayName>
+          <ti:FallbackHandler profile="href">https://www.example.org/other</ti:FallbackHandler>
+          <ti:TrustedEntity include="true">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+        </ti:TrustProfile>
+        <ti:TrustProfile name="another" strict="true">
+          <ti:DisplayName xml:lang="en">Another Access</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">Another Access</ti:DisplayName>
+          <ti:FallbackHandler profile="href">https://www.example.org/another</ti:FallbackHandler>
+          <ti:TrustedEntity include="false">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+        </ti:TrustProfile>
+        <ti:TrustProfileRef>global1</ti:TrustProfileRef>
+      </ti:TrustInfo>
+      <init:RequestInitiator Binding="urn:oasis:names:tc:SAML:profiles:SSO:request-init" Location="https://cpauth.icos-cp.eu/saml/login"/>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="en">Carbon Portal authentication service</mdui:DisplayName>
+        <mdui:DisplayName xml:lang="sv">Kolportalens autentiseringstjänst</mdui:DisplayName>
+        <mdui:Description xml:lang="en">Single Sign On for services of ICOS Carbon Portal. Maintained by the Carbon Portal team at Physical Geography department (nateko.lu.se).</mdui:Description>
+        <mdui:Description xml:lang="sv">Single Sign On tjänst för ICOS Kolportalen. Hanteras av Carbon Portal teamet på INES (nateko.lu.se).</mdui:Description>
+        <mdui:PrivacyStatementURL xml:lang="en">https://cpauth.icos-cp.eu/saml/privacyStatement</mdui:PrivacyStatementURL>
+        <mdui:InformationURL xml:lang="en">https://www.icos-cp.eu/</mdui:InformationURL>
+        <mdui:InformationURL xml:lang="sv">https://www.icos-cp.eu/</mdui:InformationURL>
+        <mdui:PrivacyStatementURL xml:lang="sv">https://cpauth.icos-cp.eu/saml/privacyStatement</mdui:PrivacyStatementURL>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:KeyDescriptor>
+      <ds:KeyInfo>
+        <ds:KeyName>cpauth.icos-cp.eu</ds:KeyName>
+        <ds:X509Data>
+          <ds:X509SubjectName>CN=cpauth.icos-cp.eu</ds:X509SubjectName>
+          <ds:X509Certificate>MIIEJzCCAw+gAwIBAgIJANC3VWNs7fbTMA0GCSqGSIb3DQEBCwUAMIGpMQswCQYD
+VQQGEwJTRTERMA8GA1UECAwIU2vDg8KlbmUxDTALBgNVBAcMBEx1bmQxGzAZBgNV
+BAoMEklDT1MgQ2FyYm9uIFBvcnRhbDEfMB0GA1UECwwWQXV0aGVudGljYXRpb24g
+U2VydmljZTEaMBgGA1UEAwwRY3BhdXRoLmljb3MtY3AuZXUxHjAcBgkqhkiG9w0B
+CQEWD2luZm9AaWNvcy1jcC5ldTAeFw0xNTAyMDUxMjI0MzZaFw0yNTAyMDIxMjI0
+MzZaMIGpMQswCQYDVQQGEwJTRTERMA8GA1UECAwIU2vDg8KlbmUxDTALBgNVBAcM
+BEx1bmQxGzAZBgNVBAoMEklDT1MgQ2FyYm9uIFBvcnRhbDEfMB0GA1UECwwWQXV0
+aGVudGljYXRpb24gU2VydmljZTEaMBgGA1UEAwwRY3BhdXRoLmljb3MtY3AuZXUx
+HjAcBgkqhkiG9w0BCQEWD2luZm9AaWNvcy1jcC5ldTCCASIwDQYJKoZIhvcNAQEB
+BQADggEPADCCAQoCggEBAM2QN1jaZJeuPAH+4sVMZKk7vg4JIbUuTMKk0+KIAg5M
+XiVsRiEUjY+LtIncrvA/kf2CIySI0WkbwZMjcDd03hNj4kLWhuyxfOCwDO6DsUbG
+MbyI6HIYWXJp5ljfEEFgtMqT3dDtD5vwq8h4Zy20ukxOoIokKczrAvn4JjkMsj6Z
+0CEAFBC29o4E8PWQbUBgvt6Z+2ao+RHMLD7nZVBx98Occ9KfnYnDDd9Oi1XFe009
+zaSbcqY2RpN8I9hcW/KQf3KnGW5xZ5dr4rhGklCkYr+h0W3xKu+hin8bk91t1Dkr
+gaKl/N7M3Oof3k+7ZBlwaV97es5InWCeNgDxCGkBRNsCAwEAAaNQME4wHQYDVR0O
+BBYEFDcD7MVudooGaNRYqXBYqQi3VzGxMB8GA1UdIwQYMBaAFDcD7MVudooGaNRY
+qXBYqQi3VzGxMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBABS02eZS
+weXGMJ2fEIy2JH0VhCbjuX/rz+8Hfh9LjzNb3QwKHuwP83yvPqRulV9FYmvOoK8T
+fMou5aW0mZ+QgJNKOrxY5vFxUq6pn3OiYbBu3m1C9ajbU/nx2evzt4+qUwTfHFb+
+ZgXpOtmxRekFzVvGZ18BSPJKwAAqqZ11X7skT/NwEAhbgplVPv9WkDmDzqNvHqQJ
+nyRgD2ZqUPU9nEOjGy0gI07dciVcYZQ+CiZeSECIWgQwjDEBDuwMCVAZA6gfdz6C
+KJuN+RUSKPEcxPxle1MiB4MU0ei5X4xUbvLWKn9Ok7TOXg2BpnMAv6eON1wVo0Aa
+D265cqy6Le/toVg=</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes128-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes192-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes256-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes128-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes192-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes256-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#tripledes-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#rsa-oaep"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p"/>
+    </md:KeyDescriptor>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://cpauth.icos-cp.eu/saml/SAML2/POST" index="1" isDefault="true"/>
+    <md:AttributeConsumingService index="1">
+      <md:ServiceName xml:lang="en">ICOS Carbon Portal SAML service</md:ServiceName>
+      <md:ServiceName xml:lang="sv">ICOS Kolportalens SAML tjänst</md:ServiceName>
+      <md:RequestedAttribute FriendlyName="givenName" Name="urn:oid:2.5.4.42" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="sn" Name="urn:oid:2.5.4.4" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="mail" Name="urn:oid:0.9.2342.19200300.100.1.3" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+    </md:AttributeConsumingService>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="en">ICOS Carbon Portal</md:OrganizationName>
+    <md:OrganizationName xml:lang="sv">ICOS Kolportalen</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="en">Carbon Portal</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="sv">Kolportalen</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="en">https://www.icos-cp.eu/</md:OrganizationURL>
+    <md:OrganizationURL xml:lang="sv">https://www.icos-cp.eu/</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="technical">
+    <md:GivenName>Oleg</md:GivenName>
+    <md:SurName>Mirzov</md:SurName>
+    <md:EmailAddress>mailto:oleg.mirzov@nateko.lu.se</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="administrative">
+    <md:GivenName>Alex</md:GivenName>
+    <md:SurName>Vermeulen</md:SurName>
+    <md:EmailAddress>mailto:alex.vermeulen@nateko.lu.se</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor><md:EntityDescriptor entityID="http://fs.liu.se/adfs/services/trust">
+  <md:Extensions>
+    <mdrpi:RegistrationInfo registrationAuthority="http://www.swamid.se/" registrationInstant="2013-08-22T07:40:14Z">
+      <mdrpi:RegistrationPolicy xml:lang="en">http://swamid.se/policy/mdrps</mdrpi:RegistrationPolicy>
+    </mdrpi:RegistrationInfo>
+    <mdattr:EntityAttributes>
+      <saml:Attribute Name="urn:oasis:names:tc:SAML:attribute:assurance-certification" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+        <saml:AttributeValue>http://www.swamid.se/policy/assurance/al1</saml:AttributeValue>
+        <saml:AttributeValue>http://www.swamid.se/policy/assurance/al2</saml:AttributeValue>
+        <saml:AttributeValue>http://www.swamid.se/policy/assurance/al3</saml:AttributeValue>
+        <saml:AttributeValue>https://refeds.org/sirtfi</saml:AttributeValue>
+      </saml:Attribute>
+      <saml:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" Name="http://macedir.org/entity-category-support">
+        <saml:AttributeValue>http://refeds.org/category/research-and-scholarship</saml:AttributeValue>
+        <saml:AttributeValue>http://www.geant.net/uri/dataprotection-code-of-conduct/v1</saml:AttributeValue>
+        <saml:AttributeValue>https://refeds.org/category/anonymous</saml:AttributeValue>
+        <saml:AttributeValue>https://refeds.org/category/pseudonymous</saml:AttributeValue>
+        <saml:AttributeValue>https://refeds.org/category/personalized</saml:AttributeValue>
+        <saml:AttributeValue>https://myacademicid.org/entity-categories/esi</saml:AttributeValue>
+        <saml:AttributeValue>https://refeds.org/category/code-of-conduct/v2</saml:AttributeValue>
+      </saml:Attribute>
+      <saml:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" Name="http://macedir.org/entity-category">
+        <saml:AttributeValue>http://www.geant.net/uri/dataprotection-code-of-conduct/v1</saml:AttributeValue>
+      </saml:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor WantAssertionsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <ti:TrustInfo xmlns:ti="https://seamlessaccess.org/NS/trustinfo">
+        <ti:TrustProfile name="other" strict="false">
+          <ti:DisplayName xml:lang="en">Other Access</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">Other Access sv</ti:DisplayName>
+          <ti:FallbackHandler profile="href">https://www.example.org/other</ti:FallbackHandler>
+          <ti:TrustedEntity include="true">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+        </ti:TrustProfile>
+        <ti:TrustProfile name="another" strict="true">
+          <ti:DisplayName xml:lang="en">Another Access</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">Another Access sv</ti:DisplayName>
+          <ti:FallbackHandler profile="href">https://www.example.org/another</ti:FallbackHandler>
+          <ti:TrustedEntity include="false">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+        </ti:TrustProfile>
+        <ti:TrustProfile name="yetanother" strict="false">
+          <ti:DisplayName xml:lang="en">yet Another Access</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">yet Another Access sv</ti:DisplayName>
+          <ti:FallbackHandler profile="href">https://www.example.org/another</ti:FallbackHandler>
+          <ti:TrustedEntity include="false">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+        </ti:TrustProfile>
+        <ti:TrustProfile name="yetanotherone" strict="true">
+          <ti:DisplayName xml:lang="en">yet Another one Access</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">yet Another one Access sv</ti:DisplayName>
+          <ti:FallbackHandler profile="href">https://www.example.org/another</ti:FallbackHandler>
+          <ti:TrustedEntity include="true">https://cpauth.icos-cp.eu/saml/cpauth</ti:TrustedEntity>
+        </ti:TrustProfile>
+        <ti:TrustProfileRef>global2</ti:TrustProfileRef>
+      </ti:TrustInfo>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="sv">Linköpings universitet</mdui:DisplayName>
+        <mdui:DisplayName xml:lang="en">Linköping University</mdui:DisplayName>
+        <mdui:Description xml:lang="sv">Linköpings universitet</mdui:Description>
+        <mdui:Description xml:lang="en">Linköping University</mdui:Description>
+        <mdui:Logo xml:lang="sv" height="121" width="350">https://liu.se/mall11/images/logo-350-sv.png</mdui:Logo>
+        <mdui:Logo xml:lang="en" height="126" width="350">https://liu.se/mall11/images/logo-350-en.png</mdui:Logo>
+        <mdui:PrivacyStatementURL xml:lang="en">https://minit.liu.se/static/privacy_policy.html</mdui:PrivacyStatementURL>
+        <mdui:PrivacyStatementURL xml:lang="sv">https://minit.liu.se/static/privacy_policy.html</mdui:PrivacyStatementURL>
+        <mdui:InformationURL xml:lang="en">https://www.liu.se/?l=en</mdui:InformationURL>
+        <mdui:InformationURL xml:lang="sv">https://www.liu.se/?l=sv</mdui:InformationURL>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDLTCCAhWgAwIBAgIQFPektIXgbZRBYUGmou4GaDANBgkqhkiG9w0BAQsFADAb
+MRkwFwYDVQQDDBBmc3NpZ25pbmcubGl1LnNlMB4XDTE3MTIxNTA3NDM0N1oXDTI3
+MTIxNTA3NTM0N1owGzEZMBcGA1UEAwwQZnNzaWduaW5nLmxpdS5zZTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBALbCDIqrM4xMhU9tKSgJaDyK+JGWw/lH
+sasvDfHVk33ocobSTkJypNESx9oS6ToOmD+W25/6rUlSJBsYb6TdasNP7zcxqPdT
+d1pFO15U4rchRVGn1+GK3FZPbhqTY0sdc6Wba0w9EiroxQ92AO6boQfgUded3CQu
+Jx76xPtoQCGJaObIrhQGwm9O8hXdfUclP2+cUm4I3pN7LV5MM7R1rrJrmXAtcHx8
+1lNwE/OA97k+E5stpDAMfmcL8Ccd2UDD3fbyZuPjnw566mJnilq/17eDm0ZinSfX
+N0b5E7Be3T1By2L8dYnyAsdWR9j27JnF/0QFQrypvvG+V7p3/PTegg8CAwEAAaNt
+MGswDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
+ATAbBgNVHREEFDASghBmc3NpZ25pbmcubGl1LnNlMB0GA1UdDgQWBBRRcAPfymvT
+MLgK5jMTzffTb6uTXzANBgkqhkiG9w0BAQsFAAOCAQEAJILiWPT6+wlSt70xEi/b
+2rXFgKc16HqFvHGzMUnU2goDAWje3R9hFQJe53btvOuhlCCVgHnjuQsyeSeK50vL
+G8N7PUL+TzqqVCpsk56BJeg3399mJ610S41x8b27hw6icz95mBWdTztScjyJYg6n
+/hQYf48auRXMVUTJ8ckUl72/NWrQvZ3XouyNV9S2A3DC1qtCF875TipSxbUOM2V7
+7GwXH2sdanMfhsGQYoTsZ5qE0qnjuQWVDiRnOMnvRnvzDAlCKjRtAqGlOLMOIHLq
+u8bHcIBe4v+veexfA6vNpgY75s2JxiNUDN6BEHmvl4q0e9M30gZl5SjvG2o/9A8z
+sw==</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="encryption">
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDLTCCAhWgAwIBAgIQXl+Ab5+AALlEmUMLnaw2ajANBgkqhkiG9w0BAQsFADAb
+MRkwFwYDVQQDDBBmc2RlY3J5cHQubGl1LnNlMB4XDTE3MTIxNTA3NDAyN1oXDTI3
+MTIxNTA3NTAyOFowGzEZMBcGA1UEAwwQZnNkZWNyeXB0LmxpdS5zZTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAK+KCOjlPhfT4jLdwPf3CH7FRfA7dvWk
+QbbpIVEqBZTqfnii2s7J5ZSNsaEJf9oWZO+lxesGc0TvJkuh3MKX9+biT9E6INL1
+9mSs3Q7xh0fiWvYHtoZE+7kN8mLEf9XkmS4XF1XyUgqQ1p6sSlSa8JOhTB2xGpZz
+iQBl6yLWITc07Fn2yo2LhODlIetmyGbzzMlkfysWh7k5E10xQK8a17v7SNL9GSbO
+gk4LC1vId6KN85K7klzXcPrDTJLqcPXx8D2B/IDLZnUs8lWvrhCmQSNGoNoDjITf
+hPQISI30ww3FjLx2LEkAAeylDYy+YMhms8SPJNLuC07Vh2mT1M2KwE0CAwEAAaNt
+MGswDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
+ATAbBgNVHREEFDASghBmc2RlY3J5cHQubGl1LnNlMB0GA1UdDgQWBBQVHtUN1F4N
+ZcsN4rLCbBxWP+awbjANBgkqhkiG9w0BAQsFAAOCAQEAn9vYZND0aRWq0U+daDN0
+ZcwYMh3kUkb96QElhZkxMWkIALyW1n3GsVIfwBh1h211tnMfvBiIwoW+GXEt/veo
+PEW3cacq/MatOMkj+RfQXeibYqEzNkluv5aS/O/v2dYAMop8IuOdriyu5uDsbBsV
+y76yLQQ+F40IPHZH4Si9bXQSaydlxSSjT9MNmHIMw3swUTYfxecsNJdaW8Vq4EXc
+3Qfa07tt/bO9U7O2HPPViIxlgO8Np5FEfzjD0TxJ5TgnU1lb795nZIAbvzSGULdS
+uR2IR/P9sJcaFTLtfYyZ1cTyC2eWviV+UCGwfW17U5WB23E3+NVGGpNKIfBukRYa
+3w==</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://fs.liu.se/adfs/ls/"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://fs.liu.se/adfs/ls/"/>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://fs.liu.se/adfs/ls/" index="0" isDefault="true"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://fs.liu.se/adfs/ls/" index="1"/>
+    <md:AttributeConsumingService index="1">
+      <md:ServiceName xml:lang="en">Linköping University</md:ServiceName>
+      <md:ServiceName xml:lang="sv">Linköpings universitet</md:ServiceName>
+      <md:RequestedAttribute FriendlyName="eduPersonAssurance" Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.11" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="norEduPersonNIN" Name="urn:oid:1.3.6.1.4.1.2428.90.1.5" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="personalIdentityNumber" Name="urn:oid:1.2.752.29.4.13" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+    </md:AttributeConsumingService>
+  </md:SPSSODescriptor>
+  <md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol" errorURL="https://liu-errorurl-prod-wa.azurewebsites.net/?errorurl_code=ERRORURL_CODE&amp;errorurl_ts=ERRORURL_TS&amp;errorurl_rp=ERRORURL_RP&amp;errorurl_tid=ERRORURL_TID&amp;errorurl_ctx=ERRORURL_CTX">
+    <md:Extensions>
+      <shibmd:Scope regexp="false">liu.se</shibmd:Scope>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="sv">Linköpings universitet</mdui:DisplayName>
+        <mdui:DisplayName xml:lang="en">Linköping University</mdui:DisplayName>
+        <mdui:Description xml:lang="sv">Identitsutgivare för anställda och studenter vid Linköpings universitet.</mdui:Description>
+        <mdui:Description xml:lang="en">Identity Provider for employees and students at Linköping University.</mdui:Description>
+        <mdui:Logo xml:lang="sv" height="121" width="350">https://liu.se/mall11/images/logo-350-sv.png</mdui:Logo>
+        <mdui:Logo xml:lang="en" height="126" width="350">https://liu.se/mall11/images/logo-350-en.png</mdui:Logo>
+        <mdui:Keywords xml:lang="sv">liu linköpings+universitet linkopings+universitet linkoping+university linköpings+university linköping linkoping</mdui:Keywords>
+        <mdui:Keywords xml:lang="en">liu linköpings+universitet linkopings+universitet linkoping+university linköpings+university linköping linkoping</mdui:Keywords>
+        <mdui:PrivacyStatementURL xml:lang="sv">https://liu.se/artikel/policy-for-hantering-av-personuppgifter-inom-ramen-for-identitetsutgivaren</mdui:PrivacyStatementURL>
+        <mdui:PrivacyStatementURL xml:lang="en">https://liu.se/en/article/policy-for-hantering-av-personuppgifter-inom-ramen-for-identitetsutgivaren</mdui:PrivacyStatementURL>
+        <mdui:InformationURL xml:lang="sv">https://www.liu.se/?l=sv</mdui:InformationURL>
+        <mdui:InformationURL xml:lang="en">https://www.liu.se/?l=en</mdui:InformationURL>
+      </mdui:UIInfo>
+      <mdui:DiscoHints>
+        <mdui:DomainHint>liu.se</mdui:DomainHint>
+        <mdui:IPHint>130.236.0.0/16</mdui:IPHint>
+        <mdui:IPHint>2001:6b0:17::/48</mdui:IPHint>
+        <mdui:GeolocationHint>geo:58.397282,15.578624</mdui:GeolocationHint>
+      </mdui:DiscoHints>
+    </md:Extensions>
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDLTCCAhWgAwIBAgIQFPektIXgbZRBYUGmou4GaDANBgkqhkiG9w0BAQsFADAb
+MRkwFwYDVQQDDBBmc3NpZ25pbmcubGl1LnNlMB4XDTE3MTIxNTA3NDM0N1oXDTI3
+MTIxNTA3NTM0N1owGzEZMBcGA1UEAwwQZnNzaWduaW5nLmxpdS5zZTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBALbCDIqrM4xMhU9tKSgJaDyK+JGWw/lH
+sasvDfHVk33ocobSTkJypNESx9oS6ToOmD+W25/6rUlSJBsYb6TdasNP7zcxqPdT
+d1pFO15U4rchRVGn1+GK3FZPbhqTY0sdc6Wba0w9EiroxQ92AO6boQfgUded3CQu
+Jx76xPtoQCGJaObIrhQGwm9O8hXdfUclP2+cUm4I3pN7LV5MM7R1rrJrmXAtcHx8
+1lNwE/OA97k+E5stpDAMfmcL8Ccd2UDD3fbyZuPjnw566mJnilq/17eDm0ZinSfX
+N0b5E7Be3T1By2L8dYnyAsdWR9j27JnF/0QFQrypvvG+V7p3/PTegg8CAwEAAaNt
+MGswDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
+ATAbBgNVHREEFDASghBmc3NpZ25pbmcubGl1LnNlMB0GA1UdDgQWBBRRcAPfymvT
+MLgK5jMTzffTb6uTXzANBgkqhkiG9w0BAQsFAAOCAQEAJILiWPT6+wlSt70xEi/b
+2rXFgKc16HqFvHGzMUnU2goDAWje3R9hFQJe53btvOuhlCCVgHnjuQsyeSeK50vL
+G8N7PUL+TzqqVCpsk56BJeg3399mJ610S41x8b27hw6icz95mBWdTztScjyJYg6n
+/hQYf48auRXMVUTJ8ckUl72/NWrQvZ3XouyNV9S2A3DC1qtCF875TipSxbUOM2V7
+7GwXH2sdanMfhsGQYoTsZ5qE0qnjuQWVDiRnOMnvRnvzDAlCKjRtAqGlOLMOIHLq
+u8bHcIBe4v+veexfA6vNpgY75s2JxiNUDN6BEHmvl4q0e9M30gZl5SjvG2o/9A8z
+sw==</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="encryption">
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDLTCCAhWgAwIBAgIQXl+Ab5+AALlEmUMLnaw2ajANBgkqhkiG9w0BAQsFADAb
+MRkwFwYDVQQDDBBmc2RlY3J5cHQubGl1LnNlMB4XDTE3MTIxNTA3NDAyN1oXDTI3
+MTIxNTA3NTAyOFowGzEZMBcGA1UEAwwQZnNkZWNyeXB0LmxpdS5zZTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAK+KCOjlPhfT4jLdwPf3CH7FRfA7dvWk
+QbbpIVEqBZTqfnii2s7J5ZSNsaEJf9oWZO+lxesGc0TvJkuh3MKX9+biT9E6INL1
+9mSs3Q7xh0fiWvYHtoZE+7kN8mLEf9XkmS4XF1XyUgqQ1p6sSlSa8JOhTB2xGpZz
+iQBl6yLWITc07Fn2yo2LhODlIetmyGbzzMlkfysWh7k5E10xQK8a17v7SNL9GSbO
+gk4LC1vId6KN85K7klzXcPrDTJLqcPXx8D2B/IDLZnUs8lWvrhCmQSNGoNoDjITf
+hPQISI30ww3FjLx2LEkAAeylDYy+YMhms8SPJNLuC07Vh2mT1M2KwE0CAwEAAaNt
+MGswDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
+ATAbBgNVHREEFDASghBmc2RlY3J5cHQubGl1LnNlMB0GA1UdDgQWBBQVHtUN1F4N
+ZcsN4rLCbBxWP+awbjANBgkqhkiG9w0BAQsFAAOCAQEAn9vYZND0aRWq0U+daDN0
+ZcwYMh3kUkb96QElhZkxMWkIALyW1n3GsVIfwBh1h211tnMfvBiIwoW+GXEt/veo
+PEW3cacq/MatOMkj+RfQXeibYqEzNkluv5aS/O/v2dYAMop8IuOdriyu5uDsbBsV
+y76yLQQ+F40IPHZH4Si9bXQSaydlxSSjT9MNmHIMw3swUTYfxecsNJdaW8Vq4EXc
+3Qfa07tt/bO9U7O2HPPViIxlgO8Np5FEfzjD0TxJ5TgnU1lb795nZIAbvzSGULdS
+uR2IR/P9sJcaFTLtfYyZ1cTyC2eWviV+UCGwfW17U5WB23E3+NVGGpNKIfBukRYa
+3w==</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://fs.liu.se/adfs/services/trust/artifactresolution" index="0"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://fs.liu.se/adfs/ls/"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://fs.liu.se/adfs/ls/"/>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://fs.liu.se/adfs/ls/"/>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://fs.liu.se/adfs/ls/"/>
+  </md:IDPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="sv">Linköpings universitet</md:OrganizationName>
+    <md:OrganizationName xml:lang="en">Linköping University</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="sv">Linköpings universitet</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="en">Linköping University</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="sv">https://liu.se/</md:OrganizationURL>
+    <md:OrganizationURL xml:lang="en">https://liu.se/en</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="administrative">
+    <md:Company>Linköping University</md:Company>
+    <md:SurName>LiU-IT SAML admins</md:SurName>
+    <md:EmailAddress>mailto:saml-admins@it.liu.se</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="technical">
+    <md:Company>Linköping University</md:Company>
+    <md:SurName>LiU-IT SAML admins</md:SurName>
+    <md:EmailAddress>mailto:saml-admins@it.liu.se</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="support">
+    <md:Company>Linköping University</md:Company>
+    <md:SurName>LiU-IT Helpdesk</md:SurName>
+    <md:EmailAddress>mailto:helpdesk@liu.se</md:EmailAddress>
+    <md:TelephoneNumber>+46 13 282828</md:TelephoneNumber>
+  </md:ContactPerson>
+  <md:ContactPerson xmlns:remd="http://refeds.org/metadata" contactType="other" remd:contactType="http://refeds.org/metadata/contactType/security">
+    <md:GivenName>LiU Incident Response Team</md:GivenName>
+    <md:EmailAddress>mailto:abuse@liu.se</md:EmailAddress>
+    <md:TelephoneNumber>+46 13 281744</md:TelephoneNumber>
+  </md:ContactPerson>
+</md:EntityDescriptor><md:EntityDescriptor entityID="https://test-edusign.ed-integrations.com/shibboleth">
+  <md:Extensions>
+    <mdrpi:RegistrationInfo registrationAuthority="http://www.swamid.se/" registrationInstant="2021-06-18T15:55:50Z">
+      <mdrpi:RegistrationPolicy xml:lang="en">http://swamid.se/policy/mdrps</mdrpi:RegistrationPolicy>
+    </mdrpi:RegistrationInfo>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha512"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#sha384"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#sha224"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha224"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha384"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2009/xmldsig11#dsa-sha256"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2000/09/xmldsig#dsa-sha1"/>
+    <mdattr:EntityAttributes>
+      <saml:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" Name="http://macedir.org/entity-category">
+        <saml:AttributeValue>http://www.geant.net/uri/dataprotection-code-of-conduct/v1</saml:AttributeValue>
+        <saml:AttributeValue>https://refeds.org/category/code-of-conduct/v2</saml:AttributeValue>
+      </saml:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <ti:TrustInfo xmlns:ti="https://seamlessaccess.org/NS/trustinfo">
+         <ti:TrustProfile name="customer" strict="true">
+           <ti:DisplayName xml:lang="en">Customer Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer2" strict="false">
+           <ti:DisplayName xml:lang="en">Customer 2 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 2</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer3" strict="true">
+           <ti:DisplayName xml:lang="en">Customer 3 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 3</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities include="false" match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer4" strict="false">
+           <ti:DisplayName xml:lang="en">Customer 4 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 4</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities include="false" match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
+         </ti:TrustProfile>
+      </ti:TrustInfo>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="sv">eduSign (Emergya)</mdui:DisplayName>
+        <mdui:DisplayName xml:lang="en">eduSign (Emergya)</mdui:DisplayName>
+        <mdui:Description xml:lang="sv">Testplats för eduSign (Emergya).</mdui:Description>
+        <mdui:Description xml:lang="en">Test site for eduSign (Emergya).</mdui:Description>
+        <mdui:InformationURL xml:lang="en">https://www.sunet.se/services/sakerhet/edusign/</mdui:InformationURL>
+        <mdui:InformationURL xml:lang="sv">https://www.sunet.se/services/sakerhet/edusign/</mdui:InformationURL>
+        <mdui:PrivacyStatementURL xml:lang="sv">https://wiki.sunet.se/display/info/eduSign+Privacy+Policy?showLanguage=sv_SE</mdui:PrivacyStatementURL>
+        <mdui:PrivacyStatementURL xml:lang="en">https://wiki.sunet.se/display/info/eduSign+Privacy+Policy?showLanguage=en_GB</mdui:PrivacyStatementURL>
+      </mdui:UIInfo>
+      <init:RequestInitiator Binding="urn:oasis:names:tc:SAML:profiles:SSO:request-init" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/Login"/>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/Login" index="1"/>
+    </md:Extensions>
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo>
+        <ds:KeyName>test-edusign.ed-integrations.com</ds:KeyName>
+        <ds:X509Data>
+          <ds:X509SubjectName>CN=test-edusign.ed-integrations.com</ds:X509SubjectName>
+          <ds:X509Certificate>MIIEMjCCApqgAwIBAgIULYfaz0a2vQPUNhHOpqJiw+XMn6owDQYJKoZIhvcNAQEL
+BQAwKzEpMCcGA1UEAxMgdGVzdC1lZHVzaWduLmVkLWludGVncmF0aW9ucy5jb20w
+HhcNMjEwNjE4MDkyMzM0WhcNMzEwNjE2MDkyMzM0WjArMSkwJwYDVQQDEyB0ZXN0
+LWVkdXNpZ24uZWQtaW50ZWdyYXRpb25zLmNvbTCCAaIwDQYJKoZIhvcNAQEBBQAD
+ggGPADCCAYoCggGBAOcHd/seqF7Ki8bqzJSahdUETdIacXidbu9PA6kEUJ4d1IDt
+3jJCzmW8x0+T7n1RA5a2JAmbn9HOPoi3HgKEkxDDMbabODiNntZC4v+bQiMlB7UG
+LxF8UCX8gSgVHeyQPNx6NAnpmft+JZPts90wQBuRfarSz//oyhKRFYgGZ79D4cUP
+CqHZ6ZqmxwtZlujSULN8ePpcp5aMHp9pglHawgVmb340jlk2/jeFxkDNtTVXb6Ox
+0/NJeZN4P99uGNviiS83lI2VDZqSdW5Wx6vVsRRHpNpIQB5xoOktCQDQsMBTXlwQ
+aAaNQKUTh8bwvMLD6bXKsHBGA0hYEL9pSu8BhABcJzty+97LlkOFLijByeLu5b1y
+qzmd4Mo+l2t5vdeSiHeAFVR66scwPoMaiUpYbts6NtKWh8i2WjkpqIuLIgTJUzRr
+luhdsJZnvQkdCweCOVg5Aaittqh/UgRGQZ1RhsjOY2tDMpNcs5dmKzjkdC5nXQTo
+PUadahgVLW3zRIxVcwIDAQABo04wTDArBgNVHREEJDAigiB0ZXN0LWVkdXNpZ24u
+ZWQtaW50ZWdyYXRpb25zLmNvbTAdBgNVHQ4EFgQUg/YnxJdS6cW0SM9h85PTNfAp
+3pQwDQYJKoZIhvcNAQELBQADggGBAMykG0VJmjHQu/kp3kWFEHJDJfRiuWqAfm8k
+i8skRKDr2Bng93g5LD5P6YTp6S3HCGYo4sh3LCjlzrcjUAetOnKS4clzdMGwT3et
+ijCfrNrLkfA0GtkbjDmVI4gZFwnDZ7ABRmvM9ncc9UM4suTbl/VKHbRNQuUnhvnK
+LGxLgwhFbDmTAGtf7LGiOjo4QpdP1ujMRWv+l+cjipr5X6gqteH1Uj0wP2tcyL1f
+Tdv5I+YEGafA76R6e2iNP0ify+NkaJ9mnhUJXKXbHRvarV5fp9Nzoo47npgUegFo
+ihd3vAEmAtmfGKXsVkWE1AtRlPbwrCJSAeadGTa66H0omDB14M6vEQs7L9jbgw03
+S3mV8N25rwbce1luo6MUnPJpDc6iOnadnBeQ2LIXbhNj3Z6E1exadzNX9BUTxr68
+8rY8wHtadr+9xh/5mNnFuDKdn9ZciDjP9b3OjQH0fG/iJhZWF2DgZlSaCzR5qLAA
+YJIFVUg+VwfF8XvjH0WKszSmYywVYg==</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="encryption">
+      <ds:KeyInfo>
+        <ds:KeyName>test-edusign.ed-integrations.com</ds:KeyName>
+        <ds:X509Data>
+          <ds:X509SubjectName>CN=test-edusign.ed-integrations.com</ds:X509SubjectName>
+          <ds:X509Certificate>MIIEMjCCApqgAwIBAgIULYfaz0a2vQPUNhHOpqJiw+XMn6owDQYJKoZIhvcNAQEL
+BQAwKzEpMCcGA1UEAxMgdGVzdC1lZHVzaWduLmVkLWludGVncmF0aW9ucy5jb20w
+HhcNMjEwNjE4MDkyMzM0WhcNMzEwNjE2MDkyMzM0WjArMSkwJwYDVQQDEyB0ZXN0
+LWVkdXNpZ24uZWQtaW50ZWdyYXRpb25zLmNvbTCCAaIwDQYJKoZIhvcNAQEBBQAD
+ggGPADCCAYoCggGBAOcHd/seqF7Ki8bqzJSahdUETdIacXidbu9PA6kEUJ4d1IDt
+3jJCzmW8x0+T7n1RA5a2JAmbn9HOPoi3HgKEkxDDMbabODiNntZC4v+bQiMlB7UG
+LxF8UCX8gSgVHeyQPNx6NAnpmft+JZPts90wQBuRfarSz//oyhKRFYgGZ79D4cUP
+CqHZ6ZqmxwtZlujSULN8ePpcp5aMHp9pglHawgVmb340jlk2/jeFxkDNtTVXb6Ox
+0/NJeZN4P99uGNviiS83lI2VDZqSdW5Wx6vVsRRHpNpIQB5xoOktCQDQsMBTXlwQ
+aAaNQKUTh8bwvMLD6bXKsHBGA0hYEL9pSu8BhABcJzty+97LlkOFLijByeLu5b1y
+qzmd4Mo+l2t5vdeSiHeAFVR66scwPoMaiUpYbts6NtKWh8i2WjkpqIuLIgTJUzRr
+luhdsJZnvQkdCweCOVg5Aaittqh/UgRGQZ1RhsjOY2tDMpNcs5dmKzjkdC5nXQTo
+PUadahgVLW3zRIxVcwIDAQABo04wTDArBgNVHREEJDAigiB0ZXN0LWVkdXNpZ24u
+ZWQtaW50ZWdyYXRpb25zLmNvbTAdBgNVHQ4EFgQUg/YnxJdS6cW0SM9h85PTNfAp
+3pQwDQYJKoZIhvcNAQELBQADggGBAMykG0VJmjHQu/kp3kWFEHJDJfRiuWqAfm8k
+i8skRKDr2Bng93g5LD5P6YTp6S3HCGYo4sh3LCjlzrcjUAetOnKS4clzdMGwT3et
+ijCfrNrLkfA0GtkbjDmVI4gZFwnDZ7ABRmvM9ncc9UM4suTbl/VKHbRNQuUnhvnK
+LGxLgwhFbDmTAGtf7LGiOjo4QpdP1ujMRWv+l+cjipr5X6gqteH1Uj0wP2tcyL1f
+Tdv5I+YEGafA76R6e2iNP0ify+NkaJ9mnhUJXKXbHRvarV5fp9Nzoo47npgUegFo
+ihd3vAEmAtmfGKXsVkWE1AtRlPbwrCJSAeadGTa66H0omDB14M6vEQs7L9jbgw03
+S3mV8N25rwbce1luo6MUnPJpDc6iOnadnBeQ2LIXbhNj3Z6E1exadzNX9BUTxr68
+8rY8wHtadr+9xh/5mNnFuDKdn9ZciDjP9b3OjQH0fG/iJhZWF2DgZlSaCzR5qLAA
+YJIFVUg+VwfF8XvjH0WKszSmYywVYg==</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes128-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes192-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes256-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes128-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes192-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes256-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#tripledes-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#rsa-oaep"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p"/>
+    </md:KeyDescriptor>
+    <md:ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/Artifact/SOAP" index="1"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/SLO/SOAP"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/SLO/Redirect"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/SLO/POST"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/SLO/Artifact"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/SAML2/POST" index="1"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/SAML2/Artifact" index="3"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:PAOS" Location="https://test-edusign.ed-integrations.com/Shibboleth.sso/SAML2/ECP" index="4"/>
+    <md:AttributeConsumingService index="1">
+      <md:ServiceName xml:lang="en">eduSign (Emergya)</md:ServiceName>
+      <md:ServiceName xml:lang="sv">eduSign (Emergya)</md:ServiceName>
+      <md:RequestedAttribute FriendlyName="eduPersonPrincipalName" Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.6" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="mail" Name="urn:oid:0.9.2342.19200300.100.1.3" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="displayName" Name="urn:oid:2.16.840.1.113730.3.1.241" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="givenName" Name="urn:oid:2.5.4.42" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="sn" Name="urn:oid:2.5.4.4" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="mailLocalAddress" Name="urn:oid:2.16.840.1.113730.3.1.13" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+    </md:AttributeConsumingService>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="en">Emergya</md:OrganizationName>
+    <md:OrganizationName xml:lang="sv">Emergya</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="en">Emergya</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="sv">Emergya</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="en">https://www.emergya.com</md:OrganizationURL>
+    <md:OrganizationURL xml:lang="sv">https://www.emergya.com</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="technical">
+    <md:GivenName>Enrique</md:GivenName>
+    <md:EmailAddress>mailto:eperez@emergya.com</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="administrative">
+    <md:GivenName>Enrique</md:GivenName>
+    <md:EmailAddress>mailto:eperez@emergya.com</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="support">
+    <md:GivenName>Enrique</md:GivenName>
+    <md:EmailAddress>mailto:eperez@emergya.com</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson xmlns:remd="http://refeds.org/metadata" contactType="other" remd:contactType="http://refeds.org/metadata/contactType/security">
+    <md:GivenName>Enrique</md:GivenName>
+    <md:EmailAddress>mailto:eperez@emergya.com</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor><md:EntityDescriptor entityID="https://box-idp.nordu.net/simplesaml/module.php/saml/sp/metadata.php/default-sp">
+  <md:Extensions>
+    <mdrpi:RegistrationInfo registrationAuthority="http://www.swamid.se/" registrationInstant="2013-06-19T11:55:52Z">
+      <mdrpi:RegistrationPolicy xml:lang="en">http://swamid.se/policy/mdrps</mdrpi:RegistrationPolicy>
+    </mdrpi:RegistrationInfo>
+    <mdattr:EntityAttributes>
+      <saml:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" Name="http://macedir.org/entity-category">
+        <saml:AttributeValue>http://refeds.org/category/research-and-scholarship</saml:AttributeValue>
+        <saml:AttributeValue>http://www.geant.net/uri/dataprotection-code-of-conduct/v1</saml:AttributeValue>
+        <saml:AttributeValue>https://refeds.org/category/code-of-conduct/v2</saml:AttributeValue>
+      </saml:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:1.1:protocol urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <ti:TrustInfo xmlns:ti="https://seamlessaccess.org/NS/trustinfo">
+         <ti:TrustProfile name="customer" strict="true">
+           <ti:DisplayName xml:lang="en">Customer Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities match="entity_categories">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
+           <ti:TrustedEntities match="entity_categories">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer2" strict="false">
+           <ti:DisplayName xml:lang="en">Customer 2 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 2</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities match="entity_categories">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
+           <ti:TrustedEntities match="entity_categories">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer3" strict="true">
+           <ti:DisplayName xml:lang="en">Customer 3 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 3</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities include="false" match="entity_categories">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer4" strict="false">
+           <ti:DisplayName xml:lang="en">Customer 4 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 4</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities include="false" match="entity_categories">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
+         </ti:TrustProfile>
+      </ti:TrustInfo>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://box-idp.nordu.net/simplesaml/module.php/saml/sp/discoresp.php" index="1"/>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="sv">NORDUnet Box Service Access</mdui:DisplayName>
+        <mdui:Description xml:lang="sv">NORDUnet Box Service Access</mdui:Description>
+        <mdui:DisplayName xml:lang="en">NORDUnet Box Service Access</mdui:DisplayName>
+        <mdui:Description xml:lang="en">NORDUnet Box Service Access</mdui:Description>
+        <mdui:InformationURL xml:lang="en">https://box.com</mdui:InformationURL>
+        <mdui:InformationURL xml:lang="sv">https://box.com</mdui:InformationURL>
+        <mdui:PrivacyStatementURL xml:lang="en">https://box-idp.nordu.net/privacy-policy/</mdui:PrivacyStatementURL>
+        <mdui:PrivacyStatementURL xml:lang="sv">https://box-idp.nordu.net/privacy-policy/</mdui:PrivacyStatementURL>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:KeyDescriptor>
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIEtDCCApwCCQC4IVr+uQQuQjANBgkqhkiG9w0BAQsFADAcMRowGAYDVQQDDBFi
+b3gtaWRwLm5vcmR1Lm5ldDAeFw0yMzA0MTcwODEzMTZaFw0zMzA0MTQwODEzMTZa
+MBwxGjAYBgNVBAMMEWJveC1pZHAubm9yZHUubmV0MIICIjANBgkqhkiG9w0BAQEF
+AAOCAg8AMIICCgKCAgEAt4jNjYzRt6Ljqma3G+Z03rivSGGsVC1kYmMAE6/U+n6j
+LT9zL+m8L+Sc6hZYInA/STvrGCNCvk4KCveO3ZFbWjANicTwOxzsYxgGH8AddO+4
+KVmxfGjjkiOHZ1JuNUG8xQKMaL288kye7ueZQs7gvPT2P7J0TUcif7mgQfTjrsNv
+oNdCMRqHnYJUpxqdFpWNX9mDUJgxG+DeFkn4DuVE4UfSpkg3VCtq3TPRcr0+adrT
+C/0dtFd/ocw956ATOuUqXQtrSqWrIA1bFJePmWughAfGYob+W2tJe3PCsy2uiJew
+Osz/KkK/Di+fFsZXGL4NOwwFww2gglnbjmQbTGxgYTFtEWmHa5rN6NBR9+YQkdQv
+AaH21jgpB7fxNuUrzLX38WV/O3abYAv0ndJxgR72AR8rD/lI2dNVglNK+JLtSDrg
+sehhdJQYICyAOsg/+EKvB84V+f8g5MnHsDaq+ztiQYx1xF9K5qV0NgqRnDBoBsIW
+CPWnFU2Hujd9ua+6hCMp3QFXjb6PJXnWbXJR71+U0xHlwLUV+BDDzxm4XPn3VGCp
+WiH5WIf9gRdiwO4CUWjBHbHqrkJDfl4/qGzUFSdDSxoNvior82QfYLGj2UlDmey7
+GpFZatwWxGvyk226qComY0YRddD0WDEkjzKSiF0BIv1PAEyYWjaUyst4dfULUr8C
+AwEAATANBgkqhkiG9w0BAQsFAAOCAgEABC9jC22UPFbcwIOCSbBPfnbztm4rywbi
+xbtoZzpwV2tb0XKSjtVMobuoKhQIO7rQ73VkqZWvM199msZ63TEQiKaFYZU5K4er
+Ffh6e0FXh4N86CSGIeveXxOwJHKAzgOTHKWTuoSbJjMnzlTkqIs0xhWn39n11mz5
+YXxWwTWdz/+Om8aGt3IPSTpYhMgVSXMWBMf7qnWDkmT93hNQobWZRmINVsxuHLke
+Poi+/ATtBjsX1X8B7tZUYbSNrnWhVqqcuY8APmWDdCfcbDMrEkyhzQH6Rc/NKvE9
+jQRdj4FP2KTTNbUr2WNIzAFDi+Ob7zr8olaSBOgrdX+GGopsyUdJnaP7NYk9QUfs
+U9e7c4yPKi/JzNtRg1/XjRQrbsso+sQUz44T0SX79cupLBF0v4UI7Rxe47p7cDND
+Kr1uWiRowvv8rr1ulviclpMre94+HX6SiVtYNc1Kr6DznJX9Kw+rFKRgTK49NIt5
+XYW11X9JRbQHE70hDBR73kFDxzgs7DXyVDi9IqAteFxhluzrzj8AYFt6tfonH9HK
+0oYU7JRdwtwdMvBbsTTxN5H2gp4iED98u9nhk7XFMCTnJCSO+FrQ7ZS4udNP5vTH
+ihiRBKiRcgah+zDpDdvXr7ltKiSZSZ4HkLOJnPG4sN3Pbp58yCqAerAvxW7UN5Wa
+fbypb1DOrVI=</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDODCCAiCgAwIBAgIJAIAVEWBFxna/MA0GCSqGSIb3DQEBBQUAMBwxGjAYBgNVBAMTEWJveC1pZHAubm9yZHUubmV0MB4XDTEzMDYxOTA4MTYxMFoXDTIzMDQyODA4MTYxMFowHDEaMBgGA1UEAxMRYm94LWlkcC5ub3JkdS5uZXQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC5gi5hp6Uh1EAckiVKNUWqUqSPVuKmCEzE6iM85a+y3KZE+GUiaeaykltH0m83B3UsSxPeyZdP/mJTmCRFG/2F05uY1S6kcmK+X1Q+Trfswybt5xOdjlEq17GZD5qBzWMBdcQc60Ai9R2a7OvsRP05jljcv8x2njHbbmP/yqcUbKDL0niSm0bF06Rx5KVw+uWpDM3A34eWyf4aGulfnjy8xWq9plsiqzw2kfrfsmM+4S8oYRP9QqV3RVMlIYuPwyEzO7ko/lRp/moBFkOzbGU2ynuhpn51r9WSX4kK+1gyyi8l/QCZ9jfM+QLY7uB/mm/xUXBfH82K6tvJZLR64OL/AgMBAAGjfTB7MB0GA1UdDgQWBBSeFLZkxHZxW0JeFidp1pR3hhVMmzBMBgNVHSMERTBDgBSeFLZkxHZxW0JeFidp1pR3hhVMm6EgpB4wHDEaMBgGA1UEAxMRYm94LWlkcC5ub3JkdS5uZXSCCQCAFRFgRcZ2vzAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQAQZ0ZVUQvEOucts7DYA885XEbKJZ50tkNHgbna/ZQCdrSMXb4J2l3B706T7yATXBSaH5KgFIgrCVnoCa3CAPlxZf5IUsvU/en+OBFYYlJB6D/ndfvlwYS6uYOBeY3pY/Ct1Epu3AG2qNkZ+LgRNDxMvYLms76BOc4L5YuPOk76tZtbpqw9ChtwcJh3JXvICwZ75I3SyZ1PFOlVsusjq+pZ8Iqk1fGECEJs34szes0j11E46YSMmwLSH1uxyb4LAQQ2K+Ird2Jl9+yPhovsJ/DMxdtg6mA2TeybOSN46hTdPZ44iOuPKrfSrgBMtulYaUN7MG3Rx4b/SffCdTLgBKg2</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://box-idp.nordu.net/simplesaml/module.php/saml/sp/saml2-logout.php/default-sp"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://box-idp.nordu.net/simplesaml/module.php/saml/sp/saml2-acs.php/default-sp" index="0"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:1.0:profiles:browser-post" Location="https://box-idp.nordu.net/simplesaml/module.php/saml/sp/saml1-acs.php/default-sp" index="1"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://box-idp.nordu.net/simplesaml/module.php/saml/sp/saml2-acs.php/default-sp" index="2"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:1.0:profiles:artifact-01" Location="https://box-idp.nordu.net/simplesaml/module.php/saml/sp/saml1-acs.php/default-sp/artifact" index="3"/>
+    <md:AttributeConsumingService index="1">
+      <md:ServiceName xml:lang="en">NORDUnet Box Service Access</md:ServiceName>
+      <md:ServiceName xml:lang="sv">NORDUnet Box Service Access</md:ServiceName>
+      <md:ServiceDescription xml:lang="en">NORDUnet Box Service Access (box.com)</md:ServiceDescription>
+      <md:ServiceDescription xml:lang="sv">NORDUnet Box Service Access (box.com)</md:ServiceDescription>
+      <md:RequestedAttribute FriendlyName="mail" isRequired="true" Name="urn:oid:0.9.2342.19200300.100.1.3" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"/>
+      <md:RequestedAttribute FriendlyName="displayName" isRequired="true" Name="urn:oid:2.16.840.1.113730.3.1.241" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"/>
+      <md:RequestedAttribute FriendlyName="sn" isRequired="true" Name="urn:oid:2.5.4.4" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"/>
+      <md:RequestedAttribute FriendlyName="givenName" isRequired="true" Name="urn:oid:2.5.4.42" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"/>
+      <md:RequestedAttribute FriendlyName="eduPersonPrincipalName" isRequired="true" Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.6" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"/>
+      <md:RequestedAttribute FriendlyName="schacHomeOrganization" isRequired="false" Name="urn:oid:1.3.6.1.4.1.25178.1.2.9" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"/>
+      <md:RequestedAttribute Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.9" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" FriendlyName="eduPersonScopedAffiliation" isRequired="false"/>
+      <md:RequestedAttribute Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.1" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" FriendlyName="eduPersonAffiliation" isRequired="false"/>
+      <md:RequestedAttribute Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.5" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" FriendlyName="eduPersonPrimaryAffiliation" isRequired="false"/>
+      <md:RequestedAttribute Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.7" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" FriendlyName="eduPersonEntitlement" isRequired="false"/>
+    </md:AttributeConsumingService>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="en">NORDUnet A/S</md:OrganizationName>
+    <md:OrganizationName xml:lang="sv">NORDUnet A/S</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="en">NORDUnet</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="sv">NORDUnet</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="en">http://www.nordu.net</md:OrganizationURL>
+    <md:OrganizationURL xml:lang="sv">http://www.nordu.net</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="technical">
+    <md:GivenName>NORDUNet</md:GivenName>
+    <md:SurName>NOC</md:SurName>
+    <md:EmailAddress>mailto:noc@nordu.net</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson xmlns:remd="http://refeds.org/metadata" contactType="other" remd:contactType="http://refeds.org/metadata/contactType/security">
+    <md:Company>NORDUnet</md:Company>
+    <md:GivenName>NORDUnet CERT</md:GivenName>
+    <md:EmailAddress>mailto:cert@nordu.net</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="administrative">
+    <md:Company>NORDUnet</md:Company>
+    <md:SurName>NOC</md:SurName>
+    <md:EmailAddress>mailto:noc@nordu.net</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="support">
+    <md:GivenName>NORDUNet</md:GivenName>
+    <md:SurName>NOC</md:SurName>
+    <md:EmailAddress>mailto:noc@nordu.net</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor><md:EntityDescriptor entityID="https://csucoast.infoready4.com/shibboleth">
+  <md:Extensions>
+    <mdrpi:RegistrationInfo registrationAuthority="https://incommon.org"/>
+    <mdattr:EntityAttributes>
+      <saml:Attribute Name="urn:oasis:names:tc:SAML:attribute:assurance-certification" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+        <saml:AttributeValue>https://refeds.org/sirtfi</saml:AttributeValue>
+      </saml:Attribute>
+      <saml:Attribute Name="http://macedir.org/entity-category" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+        <saml:AttributeValue>http://id.incommon.org/category/registered-by-incommon</saml:AttributeValue>
+      </saml:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <ti:TrustInfo xmlns:ti="https://seamlessaccess.org/NS/trustinfo">
+         <ti:TrustProfile name="customer" strict="true">
+           <ti:DisplayName xml:lang="en">Customer Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntity include="false">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
+           <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer2" strict="false">
+           <ti:DisplayName xml:lang="en">Customer 2 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 2</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntity include="false">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
+           <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer3" strict="true">
+           <ti:DisplayName xml:lang="en">Customer 3 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 3</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntity include="false">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
+           <ti:TrustedEntities match="entity_categories">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer4" strict="false">
+           <ti:DisplayName xml:lang="en">Customer 4 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 4</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntity include="false">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
+           <ti:TrustedEntities match="entity_categories">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+         </ti:TrustProfile>
+      </ti:TrustInfo>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://csucoast.infoready4.com/Shibboleth.sso/Login" index="1"/>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="en">InfoReady Review - CSU Coast</mdui:DisplayName>
+        <mdui:PrivacyStatementURL xml:lang="en">http://privacy-policy.inforeadycorp.com/InfoReady%20Privacy%20Notice.pdf</mdui:PrivacyStatementURL>
+        <mdui:Logo height="215" width="215" xml:lang="en">https://logo.inforeadycorp.com/infoready_logo.jpg</mdui:Logo>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:KeyDescriptor>
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>
+MIIC6zCCAdOgAwIBAgIJAOO9wmxE2PCSMA0GCSqGSIb3DQEBBQUAMBcxFTATBgNV
+BAMTDGluZm9yZHl3aW4wMjAeFw0xMzEwMjkwNjE0NDlaFw0yMzEwMjcwNjE0NDla
+MBcxFTATBgNVBAMTDGluZm9yZHl3aW4wMjCCASIwDQYJKoZIhvcNAQEBBQADggEP
+ADCCAQoCggEBAMpdE35LzF2eEaAhLfxtotv6XhMXfkOMbugHq8xk5rhyx7RKS+Ku
+t9wW8Mv2rG7NAJw+8167dP6N2RQKpRBn17FIOhm/cuSNtiTBJtA9QiTEkyN5D1ma
+ykJjlD95ymo0XdRDWwz/6IP5v+d95BlfbnlkswWOGOMLxCtaWCSZQ00RJFDKudL5
+IrK+2A1KwF4O+DxqivhdLsd/yA+IjX1efYnT7MPsd7Yyh5wKXKkGbKEg9yAW65Dt
+x2xbBCjDT2PCBhJ4ZuRfUv8whBCT2qgH6+pQ5JBN9ZDz1iGDFp8XfQ27UtzlFdBc
+cjvWmtOh/V35fBXl5LIbJdU/ypJMBwehxbcCAwEAAaM6MDgwFwYDVR0RBBAwDoIM
+aW5mb3JkeXdpbjAyMB0GA1UdDgQWBBQTyklRhSLuL0VcI0Nv4tQhZYqHITANBgkq
+hkiG9w0BAQUFAAOCAQEAJyNYKdKAFdp7xvqnjszw+AF3dYl3HQKe5bC0M+gu7G+2
+hJL2D70cFCXXi2bNcdyLsFVPiecMo69QinOP3kqCPNL7S5pSjm48T9bTiRr4WNy1
+hkxJ7nCV++z696YqbE7WYec9LEpcNDnDnmDfQOxvxzdtpIyM3Egw+koKEZu13ebw
+zAs2xgBj3V5YWmzS7nk1wPPJBKpr+9W5xixEGfaKfrrQXayP/LVyN+u/3BjZCZfE
+bfqmalH+rjpJ7ZCck4CQFxCvnLhwl+L5DEuEFXmgTzk7EDb65no+rXaZQd3/IEre
+sazovBHNw8FPYGiOCi2757flvBsb6gW+FbN0SPmtSQ==
+          </ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes128-cbc"/>
+    </md:KeyDescriptor>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://csucoast.infoready4.com/Shibboleth.sso/SLO/POST"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://csucoast.infoready4.com/Shibboleth.sso/SLO/Redirect"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://csucoast.infoready4.com/Shibboleth.sso/SLO/SOAP"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://csucoast.infoready4.com/Shibboleth.sso/SAML2/POST" index="1"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://csucoast.infoready4.com/Shibboleth.sso/SAML2/POST-SimpleSign" index="2"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://csucoast.infoready4.com/Shibboleth.sso/SAML2/Artifact" index="3"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:PAOS" Location="https://csucoast.infoready4.com/Shibboleth.sso/SAML2/ECP" index="4"/>
+    <md:AttributeConsumingService index="1">
+      <md:ServiceName xml:lang="en">InfoReady Review - CSU Coast</md:ServiceName>
+      <md:RequestedAttribute FriendlyName="eduPersonPrincipalName" Name="urn:oid:1.3.6.1.4.1.5923.1.1.1.6" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="givenName" Name="urn:oid:2.5.4.42" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="mail" Name="urn:oid:0.9.2342.19200300.100.1.3" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="sn" Name="urn:oid:2.5.4.4" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+    </md:AttributeConsumingService>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="en">InfoReady Corp</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="en">InfoReady Corp</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="en">http://www.infoready4.com/</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="administrative">
+    <md:GivenName>John Testa</md:GivenName>
+    <md:EmailAddress>mailto:jtesta@inforeadycorp.com</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="technical">
+    <md:GivenName>John Testa</md:GivenName>
+    <md:EmailAddress>mailto:jtesta@inforeadycorp.com</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson xmlns:remd="http://refeds.org/metadata" contactType="other" remd:contactType="http://refeds.org/metadata/contactType/security">
+    <md:GivenName>John Testa</md:GivenName>
+    <md:EmailAddress>mailto:jtesta@inforeadycorp.com</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor><md:EntityDescriptor entityID="https://sp.silverchair.com/spe/development/shibboleth">
+  <md:Extensions>
+    <mdrpi:RegistrationInfo registrationAuthority="https://incommon.org"/>
+    <mdattr:EntityAttributes>
+      <saml:Attribute Name="urn:oasis:names:tc:SAML:attribute:assurance-certification" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+        <saml:AttributeValue>https://refeds.org/sirtfi</saml:AttributeValue>
+      </saml:Attribute>
+      <saml:Attribute Name="http://macedir.org/entity-category" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+        <saml:AttributeValue>http://id.incommon.org/category/registered-by-incommon</saml:AttributeValue>
+      </saml:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:1.1:protocol urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="en">Silverchair Development: SPE</mdui:DisplayName>
+        <mdui:PrivacyStatementURL xml:lang="en">https://www.spe.org/en/about/privacypolicy/</mdui:PrivacyStatementURL>
+        <mdui:Logo height="48" width="300" xml:lang="en">https://spe.silverchair-cdn.com/data/SiteBuilderAssetsOriginals/Live/images/umbrella/logo-umbrella.svg</mdui:Logo>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:KeyDescriptor>
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>
+MIIDFTCCAf2gAwIBAgIJAIMIDrOlxEr0MA0GCSqGSIb3DQEBBQUAMCUxIzAhBgNV
+BAMTGm51c2Vhc2NtMDF3ZWIwMS5zc2MtYXouaW50MB4XDTIxMDcwNjE4MTU0M1oX
+DTMxMDcwNDE4MTU0M1owJTEjMCEGA1UEAxMabnVzZWFzY20wMXdlYjAxLnNzYy1h
+ei5pbnQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDCJx8wp2FF7Bag
+HzPItutIS8MSxkYnvofcglbTCjimepr4FYJuhkZOlmWTl2AlBGCnCsM3dFkWx76f
+dBq7/X9qc/QJ2g4/vDyYNlobur0xcFw/SZxpy8l0LRohIZMly2jmiQmQ7aZ6D+K/
+OExufBqjGzxp1cbWm7MlBnLXexjnh6qWWHTa/5W2ySTCYPmJ2d51YvpSV4+9wMxV
+ITOKfNkm52RNF/Q9eXAV4d6zHJsNwmdGrb8XVdm/MkdBPDyw3IPDy2e3KYTx7ti9
+MPDQENn1PUV0dEMwuF3maROTDxIeIVmVUj2flaO76WdVWUAu4Bg95eDNhCGXEA91
+bLV6ng03AgMBAAGjSDBGMCUGA1UdEQQeMByCGm51c2Vhc2NtMDF3ZWIwMS5zc2Mt
+YXouaW50MB0GA1UdDgQWBBRar/CmyxfuvAB3chQL1aA1kZs3aDANBgkqhkiG9w0B
+AQUFAAOCAQEAnts5wtfZhyPYJwePuM65YaTbHK0TJUftnbqm7HaErq0zSWF5gu2S
+7tl64XCsVombMIB4lyFJbtLuV+YjcUiHdaDKW1YnieLEL2RuIDUNkk/9TldET38F
++f8yQftJip1jryiIT9y23PcH9jDmyUrXDZb7mEpSYGME6zv8+iVtVMUptdMjc03/
+mvrim4nfo4SSeNJIIy8Z28S9/dLeCZ0YoJ9zbWw/zXfIcNZzZBcMDf9LMMroI64d
+RDrfw3LTeorwzAyhFE21Ucr2yg6UWwGNcXONljmp5SN7tetGFhxqkZq/CbHPY1nd
+FBzl4iij1pDK0FgADtGlc3l/qDl5Z1w3JQ==
+          </ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes128-cbc"/>
+    </md:KeyDescriptor>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://spedev.silverchair.com/Shibboleth.sso/SLO/POST"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://spedev.silverchair.com/Shibboleth.sso/SLO/Artifact"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://spedev.silverchair.com/Shibboleth.sso/SLO/SOAP"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://spedev.silverchair.com/Shibboleth.sso/SAML2/POST" index="1"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://spedev.silverchair.com/Shibboleth.sso/SAML2/POST-SimpleSign" index="2"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://spedev.silverchair.com/Shibboleth.sso/SAML2/Artifact" index="3"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:PAOS" Location="https://spedev.silverchair.com/Shibboleth.sso/SAML2/ECP" index="4"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:1.0:profiles:browser-post" Location="https://spedev.silverchair.com/Shibboleth.sso/SAML/POST" index="5"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:1.0:profiles:artifact-01" Location="https://spedev.silverchair.com/Shibboleth.sso/SAML/Artifact" index="6"/>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="en">Silverchair Information Systems</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="en">Silverchair Information Systems</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="en">https://www.silverchair.com/</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="administrative">
+    <md:GivenName>Shibboleth Admin</md:GivenName>
+    <md:EmailAddress>mailto:ShibbolethAdmin@silverchair.com</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="technical">
+    <md:GivenName>Shibboleth Admin</md:GivenName>
+    <md:EmailAddress>mailto:ShibbolethAdmin@silverchair.com</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson xmlns:remd="http://refeds.org/metadata" contactType="other" remd:contactType="http://refeds.org/metadata/contactType/security">
+    <md:GivenName>Shibboleth Admin</md:GivenName>
+    <md:EmailAddress>mailto:ShibbolethAdmin@silverchair.com</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor></md:EntitiesDescriptor>
