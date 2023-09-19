@@ -882,38 +882,6 @@ def discojson_t(t, resource, icon_store=None):
     return entities
 
 
-def fetch_mdjson(urls):
-    opts = ResourceOpts()
-    resource = Resource(None, opts)
-    for url in urls:
-        resource.add_child(url, opts)
-
-    rp = ResourceHandler(name="Metadata")
-    rp.schedule(resource.children)
-    try:
-        rp.done.acquire()
-        rp.done.wait()
-    finally:
-        rp.done.release()
-    rp.fetcher.stop()
-    rp.fetcher.join()
-
-    entities = []
-    for child in resource.children:
-        if child.t is not None:
-            entities.extend(child.t.findall(".//{%s}EntityDescriptor" % NS['md']))
-
-    ot = entitiesdescriptor(entities, 'extra-sources')
-
-    entities_json_list = discojson_t(ot, resource)
-
-    entities_json = {}
-    for e in entities_json_list:
-        entities_json[e['entityID']] = e
-
-    return entities_json
-
-
 def discojson_sp(e, global_trust_info=None, global_md_sources=None):
     sp = {}
 
@@ -924,12 +892,12 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
     sp['entityID'] = e.get('entityID', None)
 
     # grab metadata sources, download metadata, and translate to json
-    md_source_urls = [el.text for el in tinfo_el.findall('.//{%s}MetadataSource' % NS['ti'])]
-    if len(md_source_urls) > 0:
-        try:
-            sp['extra_md'] = fetch_mdjson(md_source_urls)
-        except Exception as e:
-            raise ValueError(f"Problem interpreting metadata at {md_source_urls}: {e}")
+    # md_source_urls = [el.text for el in tinfo_el.findall('.//{%s}MetadataSource' % NS['ti'])]
+    # if len(md_source_urls) > 0:
+        # try:
+            # sp['extra_md'] = fetch_mdjson(md_source_urls)
+        # except Exception as e:
+            # raise ValueError(f"Problem interpreting metadata at {md_source_urls}: {e}")
 
     sp['profiles'] = {}
     # Grab trust profile emements, and translate to json
