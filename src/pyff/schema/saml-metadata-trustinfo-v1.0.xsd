@@ -38,7 +38,7 @@
 
  <element name="TrustProfile" type="ti:TrustProfileType"/>
  <complexType name="TrustProfileType">
-    <sequence minOccurs="0">
+    <sequence minOccurs="1">
        <element ref="ti:DisplayName" minOccurs="0" maxOccurs="unbounded"/>
        <element ref="ti:FallbackHandler" minOccurs="0" maxOccurs="1"/>
        <element ref="ti:TrustedEntity" minOccurs="0" maxOccurs="unbounded"/>
