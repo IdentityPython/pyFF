@@ -706,10 +706,43 @@ def entity_extended_display_i18n(entity, default_lang=None):
     return name_dict, desc_dict
 
 
+def entity_attribute(entity, attribute):
+    values = None
+    els = entity.findall(
+        './/{%s}EntityAttributes/{%s}Attribute[@Name="%s"]/{%s}AttributeValue'
+        % (NS['mdattr'], NS['saml'], attribute, NS['saml'])
+    )
+    if len(els) > 0:
+        values = [el.text for el in els]
+    return values
+
+
 def entity_categories(entity):
     cats = None
     cats_els = entity.findall(
         './/{%s}EntityAttributes/{%s}Attribute[@Name="http://macedir.org/entity-category"]/{%s}AttributeValue'
+        % (NS['mdattr'], NS['saml'], NS['saml'])
+    )
+    if len(cats_els) > 0:
+        cats = [el.text for el in cats_els]
+    return cats
+
+
+def assurance_cetification(entity):
+    certs = None
+    certs_els = entity.findall(
+        './/{%s}EntityAttributes/{%s}Attribute[@Name="urn:oasis:names:tc:SAML:attribute:assurance-certification"]/{%s}AttributeValue'
+        % (NS['mdattr'], NS['saml'], NS['saml'])
+    )
+    if len(certs_els) > 0:
+        certs = [el.text for el in certs_els]
+    return certs
+
+
+def entity_category_support(entity):
+    cats = None
+    cats_els = entity.findall(
+        './/{%s}EntityAttributes/{%s}Attribute[@Name="http://macedir.org/entity-category-support"]/{%s}AttributeValue'
         % (NS['mdattr'], NS['saml'], NS['saml'])
     )
     if len(cats_els) > 0:
@@ -812,7 +845,9 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
     entity_id = e.get('entityID')
     title_langs, descr_langs = entity_extended_display_i18n(e)
     reg_auth = registration_authority(e)
-    cats = entity_categories(e)
+    categories = entity_attribute(e, "http://macedir.org/entity-category")
+    certifications = entity_attribute(e, "urn:oasis:names:tc:SAML:attribute:assurance-certification")
+    cat_support = entity_attribute(e, "http://macedir.org/entity-category-support")
 
     d = dict(
         title=title,
@@ -826,8 +861,14 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
     if reg_auth is not None:
         d['registrationAuthority'] = reg_auth
 
-    if cats is not None:
-        d['entity_categories'] = cats
+    if categories is not None:
+        d['entity_categories'] = categories
+
+    if certifications is not None:
+        d['assurance_certifications'] = certifications
+
+    if cat_support is not None:
+        d['entity_category_support'] = cat_support
 
     if sources is not None:
         d['md_sources'] = sources
