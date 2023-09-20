@@ -598,27 +598,27 @@ YJIFVUg+VwfF8XvjH0WKszSmYywVYg==</ds:X509Certificate>
            <ti:DisplayName xml:lang="en">Customer Access</ti:DisplayName>
            <ti:DisplayName xml:lang="sv">Kundinloggning</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
-           <ti:TrustedEntities match="entity_categories">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
-           <ti:TrustedEntities match="entity_categories">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+           <ti:TrustedEntities match="entity_category">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
+           <ti:TrustedEntities match="entity_category">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer2" strict="false">
            <ti:DisplayName xml:lang="en">Customer 2 Access</ti:DisplayName>
            <ti:DisplayName xml:lang="sv">Kundinloggning 2</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
-           <ti:TrustedEntities match="entity_categories">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
-           <ti:TrustedEntities match="entity_categories">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+           <ti:TrustedEntities match="entity_category">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
+           <ti:TrustedEntities match="entity_category">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer3" strict="true">
            <ti:DisplayName xml:lang="en">Customer 3 Access</ti:DisplayName>
            <ti:DisplayName xml:lang="sv">Kundinloggning 3</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
-           <ti:TrustedEntities include="false" match="entity_categories">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
+           <ti:TrustedEntities include="false" match="entity_category">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer4" strict="false">
            <ti:DisplayName xml:lang="en">Customer 4 Access</ti:DisplayName>
            <ti:DisplayName xml:lang="sv">Kundinloggning 4</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
-           <ti:TrustedEntities include="false" match="entity_categories">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
+           <ti:TrustedEntities include="false" match="entity_category">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
          </ti:TrustProfile>
       </ti:TrustInfo>
       <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://box-idp.nordu.net/simplesaml/module.php/saml/sp/discoresp.php" index="1"/>
@@ -756,14 +756,26 @@ fbypb1DOrVI=</ds:X509Certificate>
            <ti:DisplayName xml:lang="sv">Kundinloggning 3</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
            <ti:TrustedEntity include="false">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
-           <ti:TrustedEntities match="entity_categories">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+           <ti:TrustedEntities match="entity_category">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer4" strict="false">
            <ti:DisplayName xml:lang="en">Customer 4 Access</ti:DisplayName>
            <ti:DisplayName xml:lang="sv">Kundinloggning 4</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
            <ti:TrustedEntity include="false">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
-           <ti:TrustedEntities match="entity_categories">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+           <ti:TrustedEntities match="entity_category">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer5" strict="true">
+           <ti:DisplayName xml:lang="en">Customer 5 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 5</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities match="entity_category_support">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
+         </ti:TrustProfile>
+         <ti:TrustProfile name="customer6" strict="true">
+           <ti:DisplayName xml:lang="en">Customer 6 Access</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Kundinloggning 6</ti:DisplayName>
+           <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
+           <ti:TrustedEntities match="assurance_certification">https://refeds.org/sirtfi</ti:TrustedEntities>
          </ti:TrustProfile>
       </ti:TrustInfo>
       <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://csucoast.infoready4.com/Shibboleth.sso/Login" index="1"/>

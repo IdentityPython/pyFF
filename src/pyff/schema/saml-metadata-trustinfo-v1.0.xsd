@@ -72,18 +72,18 @@
  <complexType name="TrustedEntitiesType">
     <simpleContent>
       <extension base="anyURI">
-        <attribute name="match" type="ti:matchType" default="registrationAuthority"/>
+        <attribute name="match" type="ti:MatchType" default="registrationAuthority"/>
         <attribute name="include" type="boolean" default="true"/>
       </extension>
     </simpleContent>
 </complexType>
-<simpleType name="matchType">
+<simpleType name="MatchType">
     <restriction base="string">
         <enumeration value="registrationAuthority"/>
-        <enumeration value="entity_categories"/>
-        <enumeration value="assurance_certifications"/>
+        <enumeration value="entity_category"/>
+        <enumeration value="assurance_certification"/>
         <enumeration value="entity_category_support"/>
-        <enumeration value="md_sources"/>
+        <enumeration value="md_source"/>
     </restriction>
 </simpleType>
 

@@ -862,16 +862,16 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
         d['registrationAuthority'] = reg_auth
 
     if categories is not None:
-        d['entity_categories'] = categories
+        d['entity_category'] = categories
 
     if certifications is not None:
-        d['assurance_certifications'] = certifications
+        d['assurance_certification'] = certifications
 
     if cat_support is not None:
         d['entity_category_support'] = cat_support
 
     if sources is not None:
-        d['md_sources'] = sources
+        d['md_source'] = sources
 
     eattr = entity_attribute_dict(e)
     if 'idp' in eattr[ATTRS['role']]:
