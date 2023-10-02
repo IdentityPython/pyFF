@@ -46,7 +46,10 @@
   <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
     <md:Extensions>
       <ti:TrustInfo xmlns:ti="https://seamlessaccess.org/NS/trustinfo">
-        <ti:MetadataSource>https://login.uleam.cedia.edu.ec/saml2/idp/metadata.php</ti:MetadataSource>
+        <ti:MetadataSource src="https://login.uleam.cedia.edu.ec/saml2/idp/metadata.php">
+          <ti:DisplayName xml:lang="en">Display name for extra md - en</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">Display name for extra md - sv</ti:DisplayName>
+        </ti:MetadataSource>
         <ti:TrustProfile name="customer" strict="true">
           <ti:DisplayName xml:lang="en">Customer Access</ti:DisplayName>
           <ti:DisplayName xml:lang="sv">Kundinloggning</ti:DisplayName>

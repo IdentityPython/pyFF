@@ -182,12 +182,39 @@ class SAMLMetadataResourceParser(PyffParser):
             resource.expire_time = expire_time
             info.expiration_time = str(expire_time)
 
+        def _extra_md(_t, info, **kwargs):
+            entityID = kwargs.get('entityID')
+            if info['alias'] != entityID:
+                return _t
+            sp_entities = kwargs.get('sp_entities')
+            location = kwargs.get('location')
+            sp_entity = sp_entities.find("{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
+            if sp_entity is not None:
+                md_source = sp_entity.find("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource[@src='%s']" % (NS['md'], NS['md'], NS['ti'], NS['ti'], location))
+                for e in iter_entities(_t):
+                    md_source.append(e)
+            return etree.Element("{%s}EntitiesDescriptor" % NS['md'])
+
         if t is not None:
             resource.t = t
             resource.type = "application/samlmetadata+xml"
 
             for e in iter_entities(t):
-                info.entities.append(e.get('entityID'))
+                entityID = e.get('entityID')
+                info.entities.append(entityID)
+
+                md_source = e.find("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource" % (NS['md'], NS['md'], NS['ti'], NS['ti']))
+                if md_source is not None:
+                    location = md_source.attrib.get('src')
+                    if location is not None:
+                        child_opts = resource.opts.copy(update={'alias': entityID})
+                        r = resource.add_child(location, child_opts)
+                        kwargs = {
+                            'entityID': entityID,
+                            'sp_entities': t,
+                            'location': location,
+                        }
+                        r.add_via(Lambda(_extra_md, **kwargs))
 
         if trust_info is not None:
             resource.trust_info = trust_info
@@ -932,13 +959,19 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
 
     sp['entityID'] = e.get('entityID', None)
 
-    # grab metadata sources, download metadata, and translate to json
-    # md_source_urls = [el.text for el in tinfo_el.findall('.//{%s}MetadataSource' % NS['ti'])]
-    # if len(md_source_urls) > 0:
-        # try:
-            # sp['extra_md'] = fetch_mdjson(md_source_urls)
-        # except Exception as e:
-            # raise ValueError(f"Problem interpreting metadata at {md_source_urls}: {e}")
+    md_sources = e.findall("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource" % (NS['md'], NS['md'], NS['ti'], NS['ti']))
+
+    sp['extra_md'] = []
+    for md_source in md_sources:
+        dname_external = {}
+        for dname in md_source.iterfind('.//{%s}DisplayName' % NS['ti']):
+            lang = dname.attrib['{%s}lang' % NS['xml']]
+            dname_external[lang] = dname.text
+
+        for idp in md_source.findall("{%s}EntityDescriptor" % NS['md']):
+            idp_json = discojson(idp)
+            idp_json['trusted'] = dname_external
+            sp['extra_md'].append(idp_json)
 
     sp['profiles'] = {}
     # Grab trust profile emements, and translate to json

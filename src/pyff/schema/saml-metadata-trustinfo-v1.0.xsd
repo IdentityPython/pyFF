@@ -32,7 +32,14 @@
    </sequence>
  </complexType>
 
- <element name="MetadataSource" type="anyURI"/>
+ <element name="MetadataSource" type="ti:MetadataSourceType"/>
+  <complexType name="MetadataSourceType">
+     <sequence minOccurs="0">
+        <element ref="ti:DisplayName" minOccurs="0" maxOccurs="unbounded"/>
+        <element ref="md:EntityDescriptor" minOccurs="0" maxOccurs="unbounded"/>
+     </sequence>
+     <attribute name="src" type="anyURI"/>
+  </complexType>
 
  <element name="TrustProfileRef" type="anyURI"/>
 
