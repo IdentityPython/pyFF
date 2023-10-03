@@ -1,5 +1,7 @@
+import json
 import os
 import shutil
+import sys
 import tempfile
 
 import pytest
@@ -724,5 +726,34 @@ class SigningTest(PipeLineTest):
         assert "Expected exception from bad namespace in"
         assert md.lookup(entity)
 
+    def test_discojson_sp(self):
+        with patch.multiple("sys", exit=self.sys_exit):
+            tmpdir = tempfile.mkdtemp()
+            os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
+            try:
+                self.exec_pipeline("""
+- load:
+   - file://%s/metadata/test02-sp.xml
+- select
+- discojson_sp
+- publish:
+    output: %s/disco_sp.json
+    raw: true
+    update_store: false
+""" % (self.datadir, tmpdir))
+                fn = "%s/disco_sp.json" % tmpdir
+                assert os.path.exists(fn)
+                with open(fn, 'r') as f:
+                    sp_json = json.load(f)
 
-
+                assert 'https://example.com.com/shibboleth' in str(sp_json)
+                example_sp_json = sp_json[0]
+                assert 'customer' in example_sp_json['profiles']
+                customer_tinfo = example_sp_json['profiles']['customer']
+                assert customer_tinfo['entity'][0] == {'entity_id': 'https://example.org/idp.xml', 'include': True}
+                assert customer_tinfo['entities'][0] == {'select': 'http://www.swamid.se/', 'match': 'registrationAuthority', 'include': True}
+                assert customer_tinfo['fallback_handler'] == {'profile': 'href', 'handler': 'https://www.example.org/about'}
+            except IOError:
+                pass
+            finally:
+                shutil.rmtree(tmpdir)

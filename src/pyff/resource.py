@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import os
 import traceback
-from collections import deque
+from collections import defaultdict, deque
 from datetime import datetime
 from enum import Enum
 from threading import Condition, Lock
-from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, Tuple
 from urllib.parse import quote as urlescape
 
 import requests
@@ -239,6 +239,8 @@ class Resource(Watchable):
         self.last_parser: Optional['PyffParser'] = None  # importing PyffParser in this module causes a loop
         self._infos: Deque[ResourceInfo] = deque(maxlen=config.info_buffer_size)
         self.children: Deque[Resource] = deque()
+        self.trust_info: Optional[dict] = None
+        self.md_sources: Optional[dict] = None
         self._setup()
 
     def _setup(self):
@@ -491,3 +493,22 @@ class Resource(Watchable):
         info.state = ResourceLoadState.Ready
 
         return self.children
+
+    def global_trust_info(self):
+        trust_info = {}
+        for r in self.walk():
+            if r.url and r.trust_info is not None:
+                trust_info[r.url] = r.trust_info['profiles']
+        return trust_info
+
+    def global_md_sources(self):
+        from pyff.samlmd import SAMLParserInfo
+
+        md_sources = defaultdict(list)
+        for r in self.walk():
+            if r.url:
+                for info in r._infos:
+                    if isinstance(info.parser_info, SAMLParserInfo):
+                        for entity_id in info.parser_info.entities:
+                            md_sources[entity_id].append(r.url)
+        return md_sources

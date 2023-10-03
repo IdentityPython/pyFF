@@ -1,0 +1,8 @@
+- load:
+  - "../src/pyff/test/data/metadata/edugain-trustinfo-2.0.xml"
+- select
+- discojson_sp
+- publish:
+    output: "./disco_sp.json"
+    raw: true
+    update_store: false

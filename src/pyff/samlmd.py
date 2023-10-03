@@ -11,6 +11,7 @@ from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid, Element, ElementTree
 from pydantic import Field
 from xmlsec.crypto import CertDict
+from .resource import Resource, ResourceHandler, ResourceOpts
 
 from pyff.constants import ATTRS, NF_URI, NS, config
 from pyff.exceptions import *
@@ -92,7 +93,7 @@ def parse_saml_metadata(
     :param base_url: use this base url to resolve relative URLs for XInclude processing
     :param validation_errors: A dict that will be used to return validation errors to the caller
 
-    :return: Tuple with t (ElementTree), expire_time_offset, exception
+    :return: Tuple with t (ElementTree), trust_info, expire_time_offset, exception
     """
 
     if validation_errors is None:
@@ -106,6 +107,9 @@ def parse_saml_metadata(
         expire_time_offset = metadata_expiration(t)
 
         t = check_signature(t, opts.verify)
+
+        trust_info = None
+        extensions = t.find('{%s}Extensions' % NS['md'])
 
         if opts.cleanup is not None:
             for cb in opts.cleanup:
@@ -131,6 +135,8 @@ def parse_saml_metadata(
                 t = entitiesdescriptor(
                     [t], base_url, copy=False, validate=True, filter_invalid=filter_invalid, nsmap=t.nsmap
                 )
+            elif t.tag == "{%s}EntitiesDescriptor" % NS['md'] and extensions is not None:
+                trust_info = discojson_sp(extensions)
 
     except Exception as ex:
         log.debug(traceback.format_exc())
@@ -138,11 +144,11 @@ def parse_saml_metadata(
         if opts.fail_on_error:
             raise ex
 
-        return None, None, ex
+        return None, None, None, ex
 
     log.debug("returning %d valid entities" % len(list(iter_entities(t))))
 
-    return t, expire_time_offset, None
+    return t, trust_info, expire_time_offset, None
 
 
 class SAMLParserInfo(ParserInfo):
@@ -161,7 +167,7 @@ class SAMLMetadataResourceParser(PyffParser):
 
     def parse(self, resource: Resource, content: str) -> SAMLParserInfo:
         info = SAMLParserInfo(description='SAML Metadata', expiration_time='')
-        t, expire_time_offset, exception = parse_saml_metadata(
+        t, trust_info, expire_time_offset, exception = parse_saml_metadata(
             unicode_stream(content),
             base_url=resource.url,
             opts=resource.opts,
@@ -176,12 +182,42 @@ class SAMLMetadataResourceParser(PyffParser):
             resource.expire_time = expire_time
             info.expiration_time = str(expire_time)
 
+        def _extra_md(_t, info, **kwargs):
+            entityID = kwargs.get('entityID')
+            if info['alias'] != entityID:
+                return _t
+            sp_entities = kwargs.get('sp_entities')
+            location = kwargs.get('location')
+            sp_entity = sp_entities.find("{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
+            if sp_entity is not None:
+                md_source = sp_entity.find("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource[@src='%s']" % (NS['md'], NS['md'], NS['ti'], NS['ti'], location))
+                for e in iter_entities(_t):
+                    md_source.append(e)
+            return etree.Element("{%s}EntitiesDescriptor" % NS['md'])
+
         if t is not None:
             resource.t = t
             resource.type = "application/samlmetadata+xml"
 
             for e in iter_entities(t):
-                info.entities.append(e.get('entityID'))
+                entityID = e.get('entityID')
+                info.entities.append(entityID)
+
+                md_source = e.find("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource" % (NS['md'], NS['md'], NS['ti'], NS['ti']))
+                if md_source is not None:
+                    location = md_source.attrib.get('src')
+                    if location is not None:
+                        child_opts = resource.opts.copy(update={'alias': entityID})
+                        r = resource.add_child(location, child_opts)
+                        kwargs = {
+                            'entityID': entityID,
+                            'sp_entities': t,
+                            'location': location,
+                        }
+                        r.add_via(Lambda(_extra_md, **kwargs))
+
+        if trust_info is not None:
+            resource.trust_info = trust_info
 
         if exception is not None:
             resource.info.exception = exception
@@ -697,6 +733,56 @@ def entity_extended_display_i18n(entity, default_lang=None):
     return name_dict, desc_dict
 
 
+def entity_attribute(entity, attribute):
+    values = None
+    els = entity.findall(
+        './/{%s}EntityAttributes/{%s}Attribute[@Name="%s"]/{%s}AttributeValue'
+        % (NS['mdattr'], NS['saml'], attribute, NS['saml'])
+    )
+    if len(els) > 0:
+        values = [el.text for el in els]
+    return values
+
+
+def entity_categories(entity):
+    cats = None
+    cats_els = entity.findall(
+        './/{%s}EntityAttributes/{%s}Attribute[@Name="http://macedir.org/entity-category"]/{%s}AttributeValue'
+        % (NS['mdattr'], NS['saml'], NS['saml'])
+    )
+    if len(cats_els) > 0:
+        cats = [el.text for el in cats_els]
+    return cats
+
+
+def assurance_cetification(entity):
+    certs = None
+    certs_els = entity.findall(
+        './/{%s}EntityAttributes/{%s}Attribute[@Name="urn:oasis:names:tc:SAML:attribute:assurance-certification"]/{%s}AttributeValue'
+        % (NS['mdattr'], NS['saml'], NS['saml'])
+    )
+    if len(certs_els) > 0:
+        certs = [el.text for el in certs_els]
+    return certs
+
+
+def entity_category_support(entity):
+    cats = None
+    cats_els = entity.findall(
+        './/{%s}EntityAttributes/{%s}Attribute[@Name="http://macedir.org/entity-category-support"]/{%s}AttributeValue'
+        % (NS['mdattr'], NS['saml'], NS['saml'])
+    )
+    if len(cats_els) > 0:
+        cats = [el.text for el in cats_els]
+    return cats
+
+
+def registration_authority(entity):
+    regauth_el = entity.find(".//{%s}RegistrationInfo" % NS['mdrpi'])
+    if regauth_el is not None:
+        return regauth_el.attrib.get('registrationAuthority')
+
+
 def entity_extended_display(entity, langs=None):
     """Utility-method for computing a displayable string for a given entity.
 
@@ -778,13 +864,17 @@ def entity_scopes(e):
     return [s.text for s in elt]
 
 
-def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
+def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store=None):
     if e is None:
         return dict()
 
     title, descr = entity_extended_display(e)
     entity_id = e.get('entityID')
     title_langs, descr_langs = entity_extended_display_i18n(e)
+    reg_auth = registration_authority(e)
+    categories = entity_attribute(e, "http://macedir.org/entity-category")
+    certifications = entity_attribute(e, "urn:oasis:names:tc:SAML:attribute:assurance-certification")
+    cat_support = entity_attribute(e, "http://macedir.org/entity-category-support")
 
     d = dict(
         title=title,
@@ -795,6 +885,20 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
         entity_id=entity_id,
         entityID=entity_id,
     )
+    if reg_auth is not None:
+        d['registrationAuthority'] = reg_auth
+
+    if categories is not None:
+        d['entity_category'] = categories
+
+    if certifications is not None:
+        d['assurance_certification'] = certifications
+
+    if cat_support is not None:
+        d['entity_category_support'] = cat_support
+
+    if sources is not None:
+        d['md_source'] = sources
 
     eattr = entity_attribute_dict(e)
     if 'idp' in eattr[ATTRS['role']]:
@@ -835,8 +939,97 @@ def discojson(e, langs=None, fallback_to_favicon=False, icon_store=None):
     return d
 
 
-def discojson_t(t, icon_store=None):
-    return [discojson(en, icon_store=icon_store) for en in iter_entities(t)]
+def discojson_t(t, resource, icon_store=None):
+    md_sources = resource.global_md_sources()
+    entities = []
+    for en in iter_entities(t):
+        entity_id = en.attrib['entityID']
+        sources = md_sources[entity_id]
+        entity = discojson(en, sources=sources, icon_store=icon_store)
+        entities.append(entity)
+    return entities
+
+
+def discojson_sp(e, global_trust_info=None, global_md_sources=None):
+    sp = {}
+
+    tinfo_el = e.find('.//{%s}TrustInfo' % NS['ti'])
+    if tinfo_el is None:
+        return None
+
+    sp['entityID'] = e.get('entityID', None)
+
+    md_sources = e.findall("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource" % (NS['md'], NS['md'], NS['ti'], NS['ti']))
+
+    sp['extra_md'] = []
+    for md_source in md_sources:
+        dname_external = {}
+        for dname in md_source.iterfind('.//{%s}DisplayName' % NS['ti']):
+            lang = dname.attrib['{%s}lang' % NS['xml']]
+            dname_external[lang] = dname.text
+
+        for idp in md_source.findall("{%s}EntityDescriptor" % NS['md']):
+            idp_json = discojson(idp)
+            idp_json['trusted'] = dname_external
+            sp['extra_md'].append(idp_json)
+
+    sp['profiles'] = {}
+    # Grab trust profile emements, and translate to json
+    for profile_el in tinfo_el.findall('.//{%s}TrustProfile' % NS['ti']):
+        name = profile_el.attrib['name']
+        strict = profile_el.attrib.get('strict', True)
+        strict = strict if type(strict) is bool else strict in ('t', 'T', 'true', 'True')
+        sp['profiles'][name] = {'strict': strict, 'entity': [], 'entities': []}
+
+        display_name = {}
+        for dname in profile_el.iterfind('.//{%s}DisplayName' % NS['ti']):
+            lang = dname.attrib['{%s}lang' % NS['xml']]
+            display_name[lang] = dname.text
+        sp['profiles'][name]['display_name'] = display_name
+
+        fallback_handler = profile_el.find('.//{%s}FallbackHandler' % NS['ti'])
+        if fallback_handler is not None:
+            prof = fallback_handler.attrib.get('profile', 'href')
+            handler = fallback_handler.text
+            sp['profiles'][name]['fallback_handler'] = {'profile': prof, 'handler': handler}
+
+        for entity_el in profile_el.findall('.//{%s}TrustedEntity' % NS['ti']):
+            entity_id = entity_el.text
+            include = entity_el.attrib.get('include', True)
+            include = include if type(include) is bool else include in ('t', 'T', 'true', 'True')
+            sp['profiles'][name]['entity'].append({'entity_id': entity_id, 'include': include})
+
+        for entities_el in profile_el.findall('.//{%s}TrustedEntities' % NS['ti']):
+            select = entities_el.text
+            match = entities_el.attrib.get('match', 'registrationAuthority')
+            include = entities_el.attrib.get('include', True)
+            include = include if type(include) is bool else include in ('t', 'T', 'true', 'True')
+            sp['profiles'][name]['entities'].append({'select': select, 'match': match, 'include': include})
+
+    if global_trust_info is not None and global_md_sources is not None:
+        for profileref_el in tinfo_el.findall('.//{%s}TrustProfileRef' % NS['ti']):
+            refname = profileref_el.text
+            sources = global_md_sources[sp['entityID']]
+            for source in sources:
+                if refname in global_trust_info[source]:
+                    sp['profiles'][refname] = global_trust_info[source][refname]
+                    break
+
+    return sp
+
+
+def discojson_sp_t(req):
+    d = []
+    t = req.t
+    global_tinfo = req.md.rm.global_trust_info()
+    global_sources = req.md.rm.global_md_sources()
+
+    for e in iter_entities(t):
+        sp = discojson_sp(e, global_trust_info=global_tinfo, global_md_sources=global_sources)
+        if sp is not None:
+            d.append(sp)
+
+    return d
 
 
 def sha1_id(e):
