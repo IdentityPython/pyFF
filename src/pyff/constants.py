@@ -36,6 +36,7 @@ NS = dict(
     xsi="http://www.w3.org/2001/XMLSchema-instance",
     ser="http://eidas.europa.eu/metadata/servicelist",
     eidas="http://eidas.europa.eu/saml-extensions",
+    ti="https://seamlessaccess.org/NS/trustinfo",
 )
 
 #: These are the attribute aliases pyFF knows about. These are used to build URI paths, populate the index

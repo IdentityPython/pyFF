@@ -13,4 +13,5 @@
 <import namespace="http://www.w3.org/2005/Atom" schemaLocation="atom.xsd"/>
 <import namespace="http://docs.oasis-open.org/ns/xri/xrd-1.0" schemaLocation="xrd-1.0-os.xsd"/>
 <import namespace="urn:oasis:names:tc:SAML:metadata:rpi" schemaLocation="saml-metadata-rpi-v1.0.xsd"/>
+<import namespace="https://seamlessaccess.org/NS/trustinfo" schemaLocation="saml-metadata-trustinfo-v1.0.xsd"/>
 </schema>

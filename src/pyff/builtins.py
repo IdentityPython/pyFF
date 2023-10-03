@@ -12,6 +12,7 @@ import sys
 import traceback
 from copy import deepcopy
 from datetime import datetime
+from io import BytesIO
 from str2bool import str2bool
 from typing import Dict, Optional
 
@@ -29,6 +30,7 @@ from pyff.logs import get_log
 from pyff.pipes import PipeException, PipelineCallback, Plumbing, pipe, registry
 from pyff.samlmd import (
     annotate_entity,
+    discojson_sp_t,
     discojson_t,
     entitiesdescriptor,
     find_in_document,
@@ -46,6 +48,7 @@ from pyff.utils import (
     duration2timedelta,
     hash_id,
     iso2datetime,
+    parse_xml,
     root,
     safe_write,
     total_seconds,
@@ -249,10 +252,30 @@ def fork(req: Plumbing.Request, *opts):
             - setattr:
                 attribute: value
 
+    **parsecopy**
+
+    Due to a hard to find bug, fork which uses deepcopy can lose some namespaces. The parsecopy argument is a workaround.
+    It uses a brute force serialisation and deserialisation to get around the bug. 
+
+    .. code-block:: yaml
+
+        - select  # select all entities
+        - fork parsecopy:
+            - certreport
+            - publish:
+                 output: "/tmp/annotated.xml"
+        - fork:
+            - xslt:
+                 stylesheet: tidy.xml
+            - publish:
+                 output: "/tmp/clean.xml"
     """
     nt = None
     if req.t is not None:
-        nt = deepcopy(req.t)
+        if 'parsecopy' in opts:
+            nt = root(parse_xml(BytesIO(dumptree(req.t))))
+        else:
+            nt = deepcopy(req.t)
 
     if not isinstance(req.args, list):
         raise ValueError('Non-list arguments to "fork" not allowed')
@@ -954,8 +977,69 @@ def _discojson(req: Plumbing.Request, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    res = discojson_t(req.t, icon_store=req.md.icon_store)
+    res = discojson_t(req.t, req.md.rm, icon_store=req.md.icon_store)
     res.sort(key=operator.itemgetter('title'))
+
+    return json.dumps(res)
+
+
+@pipe(name='discojson_sp')
+def _discojson_sp(req, *opts):
+    """
+
+    Return a json representation of the trust information
+
+    .. code-block:: yaml
+      discojson_sp:
+
+    The returned json doc will have the following structure.
+
+    The root is a dictionary, in which the keys are the entityID's
+    of the SP entities that have trust information in their metadata,
+    and the values are a representation of that trust information.
+
+    For the XML structure of the trust information see the XML Schema
+    in this repo at `/src/pyff/schema/saml-metadata-trustinfo-v1.0.xsd`.
+
+    For each SP with trust information, the representation of
+    that information is as follows.
+
+    If there are MetadataSource elements, there will be a key
+    'extra_md' pointing to a dictionary of the metadata from those additional
+    sources, with entityIDs as keys and entities (with the format provided by
+    the discojson function above) as values.
+
+    Then there will be a key 'profiles' pointing to a dictionary
+    in which the keys are the names of the trust profiles, and the values
+    are json representations of those trust profiles.
+
+    Each trust profile will have the following keys.
+
+    If the trust profile includes a FallbackHandler element, there will
+    be a key 'fallback_handler' pointing to a dict with 2 keys, 'profile'
+    which by default is 'href', and handler which is a string, commonly a URL.
+
+    Then there will be an 'entity' key pointing to a list of representations of
+    individual trusted/untrusted entities, each of them a dictionary, with 2 keys:
+    'entity_id' pointing to a string with the entityID, and 'include',
+    pointing to a boolean.
+
+    Finally there will be a key 'entities' pointing to a list of representations
+    of groups of trusted/untrusted entities, each of them a dictionary with 3 keys:
+    a 'match' key pointing to the property of the entities by which they will be selected,
+    by default 'registrationAuthority', a key 'select' with the value that will be used
+    to select the 'match' property, and 'include', pointing to a boolean.
+
+    :param req: The request
+    :param opts: Options (unusued)
+    :return: returns a JSON doc
+
+    """
+
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    res = discojson_sp_t(req)
 
     return json.dumps(res)
 
