@@ -16,7 +16,7 @@ from urllib.parse import quote as urlescape
 
 import requests
 from lxml.etree import ElementTree
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 from requests.adapters import Response
 
 from pyff.constants import config
@@ -170,9 +170,7 @@ class ResourceOpts(BaseModel):
     # set to False to turn off all XML schema validation
     validate_schema: bool = Field(True, alias='validate')
     verify_tls: bool = False
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_dict(self) -> Dict[str, Any]:
         res = self.dict()
@@ -198,9 +196,7 @@ class ResourceInfo(BaseModel):
     parser_info: Optional[ParserInfo] = None
     expired: Optional[bool] = None
     exception: Optional[BaseException] = None
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_dict(self) -> Dict[str, Any]:
         def _format_key(k: str) -> str:
