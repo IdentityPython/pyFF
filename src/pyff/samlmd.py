@@ -961,7 +961,7 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
 
     md_sources = e.findall("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource" % (NS['md'], NS['md'], NS['ti'], NS['ti']))
 
-    sp['extra_md'] = []
+    sp['extra_md'] = {}
     for md_source in md_sources:
         dname_external = {}
         for dname in md_source.iterfind('.//{%s}DisplayName' % NS['ti']):
@@ -971,7 +971,7 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
         for idp in md_source.findall("{%s}EntityDescriptor" % NS['md']):
             idp_json = discojson(idp)
             idp_json['trusted'] = dname_external
-            sp['extra_md'].append(idp_json)
+            sp['extra_md'][idp_json['entityID']] = idp_json
 
     sp['profiles'] = {}
     # Grab trust profile emements, and translate to json
