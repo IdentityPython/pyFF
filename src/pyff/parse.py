@@ -29,6 +29,7 @@ class ParserInfo(BaseModel):
         res = {_format_key(k): v for k, v in self.dict().items()}
         return res
 
+ResourceInfo.model_rebuild()
 
 class ParserException(Exception):
     def __init__(self, msg, wrapped=None, data=None):
