@@ -556,8 +556,8 @@ def parse_options(program, docs):
                 else:
                     raise ValueError("Unknown option {}".format(o))
 
-        #if config.compat_dir and not config.base_dir:
-        #    config.base_dir = config.compat_dir
+        if config.compat_dir and not config.base_dir:
+            config.base_dir = config.compat_dir
 
     except Exception as ex:
         print(ex)
