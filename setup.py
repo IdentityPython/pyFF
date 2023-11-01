@@ -9,7 +9,7 @@ from typing import List
 from setuptools import find_packages
 
 __author__ = 'Leif Johansson'
-__version__ = '2.0.0'
+__version__ = '2.1.0'
 
 
 def load_requirements(path: PurePath) -> List[str]:

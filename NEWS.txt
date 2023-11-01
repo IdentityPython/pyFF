@@ -151,3 +151,11 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Release date: tor  1 apr 2021 21:15:14 CEST
 * 1.2.0 contains several bugfixes from 1.1.5
 * 2.0.0 drops all frontend components and returns pyFFd to an API-only service
+
+2.1.0
+---
+* Release date: ons  1 nov 2023 10:17:10 CET
+* Support for metadata trust extensions
+* Multiple bug-fixes
+* Coverted to pydantic 2.4.x
+* More typing
