@@ -20,8 +20,6 @@ requests_file
 simplejson >=2.6.2
 six>=1.11.0
 sphinx
-sphinx-apidoc
-sphinx-pypi-upload
 whoosh
 wsgi-intercept
 xmldiff

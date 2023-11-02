@@ -1,4 +1,5 @@
 include README.rst
 include NEWS.txt
+include *.md LICENSE* *requirements*
 recursive-include examples *.fd *.xrd
 recursive-include src/pyff *.xsl *.xsd *.js *.css *.html *.xrd *.png *.gif *.po *pot
