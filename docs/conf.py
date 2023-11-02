@@ -13,11 +13,12 @@
 
 import sys
 import os
+import sphinx
 
 sys.path.insert(0, os.path.abspath('./../'))
 autodoc_mock_imports = ["alpha","beta"]
 
-import sphinx.apidoc
+#import sphinx.apidoc
 def setup(app):
     sphinx.ext.apidoc.main(['-f', '-T', '-e', '-M', '-o', './code/', '../src', '../src/localconfig.py', '../src/pyff/test'])
 
@@ -33,7 +34,7 @@ sys.path.insert(0, os.path.abspath('../src'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.autosummary', 'recommonmark']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.apidoc', 'sphinx.ext.autosummary']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
