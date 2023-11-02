@@ -5,20 +5,3 @@ Development setup
 2. ./setup.py develop
 
 Optionally do the same for pyXMLSecurity if you plan to do work that involves crypto functions
-
-Release HOWTO
-=============
-
-To make a release, 
-
-  1) remove dev suffix on version in setup.py
-  2) set release date in NEWS.txt
-  2b) update the version in docs/conf.py
-  3) commit the changes to setup.py and NEWS.txt
-  4) git tag <version>
-  5) git push && git push --tag
-  6) cd docs && make html
-  6) Upload to PyPI: twine upload dist/pyFF-<version>.tar.gz
-  7) Increase version in setup.py (for next release) with dev suffix
-  8) Create NEWS.txt entry for next release
-
