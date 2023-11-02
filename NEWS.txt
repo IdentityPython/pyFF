@@ -159,3 +159,7 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Multiple bug-fixes
 * Coverted to pydantic 2.4.x
 * More typing
+
+2.1.1
+-----
+* Fix MANIFEST issue that prevented install from sdist
