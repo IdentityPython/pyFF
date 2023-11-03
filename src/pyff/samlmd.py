@@ -1,6 +1,6 @@
 import traceback
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from str2bool import str2bool
 from io import BytesIO
 from itertools import chain
@@ -343,9 +343,9 @@ def metadata_expiration(t: ElementTree) -> Optional[timedelta]:
         cache_duration = config.default_cache_duration
         valid_until = relt.get('validUntil', None)
         if valid_until is not None:
-            now = utc_now().replace(microsecond=0)
+            now = utc_now().replace(microsecond=0).replace(tzinfo=None)
             vu = iso2datetime(valid_until)
-            vu = vu.replace(microsecond=0)
+            vu = vu.replace(microsecond=0).replace(tzinfo=None)
             return vu - now
         elif config.respect_cache_duration:
             cache_duration = relt.get('cacheDuration', config.default_cache_duration)
