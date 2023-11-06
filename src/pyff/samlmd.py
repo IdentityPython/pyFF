@@ -970,7 +970,7 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
 
         for idp in md_source.findall("{%s}EntityDescriptor" % NS['md']):
             idp_json = discojson(idp)
-            idp_json['trusted'] = dname_external
+            idp_json['hint'] = dname_external
             sp['extra_md'][idp_json['entityID']] = idp_json
 
     sp['profiles'] = {}
