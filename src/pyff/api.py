@@ -447,7 +447,7 @@ def search_handler(request: Request) -> Response:
     :param request: the HTTP request with the 'query' request parameter
     :return: a JSON search result
     """
-    match = request.params.get('q', request.params.get('query', None))
+    match = request.params.get('q', request.params.get('query', ""))
 
     # Enable matching on scope.
     match = match.split('@').pop() if match and not match.endswith('@') else match
