@@ -1,4 +1,4 @@
-import random
+import random, time
 
 from pyff.constants import NS, config
 from pyff.logs import get_log
@@ -14,7 +14,7 @@ class MDRepository:
     """A class representing a set of SAML metadata and the resources from where this metadata was loaded."""
 
     def __init__(self, scheduler=None) -> None:
-        random.seed(id(self))
+        random.seed(time.time())
         self.rm = Resource(url=None, opts=ResourceOpts())  # root
         if scheduler is None:
             scheduler = make_default_scheduler()
