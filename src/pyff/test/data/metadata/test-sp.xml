@@ -65,8 +65,8 @@
           <ti:TrustedEntity>https://idp.u-picardie.fr/idp/shibboleth</ti:TrustedEntity>
         </ti:TrustProfile>
         <ti:TrustProfile name="other" strict="false">
-          <ti:DisplayName xml:lang="en">Other Access</ti:DisplayName>
-          <ti:DisplayName xml:lang="sv">Other Access sv</ti:DisplayName>
+          <ti:DisplayName xml:lang="en">Degraded security</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">Degraded security sv</ti:DisplayName>
           <ti:FallbackHandler profile="href">https://www.example.org/other</ti:FallbackHandler>
           <ti:TrustedEntity include="true">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
         </ti:TrustProfile>
@@ -187,8 +187,8 @@ D265cqy6Le/toVg=</ds:X509Certificate>
     <md:Extensions>
       <ti:TrustInfo xmlns:ti="https://seamlessaccess.org/NS/trustinfo">
         <ti:TrustProfile name="other" strict="false">
-          <ti:DisplayName xml:lang="en">Other Access</ti:DisplayName>
-          <ti:DisplayName xml:lang="sv">Other Access sv</ti:DisplayName>
+          <ti:DisplayName xml:lang="en">Degraded security</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">Degraded security sv</ti:DisplayName>
           <ti:FallbackHandler profile="href">https://www.example.org/other</ti:FallbackHandler>
           <ti:TrustedEntity include="true">https://kimlik.29mayis.edu.tr/simplesaml/saml2/idp/metadata.php</ti:TrustedEntity>
         </ti:TrustProfile>
@@ -199,8 +199,8 @@ D265cqy6Le/toVg=</ds:X509Certificate>
           <ti:TrustedEntity include="false">https://kimlik.29mayis.edu.tr/simplesaml/saml2/idp/metadata.php</ti:TrustedEntity>
         </ti:TrustProfile>
         <ti:TrustProfile name="yetanother" strict="false">
-          <ti:DisplayName xml:lang="en">yet Another Access</ti:DisplayName>
-          <ti:DisplayName xml:lang="sv">yet Another Access sv</ti:DisplayName>
+          <ti:DisplayName xml:lang="en">Degraded security</ti:DisplayName>
+          <ti:DisplayName xml:lang="sv">Degraded security sv</ti:DisplayName>
           <ti:FallbackHandler profile="href">https://www.example.org/another</ti:FallbackHandler>
           <ti:TrustedEntity include="false">https://kimlik.29mayis.edu.tr/simplesaml/saml2/idp/metadata.php</ti:TrustedEntity>
         </ti:TrustProfile>
@@ -436,8 +436,8 @@ uR2IR/P9sJcaFTLtfYyZ1cTyC2eWviV+UCGwfW17U5WB23E3+NVGGpNKIfBukRYa
            <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer2" strict="false">
-           <ti:DisplayName xml:lang="en">Customer 2 Access</ti:DisplayName>
-           <ti:DisplayName xml:lang="sv">Kundinloggning 2</ti:DisplayName>
+           <ti:DisplayName xml:lang="en">Degraded security</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Degraded security sv</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
            <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
          </ti:TrustProfile>
@@ -448,8 +448,8 @@ uR2IR/P9sJcaFTLtfYyZ1cTyC2eWviV+UCGwfW17U5WB23E3+NVGGpNKIfBukRYa
            <ti:TrustedEntities include="false" match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer4" strict="false">
-           <ti:DisplayName xml:lang="en">Customer 4 Access</ti:DisplayName>
-           <ti:DisplayName xml:lang="sv">Kundinloggning 4</ti:DisplayName>
+           <ti:DisplayName xml:lang="en">Degraded security</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Degraded security sv</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
            <ti:TrustedEntities include="false" match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
          </ti:TrustProfile>
@@ -605,8 +605,8 @@ YJIFVUg+VwfF8XvjH0WKszSmYywVYg==</ds:X509Certificate>
            <ti:TrustedEntities match="entity_category">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer2" strict="false">
-           <ti:DisplayName xml:lang="en">Customer 2 Access</ti:DisplayName>
-           <ti:DisplayName xml:lang="sv">Kundinloggning 2</ti:DisplayName>
+           <ti:DisplayName xml:lang="en">Degraded security</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Degraded security sv</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
            <ti:TrustedEntities match="entity_category">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
            <ti:TrustedEntities match="entity_category">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
@@ -618,8 +618,8 @@ YJIFVUg+VwfF8XvjH0WKszSmYywVYg==</ds:X509Certificate>
            <ti:TrustedEntities include="false" match="entity_category">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer4" strict="false">
-           <ti:DisplayName xml:lang="en">Customer 4 Access</ti:DisplayName>
-           <ti:DisplayName xml:lang="sv">Kundinloggning 4</ti:DisplayName>
+           <ti:DisplayName xml:lang="en">Degraded security</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Degraded security sv</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
            <ti:TrustedEntities include="false" match="entity_category">http://refeds.org/category/research-and-scholarship</ti:TrustedEntities>
          </ti:TrustProfile>
@@ -748,8 +748,8 @@ fbypb1DOrVI=</ds:X509Certificate>
            <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer2" strict="false">
-           <ti:DisplayName xml:lang="en">Customer 2 Access</ti:DisplayName>
-           <ti:DisplayName xml:lang="sv">Kundinloggning 2</ti:DisplayName>
+           <ti:DisplayName xml:lang="en">Degraded security</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Degraded security sv</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
            <ti:TrustedEntity include="false">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
            <ti:TrustedEntities match="registrationAuthority">http://www.swamid.se/</ti:TrustedEntities>
@@ -762,8 +762,8 @@ fbypb1DOrVI=</ds:X509Certificate>
            <ti:TrustedEntities match="entity_category">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
          </ti:TrustProfile>
          <ti:TrustProfile name="customer4" strict="false">
-           <ti:DisplayName xml:lang="en">Customer 4 Access</ti:DisplayName>
-           <ti:DisplayName xml:lang="sv">Kundinloggning 4</ti:DisplayName>
+           <ti:DisplayName xml:lang="en">Degraded security</ti:DisplayName>
+           <ti:DisplayName xml:lang="sv">Degraded security sv</ti:DisplayName>
            <ti:FallbackHandler profile="href">https://www.example.org/about</ti:FallbackHandler>
            <ti:TrustedEntity include="false">https://login.idp.eduid.se/idp.xml</ti:TrustedEntity>
            <ti:TrustedEntities match="entity_category">http://www.geant.net/uri/dataprotection-code-of-conduct/v1</ti:TrustedEntities>
