@@ -163,3 +163,11 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 2.1.1
 -----
 * Fix MANIFEST issue that prevented install from sdist
+
+2.1.2
+-----
+* Documentation updates related to sphinx
+* Clarify semantics of trust info extension metadata
+* Fix random seeding
+* Fix for data handling related to non-Z timezones in metadata
+
