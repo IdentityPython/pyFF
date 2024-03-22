@@ -783,6 +783,14 @@ def registration_authority(entity):
         return regauth_el.attrib.get('registrationAuthority')
 
 
+def discovery_responses(entity):
+    responses = None
+    responses_els = entity.findall(".//{%s}DiscoveryResponse" % NS['idpdisc'])
+    if len(responses_els) > 0:
+        responses = [el.attrib.get('Location') for el in responses_els]
+    return responses
+
+
 def entity_extended_display(entity, langs=None):
     """Utility-method for computing a displayable string for a given entity.
 
@@ -875,6 +883,7 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
     categories = entity_attribute(e, "http://macedir.org/entity-category")
     certifications = entity_attribute(e, "urn:oasis:names:tc:SAML:attribute:assurance-certification")
     cat_support = entity_attribute(e, "http://macedir.org/entity-category-support")
+    disc_responses = discovery_responses(e)
 
     d = dict(
         title=title,
@@ -899,6 +908,9 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
 
     if sources is not None:
         d['md_source'] = sources
+
+    if disc_responses is not None:
+        d["discovery_responses"] = disc_responses
 
     eattr = entity_attribute_dict(e)
     if 'idp' in eattr[ATTRS['role']]:
