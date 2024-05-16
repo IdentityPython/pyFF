@@ -136,6 +136,12 @@ class PyFFAPITest(PipeLineTest):
             assert info['title'] == 'NORDUnet'
             assert 'nordu.net' in info['scope']
 
+            # check that we get a discovery_responses where we expect one
+            r = requests.get("{}/entities/%7Bsha1%7Dc3ba81cede254454b64ee9743df19201fe34adc9.json".format(url))
+            assert r.status_code == 200
+            data = r.json()
+            info = data[0]
+            assert 'https://box-idp.nordu.net/simplesaml/module.php/saml/sp/discoresp.php' in info['discovery_responses']
 
 class PyFFAPITestResources(PipeLineTest):
     """
