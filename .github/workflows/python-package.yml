@@ -15,10 +15,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest"]
+        os: ["ubuntu-24.04", "ubuntu-22.04", "ubuntu-20.04"]
+        python: ["3.9", "3.10", "3.11", "3.12"]
     runs-on:  ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python }}
     - name: Lint with Ruff
       run: |
         pip install ruff
