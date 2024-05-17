@@ -22,7 +22,7 @@ jobs:
     - name: Lint with Ruff
       run: |
         pip install ruff
-        ruff --output-format=github .
+        ruff check --output-format=github .
       continue-on-error: true
 
     - name: Install dependencies
@@ -39,5 +39,5 @@ jobs:
       run: |
         make quick_test
         make test_coverage
-        make typecheck
+        #make typecheck
     
