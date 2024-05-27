@@ -171,3 +171,6 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Fix random seeding
 * Fix for data handling related to non-Z timezones in metadata
 
+2.1.3
+-----
+* Add DiscoveryResponse info to SPs in discojson
