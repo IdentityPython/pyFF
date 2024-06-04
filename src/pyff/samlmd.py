@@ -1,4 +1,6 @@
+import json
 import traceback
+from base64 import b64decode
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from str2bool import str2bool
@@ -1038,6 +1040,37 @@ def discojson_sp_t(req):
 
     for e in iter_entities(t):
         sp = discojson_sp(e, global_trust_info=global_tinfo, global_md_sources=global_sources)
+        if sp is not None:
+            d.append(sp)
+
+    return d
+
+
+def discojson_sp_attr(e):
+
+    attribute = "http://refeds.org/entity-selection-profile"
+    b64_trustinfos = entity_attribute(e, attribute)
+    if b64_trustinfos is None:
+        return None
+
+    sp = {}
+    sp['entityID'] = e.get('entityID', None)
+    sp['profiles'] = {}
+
+    for b64_trustinfo in b64_trustinfos:
+        str_trustinfo = b64decode(b64_trustinfo.encode('ascii'))
+        trustinfo = json.loads(str_trustinfo.decode('utf8'))
+        sp['profiles'].update(trustinfo['profiles'])
+
+    return sp
+
+
+def discojson_sp_attr_t(req):
+    d = []
+    t = req.t
+
+    for e in iter_entities(t):
+        sp = discojson_sp_attr(e)
         if sp is not None:
             d.append(sp)
 

@@ -757,3 +757,34 @@ class SigningTest(PipeLineTest):
                 pass
             finally:
                 shutil.rmtree(tmpdir)
+
+    def test_discojson_sp_trustinfo_in_attr(self):
+        with patch.multiple("sys", exit=self.sys_exit):
+            tmpdir = tempfile.mkdtemp()
+            os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
+            try:
+                self.exec_pipeline("""
+- load:
+   - file://%s/metadata/test-sp-trustinfo-in-attr.xml
+- select
+- discojson_sp_attr
+- publish:
+    output: %s/disco_sp_attr.json
+    raw: true
+    update_store: false
+""" % (self.datadir, tmpdir))
+                fn = "%s/disco_sp_attr.json" % tmpdir
+                assert os.path.exists(fn)
+                with open(fn, 'r') as f:
+                    sp_json = json.load(f)
+
+                assert 'https://example.com/shibboleth' in str(sp_json)
+                example_sp_json = sp_json[0]
+                assert 'incommon-wayfinder' in example_sp_json['profiles']
+                tinfo = example_sp_json['profiles']['incommon-wayfinder']
+                assert tinfo['entities'][0] == {'select': 'https://mdq.incommon.org/entities', 'match': 'md_source', 'include': True}
+                assert tinfo['strict']
+            except IOError:
+                pass
+            finally:
+                shutil.rmtree(tmpdir)

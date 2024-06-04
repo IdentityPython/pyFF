@@ -31,6 +31,7 @@ from pyff.pipes import PipeException, PipelineCallback, Plumbing, pipe, registry
 from pyff.samlmd import (
     annotate_entity,
     discojson_sp_t,
+    discojson_sp_attr_t,
     discojson_t,
     entitiesdescriptor,
     find_in_document,
@@ -1040,6 +1041,36 @@ def _discojson_sp(req, *opts):
         raise PipeException("Your pipeline is missing a select statement.")
 
     res = discojson_sp_t(req)
+
+    return json.dumps(res)
+
+
+@pipe(name='discojson_sp_attr')
+def _discojson_sp_attr(req, *opts):
+    """
+
+    Return a json representation of the trust information
+
+    .. code-block:: yaml
+      discojson_sp_attr:
+
+    SP Entities can carry trust information as a base64 encoded json blob
+    as an entity attribute with name `http://refeds.org/entity-selection-profile`.
+    The schema of this json is the same as the one produced above from XML
+    with the pipe `discojson_sp`, and published at:
+
+    https://github.com/TheIdentitySelector/thiss-mdq/blob/master/trustinfo.schema.json
+
+    :param req: The request
+    :param opts: Options (unusued)
+    :return: returns a JSON doc
+
+    """
+
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    res = discojson_sp_attr_t(req)
 
     return json.dumps(res)
 
