@@ -747,12 +747,19 @@ class SigningTest(PipeLineTest):
                     sp_json = json.load(f)
 
                 assert 'https://example.com.com/shibboleth' in str(sp_json)
+                assert len(sp_json) == 2
                 example_sp_json = sp_json[0]
                 assert 'customer' in example_sp_json['profiles']
                 customer_tinfo = example_sp_json['profiles']['customer']
                 assert customer_tinfo['entity'][0] == {'entity_id': 'https://example.org/idp.xml', 'include': True}
                 assert customer_tinfo['entities'][0] == {'select': 'http://www.swamid.se/', 'match': 'registrationAuthority', 'include': True}
                 assert customer_tinfo['fallback_handler'] == {'profile': 'href', 'handler': 'https://www.example.org/about'}
+
+                example_sp_json_2 = sp_json[1]
+                assert 'incommon-wayfinder' in example_sp_json_2['profiles']
+                tinfo = example_sp_json_2['profiles']['incommon-wayfinder']
+                assert tinfo['entities'][0] == {'select': 'https://mdq.incommon.org/entities', 'match': 'md_source', 'include': True}
+                assert tinfo['strict']
             except IOError:
                 pass
             finally:

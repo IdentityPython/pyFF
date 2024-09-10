@@ -1032,20 +1032,6 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
     return sp
 
 
-def discojson_sp_t(req):
-    d = []
-    t = req.t
-    global_tinfo = req.md.rm.global_trust_info()
-    global_sources = req.md.rm.global_md_sources()
-
-    for e in iter_entities(t):
-        sp = discojson_sp(e, global_trust_info=global_tinfo, global_md_sources=global_sources)
-        if sp is not None:
-            d.append(sp)
-
-    return d
-
-
 def discojson_sp_attr(e):
 
     attribute = "http://refeds.org/entity-selection-profile"
@@ -1063,6 +1049,24 @@ def discojson_sp_attr(e):
         sp['profiles'].update(trustinfo['profiles'])
 
     return sp
+
+
+def discojson_sp_t(req):
+    d = []
+    t = req.t
+    global_tinfo = req.md.rm.global_trust_info()
+    global_sources = req.md.rm.global_md_sources()
+
+    for e in iter_entities(t):
+        sp = discojson_sp(e, global_trust_info=global_tinfo, global_md_sources=global_sources)
+        if sp is not None:
+            d.append(sp)
+
+        sp = discojson_sp_attr(e)
+        if sp is not None:
+            d.append(sp)
+
+    return d
 
 
 def discojson_sp_attr_t(req):
