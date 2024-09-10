@@ -264,7 +264,7 @@ class Config(object):
     allow_shutdown = S("allow_shutdown", default=False, typeconv=as_bool, deprecated=True)
     ds_template = S("ds_template", default="ds.html", deprecated=True)
 
-    loglevel = S("loglevel", default=logging.WARN, info="set the loglevel")
+    loglevel = S("loglevel", default='WARN', info="set the loglevel")
 
     access_log = S("access_log", cmdline=['pyffd'], info="a log target (file) to use for access logs")
 
@@ -523,7 +523,7 @@ def parse_options(program, docs):
         sys.exit(2)
 
     if config.loglevel is None:
-        config.loglevel = logging.INFO
+        config.loglevel = 'INFO'
 
     if config.aliases is None or len(config.aliases) == 0:
         config.aliases = dict(metadata=entities)
