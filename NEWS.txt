@@ -178,3 +178,4 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Add DiscoveryResponse info to SPs in discojson
 * Remove cherrypy imports
 * Fix logging
+* suport SP trust metadata in an entity attribute as JSON blob
