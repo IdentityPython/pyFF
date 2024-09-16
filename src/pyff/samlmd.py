@@ -402,7 +402,7 @@ def filter_or_validate(
     return t
 
 
-def resolve_entities(entities, lookup_fn=None):
+def resolve_entities(entities, lookup_fn=None, dedup=True):
     """
 
     :param entities: a set of entities specifiers (lookup is used to find entities from this set)
@@ -416,13 +416,21 @@ def resolve_entities(entities, lookup_fn=None):
         else:
             return l_fn(m)
 
-    resolved_entities = dict()  # a set won't do since __compare__ doesn't use @entityID
+    if dedup:
+        resolved_entities = dict()  # a set won't do since __compare__ doesn't use @entityID
+    else:
+        resolved_entities = []
     for member in entities:
         for entity in _resolve(member, lookup_fn):
             entity_id = entity.get('entityID', None)
             if entity is not None and entity_id is not None:
-                resolved_entities[entity_id] = entity
-    return resolved_entities.values()
+                if dedup:
+                    resolved_entities[entity_id] = entity
+                else:
+                    resolved_entities.append(entity)
+    if dedup:
+        return resolved_entities.values()
+    return resolved_entities
 
 
 def entitiesdescriptor(
