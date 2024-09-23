@@ -536,7 +536,7 @@ def parse_options(program, docs):
             if o in ('-h', '--help'):
                 print(docs)
                 sys.exit(0)
-            elif o in ('--version',):
+            elif o in ('-v', '--version'):
                 print("{} version {}".format(program, pyff_version))
                 sys.exit(0)
             elif o in ('-A', '--alias'):
