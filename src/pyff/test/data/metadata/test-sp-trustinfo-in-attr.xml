@@ -1,0 +1,114 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<md:EntitiesDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute" xmlns:mdrpi="urn:oasis:names:tc:SAML:metadata:rpi" xmlns:shibmd="urn:mace:shibboleth:metadata:1.0" xmlns:xrd="http://docs.oasis-open.org/ns/xri/xrd-1.0" xmlns:pyff="http://pyff.io/NS" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ser="http://eidas.europa.eu/metadata/servicelist" xmlns:eidas="http://eidas.europa.eu/saml-extensions" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" xmlns:samla="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:init="urn:oasis:names:tc:SAML:profiles:SSO:request-init" xmlns:idpdisc="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" xmlns:wayf="http://sdss.ac.uk/2006/06/WAYF" xmlns:req-attr="urn:oasis:names:tc:SAML:protcol:ext:req-attr" Name="test">
+  <md:EntityDescriptor entityID="https://example.com/shibboleth">
+  <md:Extensions>
+    <mdrpi:RegistrationInfo registrationAuthority="http://www.swamid.se/" registrationInstant="2015-02-11T11:09:51Z">
+      <mdrpi:RegistrationPolicy xml:lang="en">http://swamid.se/policy/mdrps</mdrpi:RegistrationPolicy>
+    </mdrpi:RegistrationInfo>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha512"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#sha384"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#sha224"/>
+    <alg:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha224"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha384"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2009/xmldsig11#dsa-sha256"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+    <alg:SigningMethod Algorithm="http://www.w3.org/2000/09/xmldsig#dsa-sha1"/>
+    <mdattr:EntityAttributes>
+      <saml:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" Name="http://macedir.org/entity-category">
+        <saml:AttributeValue>http://www.geant.net/uri/dataprotection-code-of-conduct/v1</saml:AttributeValue>
+      </saml:Attribute>
+      <saml:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" Name="https://refeds.org/entity-selection-profile">   
+        <saml:AttributeValue>ewogICJwcm9maWxlcyI6IHsKICAgICJpbmNvbW1vbi13YXlmaW5kZXIiOiB7CiAgICAgICAic3RyaWN0IjogdHJ1ZSwKICAgICAgICJlbnRpdGllcyI6IFsKICAgICAgICAgewogICAgICAgICAgICJzZWxlY3QiOiAiaHR0cHM6Ly9tZHEuaW5jb21tb24ub3JnL2VudGl0aWVzIiwKICAgICAgICAgICAibWF0Y2giOiAibWRfc291cmNlIiwKICAgICAgICAgICAiaW5jbHVkZSI6IHRydWUKICAgICAgICAgfQogICAgICAgXQogICAgfQogIH0KfQ==</saml:AttributeValue>
+      </saml:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <init:RequestInitiator Binding="urn:oasis:names:tc:SAML:profiles:SSO:request-init" Location="https://cpauth.icos-cp.eu/saml/login"/>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="en">Carbon Portal authentication service</mdui:DisplayName>
+        <mdui:DisplayName xml:lang="sv">Kolportalens autentiseringstjänst</mdui:DisplayName>
+        <mdui:Description xml:lang="en">Single Sign On for services of ICOS Carbon Portal. Maintained by the Carbon Portal team at Physical Geography department (nateko.lu.se).</mdui:Description>
+        <mdui:Description xml:lang="sv">Single Sign On tjänst för ICOS Kolportalen. Hanteras av Carbon Portal teamet på INES (nateko.lu.se).</mdui:Description>
+        <mdui:PrivacyStatementURL xml:lang="en">https://cpauth.icos-cp.eu/saml/privacyStatement</mdui:PrivacyStatementURL>
+        <mdui:InformationURL xml:lang="en">https://www.icos-cp.eu/</mdui:InformationURL>
+        <mdui:InformationURL xml:lang="sv">https://www.icos-cp.eu/</mdui:InformationURL>
+        <mdui:PrivacyStatementURL xml:lang="sv">https://cpauth.icos-cp.eu/saml/privacyStatement</mdui:PrivacyStatementURL>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:KeyDescriptor>
+      <ds:KeyInfo>
+        <ds:KeyName>cpauth.icos-cp.eu</ds:KeyName>
+        <ds:X509Data>
+          <ds:X509SubjectName>CN=cpauth.icos-cp.eu</ds:X509SubjectName>
+          <ds:X509Certificate>MIIEJzCCAw+gAwIBAgIJANC3VWNs7fbTMA0GCSqGSIb3DQEBCwUAMIGpMQswCQYD
+VQQGEwJTRTERMA8GA1UECAwIU2vDg8KlbmUxDTALBgNVBAcMBEx1bmQxGzAZBgNV
+BAoMEklDT1MgQ2FyYm9uIFBvcnRhbDEfMB0GA1UECwwWQXV0aGVudGljYXRpb24g
+U2VydmljZTEaMBgGA1UEAwwRY3BhdXRoLmljb3MtY3AuZXUxHjAcBgkqhkiG9w0B
+CQEWD2luZm9AaWNvcy1jcC5ldTAeFw0xNTAyMDUxMjI0MzZaFw0yNTAyMDIxMjI0
+MzZaMIGpMQswCQYDVQQGEwJTRTERMA8GA1UECAwIU2vDg8KlbmUxDTALBgNVBAcM
+BEx1bmQxGzAZBgNVBAoMEklDT1MgQ2FyYm9uIFBvcnRhbDEfMB0GA1UECwwWQXV0
+aGVudGljYXRpb24gU2VydmljZTEaMBgGA1UEAwwRY3BhdXRoLmljb3MtY3AuZXUx
+HjAcBgkqhkiG9w0BCQEWD2luZm9AaWNvcy1jcC5ldTCCASIwDQYJKoZIhvcNAQEB
+BQADggEPADCCAQoCggEBAM2QN1jaZJeuPAH+4sVMZKk7vg4JIbUuTMKk0+KIAg5M
+XiVsRiEUjY+LtIncrvA/kf2CIySI0WkbwZMjcDd03hNj4kLWhuyxfOCwDO6DsUbG
+MbyI6HIYWXJp5ljfEEFgtMqT3dDtD5vwq8h4Zy20ukxOoIokKczrAvn4JjkMsj6Z
+0CEAFBC29o4E8PWQbUBgvt6Z+2ao+RHMLD7nZVBx98Occ9KfnYnDDd9Oi1XFe009
+zaSbcqY2RpN8I9hcW/KQf3KnGW5xZ5dr4rhGklCkYr+h0W3xKu+hin8bk91t1Dkr
+gaKl/N7M3Oof3k+7ZBlwaV97es5InWCeNgDxCGkBRNsCAwEAAaNQME4wHQYDVR0O
+BBYEFDcD7MVudooGaNRYqXBYqQi3VzGxMB8GA1UdIwQYMBaAFDcD7MVudooGaNRY
+qXBYqQi3VzGxMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBABS02eZS
+weXGMJ2fEIy2JH0VhCbjuX/rz+8Hfh9LjzNb3QwKHuwP83yvPqRulV9FYmvOoK8T
+fMou5aW0mZ+QgJNKOrxY5vFxUq6pn3OiYbBu3m1C9ajbU/nx2evzt4+qUwTfHFb+
+ZgXpOtmxRekFzVvGZ18BSPJKwAAqqZ11X7skT/NwEAhbgplVPv9WkDmDzqNvHqQJ
+nyRgD2ZqUPU9nEOjGy0gI07dciVcYZQ+CiZeSECIWgQwjDEBDuwMCVAZA6gfdz6C
+KJuN+RUSKPEcxPxle1MiB4MU0ei5X4xUbvLWKn9Ok7TOXg2BpnMAv6eON1wVo0Aa
+D265cqy6Le/toVg=</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes128-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes192-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes256-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes128-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes192-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes256-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#tripledes-cbc"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#rsa-oaep"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p"/>
+    </md:KeyDescriptor>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://cpauth.icos-cp.eu/saml/SAML2/POST" index="1" isDefault="true"/>
+    <md:AttributeConsumingService index="1">
+      <md:ServiceName xml:lang="en">ICOS Carbon Portal SAML service</md:ServiceName>
+      <md:ServiceName xml:lang="sv">ICOS Kolportalens SAML tjänst</md:ServiceName>
+      <md:RequestedAttribute FriendlyName="givenName" Name="urn:oid:2.5.4.42" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="sn" Name="urn:oid:2.5.4.4" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+      <md:RequestedAttribute FriendlyName="mail" Name="urn:oid:0.9.2342.19200300.100.1.3" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" isRequired="true"/>
+    </md:AttributeConsumingService>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="en">ICOS Carbon Portal</md:OrganizationName>
+    <md:OrganizationName xml:lang="sv">ICOS Kolportalen</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="en">Carbon Portal</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="sv">Kolportalen</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="en">https://www.icos-cp.eu/</md:OrganizationURL>
+    <md:OrganizationURL xml:lang="sv">https://www.icos-cp.eu/</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="technical">
+    <md:GivenName>Oleg</md:GivenName>
+    <md:SurName>Mirzov</md:SurName>
+    <md:EmailAddress>mailto:oleg.mirzov@nateko.lu.se</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="administrative">
+    <md:GivenName>Alex</md:GivenName>
+    <md:SurName>Vermeulen</md:SurName>
+    <md:EmailAddress>mailto:alex.vermeulen@nateko.lu.se</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor></md:EntitiesDescriptor>

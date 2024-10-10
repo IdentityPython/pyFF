@@ -31,6 +31,7 @@ from pyff.pipes import PipeException, PipelineCallback, Plumbing, pipe, registry
 from pyff.samlmd import (
     annotate_entity,
     discojson_sp_t,
+    discojson_sp_attr_t,
     discojson_t,
     entitiesdescriptor,
     find_in_document,
@@ -731,7 +732,7 @@ def select(req: Plumbing.Request, *opts):
     Select a set of EntityDescriptor elements as the working document.
 
     :param req: The request
-    :param opts: Options - used for select alias
+    :param opts: Options - see Options below
     :return: returns the result of the operation as a working document
 
     Select picks and expands elements (with optional filtering) from the active repository you setup using calls
@@ -778,25 +779,60 @@ def select(req: Plumbing.Request, *opts):
     would terminate the plumbing at select if there are no SPs in the local repository. This is useful in
     combination with fork for handling multiple cases in your plumbings.
 
-    The 'as' keyword allows a select to be stored as an alias in the local repository. For instance
+    Options are put directly after "select". E.g:
 
     .. code-block:: yaml
 
-        - select as /foo-2.0: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+        - select as /foo-2.0 dedup True: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
 
-    would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in the current repository.
-    Note that you should not include an extension in your "as foo-bla-something" since that would make your
-    alias invisible for anything except the corresponding mime type.
+    **Options**
+    Defaults are marked with (*)
+    - as <name> : The 'as' keyword allows a select to be stored as an alias in the local repository. For instance
+
+        .. code-block:: yaml
+
+            - select as /foo-2.0: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+
+        would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in the current repository.
+        Note that you should not include an extension in your "as foo-bla-something" since that would make your
+        alias invisible for anything except the corresponding mime type.
+
+    - dedup <True*|False> : Whether to deduplicate the results by entityID.
+
+        Note: When select is used after a load pipe with more than one source, if dedup is set to True
+        and there are entity properties that may differ from one source to another, these will be squashed
+        rather than merged.
     """
+    opt_names = ('as', 'dedup')
+    if len(opts) % 2 == 0:
+        _opts = dict(list(zip(opts[::2], opts[1::2])))
+    else:
+        _opts = {}
+        for i in range(0, len(opts), 2):
+            if opts[i] in opt_names:
+                _opts[opts[i]] = opts[i + 1]
+            else:
+                _opts['as'] = opts[i]
+                if i + 1 < len(opts):
+                    more_opts = opts[i + 1:]
+                    _opts.update(dict(list(zip(more_opts[::2], more_opts[1::2]))))
+                    break
+
+    _opts.setdefault('dedup', "True")
+    _opts.setdefault('name', req.plumbing.id)
+    _opts['dedup'] = bool(str2bool(_opts['dedup']))
+
     args = _select_args(req)
-    name = req.plumbing.id
+    name = _opts['name']
+    dedup = _opts['dedup']
+
     if len(opts) > 0:
         if opts[0] != 'as' and len(opts) == 1:
             name = opts[0]
         if opts[0] == 'as' and len(opts) == 2:
             name = opts[1]
 
-    entities = resolve_entities(args, lookup_fn=req.md.store.select)
+    entities = resolve_entities(args, lookup_fn=req.md.store.select, dedup=dedup)
 
     if req.state.get('match', None):  # TODO - allow this to be passed in via normal arguments
 
@@ -1040,6 +1076,36 @@ def _discojson_sp(req, *opts):
         raise PipeException("Your pipeline is missing a select statement.")
 
     res = discojson_sp_t(req)
+
+    return json.dumps(res)
+
+
+@pipe(name='discojson_sp_attr')
+def _discojson_sp_attr(req, *opts):
+    """
+
+    Return a json representation of the trust information
+
+    .. code-block:: yaml
+      discojson_sp_attr:
+
+    SP Entities can carry trust information as a base64 encoded json blob
+    as an entity attribute with name `https://refeds.org/entity-selection-profile`.
+    The schema of this json is the same as the one produced above from XML
+    with the pipe `discojson_sp`, and published at:
+
+    https://github.com/TheIdentitySelector/thiss-mdq/blob/master/trustinfo.schema.json
+
+    :param req: The request
+    :param opts: Options (unusued)
+    :return: returns a JSON doc
+
+    """
+
+    if req.t is None:
+        raise PipeException("Your pipeline is missing a select statement.")
+
+    res = discojson_sp_attr_t(req)
 
     return json.dumps(res)
 

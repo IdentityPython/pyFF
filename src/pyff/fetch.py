@@ -96,7 +96,7 @@ class Fetcher(threading.Thread, Watchable):
         :param url: the url to fetch
         :return: nothing is returned.
         """
-        log.debug("scheduling fetch of {}".format(url))
+        log.info("scheduling fetch of {}".format(url))
         self.request.put(url)
 
     def stop(self):

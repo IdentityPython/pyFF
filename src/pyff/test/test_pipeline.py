@@ -747,12 +747,50 @@ class SigningTest(PipeLineTest):
                     sp_json = json.load(f)
 
                 assert 'https://example.com.com/shibboleth' in str(sp_json)
+                assert len(sp_json) == 2
                 example_sp_json = sp_json[0]
                 assert 'customer' in example_sp_json['profiles']
                 customer_tinfo = example_sp_json['profiles']['customer']
                 assert customer_tinfo['entity'][0] == {'entity_id': 'https://example.org/idp.xml', 'include': True}
                 assert customer_tinfo['entities'][0] == {'select': 'http://www.swamid.se/', 'match': 'registrationAuthority', 'include': True}
                 assert customer_tinfo['fallback_handler'] == {'profile': 'href', 'handler': 'https://www.example.org/about'}
+
+                example_sp_json_2 = sp_json[1]
+                assert 'incommon-wayfinder' in example_sp_json_2['profiles']
+                tinfo = example_sp_json_2['profiles']['incommon-wayfinder']
+                assert tinfo['entities'][0] == {'select': 'https://mdq.incommon.org/entities', 'match': 'md_source', 'include': True}
+                assert tinfo['strict']
+            except IOError:
+                pass
+            finally:
+                shutil.rmtree(tmpdir)
+
+    def test_discojson_sp_trustinfo_in_attr(self):
+        with patch.multiple("sys", exit=self.sys_exit):
+            tmpdir = tempfile.mkdtemp()
+            os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
+            try:
+                self.exec_pipeline("""
+- load:
+   - file://%s/metadata/test-sp-trustinfo-in-attr.xml
+- select
+- discojson_sp_attr
+- publish:
+    output: %s/disco_sp_attr.json
+    raw: true
+    update_store: false
+""" % (self.datadir, tmpdir))
+                fn = "%s/disco_sp_attr.json" % tmpdir
+                assert os.path.exists(fn)
+                with open(fn, 'r') as f:
+                    sp_json = json.load(f)
+
+                assert 'https://example.com/shibboleth' in str(sp_json)
+                example_sp_json = sp_json[0]
+                assert 'incommon-wayfinder' in example_sp_json['profiles']
+                tinfo = example_sp_json['profiles']['incommon-wayfinder']
+                assert tinfo['entities'][0] == {'select': 'https://mdq.incommon.org/entities', 'match': 'md_source', 'include': True}
+                assert tinfo['strict']
             except IOError:
                 pass
             finally:

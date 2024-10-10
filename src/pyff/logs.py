@@ -7,12 +7,6 @@ from typing import Any, Optional
 
 import six
 
-try:
-    import cherrypy
-except ImportError as e:
-    logging.debug("cherrypy logging disabled")
-    cherrypy = None
-
 
 class PyFFLogger(object):
     def __init__(self, name=None):
@@ -29,9 +23,7 @@ class PyFFLogger(object):
         }
 
     def _l(self, severity, msg):
-        if cherrypy is not None and '' in cherrypy.tree.apps:
-            cherrypy.tree.apps[''].log(str(msg), severity=severity)
-        elif severity in self._loggers:
+        if severity in self._loggers:
             self._loggers[severity](str(msg))
         else:
             raise ValueError("unknown severity %s" % severity)
