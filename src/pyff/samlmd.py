@@ -1042,7 +1042,7 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
 
 def discojson_sp_attr(e):
 
-    attribute = "http://refeds.org/entity-selection-profile"
+    attribute = "https://refeds.org/entity-selection-profile"
     b64_trustinfos = entity_attribute(e, attribute)
     if b64_trustinfos is None:
         return None

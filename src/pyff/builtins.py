@@ -1090,7 +1090,7 @@ def _discojson_sp_attr(req, *opts):
       discojson_sp_attr:
 
     SP Entities can carry trust information as a base64 encoded json blob
-    as an entity attribute with name `http://refeds.org/entity-selection-profile`.
+    as an entity attribute with name `https://refeds.org/entity-selection-profile`.
     The schema of this json is the same as the one produced above from XML
     with the pipe `discojson_sp`, and published at:
 
