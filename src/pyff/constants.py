@@ -290,7 +290,7 @@ class Config(object):
 
     caching_enabled = S("caching_enabled", default=True, typeconv=as_bool, info="enable caching?")
 
-    no_cashing = N('no_cashing', invert=caching_enabled, short='C', info="disable all caches")
+    no_caching = N('no_caching', invert=caching_enabled, short='C', info="disable all caches")
 
     daemonize = S("daemonize", default=True, cmdline=['pyffd'], info="run in background")
 
@@ -536,7 +536,7 @@ def parse_options(program, docs):
             if o in ('-h', '--help'):
                 print(docs)
                 sys.exit(0)
-            elif o in ('--version',):
+            elif o in ('-v', '--version'):
                 print("{} version {}".format(program, pyff_version))
                 sys.exit(0)
             elif o in ('-A', '--alias'):
