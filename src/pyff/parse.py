@@ -4,6 +4,7 @@ from collections import deque
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
+from urllib.parse import quote as urlescape
 from xmlsec.crypto import CertDict
 
 from pyff.constants import NS
@@ -84,7 +85,7 @@ class DirectoryParser(PyffParser):
         n = 0
         for fn in find_matching_files(content, self.extensions):
             child_opts = resource.opts.copy(update={'alias': None})
-            resource.add_child("file://" + fn, child_opts)
+            resource.add_child("file://" + urlescape(fn), child_opts)
             n += 1
 
         if n == 0:
