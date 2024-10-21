@@ -1,4 +1,6 @@
+import json
 import traceback
+from base64 import b64decode
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from str2bool import str2bool
@@ -400,7 +402,7 @@ def filter_or_validate(
     return t
 
 
-def resolve_entities(entities, lookup_fn=None):
+def resolve_entities(entities, lookup_fn=None, dedup=True):
     """
 
     :param entities: a set of entities specifiers (lookup is used to find entities from this set)
@@ -414,13 +416,21 @@ def resolve_entities(entities, lookup_fn=None):
         else:
             return l_fn(m)
 
-    resolved_entities = dict()  # a set won't do since __compare__ doesn't use @entityID
+    if dedup:
+        resolved_entities = dict()  # a set won't do since __compare__ doesn't use @entityID
+    else:
+        resolved_entities = []
     for member in entities:
         for entity in _resolve(member, lookup_fn):
             entity_id = entity.get('entityID', None)
             if entity is not None and entity_id is not None:
-                resolved_entities[entity_id] = entity
-    return resolved_entities.values()
+                if dedup:
+                    resolved_entities[entity_id] = entity
+                else:
+                    resolved_entities.append(entity)
+    if dedup:
+        return resolved_entities.values()
+    return resolved_entities
 
 
 def entitiesdescriptor(
@@ -783,6 +793,14 @@ def registration_authority(entity):
         return regauth_el.attrib.get('registrationAuthority')
 
 
+def discovery_responses(entity):
+    responses = None
+    responses_els = entity.findall(".//{%s}DiscoveryResponse" % NS['idpdisc'])
+    if len(responses_els) > 0:
+        responses = [el.attrib.get('Location') for el in responses_els]
+    return responses
+
+
 def entity_extended_display(entity, langs=None):
     """Utility-method for computing a displayable string for a given entity.
 
@@ -875,6 +893,7 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
     categories = entity_attribute(e, "http://macedir.org/entity-category")
     certifications = entity_attribute(e, "urn:oasis:names:tc:SAML:attribute:assurance-certification")
     cat_support = entity_attribute(e, "http://macedir.org/entity-category-support")
+    disc_responses = discovery_responses(e)
 
     d = dict(
         title=title,
@@ -899,6 +918,9 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
 
     if sources is not None:
         d['md_source'] = sources
+
+    if disc_responses is not None:
+        d["discovery_responses"] = disc_responses
 
     eattr = entity_attribute_dict(e)
     if 'idp' in eattr[ATTRS['role']]:
@@ -1018,6 +1040,25 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
     return sp
 
 
+def discojson_sp_attr(e):
+
+    attribute = "https://refeds.org/entity-selection-profile"
+    b64_trustinfos = entity_attribute(e, attribute)
+    if b64_trustinfos is None:
+        return None
+
+    sp = {}
+    sp['entityID'] = e.get('entityID', None)
+    sp['profiles'] = {}
+
+    for b64_trustinfo in b64_trustinfos:
+        str_trustinfo = b64decode(b64_trustinfo.encode('ascii'))
+        trustinfo = json.loads(str_trustinfo.decode('utf8'))
+        sp['profiles'].update(trustinfo['profiles'])
+
+    return sp
+
+
 def discojson_sp_t(req):
     d = []
     t = req.t
@@ -1026,6 +1067,22 @@ def discojson_sp_t(req):
 
     for e in iter_entities(t):
         sp = discojson_sp(e, global_trust_info=global_tinfo, global_md_sources=global_sources)
+        if sp is not None:
+            d.append(sp)
+
+        sp = discojson_sp_attr(e)
+        if sp is not None:
+            d.append(sp)
+
+    return d
+
+
+def discojson_sp_attr_t(req):
+    d = []
+    t = req.t
+
+    for e in iter_entities(t):
+        sp = discojson_sp_attr(e)
         if sp is not None:
             d.append(sp)
 

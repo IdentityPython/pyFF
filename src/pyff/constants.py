@@ -37,6 +37,7 @@ NS = dict(
     ser="http://eidas.europa.eu/metadata/servicelist",
     eidas="http://eidas.europa.eu/saml-extensions",
     ti="https://seamlessaccess.org/NS/trustinfo",
+    idpdisc="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol",
 )
 
 #: These are the attribute aliases pyFF knows about. These are used to build URI paths, populate the index
@@ -263,7 +264,7 @@ class Config(object):
     allow_shutdown = S("allow_shutdown", default=False, typeconv=as_bool, deprecated=True)
     ds_template = S("ds_template", default="ds.html", deprecated=True)
 
-    loglevel = S("loglevel", default=logging.WARN, info="set the loglevel")
+    loglevel = S("loglevel", default='WARN', info="set the loglevel")
 
     access_log = S("access_log", cmdline=['pyffd'], info="a log target (file) to use for access logs")
 
@@ -289,7 +290,7 @@ class Config(object):
 
     caching_enabled = S("caching_enabled", default=True, typeconv=as_bool, info="enable caching?")
 
-    no_cashing = N('no_cashing', invert=caching_enabled, short='C', info="disable all caches")
+    no_caching = N('no_caching', invert=caching_enabled, short='C', info="disable all caches")
 
     daemonize = S("daemonize", default=True, cmdline=['pyffd'], info="run in background")
 
@@ -522,7 +523,7 @@ def parse_options(program, docs):
         sys.exit(2)
 
     if config.loglevel is None:
-        config.loglevel = logging.INFO
+        config.loglevel = 'INFO'
 
     if config.aliases is None or len(config.aliases) == 0:
         config.aliases = dict(metadata=entities)
@@ -535,7 +536,7 @@ def parse_options(program, docs):
             if o in ('-h', '--help'):
                 print(docs)
                 sys.exit(0)
-            elif o in ('--version',):
+            elif o in ('-v', '--version'):
                 print("{} version {}".format(program, pyff_version))
                 sys.exit(0)
             elif o in ('-A', '--alias'):
