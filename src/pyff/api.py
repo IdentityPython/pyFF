@@ -487,23 +487,10 @@ def add_cors_headers_response_callback(event: NewRequest) -> None:
     event.request.add_response_callback(cors_headers)
 
 
-def launch_memory_usage_server(port: int = 9002) -> None:
-    import cherrypy
-    import dowser
-
-    cherrypy.tree.mount(dowser.Root())
-    cherrypy.config.update({'environment': 'embedded', 'server.socket_port': port})
-
-    cherrypy.engine.start()
-
-
 def mkapp(*args: Any, **kwargs: Any) -> Any:
     md = kwargs.pop('md', None)
     if md is None:
         md = MDRepository()
-
-    if config.devel_memory_profile:
-        launch_memory_usage_server()
 
     with Configurator(debug_logger=log) as ctx:
         ctx.add_subscriber(add_cors_headers_response_callback, NewRequest)
