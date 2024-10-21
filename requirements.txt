@@ -1,4 +1,4 @@
-urllib3==1.26.18
+urllib3==1.26.19
 pytz
 accept_types >=0.4.1
 apscheduler==3.6.3
