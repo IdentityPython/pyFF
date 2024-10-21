@@ -1,4 +1,4 @@
-urllib3==1.26.18
+urllib3==1.26.19
 pytz
 accept_types >=0.4.1
 apscheduler==3.6.3
@@ -24,3 +24,4 @@ wsgi-intercept
 xmldiff
 str2bool
 setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
