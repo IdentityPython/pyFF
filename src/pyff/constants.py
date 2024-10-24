@@ -168,7 +168,7 @@ class BaseSetting(object):
 
     def long_spec(self):
         long_name = self.long_name
-        if hasattr(self, 'typeconv') and self.typeconv == as_bool:
+        if (hasattr(self, 'typeconv') and self.typeconv == as_bool) or isinstance(self, InvertedSetting):
             return '{}'.format(long_name)
         else:
             return '{}='.format(long_name)
@@ -201,10 +201,10 @@ class InvertedSetting(BaseSetting):
         super().__init__(*args, **kwargs)
 
     def __get__(self, instance, owner):
-        return not self.setting.__get__()
+        return not self.setting.__get__(instance, owner)
 
     def __set__(self, instance, value):
-        self.setting.__set__(not value)
+        self.setting.__set__(instance, not value)
 
 
 class DummySetting(BaseSetting):
@@ -292,7 +292,7 @@ class Config(object):
 
     no_caching = N('no_caching', invert=caching_enabled, short='C', info="disable all caches")
 
-    daemonize = S("daemonize", default=True, cmdline=['pyffd'], info="run in background")
+    daemonize = S("daemonize", default=True, typeconv=as_bool, cmdline=['pyffd'], info="run in background")
 
     foreground = N('foreground', invert=daemonize, short='f', cmdline=['pyffd'], info="run in foreground")
 
@@ -546,6 +546,10 @@ def parse_options(program, docs):
                     config.aliases[a] = uri
             elif o in ('-m', '--module'):
                 config.modules.append(a)
+            elif o in ('-f', '--foreground'):
+                config.foreground = True
+            elif o in ('-C', '--no_caching'):
+                config.no_caching = True
             else:
                 o = o.lstrip('-')
                 s = config.find_setting(o)
@@ -553,7 +557,11 @@ def parse_options(program, docs):
                     if s.deprecated:
                         print("WARNING: {} is deprecated. Setting this option has no effect!".format(o))
                     else:
-                        setattr(s, 'value', a)
+                        value = a
+                        if s.typeconv == as_bool:
+                            value = True
+
+                        setattr(s, 'value', value)
                 else:
                     raise ValueError("Unknown option {}".format(o))
 
