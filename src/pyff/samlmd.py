@@ -1047,14 +1047,25 @@ def discojson_sp_attr(e):
     if b64_trustinfos is None:
         return None
 
+    entityID = e.get('entityID', None)
+    if entityID is None:
+        return None
+
     sp = {}
-    sp['entityID'] = e.get('entityID', None)
+    sp['entityID'] = entityID
     sp['profiles'] = {}
 
     for b64_trustinfo in b64_trustinfos:
-        str_trustinfo = b64decode(b64_trustinfo.encode('ascii'))
-        trustinfo = json.loads(str_trustinfo.decode('utf8'))
-        sp['profiles'].update(trustinfo['profiles'])
+        try:
+            str_trustinfo = b64decode(b64_trustinfo.encode('ascii'))
+            trustinfo = json.loads(str_trustinfo.decode('utf8'))
+            sp['profiles'].update(trustinfo['profiles'])
+
+        except Exception as e:
+            log.warning(f"Invalid entity-selection-profile attribute for {entityID}: {e}")
+
+    if not sp['profiles']:
+        return None
 
     return sp
 
