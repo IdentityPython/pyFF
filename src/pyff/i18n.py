@@ -31,5 +31,4 @@ else:
 
 gettext.find(APP_NAME, mo_location)
 gettext.textdomain(APP_NAME)
-gettext.bind_textdomain_codeset(APP_NAME, "UTF-8")
 language = gettext.translation(APP_NAME, mo_location, languages=languages, fallback=True)
