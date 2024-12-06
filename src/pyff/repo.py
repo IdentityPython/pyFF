@@ -15,7 +15,7 @@ class MDRepository():
     """
 
     def __init__(self, scheduler=None):
-        random.seed(self)
+        random.seed()
         self.rm = Resource()  # root
         if scheduler is None:
             scheduler = make_default_scheduler()
