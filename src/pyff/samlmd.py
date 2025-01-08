@@ -698,12 +698,12 @@ def gen_icon(e):
 
 
 def entity_icon_url(e, langs=None):
-    for ico in filter_lang(e.iter("{%s}Logo" % NS['mdui']), langs=langs):
+    for ico in filter_lang(e.iterfind(".//{%s}UIInfo/{%s}Logo" % (NS['mdui'], NS['mdui'])), langs=langs):
         return dict(url=ico.text, width=ico.get('width'), height=ico.get('height'))
 
 
 def privacy_statement_url(entity, langs):
-    for url in filter_lang(entity.iter("{%s}PrivacyStatementURL" % NS['mdui']), langs=langs):
+    for url in filter_lang(entity.iterfind(".//{%s}UIInfo/{%s}PrivacyStatementURL" % (NS['mdui'], NS['mdui'])), langs=langs):
         return url.text
 
 
@@ -732,12 +732,12 @@ def entity_extended_display_i18n(entity, default_lang=None):
     )
     name_dict.update(lang_dict(entity.iter("{%s}ServiceName" % NS['md']), lambda e: e.text, default_lang=default_lang))
     name_dict.update(
-        lang_dict(entity.iter("{%s}DisplayName" % NS['mdui']), lambda e: e.text, default_lang=default_lang)
+        lang_dict(entity.iterfind(".//{%s}UIInfo/{%s}DisplayName" % (NS['mdui'], NS['mdui'])), lambda e: e.text, default_lang=default_lang)
     )
 
     desc_dict = lang_dict(entity.iter("{%s}OrganizationURL" % NS['md']), lambda e: e.text, default_lang=default_lang)
     desc_dict.update(
-        lang_dict(entity.iter("{%s}Description" % NS['mdui']), lambda e: e.text, default_lang=default_lang)
+        lang_dict(entity.iterfind(".//{%s}UIInfo/{%s}Description" % (NS['mdui'], NS['mdui'])), lambda e: e.text, default_lang=default_lang)
     )
 
     return name_dict, desc_dict
@@ -825,7 +825,7 @@ def entity_extended_display(entity, langs=None):
         display = serviceName.text
         break
 
-    for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui']), langs=langs):
+    for displayName in filter_lang(entity.iterfind(".//{%s}UIInfo/{%s}DisplayName" % (NS['mdui'], NS['mdui'])), langs=langs):
         info = display
         display = displayName.text
         break
@@ -834,7 +834,7 @@ def entity_extended_display(entity, langs=None):
         info = organizationUrl.text
         break
 
-    for description in filter_lang(entity.iter("{%s}Description" % NS['mdui']), langs=langs):
+    for description in filter_lang(entity.iterfind(".//{%s}UIInfo/{%s}Description" % (NS['mdui'], NS['mdui'])), langs=langs):
         info = description.text
         break
 
@@ -850,7 +850,7 @@ def entity_display_name(entity: Element, langs=None) -> str:
     :param entity: An EntityDescriptor element
     :param langs: The list of languages to search in priority order
     """
-    for displayName in filter_lang(entity.iter("{%s}DisplayName" % NS['mdui']), langs=langs):
+    for displayName in filter_lang(entity.iterfind(".//{%s}UIInfo/{%s}DisplayName" % (NS['mdui'], NS['mdui'])), langs=langs):
         return displayName.text.strip()
 
     for serviceName in filter_lang(entity.iter("{%s}ServiceName" % NS['md']), langs=langs):
@@ -946,7 +946,7 @@ def discojson(e, sources=None, langs=None, fallback_to_favicon=False, icon_store
                 icon_info['url'] = ico
         d['entity_icon_url'] = icon_info
 
-    keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
+    keywords = filter_lang(e.iterfind(".//{%s}UIInfo/{%s}Keywords" % (NS['mdui'], NS['mdui'])), langs=langs)
     if keywords is not None:
         lst = [elt.text for elt in keywords]
         if len(lst) > 0:
@@ -1223,7 +1223,7 @@ def entity_simple_info(e, langs=None):
     d['service_name'] = entity_service_name(e, langs)
     d['service_descr'] = entity_service_description(e, langs)
     d['entity_attributes'] = entity_attribute_dict(e)
-    keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
+    keywords = filter_lang(e.iterfind(".//{%s}UIInfo/{%s}Keywords" % (NS['mdui'], NS['mdui'])), langs=langs)
     if keywords is not None:
         lst = [elt.text for elt in keywords]
         if len(lst) > 0:
@@ -1233,7 +1233,7 @@ def entity_simple_info(e, langs=None):
 
 def entity_info(e, langs=None):
     d = entity_simple_summary(e)
-    keywords = filter_lang(e.iter("{%s}Keywords" % NS['mdui']), langs=langs)
+    keywords = filter_lang(e.iterfind(".//{%s}UIInfo/{%s}Keywords" % (NS['mdui'], NS['mdui'])), langs=langs)
     if keywords is not None:
         lst = [elt.text for elt in keywords]
         if len(lst) > 0:
