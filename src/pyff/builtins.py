@@ -832,7 +832,10 @@ def select(req: Plumbing.Request, *opts):
         if opts[0] == 'as' and len(opts) == 2:
             name = opts[1]
 
-    entities = resolve_entities(args, lookup_fn=req.md.store.select, dedup=dedup)
+    if dedup:
+        entities = resolve_entities(args, lookup_fn=req.md.store.select, dedup=dedup)
+    else:
+        entities = resolve_entities(args, lookup_fn=req.md.store.select_with_dups, dedup=dedup)
 
     if req.state.get('match', None):  # TODO - allow this to be passed in via normal arguments
 
