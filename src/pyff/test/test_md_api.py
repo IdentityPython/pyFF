@@ -141,7 +141,7 @@ class PyFFAPITest(PipeLineTest):
             assert r.status_code == 200
             data = r.json()
             info = data[0]
-            assert 'https://box-idp.nordu.net/simplesaml/module.php/saml/sp/discoresp.php' in info['discovery_responses']
+            assert 'https://box-idp.nordu.net/simplesaml/module.php/saml/sp/discoResponse' in info['discovery_responses']
 
 class PyFFAPITestResources(PipeLineTest):
     """
