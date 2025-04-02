@@ -184,9 +184,9 @@ class SAMLMetadataResourceParser(PyffParser):
             resource.expire_time = expire_time
             info.expiration_time = str(expire_time)
 
-        def _extra_md(_t, info, **kwargs):
+        def _extra_md(_t, resource_opts, **kwargs):
             entityID = kwargs.get('entityID')
-            if info['alias'] != entityID:
+            if resource_opts['alias'] != entityID:
                 return _t
             sp_entities = kwargs.get('sp_entities')
             location = kwargs.get('location')
@@ -316,7 +316,7 @@ class MDServiceListParser(PyffParser):
                         r = resource.add_child(location, child_opts)
 
                         # this is specific post-processing for MDSL files
-                        def _update_entities(_t, **kwargs):
+                        def _update_entities(_t, resource_opts, **kwargs):
                             _country_code = kwargs.get('country_code')
                             _hide_from_discovery = kwargs.get('hide_from_discovery')
                             for e in iter_entities(_t):
