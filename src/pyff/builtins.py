@@ -256,7 +256,7 @@ def fork(req: Plumbing.Request, *opts):
     **parsecopy**
 
     Due to a hard to find bug, fork which uses deepcopy can lose some namespaces. The parsecopy argument is a workaround.
-    It uses a brute force serialisation and deserialisation to get around the bug. 
+    It uses a brute force serialisation and deserialisation to get around the bug.
 
     .. code-block:: yaml
 
@@ -676,7 +676,7 @@ def load(req: Plumbing.Request, *opts):
         url = r.pop(0)
 
         # Copy parent node opts as a starting point
-        child_opts = req.md.rm.opts.copy(update={"via": [], "cleanup": [], "verify": None, "alias": url})
+        child_opts = req.md.rm.opts.model_copy(update={"via": [], "cleanup": [], "verify": None, "alias": url})
 
         while len(r) > 0:
             elt = r.pop(0)
@@ -702,7 +702,7 @@ def load(req: Plumbing.Request, *opts):
                 child_opts.verify = elt
 
         # override anything in child_opts with what is in opts
-        child_opts = child_opts.copy(update=_opts)
+        child_opts = child_opts.model_copy(update=_opts)
 
         req.md.rm.add_child(url, child_opts)
 
@@ -814,7 +814,7 @@ def select(req: Plumbing.Request, *opts):
             else:
                 _opts['as'] = opts[i]
                 if i + 1 < len(opts):
-                    more_opts = opts[i + 1:]
+                    more_opts = opts[i + 1 :]
                     _opts.update(dict(list(zip(more_opts[::2], more_opts[1::2]))))
                     break
 
@@ -835,7 +835,6 @@ def select(req: Plumbing.Request, *opts):
     entities = resolve_entities(args, lookup_fn=req.md.store.select, dedup=dedup)
 
     if req.state.get('match', None):  # TODO - allow this to be passed in via normal arguments
-
         match = req.state['match']
 
         if isinstance(match, six.string_types):
@@ -1304,13 +1303,14 @@ def xslt(req: Plumbing.Request, *opts):
     if stylesheet is None:
         raise PipeException("xslt requires stylesheet")
 
-    params = dict((k, "\'%s\'" % v) for (k, v) in list(req.args.items()))
+    params = dict((k, "'%s'" % v) for (k, v) in list(req.args.items()))
     del params['stylesheet']
     try:
         return root(xslt_transform(req.t, stylesheet, params))
     except Exception as ex:
         log.debug(traceback.format_exc())
         raise ex
+
 
 @pipe
 def indent(req: Plumbing.Request, *opts):
@@ -1710,7 +1710,6 @@ def finalize(req: Plumbing.Request, *opts):
         if name is None or 0 == len(name):
             name = req.state.get('url', None)
             if name and 'baseURL' in req.args:
-
                 try:
                     name_url = urlparse(name)
                     base_url = urlparse(req.args.get('baseURL'))

@@ -86,7 +86,10 @@ def find_merge_strategy(strategy_name):
 
 
 def parse_saml_metadata(
-    source: BytesIO, opts: ResourceOpts, base_url=None, validation_errors: Optional[Dict[str, Any]] = None,
+    source: BytesIO,
+    opts: ResourceOpts,
+    base_url=None,
+    validation_errors: Optional[Dict[str, Any]] = None,
 ):
     """Parse a piece of XML and return an EntitiesDescriptor element after validation.
 
@@ -192,7 +195,10 @@ class SAMLMetadataResourceParser(PyffParser):
             location = kwargs.get('location')
             sp_entity = sp_entities.find("{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
             if sp_entity is not None:
-                md_source = sp_entity.find("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource[@src='%s']" % (NS['md'], NS['md'], NS['ti'], NS['ti'], location))
+                md_source = sp_entity.find(
+                    "{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource[@src='%s']"
+                    % (NS['md'], NS['md'], NS['ti'], NS['ti'], location)
+                )
                 for e in iter_entities(_t):
                     md_source.append(e)
             return etree.Element("{%s}EntitiesDescriptor" % NS['md'])
@@ -205,7 +211,10 @@ class SAMLMetadataResourceParser(PyffParser):
                 entityID = e.get('entityID')
                 info.entities.append(entityID)
 
-                md_source = e.find("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource" % (NS['md'], NS['md'], NS['ti'], NS['ti']))
+                md_source = e.find(
+                    "{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource"
+                    % (NS['md'], NS['md'], NS['ti'], NS['ti'])
+                )
                 if md_source is not None:
                     location = md_source.attrib.get('src')
                     if location is not None:
@@ -725,7 +734,6 @@ def entity_domains(entity):
 
 
 def entity_extended_display_i18n(entity, default_lang=None):
-
     name_dict = lang_dict(entity.iter("{%s}OrganizationName" % NS['md']), lambda e: e.text, default_lang=default_lang)
     name_dict.update(
         lang_dict(entity.iter("{%s}OrganizationDisplayName" % NS['md']), lambda e: e.text, default_lang=default_lang)
@@ -981,7 +989,9 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
 
     sp['entityID'] = e.get('entityID', None)
 
-    md_sources = e.findall("{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource" % (NS['md'], NS['md'], NS['ti'], NS['ti']))
+    md_sources = e.findall(
+        "{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource" % (NS['md'], NS['md'], NS['ti'], NS['ti'])
+    )
 
     sp['extra_md'] = {}
     for md_source in md_sources:
@@ -1041,7 +1051,6 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
 
 
 def discojson_sp_attr(e):
-
     attribute = "https://refeds.org/entity-selection-profile"
     b64_trustinfos = entity_attribute(e, attribute)
     if b64_trustinfos is None:
@@ -1395,7 +1404,7 @@ def sort_entities(t, sxp=None):
                 except AttributeError:
                     pass
             except IndexError:
-                log.warning("Sort pipe: unable to sort entity by '%s'. " "Entity '%s' has no such value" % (sxp, eid))
+                log.warning("Sort pipe: unable to sort entity by '%s'. Entity '%s' has no such value" % (sxp, eid))
         except TypeError:
             pass
 
