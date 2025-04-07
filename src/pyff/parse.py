@@ -9,7 +9,7 @@ from xmlsec.crypto import CertDict
 
 from pyff.constants import NS
 from pyff.logs import get_log
-from pyff.resource import Resource,ResourceInfo
+from pyff.resource import Resource, ResourceInfo
 from pyff.utils import find_matching_files, parse_xml, root, unicode_stream, utc_now
 
 __author__ = 'leifj'
@@ -30,7 +30,9 @@ class ParserInfo(BaseModel):
         res = {_format_key(k): v for k, v in self.dict().items()}
         return res
 
+
 ResourceInfo.model_rebuild()
+
 
 class ParserException(Exception):
     def __init__(self, msg, wrapped=None, data=None):
@@ -84,7 +86,7 @@ class DirectoryParser(PyffParser):
         info = ParserInfo(description='Directory', expiration_time='never expires')
         n = 0
         for fn in find_matching_files(content, self.extensions):
-            child_opts = resource.opts.copy(update={'alias': None})
+            child_opts = resource.opts.model_copy(update={'alias': None})
             resource.add_child("file://" + urlescape(fn), child_opts)
             n += 1
 
@@ -122,7 +124,7 @@ class XRDParser(PyffParser):
                 if len(fingerprints) > 0:
                     fp = fingerprints[0]
                 log.debug("XRD: {} verified by {}".format(link_href, fp))
-                child_opts = resource.opts.copy(update={'alias': None})
+                child_opts = resource.opts.model_copy(update={'alias': None})
                 resource.add_child(link_href, child_opts)
         resource.last_seen = utc_now().replace(microsecond=0)
         resource.expire_time = None
