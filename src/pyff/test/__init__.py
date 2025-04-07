@@ -6,9 +6,8 @@ import sys
 import tempfile
 from unittest import TestCase
 
-import pkg_resources
+import importlib.resources
 import six
-
 from pyff import __version__ as pyffversion
 
 # range of ports where available ports can be found
@@ -118,7 +117,6 @@ def _p(args, outf=None, ignore_exit=False):
 
 
 class SignerTestCase(TestCase):
-
     datadir = None
     private_keyspec = None
     public_keyspec = None
@@ -128,7 +126,10 @@ class SignerTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.datadir = pkg_resources.resource_filename(__name__, 'data')
+        with importlib.resources.path(
+            __name__, 'data'
+        ) as context:  # We just want the path for now to be compatible downstream
+            cls.datadir = context.as_posix()
         cls.private_keyspec = tempfile.NamedTemporaryFile('w').name
         cls.public_keyspec = tempfile.NamedTemporaryFile('w').name
 

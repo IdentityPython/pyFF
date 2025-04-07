@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from json import dumps
 from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Tuple
 
-import pkg_resources
 import pyramid.httpexceptions as exc
 import pytz
 import requests
@@ -26,12 +25,13 @@ from pyff.repo import MDRepository
 from pyff.resource import Resource
 from pyff.samlmd import entity_display_name
 from pyff.utils import b2u, dumptree, hash_id, json_serializer, utc_now
+from pyff import __version__
 
 log = get_log(__name__)
 
 
 class NoCache(object):
-    """ Dummy implementation for when caching isn't enabled """
+    """Dummy implementation for when caching isn't enabled"""
 
     def __init__(self) -> None:
         pass
@@ -70,7 +70,7 @@ def status_handler(request: Request) -> Response:
         if 'Validation Errors' in r.info and r.info['Validation Errors']:
             d[r.url] = r.info['Validation Errors']
     _status = dict(
-        version=pkg_resources.require("pyFF")[0].version,
+        version=__version__,
         invalids=d,
         icon_store=dict(size=request.registry.md.icon_store.size()),
         jobs=[dict(id=j.id, next_run_time=j.next_run_time) for j in request.registry.scheduler.get_jobs()],
@@ -163,7 +163,7 @@ def process_handler(request: Request) -> Response:
     _ctypes = {'xml': 'application/samlmetadata+xml;application/xml;text/xml', 'json': 'application/json'}
 
     def _d(x: Optional[str], do_split: bool = True) -> Tuple[Optional[str], Optional[str]]:
-        """ Split a path into a base component and an extension. """
+        """Split a path into a base component and an extension."""
         if x is not None:
             x = x.strip()
 
@@ -214,7 +214,7 @@ def process_handler(request: Request) -> Response:
         pfx = request.registry.aliases.get(alias, None)
         if pfx is None:
             log.debug("alias {} not found - passing to storage lookup".format(alias))
-            path=alias #treat as path
+            path = alias  # treat as path
 
     # content_negotiation_policy is one of three values:
     # 1. extension - current default, inspect the path and if it ends in
@@ -478,7 +478,7 @@ def add_cors_headers_response_callback(event: NewRequest) -> None:
             {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'POST,GET,DELETE,PUT,OPTIONS',
-                'Access-Control-Allow-Headers': ('Origin, Content-Type, Accept, ' 'Authorization'),
+                'Access-Control-Allow-Headers': ('Origin, Content-Type, Accept, Authorization'),
                 'Access-Control-Allow-Credentials': 'true',
                 'Access-Control-Max-Age': '1728000',
             }
