@@ -3,7 +3,7 @@ name = "pyFF"
 version = "2.1.5"
 readme = "README.rst"
 description = "Federation Feeder"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 
 authors = [
@@ -19,7 +19,7 @@ maintainers = [
 [tool.ruff]
 # Allow lines to be as long as 120.
 line-length = 120
-target-version = "py37"
+target-version = "py39"
 [tool.ruff.format]
 quote-style = "preserve"
 
