@@ -126,10 +126,10 @@ class SignerTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        with importlib.resources.path(
-            __name__, 'data'
-        ) as context:  # We just want the path for now to be compatible downstream
-            cls.datadir = context.as_posix()
+        cls.datadir = importlib.resources.files(
+            __name__,
+        ).joinpath('data')
+
         cls.private_keyspec = tempfile.NamedTemporaryFile('w').name
         cls.public_keyspec = tempfile.NamedTemporaryFile('w').name
 
