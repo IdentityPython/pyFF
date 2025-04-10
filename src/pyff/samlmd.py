@@ -209,7 +209,7 @@ class SAMLMetadataResourceParser(PyffParser):
                 if md_source is not None:
                     location = md_source.attrib.get('src')
                     if location is not None:
-                        child_opts = resource.opts.copy(update={'alias': entityID})
+                        child_opts = resource.opts.model_copy(update={'alias': entityID}, deep=True)
                         r = resource.add_child(location, child_opts)
                         kwargs = {
                             'entityID': entityID,
@@ -311,7 +311,7 @@ class MDServiceListParser(PyffParser):
                                 info.scheme_territory, location, fp, args.get('country_code')
                             )
                         )
-                        child_opts = resource.opts.copy(update={'alias': None})
+                        child_opts = resource.opts.model_copy(update={'alias': None}, deep=True)
                         child_opts.verify = fp
                         r = resource.add_child(location, child_opts)
 

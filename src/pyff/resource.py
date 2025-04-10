@@ -339,6 +339,10 @@ class Resource(Watchable):
         raise ValueError("Resource {} not present - use add_child".format(r.url))
 
     def add_child(self, url: str, opts: ResourceOpts) -> Resource:
+        """
+        Spent 3 man days. Make sure to make a deep copy of opts.
+
+        """
         r = Resource(url, opts)
         if r in self.children:
             log.debug(f'\n\n{self}:\nURL {url}\nReplacing child {r}')
