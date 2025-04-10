@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ser:MetadataServiceList Version="1.0" IssueDate="1970-01-01T00:00:00Z"
+   xmlns:xi="http://www.w3.org/2001/XInclude"
+   xmlns:ser="http://eidas.europa.eu/metadata/servicelist">
+   <ser:SchemeInformation>
+      <ser:IssuerName>Swedish E-Identification Board</ser:IssuerName>
+      <ser:SchemeIdentifier>urn:se:elegnamnden:eidas:mdlist:local</ser:SchemeIdentifier>
+      <ser:SchemeTerritory>SE</ser:SchemeTerritory>
+   </ser:SchemeInformation>
+   <!--
+   <xi:include href="/Volumes/git/pyff/src/pyff/test/data/eidas/countries/GR.xml"/>
+   -->
+   <xi:include href="src/pyff/test/data/eidas/countries/FR.xml"/>
+   <xi:include href="src/pyff/test/data/eidas/countries/GR.xml"/>
+   <ser:DistributionPoints>
+      <ser:DistributionPoint>https://qa.md.eidas.swedenconnect.se/mdservicelist-aggregate.xml</ser:DistributionPoint>
+   </ser:DistributionPoints>
+</ser:MetadataServiceList>
