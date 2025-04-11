@@ -219,6 +219,7 @@ class SAMLMetadataResourceParser(PyffParser):
                     location = md_source.attrib.get('src')
                     if location is not None:
                         child_opts = resource.opts.model_copy(update={'alias': entityID}, deep=True)
+
                         r = resource.add_child(location, child_opts)
                         kwargs = {
                             'entityID': entityID,
