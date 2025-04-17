@@ -15,6 +15,10 @@ authors = [
 maintainers = [
   {name = "Mikael Frykholm", email = "mifr@sunet.se"}
 ]
+[project.scripts]
+pyff = "pyff.md:main"
+pyffd = "pyff.mdq:main"
+samldiff = "pyff.tools:difftool"
 
 [tool.ruff]
 # Allow lines to be as long as 120.
