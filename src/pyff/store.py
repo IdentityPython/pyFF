@@ -413,14 +413,14 @@ class SAMLStoreBase(object):
         def _strings(elt):
             lst = []
             for attr in [
-                '{%s}DisplayName' % NS['mdui'],
+                './/{%s}UIInfo/{%s}DisplayName' % (NS['mdui'], NS['mdui']),
                 '{%s}ServiceName' % NS['md'],
                 '{%s}OrganizationDisplayName' % NS['md'],
                 '{%s}OrganizationName' % NS['md'],
-                '{%s}Keywords' % NS['mdui'],
+                './/{%s}UIInfo/{%s}Keywords' % (NS['mdui'], NS['mdui']),
                 '{%s}Scope' % NS['shibmd'],
             ]:
-                lst.extend([s.text for s in elt.iter(attr)])
+                lst.extend([s.text for s in elt.iterfind(attr)])
             lst.append(elt.get('entityID'))
             return [item for item in lst if item is not None]
 

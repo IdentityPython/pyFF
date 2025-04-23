@@ -795,3 +795,36 @@ class SigningTest(PipeLineTest):
                 pass
             finally:
                 shutil.rmtree(tmpdir)
+
+    def test_discojson_scoped_display_name(self):
+        with patch.multiple("sys", exit=self.sys_exit):
+            tmpdir = tempfile.mkdtemp()
+            os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
+            try:
+                self.exec_pipeline("""
+- load:
+   - file://%s/metadata/test-scoped-display-name.xml
+- select
+- discojson
+- publish:
+    output: %s/disco.json
+    raw: true
+    update_store: false
+""" % (self.datadir, tmpdir))
+                fn = "%s/disco.json" % tmpdir
+                assert os.path.exists(fn)
+                with open(fn, 'r') as f:
+                    idps_json = json.load(f)
+
+                idp_json = idps_json[0]
+                assert idp_json['title'] == 'Example University'
+                assert idp_json['title_langs']['sv'] == 'Example universitet'
+                assert idp_json['title_langs']['en'] == 'Example University'
+                assert idp_json['descr'] == 'Identity Provider for Example University'
+                assert idp_json['descr_langs']['sv'] == 'Identity Provider för Example universitet'
+                assert idp_json['descr_langs']['en'] == 'Identity Provider for Example University'
+                assert idp_json['keywords'] == 'example'
+            except IOError:
+                pass
+            finally:
+                shutil.rmtree(tmpdir)
