@@ -1057,14 +1057,34 @@ def discojson_sp_attr(e):
     if b64_trustinfos is None:
         return None
 
+    entityID = e.get('entityID', None)
     sp = {}
-    sp['entityID'] = e.get('entityID', None)
+    sp['entityID'] = entityID
     sp['profiles'] = {}
+    sp['extra_md'] = {}
 
     for b64_trustinfo in b64_trustinfos:
-        str_trustinfo = b64decode(b64_trustinfo.encode('ascii'))
-        trustinfo = json.loads(str_trustinfo.decode('utf8'))
-        sp['profiles'].update(trustinfo['profiles'])
+        try:
+            str_trustinfo = b64decode(b64_trustinfo.encode('ascii'))
+            trustinfo = json.loads(str_trustinfo.decode('utf8'))
+            for profile in trustinfo['profiles']:
+                if profile in sp['profiles']:
+                    log.warning(f"SP Entity {entityID} has a duplicate trust profile {profile}")
+                else:
+                    sp['profiles'][profile] = trustinfo['profiles'][profile]
+
+            if 'extra_md' in trustinfo:
+                for extra_id in trustinfo['extra_md']:
+                    if extra_id in sp['extra_md']:
+                        log.warning(f"SP Entity {entityID} has a duplicate extra IdP metadata {extra_id}")
+                    else:
+                        sp['extra_md'][extra_id] = trustinfo['extra_md'][extra_id]
+
+        except Exception as e:
+            log.warning(f"Invalid entity-selection-profile attribute for {entityID}: {e}")
+
+    if not sp['profiles']:
+        return None
 
     return sp
 

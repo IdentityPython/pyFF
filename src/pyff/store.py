@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import time
+from collections import defaultdict
 from datetime import datetime, timedelta
 from io import BytesIO
 from threading import ThreadError
@@ -807,6 +808,7 @@ class MemoryStore(SAMLStoreBase):
         self.md = dict()
         self.index = dict()
         self.entities = dict()
+        self.md_entities = defaultdict(dict)
 
         for hn in DINDEX:
             self.index.setdefault(hn, {})
@@ -885,13 +887,15 @@ class MemoryStore(SAMLStoreBase):
             self.entities[relt.get('entityID')] = relt  # TODO: merge?
             if tid is not None:
                 self.md[tid] = [relt.get('entityID')]
+                self.md_entities[tid][relt.get('entityID')] = relt
         elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
             if tid is None:
                 tid = relt.get('Name')
             lst = []
             for e in iter_entities(t):
-                self.update(e)
+                self.update(e, tid)
                 lst.append(e.get('entityID'))
+                self.md_entities[tid][e.get('entityID')] = e
             self.md[tid] = lst
 
     def lookup(self, key):
@@ -944,5 +948,11 @@ class MemoryStore(SAMLStoreBase):
                 lst.extend(self.lookup(entityID))
             log.debug("returning {} entities".format(len(lst)))
             return lst
+
+        return []
+
+    def select_with_dups(self, member):
+        if member in self.md_entities:
+            return self.md_entities[member].values()
 
         return []
