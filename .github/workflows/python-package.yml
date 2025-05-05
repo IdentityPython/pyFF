@@ -44,7 +44,6 @@ jobs:
 
     - name: Run tests
       run: |
-        python -m pytest src
         if [ "${{ matrix.python-version }}" == "3.13" ]; then  # workaround for TheKevJames/coveralls-python#523
           python -m pytest --no-cov src
         else
