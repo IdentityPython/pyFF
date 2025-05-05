@@ -44,7 +44,16 @@ jobs:
 
     - name: Run tests
       run: |
-        make quick_test
-        make test_coverage
+        python -m pytest src
+        if [ "${{ matrix.python-version }}" == "3.13" ]; then  # workaround for TheKevJames/coveralls-python#523
+          python -m pytest --no-cov src
+        else
+          python -m pytest src
+          coverage erase
+          pytest --cov=src/pyff
+          mv .coverage .coverage.1
+          coverage combine
+        fi
+
         #make typecheck
     
