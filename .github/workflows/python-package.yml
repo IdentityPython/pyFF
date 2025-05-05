@@ -35,7 +35,9 @@ jobs:
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         if [ -f test_requirements.txt ]; then pip install -r test_requirements.txt; fi
-        pip install coveralls
+        if [ "${{ matrix.python-version }}" != "3.13" ]; then  # workaround for TheKevJames/coveralls-python#523
+          pip install coveralls
+        fi
         pip install mypy
         python -m pip install --editable .
 
