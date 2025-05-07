@@ -2,6 +2,7 @@
 Pipes and plumbing. Plumbing instances are sequences of pipes. Each pipe is called in order to load, select,
 transform, sign or output SAML metadata.
 """
+
 from __future__ import annotations
 
 import functools
@@ -17,7 +18,8 @@ from lxml.etree import Element, ElementTree
 from pyff.logs import get_log
 from pyff.repo import MDRepository
 from pyff.store import SAMLStoreBase
-from pyff.utils import PyffException, is_text, resource_string
+from pyff.utils import is_text, resource_string
+from pyff.exceptions import PyffException
 
 log = get_log(__name__)
 
