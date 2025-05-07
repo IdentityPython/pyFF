@@ -28,7 +28,7 @@ jobs:
       run: |
         pip install ruff
         ruff check --output-format=github .
-      continue-on-error: true
+      continue-on-error: false
 
     - name: Install dependencies
       run: |

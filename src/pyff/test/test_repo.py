@@ -141,7 +141,7 @@ class TestRepo(TestCase):
         funet_connect = self.md.lookup('https://connect.funet.fi/shibboleth')[0]
         name, desc = entity_extended_display(funet_connect)
         assert name == 'FUNET E-Meeting Service'
-        dn = entity_extended_display(funet_connect)
+        _dn = entity_extended_display(funet_connect)
 
     def test_missing(self):
         swamid = root(self.swamid)

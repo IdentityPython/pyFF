@@ -125,7 +125,7 @@ class TestRedisWhooshStore(TestCase):
     def test_lookup_intersect_empty_test01(self):
         store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
         store.update(self.test01, etag='test01', lazy=False)
-        entity_id = root(self.test01).get('entityID')
+        _entity_id = root(self.test01).get('entityID')
         e = store.lookup("{}={}+{}={}".format(ATTRS['domain'], 'example.com', ATTRS['role'], 'sp'))
         assert len(e) == 0
 
@@ -258,7 +258,7 @@ class TestMemoryStore(TestCase):
     def test_lookup_intersect_empty_test01(self):
         store = MemoryStore()
         store.update(self.test01)
-        entity_id = root(self.test01).get('entityID')
+        _entity_id = root(self.test01).get('entityID')
         e = store.lookup("{}={}+{}={}".format(ATTRS['domain'], 'example.com', ATTRS['role'], 'sp'))
         assert len(e) == 0
 

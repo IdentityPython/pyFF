@@ -122,7 +122,7 @@ class TestReadWriteLock(TestCase):
         finally:
             try:
                 self.lock.release()
-            except:
+            except Exception:
                 pass
 
     def test_deadlock(self):
