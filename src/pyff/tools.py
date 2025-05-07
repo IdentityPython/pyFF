@@ -6,6 +6,7 @@ Usage: [-h|--help]
        [--version]
        [uri1] [uri2]
 """
+
 import logging
 import sys
 import traceback
@@ -19,7 +20,8 @@ from pyff.samlmd import diff, iter_entities
 from pyff.store import MemoryStore
 
 
-def difftool():
+# TODO: Is this even working? remove?
+def difftool(r1, r2):
     """
     diff two saml metadata sources
     """
@@ -31,12 +33,12 @@ def difftool():
 
     try:
         rm = Resource()
+        r1 = Resource(url=args[0], opts=ResourceOpts())
+        r2 = Resource(url=args[1], opts=ResourceOpts())
         rm.add(r1)
         rm.add(r2)
         store = MemoryStore()
         rm.reload(store=store)
-        r1 = Resource(url=args[0], opts=ResourceOpts())
-        r2 = Resource(url=args[1], opts=ResourceOpts())
         status = 0
 
         if r1.t.get('Name') != r2.t.get('Name'):

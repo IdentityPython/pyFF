@@ -16,10 +16,9 @@ from xmlsec.crypto import CertDict
 from .resource import Resource, ResourceOpts
 
 from pyff.constants import ATTRS, NF_URI, NS, config
-from pyff.exceptions import *
+from pyff.exceptions import MetadataException
 from pyff.logs import get_log
 from pyff.parse import ParserInfo, PyffParser, add_parser
-from pyff.resource import Resource, ResourceOpts
 from pyff.utils import (
     Lambda,
     b2u,
@@ -262,7 +261,7 @@ class EidasMDParserInfo(ParserInfo):
             # Turn expiration_time into 'Expiration Time'
             return k.replace('_', ' ').title()
 
-        res = {_format_key(k): v for k, v in self.dict().items()}
+        res = {_format_key(k): v for k, v in self.model_dump().items()}
         return res
 
 
@@ -371,7 +370,7 @@ def filter_invalids_from_document(t: ElementTree, base_url, validation_errors) -
     xsd = schema()
     for e in iter_entities(t):
         if not xsd.validate(e):
-            error = xml_error(xsd.error_log, m=base_url)
+            _error = xml_error(xsd.error_log, m=base_url)
             entity_id = e.get("entityID", "(Missing entityID)")
             log.warning('removing \'{}\': schema validation failed: {}'.format(entity_id, xsd.error_log))
             validation_errors[entity_id] = f"{xsd.error_log}"
@@ -703,7 +702,7 @@ def entity_attribute_dict(entity):
 
 
 def gen_icon(e):
-    scopes = entity_scopes(e)
+    _scopes = entity_scopes(e)
 
 
 def entity_icon_url(e, langs=None):
@@ -990,7 +989,9 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
     sp['entityID'] = e.get('entityID', None)
 
     md_sources = e.findall(
-        "{{{}}}SPSSODescriptor/{{{}}}Extensions/{{{}}}TrustInfo/{{{}}}MetadataSource".format(NS['md'], NS['md'], NS['ti'], NS['ti'])
+        "{{{}}}SPSSODescriptor/{{{}}}Extensions/{{{}}}TrustInfo/{{{}}}MetadataSource".format(
+            NS['md'], NS['md'], NS['ti'], NS['ti']
+        )
     )
 
     sp['extra_md'] = {}
@@ -1294,7 +1295,9 @@ def _entity_attributes(e):
 
 def _eattribute(e, attr, nf):
     ea = _entity_attributes(e)
-    a = ea.xpath(".//saml:Attribute[@NameFormat='{}' and @Name='{}']".format(nf, attr), namespaces=NS, smart_strings=False)
+    a = ea.xpath(
+        ".//saml:Attribute[@NameFormat='{}' and @Name='{}']".format(nf, attr), namespaces=NS, smart_strings=False
+    )
     if a is None or len(a) == 0:
         a = etree.Element("{%s}Attribute" % NS['saml'])
         a.set('NameFormat', nf)

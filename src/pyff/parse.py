@@ -27,7 +27,7 @@ class ParserInfo(BaseModel):
             # Turn expiration_time into 'Expiration Time'
             return k.replace('_', ' ').title()
 
-        res = {_format_key(k): v for k, v in self.dict().items()}
+        res = {_format_key(k): v for k, v in self.model_dump().items()}
         return res
 
 
@@ -114,7 +114,7 @@ class XRDParser(PyffParser):
         info = ParserInfo(description='XRD links', expiration_time='never expires')
         t = parse_xml(unicode_stream(content))
 
-        relt = root(t)
+        _relt = root(t)
         for xrd in t.iter("{%s}XRD" % NS['xrd']):
             for link in xrd.findall(".//{{{}}}Link[@rel='{}']".format(NS['xrd'], NS['md'])):
                 link_href = link.get("href")

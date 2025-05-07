@@ -523,9 +523,9 @@ def parse_options(program, docs):
 
     if config.loglevel is None:
         config.loglevel = 'INFO'
-
-    if config.aliases is None or len(config.aliases) == 0:
-        config.aliases = dict(metadata=entities)
+    # FIXME, don't know what this is, but it is wrong.
+    #    if config.aliases is None or len(config.aliases) == 0:
+    #        config.aliases = dict(metadata=entities)
 
     if config.modules is None:
         config.modules = []

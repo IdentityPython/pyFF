@@ -301,7 +301,7 @@ def fork(req: Plumbing.Request, *opts):
 def _any(lst, d):
     for x in lst:
         if x in d:
-            if type(d) == dict:
+            if d is dict:
                 return d[x]
             else:
                 return True
@@ -837,7 +837,7 @@ def select(req: Plumbing.Request, *opts):
         match = req.state['match']
 
         if isinstance(match, str):
-            query = [match.lower()]
+            _query = [match.lower()]
 
         def _strings(elt):
             lst = []
@@ -869,7 +869,7 @@ def select(req: Plumbing.Request, *opts):
 
             if q is not None and len(q) > 0:
                 tokens = _strings(elt)
-                p = re.compile(fr'\b{q}', re.IGNORECASE)
+                p = re.compile(rf'\b{q}', re.IGNORECASE)
                 for tstr in tokens:
                     if p.search(tstr):
                         return tstr
