@@ -10,7 +10,7 @@ import requests
 from mako.lookup import TemplateLookup
 from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
 
-from pyff.api import mkapp 
+from pyff.api import mkapp
 from pyff.constants import config
 from pyff.test import SignerTestCase
 from pyff.test.test_pipeline import PipeLineTest
@@ -20,6 +20,7 @@ class PyFFAPITest(PipeLineTest):
     """
     Runs twill tests using the wsgi-intercept
     """
+
     mdx = None
     mdx_template = None
     app = None
@@ -31,7 +32,7 @@ class PyFFAPITest(PipeLineTest):
         cls.templates = TemplateLookup(directories=[os.path.join(cls.datadir, 'mdx')])
         with tempfile.TemporaryDirectory() as td:
             cls.tmp = td
-            cls.mdx = os.path.join(td,'mdx.fd')
+            cls.mdx = os.path.join(td, 'mdx.fd')
             cls.mdx_template = cls.templates.get_template('mdx.fd')
             with open(cls.mdx, "w+") as fd:
                 fd.write(cls.mdx_template.render(ctx=cls))
@@ -132,7 +133,7 @@ class PyFFAPITest(PipeLineTest):
             data = r.json()
             assert data is not None and len(data) == 1
             info = data[0]
-            assert type(info) == dict
+            assert info is dict
             assert info['title'] == 'NORDUnet'
             assert 'nordu.net' in info['scope']
 
@@ -141,7 +142,10 @@ class PyFFAPITest(PipeLineTest):
             assert r.status_code == 200
             data = r.json()
             info = data[0]
-            assert 'https://box-idp.nordu.net/simplesaml/module.php/saml/sp/discoResponse' in info['discovery_responses']
+            assert (
+                'https://box-idp.nordu.net/simplesaml/module.php/saml/sp/discoResponse' in info['discovery_responses']
+            )
+
 
 class PyFFAPITestResources(PipeLineTest):
     """
