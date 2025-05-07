@@ -12,8 +12,8 @@ from collections import defaultdict, deque
 from datetime import datetime
 from enum import Enum
 from threading import Condition, Lock
-from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, List, Optional, Tuple
-from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Deque
+from collections.abc import Iterable
 from urllib.parse import quote as urlescape
 
 import requests
@@ -175,7 +175,7 @@ class ResourceOpts(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_dict(self) -> dict[str, Any]:
-        res = self.dict()
+        res = self.model_dump()
         # Compensate for the 'alias' field options
         res['as'] = res.pop('alias')
         res['validate'] = res.pop('validate_schema')
@@ -208,7 +208,7 @@ class ResourceInfo(BaseModel):
             # Turn validation_errors into 'Validation Errors'
             return k.replace('_', ' ').title()
 
-        res = {_format_key(k): v for k, v in self.dict().items()}
+        res = {_format_key(k): v for k, v in self.model_dump().items()}
 
         if self.parser_info:
             # Move contents from sub-dict to top of dict, for backwards compatibility
@@ -475,7 +475,7 @@ class Resource(Watchable):
             if self.post:
                 for cb in self.post:
                     if self.t is not None:
-                        n_t = cb(self.t, self.opts.dict())
+                        n_t = cb(self.t, self.opts.model_dump())
                         if n_t is None:
                             log.warn(f'callback did not return anything when parsing {self.url} {info}')
                         self.t = n_t
