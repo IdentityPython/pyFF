@@ -77,19 +77,19 @@ class MDRepository:
         if store is None:
             store = self.store
 
-        l = self._lookup(member, store=store)
-        if hasattr(l, 'tag'):
-            l = [l]
-        elif hasattr(l, '__iter__'):
-            l = list(l)
+        etree = self._lookup(member, store=store)
+        if hasattr(etree, 'tag'):
+            etree = [etree]
+        elif hasattr(etree, '__iter__'):
+            etree = list(etree)
 
         if xp is None:
-            return l
+            return etree
         else:
-            log.debug("filtering %d entities using xpath %s" % (len(l), xp))
-            t = entitiesdescriptor(l, 'dummy', lookup_fn=self.lookup)
+            log.debug("filtering %d entities using xpath %s" % (len(etree), xp))
+            t = entitiesdescriptor(etree, 'dummy', lookup_fn=self.lookup)
             if t is None:
                 return []
-            l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
-            log.debug("got %d entities after filtering" % len(l))
-            return l
+            etree = root(t).xpath(xp, namespaces=NS, smart_strings=False)
+            log.debug("got %d entities after filtering" % len(etree))
+            return etree
