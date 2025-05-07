@@ -108,7 +108,7 @@ class LoadErrorTest(PipeLineTest):
     # A File that does not exist must throw an error with fail_on_error=True
     def test_fail_on_error_no_file(self):
         try:
-            res, md = self.exec_pipeline(
+            res, _md = self.exec_pipeline(
                 f"""
     - load fail_on_error True:
         - {self.datadir}/file_that_does_not_exist.xml
@@ -126,7 +126,7 @@ class LoadErrorTest(PipeLineTest):
     # A File that does not exist must throw an error with fail_on_error=True
     def test_fail_on_error_no_file_url(self):
         try:
-            res, md = self.exec_pipeline(
+            res, _md = self.exec_pipeline(
                 f"""
     - load fail_on_error True:
         - file://{self.datadir}/file_that_does_not_exist.xml
@@ -145,7 +145,7 @@ class LoadErrorTest(PipeLineTest):
     # Note: Due to load_url retries it takes 20s to complete this test
     def test_fail_on_error_no_url(self):
         try:
-            res, md = self.exec_pipeline(
+            res, _md = self.exec_pipeline(
                 """
     - load fail_on_error True:
         - http://127.0.0.1/does_not_exist.xml
@@ -163,7 +163,7 @@ class LoadErrorTest(PipeLineTest):
     # A file with invalid XML must throw an exception with fail_on_error True:
     def test_fail_on_error_invalid_file(self):
         try:
-            res, md = self.exec_pipeline(
+            res, _md = self.exec_pipeline(
                 f"""
     - load fail_on_error True:
         - {self.datadir}/metadata/test01.xml
@@ -181,7 +181,7 @@ class LoadErrorTest(PipeLineTest):
     # A directory with a file with invalid metadata must throw an exception with fail_on_error True and filter_invalid False:
     def test_fail_on_error_invalid_dir(self):
         try:
-            res, md = self.exec_pipeline(
+            res, _md = self.exec_pipeline(
                 f"""
     - load fail_on_error True filter_invalid False:
         - {self.datadir}/metadata/
@@ -197,7 +197,7 @@ class LoadErrorTest(PipeLineTest):
 
     # A file with invalid XML must not throw an exception by default (fail_on_error False):
     def test_no_fail_on_error_invalid_file(self):
-        res, md = self.exec_pipeline(
+        _res, md = self.exec_pipeline(
             f"""
     - load:
         - {self.datadir}/metadata/test01.xml
@@ -212,7 +212,7 @@ class LoadErrorTest(PipeLineTest):
     # Loading an xml file with an invalid entity must throw when filter_invalid False and fail_on_error True
     def test_fail_on_error_invalid_entity(self):
         try:
-            res, md = self.exec_pipeline(
+            res, _md = self.exec_pipeline(
                 f"""
     - load fail_on_error True filter_invalid False:
         - {self.datadir}/metadata/test01.xml
@@ -231,7 +231,7 @@ class LoadErrorTest(PipeLineTest):
 
     # Test default behaviour. Loading a file with an invalid entity must not raise an exception
     def test_no_fail_on_error_invalid_entity(self):
-        res, md = self.exec_pipeline(
+        _res, md = self.exec_pipeline(
             f"""
     - load:
         - {self.datadir}/metadata/test01.xml
@@ -245,7 +245,7 @@ class LoadErrorTest(PipeLineTest):
 
     # A directory with a file with invalid metadata must not throw by default:
     def test_no_fail_on_error_invalid_dir(self):
-        res, md = self.exec_pipeline(
+        _res, md = self.exec_pipeline(
             f"""
     - load:
         - {self.datadir}/metadata/
@@ -263,7 +263,7 @@ class SortTest(PipeLineTest):
     EID3 = "https://sharav.abes.fr/idp/shibboleth"
 
     @staticmethod
-    def _run_sort_test(expected_order, sxp, res, l):
+    def _run_sort_test(expected_order, sxp, res, output):
         if sxp is not None:
             # Verify expected warnings for missing sort values
             for e in expected_order:
@@ -275,11 +275,11 @@ class SortTest(PipeLineTest):
                             f"Sort pipe: unable to sort entity by '{sxp}'. Entity '{e[0]}' has no such value"
                         )
                         try:
-                            assert keygen_fail_str in str(l)
+                            assert keygen_fail_str in str(output)
                         except AssertionError:
                             print(
                                 f"Test failed on expecting missing sort value from: '{e[0]}'.\n"
-                                f"Could not find string on the output: '{keygen_fail_str}'.\nOutput was:\n {l}"
+                                f"Could not find string on the output: '{keygen_fail_str}'.\nOutput was:\n {output}"
                             )
                             raise
                 except (IndexError, TypeError):
@@ -308,7 +308,7 @@ class SortTest(PipeLineTest):
     # Test sort by entityID only
     def test_sort(self):
         sxp = None
-        res, md = self.exec_pipeline(
+        res, _md = self.exec_pipeline(
             f"""
     - load:
         - {self.datadir}/metadata/test01.xml
@@ -370,7 +370,7 @@ class SortTest(PipeLineTest):
 class SigningTest(PipeLineTest):
     def test_signing(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        res, md, ctx = self.run_pipeline("signer.fd", self)
+        _res, md, _ctx = self.run_pipeline("signer.fd", self)
         eIDs = [e.get('entityID') for e in md.store]
         assert 'https://idp.aco.net/idp/shibboleth' in eIDs
         assert 'https://skriptenforum.net/shibboleth' in eIDs
@@ -378,8 +378,8 @@ class SigningTest(PipeLineTest):
 
     def test_signing_and_validation(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        res_s, md_s, ctx_s = self.run_pipeline("signer.fd", self)
-        res_v, md_v, ctx_v = self.run_pipeline("validator.fd", self)
+        _res_s, _md_s, _ctx_s = self.run_pipeline("signer.fd", self)
+        _res_v, md_v, _ctx_v = self.run_pipeline("validator.fd", self)
 
         eIDs = [e.get('entityID') for e in md_v.store]
         assert 'https://idp.aco.net/idp/shibboleth' in eIDs
@@ -388,7 +388,7 @@ class SigningTest(PipeLineTest):
 
     def test_cert_report(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        res, md, ctx = self.run_pipeline("certreport.fd", self)
+        _res, md, _ctx = self.run_pipeline("certreport.fd", self)
         eIDs = [e.get('entityID') for e in md.store]
         assert 'https://idp.aco.net/idp/shibboleth' in eIDs
         assert 'https://skriptenforum.net/shibboleth' in eIDs
@@ -398,7 +398,7 @@ class SigningTest(PipeLineTest):
 
     def test_cert_report_swamid(self):
         self.output = tempfile.NamedTemporaryFile('w').name
-        res, md, ctx = self.run_pipeline("certreport-swamid.fd", self)
+        _res, md, _ctx = self.run_pipeline("certreport-swamid.fd", self)
         with open(self.output) as fd:
             print(fd.read())
 
@@ -529,7 +529,7 @@ class SigningTest(PipeLineTest):
         finally:
             try:
                 os.unlink(tmpfile)
-            except:
+            except Exception:
                 pass
 
     def test_empty_store(self):
@@ -632,14 +632,14 @@ class SigningTest(PipeLineTest):
         finally:
             try:
                 os.unlink(tmpfile)
-            except:
+            except Exception:
                 pass
 
     def test_blacklist_single_file(self):
         entity = 'https://idp.example.com/saml2/idp/metadata.php'
 
         # First, load without a filter to ensure the entity is there
-        res, md = self.exec_pipeline(
+        _res, md = self.exec_pipeline(
             f"""
 - when batch:
     - load:
@@ -649,7 +649,7 @@ class SigningTest(PipeLineTest):
         assert md.lookup(entity)
 
         # Then, load with a filter and ensure the entity isn't there anymore
-        res, md = self.exec_pipeline(
+        _res, md = self.exec_pipeline(
             f"""
 - when batch:
     - load:
@@ -670,7 +670,7 @@ class SigningTest(PipeLineTest):
         entity = 'https://idp.example.com/saml2/idp/metadata.php'
 
         # First, load without a filter to ensure the entity is there
-        res, md = self.exec_pipeline(
+        _res, md = self.exec_pipeline(
             f"""
 - when batch:
     - load:
@@ -680,7 +680,7 @@ class SigningTest(PipeLineTest):
         assert md.lookup(entity)
 
         # Then, load with a filter and ensure the entity isn't there anymore
-        res, md = self.exec_pipeline(
+        _res, md = self.exec_pipeline(
             f"""
 - when batch:
     - load:
@@ -695,7 +695,7 @@ class SigningTest(PipeLineTest):
 
     def test_bad_namespace(self):
         try:
-            res, md = self.exec_pipeline(
+            _res, _md = self.exec_pipeline(
                 f"""
 - when batch:
     - load:
@@ -710,7 +710,7 @@ class SigningTest(PipeLineTest):
 
     def test_parsecopy_(self):
         entity = 'https://idp.example.com/saml2/idp/metadata.php'
-        res, md = self.exec_pipeline(
+        _res, md = self.exec_pipeline(
             f"""
 - when batch:
     - load:
