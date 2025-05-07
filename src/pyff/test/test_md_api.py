@@ -133,7 +133,7 @@ class PyFFAPITest(PipeLineTest):
             data = r.json()
             assert data is not None and len(data) == 1
             info = data[0]
-            assert info is dict
+            assert isinstance(info, dict)
             assert info['title'] == 'NORDUnet'
             assert 'nordu.net' in info['scope']
 

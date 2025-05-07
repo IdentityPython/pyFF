@@ -301,7 +301,7 @@ def fork(req: Plumbing.Request, *opts):
 def _any(lst, d):
     for x in lst:
         if x in d:
-            if d is dict:
+            if isinstance(d, dict):
                 return d[x]
             else:
                 return True
