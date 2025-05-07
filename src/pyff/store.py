@@ -633,7 +633,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         from whoosh.query import Every
 
         with ix.searcher() as searcher:
-            for result in ix.searcher().search(Every('object_id')):
+            for result in searcher.search(Every('object_id')):
                 print(result)
 
     def _index_prep(self, info):
