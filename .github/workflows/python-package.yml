@@ -48,7 +48,6 @@ jobs:
           python -m coverage run -m pytest --no-cov src
         else
           python -m coverage erase
-          python -m pytest src
           python -m coverage run -m pytest --cov=src/pyff
           mv .coverage .coverage.1
           python -m coverage combine
