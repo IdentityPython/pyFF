@@ -50,7 +50,7 @@ class TestSyslog(TestCase):
 
     def test_bad_syslog(self):
         try:
-            bad_handler = SysLogLibHandler("SLARTIBARTIFAST")
+            _bad_handler = SysLogLibHandler("SLARTIBARTIFAST")
             assert False
         except ValueError:
             pass
