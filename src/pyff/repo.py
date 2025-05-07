@@ -1,4 +1,5 @@
-import random, time
+import random
+import time
 
 from pyff.constants import NS, config
 from pyff.logs import get_log

@@ -2,7 +2,7 @@ import importlib
 import threading
 from datetime import datetime, timedelta
 from json import dumps
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 from collections.abc import Generator, Iterable, Mapping
 
 import pyramid.httpexceptions as exc
@@ -186,7 +186,7 @@ def process_handler(request: Request) -> Response:
     if request.body:
         try:
             request.matchdict.update(request.json_body)
-        except ValueError as ex:
+        except ValueError:
             pass
 
     entry = request.matchdict.get('entry', 'request')

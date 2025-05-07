@@ -7,7 +7,7 @@ from __future__ import annotations
 import functools
 import os
 import traceback
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable
 from collections.abc import Iterable
 
 import yaml
@@ -112,7 +112,7 @@ def load_pipe(d: Any) -> tuple[Callable, Any, str, str | dict | list | None]:
     opts: list[str] = []
     if is_text(d):
         name, opts = _n(d)
-    elif hasattr(d, '__iter__') and not type(d) is dict:
+    elif hasattr(d, '__iter__') and type(d) is not dict:
         if not len(d):
             raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
         name, opts = _n(d[0])

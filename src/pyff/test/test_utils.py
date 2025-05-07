@@ -190,7 +190,7 @@ class TestLambda(TestCase):
         try:
             f("foo")
             assert False
-        except AssertionError as ex:
+        except AssertionError:
             pass
 
 

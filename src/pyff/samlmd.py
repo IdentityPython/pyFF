@@ -2,18 +2,18 @@ import json
 import traceback
 from base64 import b64decode
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from str2bool import str2bool
 from io import BytesIO
 from itertools import chain
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import DocumentInvalid, Element, ElementTree
 from pydantic import Field
 from xmlsec.crypto import CertDict
-from .resource import Resource, ResourceHandler, ResourceOpts
+from .resource import Resource, ResourceOpts
 
 from pyff.constants import ATTRS, NF_URI, NS, config
 from pyff.exceptions import *

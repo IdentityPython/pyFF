@@ -303,7 +303,12 @@ class SAMLStoreBase:
         if watched is not None and scheduler is not None:
             for r in watched.walk():
                 if r.t is None and len(r.children) > 0:
-                    r.t = entitiesdescriptor(list(filter(lambda c: c is not None, [c.t for c in r.children])), name=r.name, validate=True, filter_invalid=True)
+                    r.t = entitiesdescriptor(
+                        list(filter(lambda c: c is not None, [c.t for c in r.children])),
+                        name=r.name,
+                        validate=True,
+                        filter_invalid=True,
+                    )
                 if r.t is not None:
                     self.update(r.t, tid=r.name, etag=r.etag)
                 else:
@@ -337,22 +342,22 @@ class SAMLStoreBase:
         the metadata repository then it is fetched an treated as a list of (one per line) of selectors. If all else
         fails an empty list is returned.
         """
-        l = self._select(member)
-        if hasattr(l, 'tag'):
-            l = [l]
-        elif hasattr(l, '__iter__'):
-            l = list(l)
+        res = self._select(member)
+        if hasattr(res, 'tag'):
+            res = [res]
+        elif hasattr(res, '__iter__'):
+            res = list(res)
 
         if xp is None:
-            return l
+            return res
         else:
-            log.debug("filtering %d entities using xpath %s" % (len(l), xp))
-            t = entitiesdescriptor(l, 'dummy', lookup_fn=self.lookup)
+            log.debug("filtering %d entities using xpath %s" % (len(res), xp))
+            t = entitiesdescriptor(res, 'dummy', lookup_fn=self.lookup)
             if t is None:
                 return []
-            l = root(t).xpath(xp, namespaces=NS, smart_strings=False)
-            log.debug("got %d entities after filtering" % len(l))
-            return l
+            res = root(t).xpath(xp, namespaces=NS, smart_strings=False)
+            log.debug("got %d entities after filtering" % len(res))
+            return res
 
     def merge(self, t, nt, strategy=merge_strategies.replace_existing, strategy_name=None):
         """
@@ -463,7 +468,7 @@ class SAMLStoreBase:
                 m = _match(query, e)
                 if m is not None:
                     d = entity_simple_summary(e)
-                    ll = d['title'].lower()
+                    _ll = d['title'].lower()
                     d['matched'] = m
             else:
                 d = entity_simple_summary(e)
@@ -620,7 +625,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
             try:
                 log.debug("releasing index lock")
                 lock.release()
-            except ThreadError as ex:
+            except ThreadError as _ex:
                 pass
 
     def dump(self):

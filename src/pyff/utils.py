@@ -22,7 +22,7 @@ from email.utils import parsedate
 from itertools import chain
 from threading import local
 from time import gmtime, strftime
-from typing import Any, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, BinaryIO, Callable, Optional, Union
 from collections.abc import Sequence
 
 import pkg_resources
@@ -720,7 +720,7 @@ def url_get(url: str, verify_tls: Optional[bool] = False) -> Response:
         headers['If-None-Match'] = _etag
     try:
         r = s.get(url, headers=headers, verify=verify_tls, timeout=config.request_timeout)
-    except OSError as ex:
+    except OSError:
         s = requests.Session()
         r = s.get(url, headers=headers, verify=verify_tls, timeout=config.request_timeout)
 

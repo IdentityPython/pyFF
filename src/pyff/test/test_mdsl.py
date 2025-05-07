@@ -1,22 +1,15 @@
-import json
 import os
-import shutil
-import sys
 import tempfile
 
 import pytest
 import yaml
 from mako.lookup import TemplateLookup
-from unittest.mock import patch
 from io import StringIO
 from pyff import builtins
-from pyff.exceptions import MetadataException
-from pyff.parse import ParserException
-from pyff.pipes import PipeException, Plumbing, plumbing
+from pyff.pipes import Plumbing, plumbing
 from pyff.repo import MDRepository
-from pyff.resource import ResourceException
-from pyff.test import ExitException, SignerTestCase
-from pyff.utils import hash_id, parse_xml, resource_filename, root, dumptree
+from pyff.test import SignerTestCase
+from pyff.utils import parse_xml
 from pyff.constants import NS
 
 

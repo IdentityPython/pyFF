@@ -138,7 +138,7 @@ class TestReadWriteLock(TestCase):
             for i in range(0, 10):
                 self._raise(w[i])
             assert False
-        except ValueError as ex:
+        except ValueError:
             pass
 
     def test_2_readers_and_3_writers(self):

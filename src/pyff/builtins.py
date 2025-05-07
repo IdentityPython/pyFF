@@ -14,7 +14,7 @@ from copy import deepcopy
 from datetime import datetime
 from io import BytesIO
 from str2bool import str2bool
-from typing import Dict, Optional
+from typing import Optional
 
 import ipaddress
 import xmlsec
@@ -1457,7 +1457,7 @@ def drop_xsi_type(req: Plumbing.Request, *opts):
     def _drop_xsi_type(elt):
         try:
             del elt.attrib["{%s}type" % NS["xsi"]]
-        except Exception as ex:
+        except Exception:
             pass
 
     with_tree(root(req.t), _drop_xsi_type)
@@ -1570,7 +1570,7 @@ def certreport(req: Plumbing.Request, *opts):
                                     "{} expires in {}".format(cert.getSubject(), dt),
                                 )
                                 log.warning("{} expires in {}".format(eid, dt))
-                        except ValueError as ex:
+                        except ValueError:
                             annotate_entity(
                                 entity_elt,
                                 "certificate-error",
