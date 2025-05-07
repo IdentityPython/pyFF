@@ -7,7 +7,6 @@ import tempfile
 from unittest import TestCase
 
 import importlib.resources
-import six
 from pyff import __version__ as pyffversion
 
 # range of ports where available ports can be found
@@ -30,7 +29,7 @@ def find_unbound_port(i=0):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.bind(("127.0.0.1", port))
-        except socket.error:
+        except OSError:
             pass
         return port
 
@@ -46,7 +45,7 @@ def run_pyffd(*args):
 def run_cmdline(script, *args):
     argv = list(*args)
     starter = tempfile.NamedTemporaryFile('w').name
-    print("starting %s using %s" % (script, starter))
+    print("starting {} using {}".format(script, starter))
     with open(starter, 'w') as fd:
         fd.write(
             """#!%s
@@ -78,9 +77,9 @@ if __name__ == '__main__':
     out, err = proc.communicate()
     rv = proc.wait()
     os.unlink(starter)
-    if isinstance(out, six.binary_type):
+    if isinstance(out, bytes):
         out = out.decode('utf-8')
-    if isinstance(err, six.binary_type):
+    if isinstance(err, bytes):
         err = err.decode('utf-8')
 
     print(">> STDOUT ---")

@@ -12,7 +12,8 @@ from collections import defaultdict, deque
 from datetime import datetime
 from enum import Enum
 from threading import Condition, Lock
-from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, List, Optional, Tuple
+from collections.abc import Iterable, Mapping
 from urllib.parse import quote as urlescape
 
 import requests
@@ -50,10 +51,10 @@ requests.packages.urllib3.disable_warnings()
 log = get_log(__name__)
 
 
-class URLHandler(object):
+class URLHandler:
     def __init__(self, *args, **kwargs):
-        log.debug("create urlhandler {} {}".format(args, kwargs))
-        self.pending: Dict[str, Resource] = {}
+        log.debug(f"create urlhandler {args} {kwargs}")
+        self.pending: dict[str, Resource] = {}
         self.name = kwargs.pop('name', None)
         self.content_handler = kwargs.pop('content_handler', None)
         self._setup()
@@ -101,7 +102,7 @@ class URLHandler(object):
         if url in self.pending:
             t = self.pending[url]
             with self.lock:
-                log.debug("RESPONSE url={}, exception={} @ {}".format(url, exception, self.count))
+                log.debug(f"RESPONSE url={url}, exception={exception} @ {self.count}")
                 self.i_handle(t, url=url, response=response, exception=exception, last_fetched=last_fetched)
                 del self.pending[url]
 
@@ -138,7 +139,7 @@ class ResourceHandler(URLHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
 
-    def thing_to_url(self, t: Resource) -> Optional[str]:
+    def thing_to_url(self, t: Resource) -> str | None:
         return t.url
 
     def i_handle(self, t: Resource, url=None, response=None, exception=None, last_fetched=None):
@@ -157,14 +158,14 @@ class ResourceHandler(URLHandler):
 
 
 class ResourceOpts(BaseModel):
-    alias: Optional[str] = Field(None, alias='as')  # TODO: Rename to 'name'?
+    alias: str | None = Field(None, alias='as')  # TODO: Rename to 'name'?
     # a certificate (file) or a SHA1 fingerprint to use for signature verification
-    verify: Optional[str] = None
+    verify: str | None = None
     # TODO: move classes to make the correct typing work: Iterable[Union[Lambda, PipelineCallback]] = Field([])
-    via: List[Callable] = Field([])
+    via: list[Callable] = Field([])
     # A list of callbacks that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
     # TODO: sort imports to make the correct typing work: Iterable[PipelineCallback] = Field([])
-    cleanup: List[Callable] = Field([])
+    cleanup: list[Callable] = Field([])
     fail_on_error: bool = False
     # remove invalid EntityDescriptor elements rather than raise an error
     filter_invalid: bool = True
@@ -173,7 +174,7 @@ class ResourceOpts(BaseModel):
     verify_tls: bool = False
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         res = self.dict()
         # Compensate for the 'alias' field options
         res['as'] = res.pop('alias')
@@ -190,16 +191,16 @@ class ResourceLoadState(str, Enum):
 
 class ResourceInfo(BaseModel):
     resource: str  # URL
-    state: Optional[ResourceLoadState] = None
-    http_headers: Dict[str, Any] = Field({})
-    reason: Optional[str] = None
-    status_code: Optional[str] = None  # HTTP status code as string. TODO: change to int
-    parser_info: Optional[ParserInfo] = None
-    expired: Optional[bool] = None
-    exception: Optional[BaseException] = None
+    state: ResourceLoadState | None = None
+    http_headers: dict[str, Any] = Field({})
+    reason: str | None = None
+    status_code: str | None = None  # HTTP status code as string. TODO: change to int
+    parser_info: ParserInfo | None = None
+    expired: bool | None = None
+    exception: BaseException | None = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         def _format_key(k: str) -> str:
             special = {'http_headers': 'HTTP Response Headers'}
             if k in special:
@@ -224,21 +225,21 @@ class ResourceInfo(BaseModel):
 
 
 class Resource(Watchable):
-    def __init__(self, url: Optional[str], opts: ResourceOpts):
+    def __init__(self, url: str | None, opts: ResourceOpts):
         super().__init__()
-        self.url: Optional[str] = url
+        self.url: str | None = url
         self.opts: ResourceOpts = opts
-        self.t: Optional[ElementTree] = None
+        self.t: ElementTree | None = None
         self.type: str = "text/plain"
-        self.etag: Optional[str] = None
-        self.expire_time: Optional[datetime] = None
+        self.etag: str | None = None
+        self.expire_time: datetime | None = None
         self.never_expires: bool = False
-        self.last_seen: Optional[datetime] = None
-        self.last_parser: Optional['PyffParser'] = None  # importing PyffParser in this module causes a loop
+        self.last_seen: datetime | None = None
+        self.last_parser: PyffParser | None = None  # importing PyffParser in this module causes a loop
         self._infos: Deque[ResourceInfo] = deque(maxlen=config.info_buffer_size)
         self.children: Deque[Resource] = deque()
-        self.trust_info: Optional[dict] = None
-        self.md_sources: Optional[dict] = None
+        self.trust_info: dict | None = None
+        self.md_sources: dict | None = None
         self._setup()
 
     def _setup(self):
@@ -246,9 +247,9 @@ class Resource(Watchable):
             if "://" not in self.url:
                 pth = os.path.abspath(self.url)
                 if os.path.isdir(pth):
-                    self.url = "dir://{}".format(pth)
+                    self.url = f"dir://{pth}"
                 elif os.path.isfile(pth) or os.path.isabs(self.url):
-                    self.url = "file://{}".format(pth)
+                    self.url = f"file://{pth}"
 
             if self.url.startswith('file://') or self.url.startswith('dir://'):
                 self.never_expires = True
@@ -282,7 +283,7 @@ class Resource(Watchable):
     def __str__(self):
         return "Resource {} expires at {} using ".format(
             self.url if self.url is not None else "(root)", self.expire_time
-        ) + ",".join(["{}={}".format(k, v) for k, v in sorted(list(self.opts.model_dump().items()))])
+        ) + ",".join([f"{k}={v}" for k, v in sorted(list(self.opts.model_dump().items()))])
 
     def reload(self, fail_on_error=False):
         with non_blocking_lock(self.lock):
@@ -317,8 +318,7 @@ class Resource(Watchable):
         if self.url is not None:
             yield self
         for c in self.children:
-            for cn in c.walk():
-                yield cn
+            yield from c.walk()
 
     def is_expired(self) -> bool:
         if self.never_expires or self.expire_time is None:
@@ -338,7 +338,7 @@ class Resource(Watchable):
             if self.children[i].url == r.url:
                 self.children[i] = r
                 return
-        raise ValueError("Resource {} not present - use add_child".format(r.url))
+        raise ValueError(f"Resource {r.url} not present - use add_child")
 
     def add_child(self, url: str, opts: ResourceOpts) -> Resource:
         """
@@ -358,7 +358,7 @@ class Resource(Watchable):
         return r
 
     @property
-    def name(self) -> Optional[str]:
+    def name(self) -> str | None:
         if self.opts.alias:
             return self.opts.alias
         return self.url
@@ -370,7 +370,7 @@ class Resource(Watchable):
         else:
             return self._infos[-1]
 
-    def load_backup(self) -> Optional[str]:
+    def load_backup(self) -> str | None:
         if config.local_copy_dir is None:
             return None
 
@@ -379,7 +379,7 @@ class Resource(Watchable):
             if isinstance(res, bytes):
                 return res.decode('utf-8')
             return res
-        except IOError as ex:
+        except OSError as ex:
             log.warning(
                 "Caught an exception trying to load local backup for {} via {}: {}".format(
                     self.url, self.local_copy_fn, ex
@@ -387,20 +387,20 @@ class Resource(Watchable):
             )
             return None
 
-    def save_backup(self, data: Optional[str]) -> None:
+    def save_backup(self, data: str | None) -> None:
         if config.local_copy_dir is not None:
             try:
                 safe_write(self.local_copy_fn, data, True)
-            except IOError as ex:
-                log.warning("unable to save backup copy of {}: {}".format(self.url, ex))
+            except OSError as ex:
+                log.warning(f"unable to save backup copy of {self.url}: {ex}")
 
-    def load_resource(self, getter: Callable[[str], Response]) -> Tuple[Optional[str], int, ResourceInfo]:
-        data: Optional[str] = None
+    def load_resource(self, getter: Callable[[str], Response]) -> tuple[str | None, int, ResourceInfo]:
+        data: str | None = None
         status: int = 500
         info = self.add_info()
         verify_tls = self.opts.verify_tls
 
-        log.debug("Loading resource {}".format(self.url))
+        log.debug(f"Loading resource {self.url}")
 
         if not self.url:
             log.error(f'No URL for resource {self}')
@@ -432,23 +432,23 @@ class Resource(Watchable):
                 )
                 data = self.load_backup()
                 if data is not None and len(data) > 0:
-                    info.reason = "Retrieved from local cache because status: {} != 200".format(status)
+                    info.reason = f"Retrieved from local cache because status: {status} != 200"
                     status = 218
 
             info.status_code = str(status)
 
-        except IOError as ex:
+        except OSError as ex:
             if self.local_copy_fn is not None:
-                log.warning("caught exception from {} - trying local backup: {}".format(self.url, ex))
+                log.warning(f"caught exception from {self.url} - trying local backup: {ex}")
                 data = self.load_backup()
                 if data is not None and len(data) > 0:
-                    info.reason = "Retrieved from local cache because exception: {}".format(ex)
+                    info.reason = f"Retrieved from local cache because exception: {ex}"
                     status = 218
             if data is None or not len(data) > 0:
                 raise ex  # propagate exception if we can't find a backup
 
         if data is None or not len(data) > 0:
-            raise ResourceException("failed to fetch {} (status: {:d})".format(self.url, status))
+            raise ResourceException(f"failed to fetch {self.url} (status: {status:d})")
 
         info.state = ResourceLoadState.Fetched
 
@@ -482,7 +482,7 @@ class Resource(Watchable):
 
             if self.is_expired():
                 info.expired = True
-                raise ResourceException("Resource at {} expired on {}".format(self.url, self.expire_time))
+                raise ResourceException(f"Resource at {self.url} expired on {self.expire_time}")
             else:
                 info.expired = False
 

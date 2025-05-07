@@ -1,8 +1,8 @@
 import logging
 from unittest import TestCase
 
-from mock import patch
-from six import StringIO
+from unittest.mock import patch
+from io import StringIO
 
 from pyff.decorators import deprecated
 

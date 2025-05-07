@@ -4,8 +4,6 @@ import tempfile
 from threading import Thread, current_thread
 from unittest import TestCase
 
-import six
-
 from pyff import utils
 from pyff.constants import NS, as_list_of_string
 from pyff.resource import Resource, ResourceOpts
@@ -88,7 +86,7 @@ class TestResources(TestCase):
             assert resource_filename(tmp) == tmp
             (d, fn) = os.path.split(tmp)
             assert resource_filename(fn, d) == tmp
-        except IOError as ex:
+        except OSError as ex:
             raise ex
         finally:
             try:
@@ -99,8 +97,8 @@ class TestResources(TestCase):
     def test_resource_string(self):
         assert resource_string("missing") is None
         assert resource_string("missing", "gone") is None
-        assert resource_string('test/data/empty.txt') == six.b('empty')
-        assert resource_string('empty.txt', 'test/data') == six.b('empty')
+        assert resource_string('test/data/empty.txt') == b'empty'
+        assert resource_string('empty.txt', 'test/data') == b'empty'
         tmp = tempfile.NamedTemporaryFile('w').name
         with open(tmp, "w") as fd:
             fd.write("test")
@@ -110,7 +108,7 @@ class TestResources(TestCase):
             assert resource_string(tmp) == 'test'
             (d, fn) = os.path.split(tmp)
             assert resource_string(fn, d) == 'test'
-        except IOError as ex:
+        except OSError as ex:
             raise ex
         finally:
             try:
@@ -212,7 +210,7 @@ class TestImage(TestCase):
             (basename, _, ext) = fn.rpartition('.')
             mime_type = TestImage.ext_to_mime.get(ext, None)
             assert mime_type is not None
-            url = "file://{}".format(fn)
+            url = f"file://{fn}"
             assert url
             r = url_get(url)
             assert r

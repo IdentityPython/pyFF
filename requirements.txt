@@ -18,7 +18,6 @@ requests
 requests_cache
 requests_file
 simplejson >=2.6.2
-six>=1.11.0
 whoosh
 wsgi-intercept
 xmldiff

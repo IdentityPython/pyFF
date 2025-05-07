@@ -1,14 +1,13 @@
 import json
 import os
 import shutil
-import sys
 import tempfile
 
 import pytest
-import six
 import yaml
+from io import StringIO
 from mako.lookup import TemplateLookup
-from mock import patch
+from unittest.mock import patch
 
 from pyff import builtins
 from pyff.exceptions import MetadataException
@@ -32,19 +31,19 @@ class PipeLineTest(SignerTestCase):
 
     @property
     def captured_stdout(self) -> str:
-        """ Return anything written to STDOUT during this test """
+        """Return anything written to STDOUT during this test"""
         out, _err = self._capsys.readouterr()  # type: ignore
         return out
 
     @property
     def captured_stderr(self) -> str:
-        """ Return anything written to STDERR during this test """
+        """Return anything written to STDERR during this test"""
         _out, err = self._capsys.readouterr()  # type: ignore
         return err
 
     @pytest.fixture(autouse=True)
     def _caplog(self, caplog):
-        """ Return anything written to the logging system during this test """
+        """Return anything written to the logging system during this test"""
         self._caplog = caplog
 
     @property
@@ -69,8 +68,8 @@ class PipeLineTest(SignerTestCase):
 
     def exec_pipeline(self, pstr):
         md = MDRepository()
-        p = yaml.safe_load(six.StringIO(pstr))
-        print("\n{}".format(yaml.dump(p)))
+        p = yaml.safe_load(StringIO(pstr))
+        print(f"\n{yaml.dump(p)}")
         pl = Plumbing(p, pid="test")
         res = pl.process(md, state={'batch': True, 'stats': {}})
         return res, md
@@ -280,7 +279,7 @@ class SortTest(PipeLineTest):
                         except AssertionError:
                             print(
                                 f"Test failed on expecting missing sort value from: '{e[0]}'.\n"
-                                f"Could not find string on the output: '{keygen_fail_str}'.\nOutput was:\n {six.u(l)}"
+                                f"Could not find string on the output: '{keygen_fail_str}'.\nOutput was:\n {l}"
                             )
                             raise
                 except (IndexError, TypeError):
@@ -294,17 +293,15 @@ class SortTest(PipeLineTest):
         from pyff.samlmd import iter_entities
 
         elts = list(iter_entities(res))
-        print("elts: {}".format(elts))
+        print(f"elts: {elts}")
         for i, me in enumerate(expected_order):
-            print("{}: {}".format(i, me))
+            print(f"{i}: {me}")
             try:
                 assert elts[i].attrib.get("entityID") == me[0]
             except AssertionError:
                 print(
-                    (
-                        f"Test failed on verifying sort position {i:d}.\nExpected: {me[0]}; "
-                        f"Found: {elts[i].attrib.get('entityID')} "
-                    )
+                    f"Test failed on verifying sort position {i:d}.\nExpected: {me[0]}; "
+                    f"Found: {elts[i].attrib.get('entityID')} "
                 )
                 raise
 
@@ -395,14 +392,14 @@ class SigningTest(PipeLineTest):
         eIDs = [e.get('entityID') for e in md.store]
         assert 'https://idp.aco.net/idp/shibboleth' in eIDs
         assert 'https://skriptenforum.net/shibboleth' in eIDs
-        with open(self.output, 'r') as fd:
+        with open(self.output) as fd:
             lines = fd.readline()
             assert len(lines) > 0
 
     def test_cert_report_swamid(self):
         self.output = tempfile.NamedTemporaryFile('w').name
         res, md, ctx = self.run_pipeline("certreport-swamid.fd", self)
-        with open(self.output, 'r') as fd:
+        with open(self.output) as fd:
             print(fd.read())
 
     def test_info_and_dump(self):
@@ -417,7 +414,7 @@ class SigningTest(PipeLineTest):
 """
             )
             assert 'https://idp.nordu.net/idp/shibboleth' in self.captured_stdout
-        except IOError:
+        except OSError:
             pass
 
     def test_end_exit(self):
@@ -431,7 +428,7 @@ class SigningTest(PipeLineTest):
 """
                 )
                 assert False
-            except IOError:
+            except OSError:
                 pass
             except ExitException as ex:
                 assert ex.code == 22
@@ -445,7 +442,7 @@ class SigningTest(PipeLineTest):
 """
             )
             assert '<EntitiesDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"/>' in self.captured_stdout
-        except IOError:
+        except OSError:
             pass
 
     def test_missing_select(self):
@@ -473,7 +470,7 @@ class SigningTest(PipeLineTest):
                 assert False
             except PipeException:
                 pass
-            except IOError:
+            except OSError:
                 pass
 
     def test_first_select_as(self):
@@ -497,12 +494,12 @@ class SigningTest(PipeLineTest):
             assert root(t2).get('entityID') == entity_id
         except PipeException:
             pass
-        except IOError:
+        except OSError:
             pass
         finally:
             try:
                 os.unlink(tmpfile)
-            except (IOError, OSError):
+            except OSError:
                 pass
 
     def test_prune(self):
@@ -527,7 +524,7 @@ class SigningTest(PipeLineTest):
             assert gone is None
         except PipeException:
             pass
-        except IOError:
+        except OSError:
             pass
         finally:
             try:
@@ -545,7 +542,7 @@ class SigningTest(PipeLineTest):
             assert False
         except PipeException:
             pass
-        except IOError:
+        except OSError:
             pass
 
     def test_empty_store2(self):
@@ -559,7 +556,7 @@ class SigningTest(PipeLineTest):
             assert False
         except PipeException:
             pass
-        except IOError:
+        except OSError:
             pass
 
     def test_empty_dir_error(self):
@@ -570,7 +567,7 @@ class SigningTest(PipeLineTest):
    - {self.datadir}/empty
 """
             )
-        except IOError:
+        except OSError:
             pass
         assert "no entities found in" in str(self.captured_log_text)
 
@@ -597,7 +594,7 @@ class SigningTest(PipeLineTest):
             assert t2 is not None
             assert root(t1).get('entityID') == root(t2).get('entityID')
             assert root(t2).get('entityID') == entity_id
-        except IOError:
+        except OSError:
             pass
         finally:
             shutil.rmtree(tmpdir)
@@ -612,7 +609,7 @@ class SigningTest(PipeLineTest):
             assert False
         except PipeException:
             pass
-        except IOError:
+        except OSError:
             pass
 
     def test_pick_invalid(self):
@@ -630,7 +627,7 @@ class SigningTest(PipeLineTest):
             assert False
         except PipeException:
             pass
-        except IOError:
+        except OSError:
             pass
         finally:
             try:
@@ -666,7 +663,7 @@ class SigningTest(PipeLineTest):
         assert not md.lookup(entity)
 
     def test_blacklist_directory(self):
-        """ Test filter action when loading all metadata in a directory.
+        """Test filter action when loading all metadata in a directory.
 
         This test has the side effect of testing some resource option inheritance mechanisms.
         """
@@ -731,19 +728,21 @@ class SigningTest(PipeLineTest):
             tmpdir = tempfile.mkdtemp()
             os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - load:
-   - file://%s/metadata/test02-sp.xml
+   - file://{}/metadata/test02-sp.xml
 - select
 - discojson_sp
 - publish:
-    output: %s/disco_sp.json
+    output: {}/disco_sp.json
     raw: true
     update_store: false
-""" % (self.datadir, tmpdir))
+""".format(self.datadir, tmpdir)
+                )
                 fn = "%s/disco_sp.json" % tmpdir
                 assert os.path.exists(fn)
-                with open(fn, 'r') as f:
+                with open(fn) as f:
                     sp_json = json.load(f)
 
                 assert 'https://example.com.com/shibboleth' in str(sp_json)
@@ -752,15 +751,26 @@ class SigningTest(PipeLineTest):
                 assert 'customer' in example_sp_json['profiles']
                 customer_tinfo = example_sp_json['profiles']['customer']
                 assert customer_tinfo['entity'][0] == {'entity_id': 'https://example.org/idp.xml', 'include': True}
-                assert customer_tinfo['entities'][0] == {'select': 'http://www.swamid.se/', 'match': 'registrationAuthority', 'include': True}
-                assert customer_tinfo['fallback_handler'] == {'profile': 'href', 'handler': 'https://www.example.org/about'}
+                assert customer_tinfo['entities'][0] == {
+                    'select': 'http://www.swamid.se/',
+                    'match': 'registrationAuthority',
+                    'include': True,
+                }
+                assert customer_tinfo['fallback_handler'] == {
+                    'profile': 'href',
+                    'handler': 'https://www.example.org/about',
+                }
 
                 example_sp_json_2 = sp_json[1]
                 assert 'incommon-wayfinder' in example_sp_json_2['profiles']
                 tinfo = example_sp_json_2['profiles']['incommon-wayfinder']
-                assert tinfo['entities'][0] == {'select': 'https://mdq.incommon.org/entities', 'match': 'md_source', 'include': True}
+                assert tinfo['entities'][0] == {
+                    'select': 'https://mdq.incommon.org/entities',
+                    'match': 'md_source',
+                    'include': True,
+                }
                 assert tinfo['strict']
-            except IOError:
+            except OSError:
                 pass
             finally:
                 shutil.rmtree(tmpdir)
@@ -770,28 +780,34 @@ class SigningTest(PipeLineTest):
             tmpdir = tempfile.mkdtemp()
             os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
             try:
-                self.exec_pipeline("""
+                self.exec_pipeline(
+                    """
 - load:
-   - file://%s/metadata/test-sp-trustinfo-in-attr.xml
+   - file://{}/metadata/test-sp-trustinfo-in-attr.xml
 - select
 - discojson_sp_attr
 - publish:
-    output: %s/disco_sp_attr.json
+    output: {}/disco_sp_attr.json
     raw: true
     update_store: false
-""" % (self.datadir, tmpdir))
+""".format(self.datadir, tmpdir)
+                )
                 fn = "%s/disco_sp_attr.json" % tmpdir
                 assert os.path.exists(fn)
-                with open(fn, 'r') as f:
+                with open(fn) as f:
                     sp_json = json.load(f)
 
                 assert 'https://example.com/shibboleth' in str(sp_json)
                 example_sp_json = sp_json[0]
                 assert 'incommon-wayfinder' in example_sp_json['profiles']
                 tinfo = example_sp_json['profiles']['incommon-wayfinder']
-                assert tinfo['entities'][0] == {'select': 'https://mdq.incommon.org/entities', 'match': 'md_source', 'include': True}
+                assert tinfo['entities'][0] == {
+                    'select': 'https://mdq.incommon.org/entities',
+                    'match': 'md_source',
+                    'include': True,
+                }
                 assert tinfo['strict']
-            except IOError:
+            except OSError:
                 pass
             finally:
                 shutil.rmtree(tmpdir)

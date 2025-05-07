@@ -2,7 +2,8 @@ import importlib
 import threading
 from datetime import datetime, timedelta
 from json import dumps
-from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Generator, Iterable, Mapping
 
 import pyramid.httpexceptions as exc
 import pytz
@@ -15,7 +16,7 @@ from pyramid.events import NewRequest
 from pyramid.request import Request
 from pyramid.response import Response
 from six import b
-from six.moves.urllib_parse import quote_plus
+from urllib.parse import quote_plus
 
 from pyff.constants import config
 from pyff.exceptions import ResourceException
@@ -30,7 +31,7 @@ from pyff import __version__
 log = get_log(__name__)
 
 
-class NoCache(object):
+class NoCache:
     """Dummy implementation for when caching isn't enabled"""
 
     def __init__(self) -> None:
@@ -82,7 +83,7 @@ def status_handler(request: Request) -> Response:
     return response
 
 
-class MediaAccept(object):
+class MediaAccept:
     def __init__(self, accept: str):
         self._type = AcceptableType(accept)
 
@@ -110,7 +111,7 @@ def _is_xml(data: Any) -> bool:
     return isinstance(data, (etree._Element, etree._ElementTree))
 
 
-def _fmt(data: Any, accepter: MediaAccept) -> Tuple[str, str]:
+def _fmt(data: Any, accepter: MediaAccept) -> tuple[str, str]:
     """
     Format data according to the accepted content type of the requester.
     Return data as string (either XML or json) and a content-type.
@@ -162,7 +163,7 @@ def process_handler(request: Request) -> Response:
     """
     _ctypes = {'xml': 'application/samlmetadata+xml;application/xml;text/xml', 'json': 'application/json'}
 
-    def _d(x: Optional[str], do_split: bool = True) -> Tuple[Optional[str], Optional[str]]:
+    def _d(x: Optional[str], do_split: bool = True) -> tuple[Optional[str], Optional[str]]:
         """Split a path into a base component and an extension."""
         if x is not None:
             x = x.strip()
@@ -195,7 +196,7 @@ def process_handler(request: Request) -> Response:
 
     # Enable matching on scope.
     match = match.split('@').pop() if match and not match.endswith('@') else match
-    log.debug("match={}".format(match))
+    log.debug(f"match={match}")
 
     if not path_elem:
         path_elem = ['entities']
@@ -213,7 +214,7 @@ def process_handler(request: Request) -> Response:
     if 'entities' not in alias:
         pfx = request.registry.aliases.get(alias, None)
         if pfx is None:
-            log.debug("alias {} not found - passing to storage lookup".format(alias))
+            log.debug(f"alias {alias} not found - passing to storage lookup")
             path = alias  # treat as path
 
     # content_negotiation_policy is one of three values:
@@ -353,11 +354,11 @@ def webfinger_handler(request: Request) -> Response:
     if resource is None:
         resource = request.host_url
 
-    jrd: Dict[str, Any] = dict()
+    jrd: dict[str, Any] = dict()
     dt = datetime.now() + timedelta(hours=1)
     jrd['expires'] = dt.isoformat()
     jrd['subject'] = request.host_url
-    links: List[Dict[str, Any]] = list()
+    links: list[dict[str, Any]] = list()
     jrd['links'] = links
 
     _dflt_rels = {
@@ -377,7 +378,7 @@ def webfinger_handler(request: Request) -> Response:
             suffix = ""
             if not url.endswith('/'):
                 suffix = _dflt_rels[r][0]
-            links.append(dict(rel=r, type=_dflt_rels[r][1], href='%s/%s%s' % (request.host_url, url, suffix)))
+            links.append(dict(rel=r, type=_dflt_rels[r][1], href=f'{request.host_url}/{url}{suffix}'))
 
     _links('/entities/')
     for a in request.registry.md.store.collections():
@@ -391,7 +392,7 @@ def webfinger_handler(request: Request) -> Response:
     aliases = request.registry.aliases
     for a in aliases.keys():
         for v in request.registry.md.store.attribute(aliases[a]):
-            _links('%s/%s' % (a, quote_plus(v)))
+            _links(f'{a}/{quote_plus(v)}')
 
     response = Response(dumps(jrd, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
@@ -407,7 +408,7 @@ def resources_handler(request: Request) -> Response:
     :return: a JSON representation of the set of resources currently loaded by the server
     """
 
-    def _infos(resources: Iterable[Resource]) -> List[Mapping[str, Any]]:
+    def _infos(resources: Iterable[Resource]) -> list[Mapping[str, Any]]:
         return [_info(r) for r in resources if r.info.state is not None]
 
     def _info(r: Resource) -> Mapping[str, Any]:
@@ -453,19 +454,19 @@ def search_handler(request: Request) -> Response:
     match = match.split('@').pop() if match and not match.endswith('@') else match
 
     entity_filter = request.params.get('entity_filter', '{http://pyff.io/role}idp')
-    log.debug("match={}".format(match))
+    log.debug(f"match={match}")
     store = request.registry.md.store
 
     def _response() -> Generator[bytes, bytes, None]:
-        yield b('[')
+        yield b'['
         in_loop = False
         entities = store.search(query=match.lower(), entity_filter=entity_filter)
         for e in entities:
             if in_loop:
-                yield b(',')
+                yield b','
             yield b(dumps(e))
             in_loop = True
-        yield b(']')
+        yield b']'
 
     response = Response(content_type='application/json')
     response.app_iter = _response()

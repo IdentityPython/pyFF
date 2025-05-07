@@ -5,11 +5,10 @@ import sys
 import tempfile
 
 import pytest
-import six
 import yaml
 from mako.lookup import TemplateLookup
-from mock import patch
-
+from unittest.mock import patch
+from io import StringIO
 from pyff import builtins
 from pyff.exceptions import MetadataException
 from pyff.parse import ParserException
@@ -71,8 +70,8 @@ class PipeLineTest(SignerTestCase):
 
     def exec_pipeline(self, pstr):
         md = MDRepository()
-        p = yaml.safe_load(six.StringIO(pstr))
-        print("\n{}".format(yaml.dump(p)))
+        p = yaml.safe_load(StringIO(pstr))
+        print(f"\n{yaml.dump(p)}")
         pl = Plumbing(p, pid="test")
         res = pl.process(md, state={'batch': True, 'stats': {}})
         return res, md
@@ -105,20 +104,20 @@ class ParseTest(PipeLineTest):
                 xml = parse_xml(tmpfile)
                 assert xml is not None
                 entityID = "https://pre.eidas.gov.gr/EidasNode/ServiceMetadata"
-                with_hide_from_discovery = xml.find("{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
+                with_hide_from_discovery = xml.find("{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entityID))
                 assert with_hide_from_discovery is not None
-                search = "{%s}Extensions/{%s}EntityAttributes/{%s}Attribute[@Name='%s']" % (NS['md'], NS['mdattr'], NS['saml'],'http://macedir.org/entity-category')
+                search = "{{{}}}Extensions/{{{}}}EntityAttributes/{{{}}}Attribute[@Name='{}']".format(NS['md'], NS['mdattr'], NS['saml'],'http://macedir.org/entity-category')
                 ecs = with_hide_from_discovery.find(search)
                 assert ecs is not None
                 entityID2 = "https://eidas.pp.dev-franceconnect.fr/EidasNode/ServiceMetadata"
-                without_hide_from_discovery = xml.find("{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID2))
+                without_hide_from_discovery = xml.find("{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entityID2))
                 ecs2 = without_hide_from_discovery.find(search)
                 assert ecs2 is None
-            except IOError:
+            except OSError:
                 pass
             finally:
                 try:
                 #os.unlink(tmpfile)
                     pass
-                except (IOError, OSError):
+                except OSError:
                     pass

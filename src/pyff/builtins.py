@@ -17,11 +17,10 @@ from str2bool import str2bool
 from typing import Dict, Optional
 
 import ipaddress
-import six
 import xmlsec
 from lxml import etree
 from lxml.etree import DocumentInvalid
-from six.moves.urllib_parse import quote_plus, urlparse
+from urllib.parse import quote_plus, urlparse
 
 from pyff.constants import NS
 from pyff.decorators import deprecated
@@ -104,7 +103,7 @@ def _map(req: Plumbing.Request, *opts):
 
     def _p(e):
         entity_id = e.get('entityID')
-        ip = Plumbing(pipeline=req.args, pid="{}.each[{}]".format(req.plumbing.pid, entity_id))
+        ip = Plumbing(pipeline=req.args, pid=f"{req.plumbing.pid}.each[{entity_id}]")
         ireq = Plumbing.Request(ip, req.md, t=e, scheduler=req.scheduler)
         ireq.set_id(entity_id)
         ireq.set_parent(req)
@@ -114,7 +113,7 @@ def _map(req: Plumbing.Request, *opts):
 
     pool = ThreadPool()
     result = pool.map(_p, iter_entities(req.t), chunksize=10)
-    log.info("processed {} entities".format(len(result)))
+    log.info(f"processed {len(result)} entities")
 
 
 @pipe(name="then")
@@ -461,7 +460,7 @@ def sort(req: Plumbing.Request, *opts):
     if req.t is None:
         raise PipeException("Unable to sort empty document.")
 
-    _opts: Dict[str, Optional[str]] = dict(list(zip(opts[0:1], [" ".join(opts[1:])])))
+    _opts: dict[str, Optional[str]] = dict(list(zip(opts[0:1], [" ".join(opts[1:])])))
     if 'order_by' not in _opts:
         _opts['order_by'] = None
     sort_entities(req.t, _opts['order_by'])
@@ -837,7 +836,7 @@ def select(req: Plumbing.Request, *opts):
     if req.state.get('match', None):  # TODO - allow this to be passed in via normal arguments
         match = req.state['match']
 
-        if isinstance(match, six.string_types):
+        if isinstance(match, str):
             query = [match.lower()]
 
         def _strings(elt):
@@ -870,22 +869,22 @@ def select(req: Plumbing.Request, *opts):
 
             if q is not None and len(q) > 0:
                 tokens = _strings(elt)
-                p = re.compile(r'\b{}'.format(q), re.IGNORECASE)
+                p = re.compile(fr'\b{q}', re.IGNORECASE)
                 for tstr in tokens:
                     if p.search(tstr):
                         return tstr
             return None
 
-        log.debug("matching {} in {} entities".format(match, len(entities)))
+        log.debug(f"matching {match} in {len(entities)} entities")
         entities = list(filter(lambda e: _match(match, e) is not None, entities))
-        log.debug("returning {} entities after match".format(len(entities)))
+        log.debug(f"returning {len(entities)} entities after match")
 
     ot = entitiesdescriptor(entities, name)
     if ot is None:
         raise PipeException("empty select - stop")
 
     if req.plumbing.id != name:
-        log.debug("storing synthetic collection {}".format(name))
+        log.debug(f"storing synthetic collection {name}")
         req.store.update(ot, name)
 
     return ot
@@ -1202,7 +1201,7 @@ def stats(req: Plumbing.Request, *opts):
         raise PipeException("Your pipeline is missing a select statement.")
 
     print("---")
-    print("total size:     {:d}".format(req.store.size()))
+    print(f"total size:     {req.store.size():d}")
     if not hasattr(req.t, 'xpath'):
         raise PipeException("Unable to call stats on non-XML")
 
@@ -1303,7 +1302,7 @@ def xslt(req: Plumbing.Request, *opts):
     if stylesheet is None:
         raise PipeException("xslt requires stylesheet")
 
-    params = dict((k, "'%s'" % v) for (k, v) in list(req.args.items()))
+    params = {k: "'%s'" % v for (k, v) in list(req.args.items())}
     del params['stylesheet']
     try:
         return root(xslt_transform(req.t, stylesheet, params))
@@ -1429,13 +1428,13 @@ def check_xml_namespaces(req: Plumbing.Request, *opts):
         raise PipeException("Your pipeline is missing a select statement.")
 
     def _verify(elt):
-        if isinstance(elt.tag, six.string_types):
+        if isinstance(elt.tag, str):
             for prefix, uri in list(elt.nsmap.items()):
                 if not uri.startswith('urn:'):
                     u = urlparse(uri)
                     if u.scheme not in ('http', 'https'):
                         raise MetadataException(
-                            "Namespace URIs must be be http(s) URIs ('{}' declared on {})".format(uri, elt.tag)
+                            f"Namespace URIs must be be http(s) URIs ('{uri}' declared on {elt.tag})"
                         )
 
     with_tree(root(req.t), _verify)
@@ -1508,7 +1507,7 @@ def certreport(req: Plumbing.Request, *opts):
     error_bits = int(req.args.get('error_bits', "1024"))
     warning_bits = int(req.args.get('warning_bits', "2048"))
 
-    seen: Dict[str, bool] = {}
+    seen: dict[str, bool] = {}
     for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS, smart_strings=False):
         for cd in req.t.xpath(
             "md:EntityDescriptor[@entityID='%s']//ds:X509Certificate" % eid, namespaces=NS, smart_strings=False
@@ -1530,17 +1529,17 @@ def certreport(req: Plumbing.Request, *opts):
                             entity_elt,
                             "certificate-error",
                             "keysize too small",
-                            "%s has keysize of %s bits (less than %s)" % (cert.getSubject(), keysize, error_bits),
+                            "{} has keysize of {} bits (less than {})".format(cert.getSubject(), keysize, error_bits),
                         )
-                        log.error("%s has keysize of %s" % (eid, keysize))
+                        log.error("{} has keysize of {}".format(eid, keysize))
                     elif keysize < warning_bits:
                         annotate_entity(
                             entity_elt,
                             "certificate-warning",
                             "keysize small",
-                            "%s has keysize of %s bits (less than %s)" % (cert.getSubject(), keysize, warning_bits),
+                            "{} has keysize of {} bits (less than {})".format(cert.getSubject(), keysize, warning_bits),
                         )
-                        log.warning("%s has keysize of %s" % (eid, keysize))
+                        log.warning("{} has keysize of {}".format(eid, keysize))
 
                     notafter = cert.getNotAfter()
                     if notafter is None:
@@ -1560,23 +1559,23 @@ def certreport(req: Plumbing.Request, *opts):
                                     entity_elt,
                                     "certificate-error",
                                     "certificate has expired",
-                                    "%s expired %s ago" % (cert.getSubject(), -dt),
+                                    "{} expired {} ago".format(cert.getSubject(), -dt),
                                 )
-                                log.error("%s expired %s ago" % (eid, -dt))
+                                log.error("{} expired {} ago".format(eid, -dt))
                             elif total_seconds(dt) < warning_seconds:
                                 annotate_entity(
                                     entity_elt,
                                     "certificate-warning",
                                     "certificate about to expire",
-                                    "%s expires in %s" % (cert.getSubject(), dt),
+                                    "{} expires in {}".format(cert.getSubject(), dt),
                                 )
-                                log.warning("%s expires in %s" % (eid, dt))
+                                log.warning("{} expires in {}".format(eid, dt))
                         except ValueError as ex:
                             annotate_entity(
                                 entity_elt,
                                 "certificate-error",
                                 "certificate has unknown expiration time",
-                                "%s unknown expiration time %s" % (cert.getSubject(), notafter),
+                                "{} unknown expiration time {}".format(cert.getSubject(), notafter),
                             )
 
                     req.store.update(entity_elt)
@@ -1623,7 +1622,7 @@ def emit(req: Plumbing.Request, ctype="application/xml", *opts):
 
     if d is not None:
         m = hashlib.sha1()
-        if not isinstance(d, six.binary_type):
+        if not isinstance(d, bytes):
             d = d.encode("utf-8")
         m.update(d)
         req.state['headers']['ETag'] = m.hexdigest()
@@ -1632,7 +1631,7 @@ def emit(req: Plumbing.Request, ctype="application/xml", *opts):
 
     req.state['headers']['Content-Type'] = ctype
     if six.PY2:
-        d = six.u(d)
+        d = d
     return d
 
 
@@ -1664,7 +1663,7 @@ def signcerts(req: Plumbing.Request, *opts):
 
 @pipe
 def finalize(req: Plumbing.Request, *opts):
-    """
+    r"""
     Prepares the working document for publication/rendering.
 
     :param req: The request
@@ -1716,7 +1715,7 @@ def finalize(req: Plumbing.Request, *opts):
                     # TODO: Investigate this error, which is probably correct:
                     #       error: On Python 3 '{}'.format(b'abc') produces "b'abc'", not 'abc';
                     #       use '{!r}'.format(b'abc') if this is desired behavior
-                    name = "{}://{}{}".format(base_url.scheme, base_url.netloc, name_url.path)  # type: ignore
+                    name = f"{base_url.scheme}://{base_url.netloc}{name_url.path}"  # type: ignore
                     log.debug("-------- using Name: %s" % name)
                 except ValueError as ex:
                     log.debug(f'Got an exception while finalizing: {ex}')
@@ -1752,7 +1751,7 @@ def finalize(req: Plumbing.Request, *opts):
                 offset = dt - now
                 e.set('validUntil', datetime2iso(dt))
             except ValueError as ex:
-                log.error("Unable to parse validUntil: %s (%s)" % (valid_until, ex))
+                log.error("Unable to parse validUntil: {} ({})".format(valid_until, ex))
 
         # set a reasonable default: 50% of the validity
         # we replace this below if we have cacheDuration set

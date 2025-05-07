@@ -35,7 +35,7 @@ class PyFFAPITest(PipeLineTest):
             cls.mdx_template = cls.templates.get_template('mdx.fd')
             with open(cls.mdx, "w+") as fd:
                 fd.write(cls.mdx_template.render(ctx=cls))
-            with open(cls.mdx, 'r') as r:
+            with open(cls.mdx) as r:
                 print("".join(r.readlines()))
             config.local_copy_dir = td
             cls._app = mkapp(cls.mdx)
@@ -49,7 +49,7 @@ class PyFFAPITest(PipeLineTest):
 
     def test_status(self):
         with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
-            r = requests.get("{}/api/status".format(url))
+            r = requests.get(f"{url}/api/status")
             assert "application/json" in r.headers['content-type']
             assert "version" in r.text
             assert r.status_code == 200
@@ -61,19 +61,19 @@ class PyFFAPITest(PipeLineTest):
 
     def test_parse_robots(self):
         try:
-            import six.moves.urllib_robotparser as robotparser
+            import urllib.robotparser as robotparser
         except ImportError as ex:
             raise unittest.SkipTest()
 
         rp = robotparser.RobotFileParser()
         with UrllibInterceptor(self.app, host='127.0.0.1', port=80) as url:
-            rp.set_url("{}/robots.txt".format(url))
+            rp.set_url(f"{url}/robots.txt")
             rp.read()
             assert not rp.can_fetch("*", url)
 
     def test_webfinger(self):
         with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
-            r = requests.get("{}/.well-known/webfinger?resource={}".format(url, url))
+            r = requests.get(f"{url}/.well-known/webfinger?resource={url}")
             assert r.status_code == 200
             assert "application/json" in r.headers['content-type']
             data = r.json()
@@ -88,7 +88,7 @@ class PyFFAPITest(PipeLineTest):
 
     def test_webfinger_rel_dj(self):
         with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
-            r = requests.get("{}/.well-known/webfinger?resource={}&rel=disco-json".format(url, url))
+            r = requests.get(f"{url}/.well-known/webfinger?resource={url}&rel=disco-json")
             assert r.status_code == 200
             assert "application/json" in r.headers['content-type']
             data = r.json()
@@ -106,11 +106,11 @@ class PyFFAPITest(PipeLineTest):
     @pytest.mark.skipif(os.environ.get('PYFF_SKIP_SLOW_TESTS') is not None, reason='Slow tests skipped')
     def test_load_and_query(self):
         with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
-            r = requests.post("{}/api/call/update".format(url))
+            r = requests.post(f"{url}/api/call/update")
             assert "application/samlmetadata+xml" in r.headers['Content-Type']
 
             # verify we managed to load something into the DB
-            r = requests.get("{}/api/status".format(url))
+            r = requests.get(f"{url}/api/status")
             assert "application/json" in r.headers['content-type']
             assert "version" in r.text
             assert r.status_code == 200
@@ -121,12 +121,12 @@ class PyFFAPITest(PipeLineTest):
             assert int(data['store']['size']) > 0
 
             # load the NORDUnet IdP as xml
-            r = requests.get("{}/entities/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.xml".format(url))
+            r = requests.get(f"{url}/entities/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.xml")
             assert r.status_code == 200
             assert 'application/samlmetadata+xml' in r.headers['Content-Type']
 
             # load the NORDUnet IdP as json
-            r = requests.get("{}/entities/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.json".format(url))
+            r = requests.get(f"{url}/entities/%7Bsha1%7Dc50752ce1d12c2b37da13a1a396b8e3895d35dd9.json")
             assert "application/json" in r.headers['Content-Type']
             assert r.status_code == 200
             data = r.json()
@@ -137,7 +137,7 @@ class PyFFAPITest(PipeLineTest):
             assert 'nordu.net' in info['scope']
 
             # check that we get a discovery_responses where we expect one
-            r = requests.get("{}/entities/%7Bsha1%7Dc3ba81cede254454b64ee9743df19201fe34adc9.json".format(url))
+            r = requests.get(f"{url}/entities/%7Bsha1%7Dc3ba81cede254454b64ee9743df19201fe34adc9.json")
             assert r.status_code == 200
             data = r.json()
             info = data[0]
@@ -168,7 +168,7 @@ class PyFFAPITestResources(PipeLineTest):
         - {cls.test01}
 """
             )
-        with open(cls.mdx, 'r') as r:
+        with open(cls.mdx) as r:
             print("".join(r.readlines()))
         cls._app = mkapp(cls.mdx)
         cls.app = lambda *args, **kwargs: cls._app

@@ -1,5 +1,4 @@
 # source http://code.activestate.com/recipes/502283/ (r1)
-# -*- coding: iso-8859-15 -*-
 """locks.py - Read-Write lock thread lock implementation
 
 See the class documentation for more info.
@@ -16,7 +15,7 @@ from time import time
 # ---------------
 
 
-class ReadWriteLock(object):
+class ReadWriteLock:
     """Read-Write lock class. A read-write lock differs from a standard
     threading.RLock() by allowing multiple threads to simultaneously hold a
     read lock, while allowing only a single thread to hold a write lock at the

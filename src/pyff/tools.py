@@ -45,13 +45,13 @@ def difftool():
 
         d1 = diff(r1.t, r2.t)
         if d1:
-            print("Only in {}".format(r1.url))
+            print(f"Only in {r1.url}")
             print("\n+".join(d1))
             status += 2
 
         d2 = diff(r2.t, r1.t)
         if d2:
-            print("Only in {}".format(r2.url))
+            print(f"Only in {r2.url}")
             print("\n+".join(d2))
             status += 4
 

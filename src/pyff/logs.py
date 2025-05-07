@@ -5,10 +5,7 @@ import os
 import syslog
 from typing import Any, Optional
 
-import six
-
-
-class PyFFLogger(object):
+class PyFFLogger:
     def __init__(self, name=None):
         if name is None:
             name = __name__
@@ -64,7 +61,7 @@ def log_config_file(ini: Optional[str]) -> None:
         if not os.path.isabs(ini):
             ini = os.path.join(os.getcwd(), ini)
         if not os.path.exists(ini):
-            raise ValueError("PYFF_LOGGING={} does not exist".format(ini))
+            raise ValueError(f"PYFF_LOGGING={ini} does not exist")
         logging.config.fileConfig(ini)
 
 
@@ -88,7 +85,7 @@ class SysLogLibHandler(logging.Handler):
 
     def __init__(self, facility):
 
-        if isinstance(facility, six.string_types):
+        if isinstance(facility, str):
             nf = getattr(syslog, "LOG_%s" % facility.upper(), None)
             if not isinstance(nf, int):
                 raise ValueError('Invalid log facility: %s' % nf)

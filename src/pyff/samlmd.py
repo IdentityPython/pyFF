@@ -50,7 +50,7 @@ from pyff.utils import (
 log = get_log(__name__)
 
 
-class EntitySet(object):
+class EntitySet:
     def __init__(self, initial=None):
         self._e = dict()
         if initial is not None:
@@ -66,8 +66,7 @@ class EntitySet(object):
             del self._e[entity_id]
 
     def __iter__(self):
-        for e in list(self._e.values()):
-            yield e
+        yield from list(self._e.values())
 
     def __len__(self):
         return len(list(self._e.keys()))
@@ -89,7 +88,7 @@ def parse_saml_metadata(
     source: BytesIO,
     opts: ResourceOpts,
     base_url=None,
-    validation_errors: Optional[Dict[str, Any]] = None,
+    validation_errors: Optional[dict[str, Any]] = None,
 ):
     """Parse a piece of XML and return an EntitiesDescriptor element after validation.
 
@@ -145,7 +144,7 @@ def parse_saml_metadata(
 
     except Exception as ex:
         log.debug(traceback.format_exc())
-        log.error("Error parsing {}: {}".format(base_url, ex))
+        log.error(f"Error parsing {base_url}: {ex}")
         if opts.fail_on_error:
             raise ex
 
@@ -157,7 +156,7 @@ def parse_saml_metadata(
 
 
 class SAMLParserInfo(ParserInfo):
-    entities: List[str] = Field([])  # list of entity ids
+    entities: list[str] = Field([])  # list of entity ids
 
 
 class SAMLMetadataResourceParser(PyffParser):
@@ -193,7 +192,7 @@ class SAMLMetadataResourceParser(PyffParser):
                 return _t
             sp_entities = kwargs.get('sp_entities')
             location = kwargs.get('location')
-            sp_entity = sp_entities.find("{%s}EntityDescriptor[@entityID='%s']" % (NS['md'], entityID))
+            sp_entity = sp_entities.find("{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entityID))
             if sp_entity is not None:
                 md_source = sp_entity.find(
                     "{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource[@src='%s']"
@@ -374,8 +373,8 @@ def filter_invalids_from_document(t: ElementTree, base_url, validation_errors) -
         if not xsd.validate(e):
             error = xml_error(xsd.error_log, m=base_url)
             entity_id = e.get("entityID", "(Missing entityID)")
-            log.warning('removing \'%s\': schema validation failed: %s' % (entity_id, xsd.error_log))
-            validation_errors[entity_id] = "{}".format(xsd.error_log)
+            log.warning('removing \'{}\': schema validation failed: {}'.format(entity_id, xsd.error_log))
+            validation_errors[entity_id] = f"{xsd.error_log}"
             if e.getparent() is None:
                 return None
             e.getparent().remove(e)
@@ -387,11 +386,11 @@ def filter_or_validate(
     filter_invalid: bool = False,
     base_url: str = "",
     source=None,
-    validation_errors: Optional[Dict[str, Any]] = None,
+    validation_errors: Optional[dict[str, Any]] = None,
 ) -> ElementTree:
     if validation_errors is None:
         validation_errors = {}
-    log.debug("Filtering invalids from {}".format(base_url))
+    log.debug(f"Filtering invalids from {base_url}")
     if filter_invalid:
         t = filter_invalids_from_document(t, base_url=base_url, validation_errors=validation_errors)
         for entity_id, err in validation_errors.items():
@@ -401,13 +400,13 @@ def filter_or_validate(
                 )
             )
     else:  # all or nothing
-        log.debug("Validating (one-shot) {}".format(base_url))
+        log.debug(f"Validating (one-shot) {base_url}")
         try:
             validate_document(t)
         except DocumentInvalid as ex:
             err = xml_error(ex.error_log, m=base_url)
             validation_errors[base_url] = err
-            raise MetadataException("Validation error while parsing {}: (from {}): {}".format(base_url, source, err))
+            raise MetadataException(f"Validation error while parsing {base_url}: (from {source}): {err}")
 
     return t
 
@@ -496,7 +495,7 @@ def entitiesdescriptor(
     if config.devel_write_xml_to_file:
         import os
 
-        with open("/tmp/pyff_entities_out-{}.xml".format(os.getpid()), "w") as fd:
+        with open(f"/tmp/pyff_entities_out-{os.getpid()}.xml", "w") as fd:
             fd.write(b2u(dumptree(t)))
 
     if validate:
@@ -506,7 +505,7 @@ def entitiesdescriptor(
         )
 
         for base_url, err in validation_errors.items():
-            log.error("Validation error: @ {}: {}".format(base_url, err))
+            log.error(f"Validation error: @ {base_url}: {err}")
 
     return t
 
@@ -885,7 +884,7 @@ def sub_domains(e):
 
 
 def entity_scopes(e):
-    elt = e.findall('.//{%s}IDPSSODescriptor/{%s}Extensions/{%s}Scope' % (NS['md'], NS['md'], NS['shibmd']))
+    elt = e.findall('.//{{{}}}IDPSSODescriptor/{{{}}}Extensions/{{{}}}Scope'.format(NS['md'], NS['md'], NS['shibmd']))
     if elt is None or len(elt) == 0:
         return None
     return [s.text for s in elt]
@@ -991,7 +990,7 @@ def discojson_sp(e, global_trust_info=None, global_md_sources=None):
     sp['entityID'] = e.get('entityID', None)
 
     md_sources = e.findall(
-        "{%s}SPSSODescriptor/{%s}Extensions/{%s}TrustInfo/{%s}MetadataSource" % (NS['md'], NS['md'], NS['ti'], NS['ti'])
+        "{{{}}}SPSSODescriptor/{{{}}}Extensions/{{{}}}TrustInfo/{{{}}}MetadataSource".format(NS['md'], NS['md'], NS['ti'], NS['ti'])
     )
 
     sp['extra_md'] = {}
@@ -1295,7 +1294,7 @@ def _entity_attributes(e):
 
 def _eattribute(e, attr, nf):
     ea = _entity_attributes(e)
-    a = ea.xpath(".//saml:Attribute[@NameFormat='%s' and @Name='%s']" % (nf, attr), namespaces=NS, smart_strings=False)
+    a = ea.xpath(".//saml:Attribute[@NameFormat='{}' and @Name='{}']".format(nf, attr), namespaces=NS, smart_strings=False)
     if a is None or len(a) == 0:
         a = etree.Element("{%s}Attribute" % NS['saml'])
         a.set('NameFormat', nf)
@@ -1405,11 +1404,11 @@ def sort_entities(t, sxp=None):
                 except AttributeError:
                     pass
             except IndexError:
-                log.warning("Sort pipe: unable to sort entity by '%s'. Entity '%s' has no such value" % (sxp, eid))
+                log.warning("Sort pipe: unable to sort entity by '{}'. Entity '{}' has no such value".format(sxp, eid))
         except TypeError:
             pass
 
-        log.debug("Generated sort key for entityID='%s' and %s='%s'" % (eid, sxp, sv))
+        log.debug("Generated sort key for entityID='{}' and {}='{}'".format(eid, sxp, sv))
         return sv is None, sv, eid
 
     container = root(t)
@@ -1446,6 +1445,6 @@ def set_nodecountry(e, country_code):
 
 
 def diff(t1, t2):
-    s1 = set([e.get('entityID') for e in iter_entities(root(t1))])
-    s2 = set([e.get('entityID') for e in iter_entities(root(t2))])
+    s1 = {e.get('entityID') for e in iter_entities(root(t1))}
+    s2 = {e.get('entityID') for e in iter_entities(root(t2))}
     return s1.difference(s2)

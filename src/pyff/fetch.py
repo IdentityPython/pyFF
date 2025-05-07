@@ -14,7 +14,7 @@ def make_resourcestore_instance(*args, **kwargs):
     return new_store(*args, **kwargs)
 
 
-class ResourceStore(object):
+class ResourceStore:
     pass
 
 
@@ -37,11 +37,11 @@ class Fetch(threading.Thread):
         self.state('idle')
 
     def state(self, state):
-        self.name = "{} ({})".format(self._id, state)
+        self.name = f"{self._id} ({state})"
 
     def run(self):
         while not self.halt:
-            log.debug("waiting for pool {}....".format(self._id))
+            log.debug(f"waiting for pool {self._id}....")
             with self.pool:
                 url = self.request.get()
                 if url is not None:
@@ -53,12 +53,12 @@ class Fetch(threading.Thread):
                         self.response.put(
                             {'response': r, 'url': url, 'exception': None, 'last_fetched': datetime.now()}
                         )
-                        log.debug("successfully fetched {}".format(url))
+                        log.debug(f"successfully fetched {url}")
                     except Exception as ex:
                         self.response.put(
                             {'response': None, 'url': url, 'exception': ex, 'last_fetched': datetime.now()}
                         )
-                        log.warning("error fetching {}".format(url))
+                        log.warning(f"error fetching {url}")
                         log.warning(ex)
                         import traceback
 
@@ -78,7 +78,7 @@ class Fetcher(threading.Thread, Watchable):
         threading.Thread.__init__(self)
         Watchable.__init__(self)
         self._id = name
-        self.name = '{} (master)'.format(self._id)
+        self.name = f'{self._id} (master)'
         self.request = queue.Queue()
         self.response = queue.Queue()
         self.pool = threading.BoundedSemaphore(num_threads)
@@ -96,7 +96,7 @@ class Fetcher(threading.Thread, Watchable):
         :param url: the url to fetch
         :return: nothing is returned.
         """
-        log.info("scheduling fetch of {}".format(url))
+        log.info(f"scheduling fetch of {url}")
         self.request.put(url)
 
     def stop(self):
@@ -120,12 +120,12 @@ class Fetcher(threading.Thread, Watchable):
 
         :return:  nothing is returned
         """
-        log.debug("Fetcher ({}) ready & waiting for responses...".format(self._id))
+        log.debug(f"Fetcher ({self._id}) ready & waiting for responses...")
         while not self.halt:
             info = self.response.get()
             if info is not None:
                 self.notify(**info)
-        log.debug("Fetcher ({}) exiting...".format(self._id))
+        log.debug(f"Fetcher ({self._id}) exiting...")
 
 
 def make_fetcher(name="Fetcher", content_handler=None):
@@ -138,5 +138,5 @@ def make_fetcher(name="Fetcher", content_handler=None):
     """
     f = Fetcher(name=name, content_handler=content_handler)
     f.start()
-    log.debug("fetcher created: {}".format(f))
+    log.debug(f"fetcher created: {f}")
     return f

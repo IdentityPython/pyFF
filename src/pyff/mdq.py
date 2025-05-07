@@ -3,7 +3,6 @@ pyFFd is the SAML metadata aggregator daemon
 
 """
 
-from __future__ import unicode_literals
 
 import os
 
@@ -24,13 +23,13 @@ class MDQApplication(gunicorn.app.base.BaseApplication):
 
     def __init__(self, options=None):
         self.options = options or {}
-        super(MDQApplication, self).__init__()
+        super().__init__()
 
     def load_config(self):
-        cfg = dict(
-            [(key, value) for key, value in iteritems(self.options) if key in self.cfg.settings and value is not None]
-        )
-        for key, value in iteritems(cfg):
+        cfg = {
+            key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None
+        }
+        for key, value in cfg.items():
             self.cfg.set(key.lower(), value)
 
     def load(self):
@@ -47,7 +46,7 @@ def main():
         os.chdir(config.base_dir)
 
     options = {
-        'bind': '{}:{}'.format(config.host, config.port),
+        'bind': f'{config.host}:{config.port}',
         'workers': config.worker_pool_size,
         'loglevel': config.loglevel,
         'preload_app': True,

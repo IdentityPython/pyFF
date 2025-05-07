@@ -20,7 +20,7 @@ log = get_log(__name__)
 class ParserInfo(BaseModel):
     description: str
     expiration_time: str  # TODO: Change expiration_time into a datetime
-    validation_errors: Dict[str, Any] = Field({})
+    validation_errors: dict[str, Any] = Field({})
 
     def to_dict(self):
         def _format_key(k: str) -> str:
@@ -91,7 +91,7 @@ class DirectoryParser(PyffParser):
             n += 1
 
         if n == 0:
-            raise IOError("no entities found in {}".format(content))
+            raise OSError(f"no entities found in {content}")
 
         resource.never_expires = True
         resource.expire_time = None
@@ -116,14 +116,14 @@ class XRDParser(PyffParser):
 
         relt = root(t)
         for xrd in t.iter("{%s}XRD" % NS['xrd']):
-            for link in xrd.findall(".//{%s}Link[@rel='%s']" % (NS['xrd'], NS['md'])):
+            for link in xrd.findall(".//{{{}}}Link[@rel='{}']".format(NS['xrd'], NS['md'])):
                 link_href = link.get("href")
                 certs = CertDict(link)
                 fingerprints = list(certs.keys())
                 fp = None
                 if len(fingerprints) > 0:
                     fp = fingerprints[0]
-                log.debug("XRD: {} verified by {}".format(link_href, fp))
+                log.debug(f"XRD: {link_href} verified by {fp}")
                 child_opts = resource.opts.model_copy(update={'alias': None})
                 resource.add_child(link_href, child_opts)
         resource.last_seen = utc_now().replace(microsecond=0)
@@ -132,7 +132,7 @@ class XRDParser(PyffParser):
         return info
 
 
-_parsers: List[PyffParser] = [XRDParser(), DirectoryParser(['xml']), NoParser()]
+_parsers: list[PyffParser] = [XRDParser(), DirectoryParser(['xml']), NoParser()]
 
 
 def add_parser(parser):

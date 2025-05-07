@@ -11,7 +11,7 @@ from pyff.test import SignerTestCase
 
 class SimplePipeLineTest(SignerTestCase):
     def setUp(self):
-        super(SimplePipeLineTest, self).setUp()
+        super().setUp()
         self.templates = TemplateLookup(directories=[os.path.join(self.datadir, 'simple-pipeline')])
         self.output = tempfile.NamedTemporaryFile('w').name
         self.signer = tempfile.NamedTemporaryFile('w').name
@@ -52,4 +52,4 @@ class SimplePipeLineTest(SignerTestCase):
         assert entities[0].get('entityID') == 'https://idp.aco.net/idp/shibboleth'
 
     def tear_down(self):
-        super(SimplePipeLineTest, self).tearDown()
+        super().tearDown()

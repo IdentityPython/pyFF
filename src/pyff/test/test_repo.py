@@ -53,7 +53,7 @@ class TestRepo(TestCase):
         entity_id = root(self.t).get('entityID')
         set_entity_attributes(root(self.t), {"http://ns.example.org": "foo"})
         self.md.store.update(root(self.t), entity_id)
-        e = self.md.lookup("{%s}%s" % ("http://ns.example.org", 'foo'))[0]
+        e = self.md.lookup("{{{}}}{}".format("http://ns.example.org", 'foo'))[0]
         assert e is not None
         assert e.get('entityID') == entity_id
 
