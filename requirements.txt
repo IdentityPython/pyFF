@@ -3,6 +3,7 @@ pytz
 accept_types >=0.4.1
 apscheduler==3.6.3
 cachetools
+eval_type_backport; python_version == '3.9'
 gunicorn
 httplib2 >=0.7.7
 lxml >=4.1.1
