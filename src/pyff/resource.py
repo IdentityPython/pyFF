@@ -3,6 +3,7 @@
 An abstraction layer for metadata fetchers. Supports both synchronous and asynchronous fetchers with cache.
 
 """
+
 from __future__ import annotations
 
 import os
@@ -192,7 +193,7 @@ class ResourceInfo(BaseModel):
     state: Optional[ResourceLoadState] = None
     http_headers: Dict[str, Any] = Field({})
     reason: Optional[str] = None
-    status_code: Optional[str] = None # HTTP status code as string. TODO: change to int
+    status_code: Optional[str] = None  # HTTP status code as string. TODO: change to int
     parser_info: Optional[ParserInfo] = None
     expired: Optional[bool] = None
     exception: Optional[BaseException] = None
@@ -220,6 +221,7 @@ class ResourceInfo(BaseModel):
             del res['Exception']
 
         return res
+
 
 class Resource(Watchable):
     def __init__(self, url: Optional[str], opts: ResourceOpts):
@@ -280,7 +282,7 @@ class Resource(Watchable):
     def __str__(self):
         return "Resource {} expires at {} using ".format(
             self.url if self.url is not None else "(root)", self.expire_time
-        ) + ",".join(["{}={}".format(k, v) for k, v in sorted(list(self.opts.dict().items()))])
+        ) + ",".join(["{}={}".format(k, v) for k, v in sorted(list(self.opts.model_dump().items()))])
 
     def reload(self, fail_on_error=False):
         with non_blocking_lock(self.lock):
@@ -485,7 +487,7 @@ class Resource(Watchable):
                 info.expired = False
 
             if info.parser_info:
-                for (eid, error) in list(info.parser_info.validation_errors.items()):
+                for eid, error in list(info.parser_info.validation_errors.items()):
                     log.error(error)
         else:
             log.debug(f'Parser did not produce anything (probably ok) when parsing {self.url} {info}')
