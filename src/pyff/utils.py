@@ -313,9 +313,6 @@ def safe_write(fn, data, mkdirs=False):
             data = data.decode('utf-8')
 
         with tempfile.NamedTemporaryFile(mode, **kwargs) as tmp:
-            if six.PY2:
-                data = data.encode('utf-8')
-
             log.debug(f"safe writing {len(data)} chrs into {fn}")
             tmp.write(data)
             tmpn = tmp.name
@@ -679,7 +676,7 @@ class DirAdapter(BaseAdapter):
         (_, _, _dir) = request.url.partition('://')
         if _dir is None or len(_dir) == 0:
             raise ValueError(f"not a directory url: {request.url}")
-        resp.raw = six.BytesIO(six.b(_dir))
+        resp.raw = io.BytesIO(_dir.encode("latin-1"))
         resp.status_code = 200
         resp.reason = "OK"
         resp.headers = {}
@@ -726,9 +723,6 @@ def url_get(url: str, verify_tls: Optional[bool] = False) -> Response:
     except OSError as ex:
         s = requests.Session()
         r = s.get(url, headers=headers, verify=verify_tls, timeout=config.request_timeout)
-
-    if six.PY2:
-        r.encoding = "utf-8"
 
     log.debug(f"url_get({url}) returns {len(r.content)} chrs encoded as {r.encoding}")
 
@@ -788,7 +782,7 @@ def short_id(data):
 
 
 def unicode_stream(data: str) -> io.BytesIO:
-    return six.BytesIO(data.encode('UTF-8'))
+    return io.BytesIO(data.encode('UTF-8'))
 
 
 def b2u(data: Union[str, bytes, tuple, list, set]) -> Union[str, bytes, tuple, list, set]:

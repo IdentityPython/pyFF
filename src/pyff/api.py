@@ -15,7 +15,6 @@ from pyramid.config import Configurator
 from pyramid.events import NewRequest
 from pyramid.request import Request
 from pyramid.response import Response
-from six import b
 from urllib.parse import quote_plus
 
 from pyff.constants import config
@@ -464,7 +463,7 @@ def search_handler(request: Request) -> Response:
         for e in entities:
             if in_loop:
                 yield b','
-            yield b(dumps(e))
+            yield dumps(e)
             in_loop = True
         yield b']'
 

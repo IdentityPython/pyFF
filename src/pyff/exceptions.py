@@ -1,5 +1,4 @@
 __author__ = 'leifj'
-import six
 
 
 class PyffException(BaseException):

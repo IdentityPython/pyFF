@@ -7,7 +7,6 @@ pyFFd is the SAML metadata aggregator daemon
 import os
 
 import gunicorn.app.base
-from six import iteritems
 
 from pyff.api import mkapp
 from pyff.constants import config, parse_options

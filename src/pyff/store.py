@@ -9,7 +9,6 @@ from io import BytesIO
 from threading import ThreadError
 
 import ipaddress
-import six
 from cachetools.func import ttl_cache
 from redis_collections import Dict, Set
 from whoosh.fields import ID, KEYWORD, NGRAMWORDS, Schema
@@ -756,7 +755,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         if key == 'entities' or key is None:
             return self._entities()
 
-        bkey = six.b(key)
+        bkey = key.encode('latin-1')
         if bkey in self.objects:
             return [self.objects.get(bkey)]
 

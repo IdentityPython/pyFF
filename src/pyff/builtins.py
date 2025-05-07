@@ -1630,8 +1630,6 @@ def emit(req: Plumbing.Request, ctype="application/xml", *opts):
         raise PipeException("Empty")
 
     req.state['headers']['Content-Type'] = ctype
-    if six.PY2:
-        d = d
     return d
 
 

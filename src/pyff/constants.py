@@ -11,7 +11,6 @@ import sys
 from str2bool import str2bool
 
 import pyconfig
-import six
 
 from pyff import __version__ as pyff_version
 
