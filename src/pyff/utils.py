@@ -3,6 +3,7 @@
 This module contains various utilities.
 
 """
+
 import base64
 import cgi
 import contextlib
@@ -45,7 +46,7 @@ from urllib.parse import urlparse
 
 from pyff import __version__
 from pyff.constants import NS, config
-from pyff.exceptions import *
+from pyff.exceptions import MetadataException, ResourceException
 from pyff.logs import get_log
 
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
@@ -73,8 +74,8 @@ def debug_observer(e):
     log.error(repr(e))
 
 
-def trunc_str(x, l):
-    return (x[:l] + '..') if len(x) > l else x
+def trunc_str(x, length):
+    return (x[:length] + '..') if len(x) > length else x
 
 
 def resource_string(name: str, pfx: Optional[str] = None) -> Optional[Union[str, bytes]]:
@@ -143,7 +144,7 @@ def totimestamp(dt: datetime, epoch=datetime(1970, 1, 1)) -> int:
     epoch = epoch.replace(tzinfo=dt.tzinfo)
 
     td = dt - epoch
-    ts = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 1e6
+    ts = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 1e6
     return int(ts)
 
 
@@ -421,7 +422,7 @@ def filter_lang(elts: Any, langs: Optional[Sequence[str]] = None) -> list[Elemen
         raise RuntimeError('Configuration is missing langs')
 
     dflt = langs[0]
-    lst = [find_lang(elts, l, dflt) for l in langs]
+    lst = [find_lang(elts, lang, dflt) for lang in langs]
     if len(lst) > 0:
         return lst
     else:
@@ -477,7 +478,7 @@ def total_seconds(dt: timedelta) -> float:
     if hasattr(dt, "total_seconds"):
         return dt.total_seconds()
     # TODO: Remove? I guess this is for Python < 3
-    return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10 ** 6) / 10 ** 6
+    return (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10**6) / 10**6
 
 
 def etag(s):
@@ -524,7 +525,7 @@ def has_tag(t, tag):
 
 
 def url2host(url):
-    (host, sep, port) = urlparse(url).netloc.partition(':')
+    (host, sep, _port) = urlparse(url).netloc.partition(':')
     return host
 
 
@@ -659,10 +660,10 @@ def is_text(x: Any) -> bool:
     return isinstance(x, str) or isinstance(x, str)
 
 
-def chunks(l, n):
+def chunks(input_list, n):
     """Yield successive n-sized chunks from l."""
-    for i in range(0, len(l), n):
-        yield l[i : i + n]
+    for i in range(0, len(input_list), n):
+        yield input_list[i : i + n]
 
 
 class DirAdapter(BaseAdapter):
@@ -748,7 +749,7 @@ def safe_b64d(s: str) -> bytes:
 
 def img_to_data(data: bytes, content_type: str) -> Optional[str]:
     """Convert a file (specified by a path) into a data URI."""
-    mime_type, options = cgi.parse_header(content_type)
+    mime_type, _options = cgi.parse_header(content_type)
     data64 = None
     if len(data) > config.icon_maxsize:
         return None
@@ -952,7 +953,7 @@ class Watchable:
     def add_watcher(self, cb, *args, **kwargs):
         self.watchers.append(Watchable.Watcher(cb, args, kwargs))
 
-    def remove_watcher(self, cb, *args, **kwargs):
+    def remove_watcher(self, cb, *_args, **_kwargs):
         self.watchers.remove(Watchable.Watcher(cb))
 
     def notify(self, *args, **kwargs):
@@ -966,5 +967,5 @@ class Watchable:
 
 
 def utc_now() -> datetime:
-    """ Return current time with tz=UTC """
+    """Return current time with tz=UTC"""
     return datetime.now(tz=timezone.utc)
