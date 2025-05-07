@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-24.04", "ubuntu-22.04"]
-        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python: ["3.9", "3.10", "3.11", "3.12"] #Disable 3.13 until https://github.com/TheKevJames/coveralls-python/issues/549 is fixed
     runs-on:  ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
