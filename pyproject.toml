@@ -24,6 +24,17 @@ samldiff = "pyff.tools:difftool"
 # Allow lines to be as long as 120.
 line-length = 120
 target-version = "py39"
+
+[tool.ruff.lint]
+# future fixes....
+#select = [ 
+#    "B",  # flake8-bugbear
+#    "E",  # pycodestyle error
+#    "F",  # pyflakes
+#    "I",  # isort
+#    "UP",  # pyupgrade
+#    "W",  # pycodestyle warning
+#]
 [tool.ruff.format]
 quote-style = "preserve"
 
