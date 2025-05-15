@@ -1,0 +1,63 @@
+publiccodeYmlVersion: "0.4"
+name: pyFF
+url: https://github.com/IdentityPython/pyFF
+softwareVersion: 2.1.3
+releaseDate: 2024-11-14
+platforms:
+  - linux
+categories:
+  - identity-management
+developmentStatus: stable
+softwareType: standalone/backend
+description:
+  en:
+    localisedName: pyFF
+    shortDescription: "pyFF is a simple but reasonably complete SAML metadata
+      processor capable of  aggregate, validate, combine, transform, sign or
+      publish SAML metadata. "
+    longDescription: >-
+      pyFF is a simple but reasonably complete SAML metadata processor. It is
+      intended to be used by anyone who needs to aggregate, validate, combine,
+      transform, sign or publish SAML metadata.
+
+
+      pyFF is used to run infrastructure for several identity federations of
+      signifficant size including edugain.org.
+
+
+      pyFF supports producing and validating digital signatures on SAML metadata
+      using the pyXMLSecurity package which in turn supports PKCS#11 and other
+      mechanisms for talking to HSMs and other cryptographic hardware.
+
+
+      pyFF is also a complete implementation of the SAML metadata query protocol
+      as described in draft-young-md-query and draft-young-md-query-saml and
+      implements extensions to MDQ for searching which means pyFF can be used as
+      the backend for a discovery service for large-scale identity federations.
+
+
+      Possible usecases include running an federation aggregator, filtering
+      metadata for use by a discovery service, generating reports from metadata
+      (eg certificate expiration reports), transforming metadata to add custom
+      elements.
+    documentation: https://pyff.readthedocs.io/en/latest/
+    features:
+      - SAML
+legal:
+  license: BSD-2-Clause
+maintenance:
+  type: community
+  contacts:
+    - name: Mikael Frykholm
+      email: mifr@sunet.se
+      phone: ""
+      affiliation: SUNET
+    - name: Leif Johansson
+      email: leifj@sunet.se
+      phone: ""
+      affiliation: SUNET
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - en
+
