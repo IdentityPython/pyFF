@@ -56,7 +56,6 @@ setup(
     include_package_data=True,
     package_data={'pyff': ['xslt/*.xsl', 'schema/*.xsd']},
     zip_safe=False,
-    install_requires=install_requires,
     scripts=['scripts/mirror-mdq.sh'],
     entry_points={
         'console_scripts': ['pyff=pyff.md:main', 'pyffd=pyff.mdq:main', 'samldiff=pyff.tools:difftool'],
