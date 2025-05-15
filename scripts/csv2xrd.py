@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import io
 import sys
 
 from lxml import etree
@@ -8,8 +7,8 @@ from lxml import etree
 ns = {None: "http://docs.oasis-open.org/ns/xri/xrd-1.0"}
 
 xrds = etree.Element("{http://docs.oasis-open.org/ns/xri/xrd-1.0}XRDS", nsmap=ns)
-with io.open(sys.argv[1]) as fd:
-    for line in fd.readlines():
+with open(sys.argv[1]) as fd:
+    for line in fd:
         line = line.strip()
         e = [x.strip('"') for x in line.split(",")]
         xrd = etree.Element("{http://docs.oasis-open.org/ns/xri/xrd-1.0}XRD", nsmap=ns)

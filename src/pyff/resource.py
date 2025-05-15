@@ -9,16 +9,16 @@ from __future__ import annotations
 import os
 import traceback
 from collections import defaultdict, deque
+from collections.abc import Iterable
 from datetime import datetime
 from enum import Enum
 from threading import Condition, Lock
-from typing import TYPE_CHECKING, Any, Callable, Deque
-from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, Callable
 from urllib.parse import quote as urlescape
 
 import requests
 from lxml.etree import ElementTree
-from pydantic import ConfigDict, BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from requests.adapters import Response
 
 from pyff.constants import config
@@ -236,8 +236,8 @@ class Resource(Watchable):
         self.never_expires: bool = False
         self.last_seen: datetime | None = None
         self.last_parser: PyffParser | None = None  # importing PyffParser in this module causes a loop
-        self._infos: Deque[ResourceInfo] = deque(maxlen=config.info_buffer_size)
-        self.children: Deque[Resource] = deque()
+        self._infos: deque[ResourceInfo] = deque(maxlen=config.info_buffer_size)
+        self.children: deque[Resource] = deque()
         self.trust_info: dict | None = None
         self.md_sources: dict | None = None
         self._setup()
@@ -334,7 +334,7 @@ class Resource(Watchable):
         return info
 
     def _replace(self, r: Resource) -> None:
-        for i in range(0, len(self.children)):
+        for i in range(len(self.children)):
             if self.children[i].url == r.url:
                 self.children[i] = r
                 return
@@ -381,9 +381,7 @@ class Resource(Watchable):
             return res
         except OSError as ex:
             log.warning(
-                "Caught an exception trying to load local backup for {} via {}: {}".format(
-                    self.url, self.local_copy_fn, ex
-                )
+                f"Caught an exception trying to load local backup for {self.url} via {self.local_copy_fn}: {ex}"
             )
             return None
 
@@ -426,9 +424,7 @@ class Resource(Watchable):
                 self.etag = _etag
             elif self.local_copy_fn is not None:
                 log.warning(
-                    "Got status={:d} while getting {}. Attempting fallback to local copy.".format(
-                        r.status_code, self.url
-                    )
+                    f"Got status={r.status_code:d} while getting {self.url}. Attempting fallback to local copy."
                 )
                 data = self.load_backup()
                 if data is not None and len(data) > 0:
@@ -454,7 +450,7 @@ class Resource(Watchable):
 
         return data, status, info
 
-    def parse(self, getter: Callable[[str], Response]) -> Deque[Resource]:
+    def parse(self, getter: Callable[[str], Response]) -> deque[Resource]:
         data, status, info = self.load_resource(getter)
 
         if not data:

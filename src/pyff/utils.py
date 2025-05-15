@@ -17,6 +17,7 @@ import threading
 import time
 import traceback
 from _collections_abc import Mapping, MutableMapping
+from collections.abc import Sequence
 from copy import copy
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate
@@ -24,7 +25,7 @@ from itertools import chain
 from threading import local
 from time import gmtime, strftime
 from typing import Any, BinaryIO, Callable, Optional, Union
-from collections.abc import Sequence
+from urllib.parse import urlparse
 
 import pkg_resources
 import requests
@@ -42,7 +43,6 @@ from requests.packages.urllib3.util.retry import Retry
 from requests.structures import CaseInsensitiveDict
 from requests_cache import CachedSession
 from requests_file import FileAdapter
-from urllib.parse import urlparse
 
 from pyff import __version__
 from pyff.constants import NS, config
@@ -67,7 +67,7 @@ def xml_error(error_log, m=None):
             return False
         return True
 
-    return "\n".join(filter(_f, ["%s" % e for e in error_log]))
+    return "\n".join(filter(_f, [f"{e}" for e in error_log]))
 
 
 def debug_observer(e):
@@ -105,8 +105,8 @@ def resource_string(name: str, pfx: Optional[str] = None) -> Optional[Union[str,
             data = fd.read()
     elif pkg_resources.resource_exists(__name__, name):
         data = pkg_resources.resource_string(__name__, name)
-    elif pfx and pkg_resources.resource_exists(__name__, "{}/{}".format(pfx, name)):
-        data = pkg_resources.resource_string(__name__, "{}/{}".format(pfx, name))
+    elif pfx and pkg_resources.resource_exists(__name__, f"{pfx}/{name}"):
+        data = pkg_resources.resource_string(__name__, f"{pfx}/{name}")
 
     return data
 
@@ -134,8 +134,8 @@ def resource_filename(name, pfx=None):
         return os.path.join(pfx, name)
     elif pkg_resources.resource_exists(__name__, name):
         return pkg_resources.resource_filename(__name__, name)
-    elif pfx and pkg_resources.resource_exists(__name__, "{}/{}".format(pfx, name)):
-        return pkg_resources.resource_filename(__name__, "{}/{}".format(pfx, name))
+    elif pfx and pkg_resources.resource_exists(__name__, f"{pfx}/{name}"):
+        return pkg_resources.resource_filename(__name__, f"{pfx}/{name}")
 
     return None
 
@@ -211,10 +211,10 @@ class ResourceResolver(etree.Resolver):
         fn = path[len(path) - 1]
         if pkg_resources.resource_exists(__name__, fn):
             return self.resolve_file(pkg_resources.resource_stream(__name__, fn), context)
-        elif pkg_resources.resource_exists(__name__, "schema/%s" % fn):
-            return self.resolve_file(pkg_resources.resource_stream(__name__, "schema/%s" % fn), context)
+        elif pkg_resources.resource_exists(__name__, f"schema/{fn}"):
+            return self.resolve_file(pkg_resources.resource_stream(__name__, f"schema/{fn}"), context)
         else:
-            raise ValueError("Unable to locate %s" % fn)
+            raise ValueError(f"Unable to locate {fn}")
 
 
 thread_local_lock = threading.Lock()
@@ -265,7 +265,7 @@ def redis():
 
 def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool = False) -> ElementTree:
     if key is not None:
-        log.debug("verifying signature using %s" % key)
+        log.debug(f"verifying signature using {key}")
         refs = xmlsec.verified(t, key, drop_signature=True)
         if only_one_signature and len(refs) != 1:
             raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
@@ -303,7 +303,7 @@ def safe_write(fn, data, mkdirs=False):
     try:
         fn = os.path.expanduser(fn)
         dirname, basename = os.path.split(fn)
-        kwargs = dict(delete=False, prefix=".%s" % basename, dir=dirname)
+        kwargs = dict(delete=False, prefix=f".{basename}", dir=dirname)
         kwargs['encoding'] = "utf-8"
         mode = 'w+'
 
@@ -445,11 +445,11 @@ def xslt_transform(t, stylesheet, params=None):
         return transform(t, **params)
     except etree.XSLTApplyError as ex:
         for entry in transform.error_log:
-            log.error('\tmessage from line {}, col {}: {}'.format(entry.line, entry.column, entry.message))
+            log.error(f'\tmessage from line {entry.line}, col {entry.column}: {entry.message}')
             log.error('\tdomain: %s (%d)' % (entry.domain_name, entry.domain))
             log.error('\ttype: %s (%d)' % (entry.type_name, entry.type))
             log.error('\tlevel: %s (%d)' % (entry.level_name, entry.level))
-            log.error('\tfilename: %s' % entry.filename)
+            log.error(f'\tfilename: {entry.filename}')
         raise ex
 
 
@@ -492,7 +492,7 @@ def hash_id(entity: Element, hn: str = 'sha1', prefix: bool = True) -> str:
 
     hstr = hex_digest(entity_id, hn)
     if prefix:
-        return "{{{}}}{}".format(hn, hstr)
+        return f"{{{hn}}}{hstr}"
     else:
         return hstr
 
@@ -502,7 +502,7 @@ def hex_digest(data, hn='sha1'):
         return data
 
     if not hasattr(hashlib, hn):
-        raise ValueError("Unknown digest '%s'" % hn)
+        raise ValueError(f"Unknown digest '{hn}'")
 
     if not isinstance(data, bytes):
         data = data.encode("utf-8")
@@ -594,7 +594,7 @@ def load_callable(name):
 # many thanks to Anders Lordahl & Scotty Logan for the idea
 def guess_entity_software(e):
     for elt in chain(
-        e.findall(".//{%s}SingleSignOnService" % NS['md']), e.findall(".//{%s}AssertionConsumerService" % NS['md'])
+        e.findall(".//{{{}}}SingleSignOnService".format(NS['md'])), e.findall(".//{{{}}}AssertionConsumerService".format(NS['md']))
     ):
         location = elt.get('Location')
         if location:
@@ -609,7 +609,7 @@ def guess_entity_software(e):
                 return 'SimpleSAMLphp'
             if location.endswith('user/authenticate'):
                 return 'KalturaSSP'
-            if location.endswith('adfs/ls') or location.endswith('adfs/ls/'):
+            if location.endswith(('adfs/ls', 'adfs/ls/')):
                 return 'ADFS'
             if '/oala/' in location or 'login.openathens.net' in location:
                 return 'OpenAthens'

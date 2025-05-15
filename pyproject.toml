@@ -55,15 +55,27 @@ line-length = 120
 target-version = "py39"
 
 [tool.ruff.lint]
-# future fixes....
-#select = [ 
-#    "B",  # flake8-bugbear
-#    "E",  # pycodestyle error
-#    "F",  # pyflakes
-#    "I",  # isort
-#    "UP",  # pyupgrade
-#    "W",  # pycodestyle warning
+#select = [
+##  "ANN",
+#  "ASYNC",
+#  "E",
+#  "ERA",
+#  "F",
+#  "FAST",
+#  "FLY",
+#  "FURB",
+#  "I",
+#  "PERF",
+#  "PGH",
+#  "PIE",
+#  "PL",
+#  "UP",
+#  "W",
 #]
+ignore = [
+"PLR0915",
+"PLR0912",
+]
 [tool.ruff.format]
 quote-style = "preserve"
 

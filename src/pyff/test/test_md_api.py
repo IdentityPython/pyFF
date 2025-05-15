@@ -62,7 +62,7 @@ class PyFFAPITest(PipeLineTest):
 
     def test_parse_robots(self):
         try:
-            import urllib.robotparser as robotparser
+            from urllib import robotparser
         except ImportError:
             raise unittest.SkipTest()
 

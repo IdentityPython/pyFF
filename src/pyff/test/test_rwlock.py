@@ -30,7 +30,7 @@ class TestReadWriteLock(TestCase):
                 self.lock.acquireWrite(timeout=timeout, blocking=False)  # upgrade to write
 
             self.lock.acquireWrite(blocking=True)  # get it twice...
-            print("thread (writer): %s starting" % current_thread().name)
+            print(f"thread (writer): {current_thread().name} starting")
             self.writer_active = True
             sleep(1)
         except Exception as ex:
@@ -42,13 +42,13 @@ class TestReadWriteLock(TestCase):
                 pass
 
         self.writer_active = False
-        print("thread: %s exiting" % current_thread().name)
+        print(f"thread: {current_thread().name} exiting")
 
     def timeout_reader(self, to_wait_for, timeout=1):
         try:
             self.lock.acquireRead(timeout=timeout)
             assert not self.writer_active
-            print("thread (reader): %s starting" % current_thread().name)
+            print(f"thread (reader): {current_thread().name} starting")
             self.readers += 1
             while to_wait_for - self.readers > 0:
                 assert not self.writer_active
@@ -62,17 +62,17 @@ class TestReadWriteLock(TestCase):
             except ValueError:  # ignore double release error
                 pass
 
-        print("thread (reader): %s exiting" % current_thread().name)
+        print(f"thread (reader): {current_thread().name} exiting")
 
     def writer(self):
         try:
             with self.lock.writelock:
-                print("thread (writer): %s starting" % current_thread().name)
+                print(f"thread (writer): {current_thread().name} starting")
                 self.writer_active = True
                 self.lock.acquireRead(timeout=0.1)  # make sure we can get a readlock as a writer
                 sleep(1)
                 self.writer_active = False
-            print("thread: %s exiting" % current_thread().name)
+            print(f"thread: {current_thread().name} exiting")
         except Exception as ex:
             self.exceptions[current_thread().name] = ex
         finally:
@@ -85,13 +85,13 @@ class TestReadWriteLock(TestCase):
         try:
             with self.lock.readlock:
                 assert not self.writer_active
-                print("thread (reader): %s starting" % current_thread().name)
+                print(f"thread (reader): {current_thread().name} starting")
                 self.readers += 1
                 while to_wait_for - self.readers > 0:
                     assert not self.writer_active
                     print("waiting for %d more readers" % (to_wait_for - self.readers))
                     sleep(0.1)
-            print("thread (reader): %s exiting" % current_thread().name)
+            print(f"thread (reader): {current_thread().name} exiting")
         except Exception as ex:
             self.exceptions[current_thread().name] = ex
 
@@ -129,13 +129,13 @@ class TestReadWriteLock(TestCase):
         self.reset()
         try:
             w = []
-            for i in range(0, 10):
-                w.append(Thread(target=self._rww, name="w%s" % i))
-            for i in range(0, 10):
+            for i in range(10):
+                w.append(Thread(target=self._rww, name=f"w{i}"))
+            for i in range(10):
                 w[i].start()
-            for i in range(0, 10):
+            for i in range(10):
                 w[i].join()
-            for i in range(0, 10):
+            for i in range(10):
                 self._raise(w[i])
             assert False
         except ValueError:

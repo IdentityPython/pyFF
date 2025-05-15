@@ -8,9 +8,9 @@ import logging
 import os
 import re
 import sys
-from str2bool import str2bool
 
 import pyconfig
+from str2bool import str2bool
 
 from pyff import __version__ as pyff_version
 
@@ -482,7 +482,7 @@ class Config:
 
     def find_setting(self, o):
         for s in self.settings():
-            if o == s.short_name or o == s.long_name:
+            if o in (s.short_name, s.long_name):
                 return s
         return None
 

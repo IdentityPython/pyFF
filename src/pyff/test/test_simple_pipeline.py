@@ -47,7 +47,7 @@ class SimplePipeLineTest(SignerTestCase):
 
     def test_select_single(self):
         assert self.validator_result is not None
-        entities = self.validator_result.findall('{%s}EntityDescriptor' % NS['md'])
+        entities = self.validator_result.findall('{{{}}}EntityDescriptor'.format(NS['md']))
         assert len(entities) == 1
         assert entities[0].get('entityID') == 'https://idp.aco.net/idp/shibboleth'
 

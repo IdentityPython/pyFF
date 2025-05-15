@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import operator
 import os
@@ -8,7 +9,6 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from threading import ThreadError
 
-import ipaddress
 from cachetools.func import ttl_cache
 from redis_collections import Dict, Set
 from whoosh.fields import ID, KEYWORD, NGRAMWORDS, Schema
@@ -265,7 +265,7 @@ class SAMLStoreBase:
 
     def __iter__(self):
         for e in self.lookup("entities"):
-            log.debug("**** yield entityID=%s" % e.get('entityID'))
+            log.debug("**** yield entityID={}".format(e.get('entityID')))
             yield e
 
     def size(self, a=None, v=None):
@@ -294,7 +294,7 @@ class SAMLStoreBase:
                     src = None
                 return self.select(src, xp=xp)
 
-        log.debug("calling store lookup %s" % member)
+        log.debug(f"calling store lookup {member}")
         return self.lookup(member)
 
     def __call__(self, *args, **kwargs):
@@ -417,19 +417,19 @@ class SAMLStoreBase:
         def _strings(elt):
             lst = []
             for attr in [
-                '{%s}DisplayName' % NS['mdui'],
-                '{%s}ServiceName' % NS['md'],
-                '{%s}OrganizationDisplayName' % NS['md'],
-                '{%s}OrganizationName' % NS['md'],
-                '{%s}Keywords' % NS['mdui'],
-                '{%s}Scope' % NS['shibmd'],
+                '{{{}}}DisplayName'.format(NS['mdui']),
+                '{{{}}}ServiceName'.format(NS['md']),
+                '{{{}}}OrganizationDisplayName'.format(NS['md']),
+                '{{{}}}OrganizationName'.format(NS['md']),
+                '{{{}}}Keywords'.format(NS['mdui']),
+                '{{{}}}Scope'.format(NS['shibmd']),
             ]:
                 lst.extend([s.text for s in elt.iter(attr)])
             lst.append(elt.get('entityID'))
             return [item for item in lst if item is not None]
 
         def _ip_networks(elt):
-            return [ipaddress.ip_network(x.text) for x in elt.iter('{%s}IPHint' % NS['mdui'])]
+            return [ipaddress.ip_network(x.text) for x in elt.iter('{{{}}}IPHint'.format(NS['mdui']))]
 
         def _match(qq, elt):
             for q in qq:
@@ -460,7 +460,7 @@ class SAMLStoreBase:
         if f:
             mexpr = "+".join(f)
 
-        log.debug("match using '%s'" % mexpr)
+        log.debug(f"match using '{mexpr}'")
         res = []
         for e in self.lookup(mexpr):
             d = None
@@ -666,7 +666,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
         relt = root(t)
         assert relt is not None
 
-        if relt.tag == "{%s}EntityDescriptor" % NS['md']:
+        if relt.tag == "{{{}}}EntityDescriptor".format(NS['md']):
             ref = object_id(relt)
             parts = None
             if ref in self.parts:
@@ -675,7 +675,7 @@ class RedisWhooshStore(SAMLStoreBase):  # TODO: This needs a gc mechanism for ke
                 self.parts[ref] = {'id': relt.get('entityID'), 'etag': etag, 'count': 1, 'items': [ref]}
                 self.objects[ref] = relt
                 self._last_modified = datetime.now()
-        elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
+        elif relt.tag == "{{{}}}EntitiesDescriptor".format(NS['md']):
             if tid is None:
                 tid = relt.get('Name')
             if etag is None:
@@ -883,13 +883,13 @@ class MemoryStore(SAMLStoreBase):
     def update(self, t, tid=None, etag=None, lazy=True):
         relt = root(t)
         assert relt is not None
-        if relt.tag == "{%s}EntityDescriptor" % NS['md']:
+        if relt.tag == "{{{}}}EntityDescriptor".format(NS['md']):
             self._unindex(relt)
             self._index(relt)
             self.entities[relt.get('entityID')] = relt  # TODO: merge?
             if tid is not None:
                 self.md[tid] = [relt.get('entityID')]
-        elif relt.tag == "{%s}EntitiesDescriptor" % NS['md']:
+        elif relt.tag == "{{{}}}EntitiesDescriptor".format(NS['md']):
             if tid is None:
                 tid = relt.get('Name')
             lst = []

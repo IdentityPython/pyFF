@@ -11,9 +11,9 @@ class TestDuration(TestCase):
     def test_duration2timedelta(self):
         for expr, secs in TestDuration.DURATIONS:
             td = duration2timedelta(expr)
-            print("timedelta: %s" % td)
-            print("duration: %s" % expr)
-            print("expected seconds: %s" % secs)
+            print(f"timedelta: {td}")
+            print(f"duration: {expr}")
+            print(f"expected seconds: {secs}")
             assert int(td.total_seconds()) == secs
             assert int(total_seconds(td)) == secs
 

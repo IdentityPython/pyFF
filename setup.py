@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
-# -*- encoding: utf-8 -*-
 
-from setuptools import setup
 from pathlib import PurePath
 from platform import python_implementation
-from typing import List
 
-from setuptools import find_packages
+from setuptools import find_packages, setup
 
 __author__ = 'Leif Johansson'
 __version__ = '2.1.3'
 
 
-def load_requirements(path: PurePath) -> List[str]:
+def load_requirements(path: PurePath) -> list[str]:
     """ Load dependencies from a requirements.txt style file, ignoring comments etc. """
     res = []
     with open(path) as fd:
-        for line in fd.readlines():
-            while line.endswith('\n') or line.endswith('\\'):
+        for line in fd:
+            while line.endswith(('\n', '\\')):
                 line = line[:-1]
             line = line.strip()
-            if not line or line.startswith('-') or line.startswith('#'):
+            if not line or line.startswith(('-', '#')):
                 continue
             res += [line]
     return res

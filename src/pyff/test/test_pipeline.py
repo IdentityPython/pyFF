@@ -2,12 +2,12 @@ import json
 import os
 import shutil
 import tempfile
+from io import StringIO
+from unittest.mock import patch
 
 import pytest
 import yaml
-from io import StringIO
 from mako.lookup import TemplateLookup
-from unittest.mock import patch
 
 from pyff import builtins
 from pyff.exceptions import MetadataException
@@ -729,18 +729,18 @@ class SigningTest(PipeLineTest):
             os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
             try:
                 self.exec_pipeline(
-                    """
+                    f"""
 - load:
-   - file://{}/metadata/test02-sp.xml
+   - file://{self.datadir}/metadata/test02-sp.xml
 - select
 - discojson_sp
 - publish:
-    output: {}/disco_sp.json
+    output: {tmpdir}/disco_sp.json
     raw: true
     update_store: false
-""".format(self.datadir, tmpdir)
+"""
                 )
-                fn = "%s/disco_sp.json" % tmpdir
+                fn = f"{tmpdir}/disco_sp.json"
                 assert os.path.exists(fn)
                 with open(fn) as f:
                     sp_json = json.load(f)
@@ -781,18 +781,18 @@ class SigningTest(PipeLineTest):
             os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
             try:
                 self.exec_pipeline(
-                    """
+                    f"""
 - load:
-   - file://{}/metadata/test-sp-trustinfo-in-attr.xml
+   - file://{self.datadir}/metadata/test-sp-trustinfo-in-attr.xml
 - select
 - discojson_sp_attr
 - publish:
-    output: {}/disco_sp_attr.json
+    output: {tmpdir}/disco_sp_attr.json
     raw: true
     update_store: false
-""".format(self.datadir, tmpdir)
+"""
                 )
-                fn = "%s/disco_sp_attr.json" % tmpdir
+                fn = f"{tmpdir}/disco_sp_attr.json"
                 assert os.path.exists(fn)
                 with open(fn) as f:
                     sp_json = json.load(f)

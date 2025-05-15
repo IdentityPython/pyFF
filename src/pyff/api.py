@@ -1,9 +1,10 @@
 import importlib
 import threading
+from collections.abc import Generator, Iterable, Mapping
 from datetime import datetime, timedelta
 from json import dumps
 from typing import Any, Optional
-from collections.abc import Generator, Iterable, Mapping
+from urllib.parse import quote_plus
 
 import pyramid.httpexceptions as exc
 import pytz
@@ -15,8 +16,8 @@ from pyramid.config import Configurator
 from pyramid.events import NewRequest
 from pyramid.request import Request
 from pyramid.response import Response
-from urllib.parse import quote_plus
 
+from pyff import __version__
 from pyff.constants import config
 from pyff.exceptions import ResourceException
 from pyff.logs import get_log
@@ -25,7 +26,6 @@ from pyff.repo import MDRepository
 from pyff.resource import Resource
 from pyff.samlmd import entity_display_name
 from pyff.utils import b2u, dumptree, hash_id, json_serializer, utc_now
-from pyff import __version__
 
 log = get_log(__name__)
 
@@ -131,7 +131,6 @@ def call(entry: str) -> None:
     resp = requests.post(url)
     if resp.status_code >= 300:
         log.error(f'POST request to API endpoint at {url} failed: {resp.status_code} {resp.reason}')
-    return None
 
 
 def request_handler(request: Request) -> Response:
@@ -386,7 +385,7 @@ def webfinger_handler(request: Request) -> Response:
 
     for entity in request.registry.md.store.lookup('entities'):
         entity_display = entity_display_name(entity)
-        _links("/entities/%s" % hash_id(entity.get('entityID')), title=entity_display)
+        _links("/entities/{}".format(hash_id(entity.get('entityID'))), title=entity_display)
 
     aliases = request.registry.aliases
     for a in aliases.keys():

@@ -13,4 +13,3 @@ def replace_existing(old, new):
 def remove(old, new):
     if old is not None:
         old.getparent().remove(old)
-    return None

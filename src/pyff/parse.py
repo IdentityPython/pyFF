@@ -2,9 +2,9 @@ import os
 from abc import ABC
 from collections import deque
 from typing import Any, Optional
+from urllib.parse import quote as urlescape
 
 from pydantic import BaseModel, Field
-from urllib.parse import quote as urlescape
 from xmlsec.crypto import CertDict
 
 from pyff.constants import NS
@@ -68,7 +68,7 @@ class NoParser(PyffParser):
         return True
 
     def parse(self, resource: Resource, content: str) -> ParserInfo:
-        raise ParserException("No matching parser found for %s" % resource.url)
+        raise ParserException(f"No matching parser found for {resource.url}")
 
 
 class DirectoryParser(PyffParser):
@@ -115,7 +115,7 @@ class XRDParser(PyffParser):
         t = parse_xml(unicode_stream(content))
 
         _relt = root(t)
-        for xrd in t.iter("{%s}XRD" % NS['xrd']):
+        for xrd in t.iter("{{{}}}XRD".format(NS['xrd'])):
             for link in xrd.findall(".//{{{}}}Link[@rel='{}']".format(NS['xrd'], NS['md'])):
                 link_href = link.get("href")
                 certs = CertDict(link)

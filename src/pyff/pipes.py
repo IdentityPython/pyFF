@@ -8,18 +8,18 @@ from __future__ import annotations
 import functools
 import os
 import traceback
-from typing import Any, Callable
 from collections.abc import Iterable
+from typing import Any, Callable
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
 from lxml.etree import Element, ElementTree
 
+from pyff.exceptions import PyffException
 from pyff.logs import get_log
 from pyff.repo import MDRepository
 from pyff.store import SAMLStoreBase
 from pyff.utils import is_text, resource_string
-from pyff.exceptions import PyffException
 
 log = get_log(__name__)
 
@@ -116,24 +116,24 @@ def load_pipe(d: Any) -> tuple[Callable, Any, str, str | dict | list | None]:
         name, opts = _n(d)
     elif hasattr(d, '__iter__') and type(d) is not dict:
         if not len(d):
-            raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
+            raise PipeException(f"This does not look like a length of pipe... \n{repr(d)}")
         name, opts = _n(d[0])
     elif type(d) is dict:
         k = list(d.keys())[0]
         name, opts = _n(k)
         args = d[k]
     else:
-        raise PipeException("This does not look like a length of pipe... \n%s" % repr(d))
+        raise PipeException(f"This does not look like a length of pipe... \n{repr(d)}")
 
     if name is None:
-        raise PipeException("Anonymous length of pipe... \n%s" % repr(d))
+        raise PipeException(f"Anonymous length of pipe... \n{repr(d)}")
 
     func = None
     if name in registry:
         func = registry[name]
 
     if func is None or not hasattr(func, '__call__'):
-        raise PipeException('No pipe named %s is installed' % name)
+        raise PipeException(f'No pipe named {name} is installed')
 
     return func, opts, name, args
 
@@ -313,14 +313,12 @@ class Plumbing:
             try:
                 pipefn, opts, name, args = load_pipe(p)
                 log.debug(
-                    "{!s}: calling '{}' using args:\n{} and opts:\n{}".format(
-                        self.pipeline, name, repr(args), repr(opts)
-                    )
+                    f"{self.pipeline!s}: calling '{name}' using args:\n{repr(args)} and opts:\n{repr(opts)}"
                 )
                 if is_text(args):
                     args = [args]
                 if args is not None and type(args) is not dict and type(args) is not list and type(args) is not tuple:
-                    raise PipeException("Unknown argument type %s" % repr(args))
+                    raise PipeException(f"Unknown argument type {repr(args)}")
                 req.args = args
                 req.name = name
                 ot = pipefn(req, *opts)
@@ -380,7 +378,7 @@ def plumbing(fn: str) -> Plumbing:
     pid = os.path.splitext(fn)[0]
     ystr = resource_string(fn)
     if ystr is None:
-        raise PipeException("Plumbing not found: %s" % fn)
+        raise PipeException(f"Plumbing not found: {fn}")
     pipeline = yaml.safe_load(ystr)
 
     return Plumbing(pipeline=pipeline, pid=pid)

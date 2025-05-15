@@ -83,7 +83,7 @@ class Fetcher(threading.Thread, Watchable):
         self.response = queue.Queue()
         self.pool = threading.BoundedSemaphore(num_threads)
         self.threads = []
-        for i in range(0, num_threads):
+        for i in range(num_threads):
             t = Fetch(self.request, self.response, self.pool, self._id, content_handler)
             t.start()
             self.threads.append(t)

@@ -102,17 +102,17 @@ class TestRepo(TestCase):
 
         disp = entity_display_name(e)
         assert disp == 'Example University'
-        for elt in e.findall(".//{%s}DisplayName" % NS['mdui']):
+        for elt in e.findall(".//{{{}}}DisplayName".format(NS['mdui'])):
             elt.getparent().remove(elt)
 
         disp = entity_display_name(e)
         assert disp == 'The Example University'
-        for elt in e.findall(".//{%s}OrganizationDisplayName" % NS['md']):
+        for elt in e.findall(".//{{{}}}OrganizationDisplayName".format(NS['md'])):
             elt.getparent().remove(elt)
 
         disp = entity_display_name(e)
         assert disp == 'ExampleU'
-        for elt in e.findall(".//{%s}OrganizationName" % NS['md']):
+        for elt in e.findall(".//{{{}}}OrganizationName".format(NS['md'])):
             elt.getparent().remove(elt)
 
         disp = entity_display_name(e)

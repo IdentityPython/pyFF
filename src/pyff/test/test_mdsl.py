@@ -1,17 +1,17 @@
 import os
 import tempfile
+from io import StringIO
 
 import pytest
 import yaml
 from mako.lookup import TemplateLookup
-from io import StringIO
+
 from pyff import builtins
+from pyff.constants import NS
 from pyff.pipes import Plumbing, plumbing
 from pyff.repo import MDRepository
 from pyff.test import SignerTestCase
 from pyff.utils import parse_xml
-from pyff.constants import NS
-
 
 __author__ = 'leifj'
 

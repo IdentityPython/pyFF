@@ -6,6 +6,7 @@ from unittest import TestCase
 
 from pyff import utils
 from pyff.constants import NS, as_list_of_string
+from pyff.merge_strategies import remove, replace_existing
 from pyff.resource import Resource, ResourceOpts
 from pyff.samlmd import entities_list, find_entity
 from pyff.utils import (
@@ -21,8 +22,6 @@ from pyff.utils import (
     schema,
     url_get,
 )
-
-from pyff.merge_strategies import remove, replace_existing
 
 
 class TestMetadata(TestCase):
@@ -52,13 +51,13 @@ class TestMetadata(TestCase):
         assert idp is not None
         idp2 = copy.deepcopy(idp)
         assert idp2 is not None
-        for o in idp2.findall(".//{%s}OrganizationName" % NS['md']):
+        for o in idp2.findall(".//{{{}}}OrganizationName".format(NS['md'])):
             o.text = "FOO"
         idp2.set('ID', 'kaka4711')
         replace_existing(idp, idp2)
         idp3 = find_entity(root(self.t2), 'kaka4711', attr='ID')
         assert idp3 is not None
-        for o in idp2.findall(".//{%s}OrganizationName" % NS['md']):
+        for o in idp2.findall(".//{{{}}}OrganizationName".format(NS['md'])):
             assert o.text == "FOO"
         remove(idp3, None)
         idp = find_entity(root(self.t2), 'kaka4711', attr='ID')

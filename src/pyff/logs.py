@@ -5,6 +5,7 @@ import os
 import syslog
 from typing import Any, Optional
 
+
 class PyFFLogger:
     def __init__(self, name=None):
         if name is None:
@@ -23,7 +24,7 @@ class PyFFLogger:
         if severity in self._loggers:
             self._loggers[severity](str(msg))
         else:
-            raise ValueError("unknown severity %s" % severity)
+            raise ValueError(f"unknown severity {severity}")
 
     def warn(self, msg: str) -> Any:
         return self._l(logging.WARN, msg)
@@ -86,9 +87,9 @@ class SysLogLibHandler(logging.Handler):
     def __init__(self, facility):
 
         if isinstance(facility, str):
-            nf = getattr(syslog, "LOG_%s" % facility.upper(), None)
+            nf = getattr(syslog, f"LOG_{facility.upper()}", None)
             if not isinstance(nf, int):
-                raise ValueError('Invalid log facility: %s' % nf)
+                raise ValueError(f'Invalid log facility: {nf}')
             self.facility = nf
         else:
             self.facility = facility

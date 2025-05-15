@@ -41,7 +41,7 @@ class MDRepository:
                     src = None
                 return self.lookup(src, xp=xp, store=store)
 
-        log.debug("calling store lookup %s" % member)
+        log.debug(f"calling store lookup {member}")
         return store.lookup(member)
 
     def lookup(self, member, xp=None, store=None):

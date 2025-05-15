@@ -1,3 +1,4 @@
+import importlib.resources
 import logging
 import os
 import socket
@@ -6,7 +7,6 @@ import sys
 import tempfile
 from unittest import TestCase
 
-import importlib.resources
 from pyff import __version__ as pyffversion
 
 # range of ports where available ports can be found
@@ -45,10 +45,10 @@ def run_pyffd(*args):
 def run_cmdline(script, *args):
     argv = list(*args)
     starter = tempfile.NamedTemporaryFile('w').name
-    print("starting {} using {}".format(script, starter))
+    print(f"starting {script} using {starter}")
     with open(starter, 'w') as fd:
         fd.write(
-            """#!%s
+            f"""#!{sys.executable}
 import sys
 import coverage
 import os
@@ -58,17 +58,16 @@ if __name__ == '__main__':
     cov.start()
     rv = 0
     try:
-        rv = load_entry_point('pyFF==%s', 'console_scripts', '%s')()
+        rv = load_entry_point('pyFF=={pyffversion}', 'console_scripts', '{script}')()
     except Exception as ex:
         raise ex
     finally:
         cov.stop()
         cov.save()
-        os.rename('.coverage','.coverage.%%d' %% os.getpid())
+        os.rename('.coverage','.coverage.%d' % os.getpid())
     sys.exit(rv)
 
 """
-            % (sys.executable, pyffversion, script)
         )
     os.chmod(starter, 0o700)
 
@@ -107,9 +106,8 @@ def _p(args, outf=None, ignore_exit=False):
     if outf is not None:
         with open(outf, "w") as fd:
             fd.write(out.decode('UTF-8'))
-    else:
-        if out is not None and len(out) > 0:
-            logging.debug(out.decode('UTF-8'))
+    elif out is not None and len(out) > 0:
+        logging.debug(out.decode('UTF-8'))
     rv = proc.wait()
     if rv and not ignore_exit:
         raise RuntimeError("command exited with code != 0: %d" % rv)
