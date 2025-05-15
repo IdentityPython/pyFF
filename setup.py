@@ -30,7 +30,6 @@ here = PurePath(__file__)
 README = open(here.with_name('README.rst')).read()
 NEWS = open(here.with_name('NEWS.txt')).read()
 
-install_requires = load_requirements(here.with_name('requirements.txt'))
 tests_require = load_requirements(here.with_name('test_requirements.txt'))
 
 python_implementation_str = python_implementation()
