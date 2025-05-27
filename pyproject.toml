@@ -1,6 +1,6 @@
 [project]
 name = "pyFF"
-version = "2.1.4"
+version = "2.1.5-dev"
 readme = "README.rst"
 description = "Federation Feeder"
 requires-python = ">=3.9"
