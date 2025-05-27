@@ -179,3 +179,11 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Remove cherrypy imports
 * Fix logging
 * suport SP trust metadata in an entity attribute as JSON blob
+
+2.1.4
+-----
+* Release date: Tue May 27 07:29:08 CEST 2025
+
+* Lots of cleanups, pyupgrade and linting fixes. 
+* MDSL fixes
+
