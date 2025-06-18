@@ -305,7 +305,7 @@ class MDServiceListParser(PyffParser):
                     fingerprints = list(certs.keys())
                     fp = None
                     if len(fingerprints) > 0:
-                        fp = fingerprints[0]
+                        fp = fingerprints
 
                     ep = ml.find("{{{}}}Endpoint".format(NS['ser']))
                     if ep is not None and fp is not None:
