@@ -38,7 +38,7 @@ dependencies = [
     "setuptools>=78.1.1",
     "simplejson>=2.6.2",
     "str2bool>=1.1",
-    "urllib3==1.26.19",
+    "urllib3==2.5.0",
     "whoosh>=2.7.4",
     "wsgi-intercept>=1.13.1",
     "xmldiff>=2.7.0",
