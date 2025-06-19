@@ -263,8 +263,8 @@ def redis():
     return thread_data.redis
 
 
-def check_signature(t: ElementTree, keys: list = [], only_one_signature: bool = False) -> ElementTree:
-    if len(keys) != 0:
+def check_signature(t: ElementTree, keys: Optional[list[str]] = None, only_one_signature: bool = False) -> ElementTree:
+    if keys:
         refs = []
         for key in keys:
             log.debug(f"verifying signature using {key}")
