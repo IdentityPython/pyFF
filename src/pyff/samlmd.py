@@ -303,23 +303,20 @@ class MDServiceListParser(PyffParser):
                 if location:
                     certs = CertDict(ml)
                     fingerprints = list(certs.keys())
-                    fp = None
-                    if len(fingerprints) > 0:
-                        fp = fingerprints
 
                     ep = ml.find("{{{}}}Endpoint".format(NS['ser']))
-                    if ep is not None and fp is not None:
+                    if ep is not None and len(fingerprints) != 0:
                         args = dict(
                             country_code=mdl.get('Territory'),
                             hide_from_discovery=str2bool(ep.get('HideFromDiscovery', 'false')),
                         )
                         log.debug(
                             "MDSL[{}]: {} verified by {} for country {}".format(
-                                info.scheme_territory, location, fp, args.get('country_code')
+                                info.scheme_territory, location, fingerprints, args.get('country_code')
                             )
                         )
                         child_opts = resource.opts.model_copy(update={'alias': None}, deep=True)
-                        child_opts.verify = fp
+                        child_opts.verify = fingerprints
                         r = resource.add_child(location, child_opts)
 
                         # this is specific post-processing for MDSL files

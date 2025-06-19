@@ -263,13 +263,13 @@ def redis():
     return thread_data.redis
 
 
-def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool = False) -> ElementTree:
-    if key is not None:
+def check_signature(t: ElementTree, keys: list = [], only_one_signature: bool = False) -> ElementTree:
+    if len(keys) != 0:
         refs = []
-        for k in key:
-            log.debug(f"verifying signature using {k}")
+        for key in keys:
+            log.debug(f"verifying signature using {key}")
             try:
-                refs = refs + xmlsec.verified(t, k, drop_signature=True)
+                refs = refs + xmlsec.verified(t, key, drop_signature=True)
             except xmlsec.exceptions.XMLSigException:
                 continue
 
