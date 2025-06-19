@@ -264,21 +264,21 @@ def redis():
 
 
 def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool = False) -> ElementTree:
-    refs = None
     if key is not None:
+        refs = []
         for k in key:
             log.debug(f"verifying signature using {k}")
             try:
-                refs = xmlsec.verified(t, k, drop_signature=True)
+                refs = refs + xmlsec.verified(t, k, drop_signature=True)
             except xmlsec.exceptions.XMLSigException:
                 continue
-            if refs:
-                if only_one_signature and len(refs) != 1:
-                    raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
-                t = refs[0]  # prevent wrapping attacks
-                return t
 
-        raise MetadataException("No valid signature(s) found")
+        if refs:
+            if only_one_signature and len(refs) != 1:
+                raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+            t = refs[0]  # prevent wrapping attacks
+        else:
+            raise MetadataException("No valid signature(s) found")
 
     return t
 
