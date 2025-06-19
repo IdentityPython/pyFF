@@ -278,7 +278,10 @@ def check_signature(t: ElementTree, keys: list = [], only_one_signature: bool = 
         else:
             if only_one_signature and len(refs) != 1:
                 raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
-            t = refs[0]  # prevent wrapping attacks, also doesn't pyff.samlmd.parse_saml_metadata handle when multiple trees are returned
+            # Make sure to only return one tree:
+            # - prevent wrapping attacks
+            # - pyff.samlmd.parse_saml_metadata doesn't handle when multiple trees are returned
+            t = refs[0]
 
     return t
 
