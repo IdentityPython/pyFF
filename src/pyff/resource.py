@@ -159,7 +159,7 @@ class ResourceHandler(URLHandler):
 
 class ResourceOpts(BaseModel):
     alias: str | None = Field(None, alias='as')  # TODO: Rename to 'name'?
-    # a certificate (file) or a SHA1 fingerprint to use for signature verification
+    # a list of certificate (file(s)) or a SHA1 fingerprint(s) to use for signature verification
     verify: Optional[list[str]] = None
     # TODO: move classes to make the correct typing work: Iterable[Union[Lambda, PipelineCallback]] = Field([])
     via: list[Callable] = Field([])
