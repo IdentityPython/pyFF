@@ -205,6 +205,10 @@ def process_handler(request: Request) -> Response:
     # Ugly workaround bc WSGI drops double-slashes.
     path = path.replace(':/', '://')
 
+    # Ugly workaround bc request.matchdict drops trailing slashes which could be part of the entityID
+    if request.path and request.path[-1] == "/":
+        path = path + "/"
+
     msg = "handling entry={}, alias={}, path={}"
     log.debug(msg.format(entry, alias, path))
 
