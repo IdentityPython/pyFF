@@ -140,7 +140,7 @@ def request_handler(request: Request) -> Response:
     :param request: the HTTP request object
     :return: the data to send to the client
     """
-    key = request.path_qs
+    key = f"{request.path_qs}_{request.accept}"
     r = None
     try:
         r = request.registry.cache[key]
