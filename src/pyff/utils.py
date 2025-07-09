@@ -264,24 +264,26 @@ def redis():
 
 
 def check_signature(t: ElementTree, keys: Optional[list[str]] = None, only_one_signature: bool = False) -> ElementTree:
-    if keys:
-        refs = []
-        for key in keys:
-            log.debug(f"verifying signature using {key}")
-            try:
-                refs = refs + xmlsec.verified(t, key, drop_signature=True)
-            except xmlsec.exceptions.XMLSigException:
-                continue
+    if not keys:
+        return t
 
-        if not refs:
-            raise MetadataException("No valid signature(s) found")
-        else:
-            if only_one_signature and len(refs) != 1:
-                raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
-            # Make sure to only return one tree:
-            # - prevent wrapping attacks
-            # - pyff.samlmd.parse_saml_metadata doesn't handle when multiple trees are returned
-            t = refs[0]
+    refs = []
+    for key in keys:
+        log.debug(f"verifying signature using {key}")
+        try:
+            refs = refs + xmlsec.verified(t, key, drop_signature=True)
+        except xmlsec.exceptions.XMLSigException:
+            continue
+
+    if not refs:
+        raise MetadataException("No valid signature(s) found")
+    else:
+        if only_one_signature and len(refs) != 1:
+            raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
+        # Make sure to only return one tree:
+        # - prevent wrapping attacks
+        # - pyff.samlmd.parse_saml_metadata doesn't handle when multiple trees are returned
+        t = refs[0]
 
     return t
 
