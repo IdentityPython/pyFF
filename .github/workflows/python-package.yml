@@ -20,26 +20,25 @@ jobs:
     runs-on:  ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
-    - name: Setup Python
-      uses: actions/setup-python@v5
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
       with:
         python-version: ${{ matrix.python }}
+        enable-cache: true
+        activate-environment: true
     - name: Lint with Ruff
       run: |
-        pip install ruff
-        ruff check --output-format=github .
+        uv tool install ruff
+        uv ruff check --output-format=github .
       continue-on-error: false
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f test_requirements.txt ]; then pip install -r test_requirements.txt; fi
         if [ "${{ matrix.python-version }}" != "3.13" ]; then  # workaround for TheKevJames/coveralls-python#523
-          pip install coveralls
+          uv pip install coveralls
         fi
-        pip install mypy
-        python -m pip install --editable .
+        uv pip install mypy
+        uv sync --locked --all-extras --dev
 
 
     - name: Run tests
