@@ -29,7 +29,7 @@ jobs:
     - name: Lint with Ruff
       run: |
         uv tool install ruff
-        uv ruff check --output-format=github .
+        uv run ruff check --output-format=github .
       continue-on-error: false
 
     - name: Install dependencies
