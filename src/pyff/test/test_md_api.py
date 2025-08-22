@@ -159,7 +159,7 @@ class PyFFAPITestResources(PipeLineTest):
     @classmethod
     def setUpClass(cls):
         SignerTestCase.setUpClass()
-        config.local_copy_dir = tempfile.TemporaryDirectory()
+        config.local_copy_dir = tempfile.mkdtemp()
         cls.templates = TemplateLookup(directories=[os.path.join(cls.datadir, 'mdx')])
         cls.mdx = tempfile.NamedTemporaryFile('w').name
         # cls.mdx_template = cls.templates.get_template('mdx.fd')
