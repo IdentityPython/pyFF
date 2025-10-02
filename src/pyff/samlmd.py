@@ -1055,10 +1055,12 @@ def discojson_sp_attr(e):
     sp['profiles'] = {}
 
     for b64_trustinfo in b64_trustinfos:
-        str_trustinfo = b64decode(b64_trustinfo.encode('ascii'))
-        trustinfo = json.loads(str_trustinfo.decode('utf8'))
-        sp['profiles'].update(trustinfo['profiles'])
-
+        try:
+            str_trustinfo = b64decode(b64_trustinfo.encode('ascii'))
+            trustinfo = json.loads(str_trustinfo.decode('utf8'))
+            sp['profiles'].update(trustinfo['profiles'])
+        except Exception:
+            log.error(f"Error parsing TrustInfo profile for {sp['entityID']}")
     return sp
 
 
