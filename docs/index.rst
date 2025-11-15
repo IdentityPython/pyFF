@@ -34,6 +34,7 @@ transforming metadata to add custom elements.
    usage/running
    usage/deploying
    usage/examples
+   usage/pipeline_options
    coding
    faq
 
