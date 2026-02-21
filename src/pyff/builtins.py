@@ -686,7 +686,7 @@ def load(req: Plumbing.Request, *opts):
                     if elt == "as":
                         child_opts.alias = value
                     elif elt == "verify":
-                        child_opts.verify = value
+                        child_opts.verify = value.split(",")
                     elif elt == "via":
                         child_opts.via.append(PipelineCallback(value, req, store=req.md.store))
                     elif elt == "cleanup":
@@ -698,7 +698,7 @@ def load(req: Plumbing.Request, *opts):
                         "Usage: load resource [as url] [[verify] verification] [via pipeline]* [cleanup pipeline]*"
                     )
             else:
-                child_opts.verify = elt
+                child_opts.verify = elt.split(",")
 
         # override anything in child_opts with what is in opts
         child_opts = child_opts.model_copy(update=_opts)
