@@ -140,7 +140,7 @@ def request_handler(request: Request) -> Response:
     :param request: the HTTP request object
     :return: the data to send to the client
     """
-    key = request.path_qs
+    key = f"{request.path_qs}_{request.accept}"
     r = None
     try:
         r = request.registry.cache[key]
@@ -204,6 +204,10 @@ def process_handler(request: Request) -> Response:
 
     # Ugly workaround bc WSGI drops double-slashes.
     path = path.replace(':/', '://')
+
+    # Ugly workaround bc request.matchdict drops trailing slashes which could be part of the entityID
+    if request.path and request.path[-1] == "/":
+        path = path + "/"
 
     msg = "handling entry={}, alias={}, path={}"
     log.debug(msg.format(entry, alias, path))
