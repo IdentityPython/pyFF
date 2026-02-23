@@ -1,6 +1,6 @@
 [project]
 name = "pyFF"
-version = "2.1.5-dev"
+version = "2.1.6.dev0"
 readme = "README.rst"
 description = "Federation Feeder"
 requires-python = ">=3.9"
@@ -102,5 +102,5 @@ all_files = "1"
 upload-dir = "docs/build/html"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.10.4,<0.11.0"]
+build-backend = "uv_build"

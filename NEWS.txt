@@ -189,3 +189,7 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 
 2.1.5
 -----
+* Release date: Mon Feb 23 15:11:40 CET 2026
+
+* Switch to uv.lock for reproducable builds.
+* temp dir fix
