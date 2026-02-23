@@ -44,12 +44,12 @@ jobs:
     - name: Run tests
       run: |
         if [ "${{ matrix.python-version }}" == "3.13" ]; then  # workaround for TheKevJames/coveralls-python#523
-          python -m coverage run -m pytest --no-cov src
+          uv run python -m coverage run -m pytest --no-cov src
         else
-          python -m coverage erase
-          python -m coverage run -m pytest --cov=src/pyff
+          uv run python -m coverage erase
+          uv run python -m coverage run -m pytest --cov=src/pyff
           mv .coverage .coverage.1
-          python -m coverage combine
+          uv run python -m coverage combine
         fi
 
         #make typecheck
