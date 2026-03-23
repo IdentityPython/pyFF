@@ -462,7 +462,7 @@ def search_handler(request: Request) -> Response:
         for e in entities:
             if in_loop:
                 yield b','
-            yield dumps(e)
+            yield dumps(e).encode('utf-8')
             in_loop = True
         yield b']'
 
