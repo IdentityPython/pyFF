@@ -15,7 +15,7 @@ from copy import deepcopy
 from datetime import datetime
 from io import BytesIO
 from typing import Optional
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import quote, urlparse
 
 import xmlsec
 from lxml import etree
@@ -539,7 +539,7 @@ def publish(req: Plumbing.Request, *opts):
 
     enc = _nop
     if req.args.get('urlencode_filenames'):
-        enc = quote_plus
+        enc = quote
 
     if output_file is None:
         return req.t
