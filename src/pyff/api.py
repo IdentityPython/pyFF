@@ -4,7 +4,7 @@ from collections.abc import Generator, Iterable, Mapping
 from datetime import datetime, timedelta
 from json import dumps
 from typing import Any, Optional
-from urllib.parse import quote_plus
+from urllib.parse import quote
 
 import pyramid.httpexceptions as exc
 import pytz
@@ -395,7 +395,7 @@ def webfinger_handler(request: Request) -> Response:
     aliases = request.registry.aliases
     for a in aliases.keys():
         for v in request.registry.md.store.attribute(aliases[a]):
-            _links(f'{a}/{quote_plus(v)}')
+            _links(f'{a}/{quote(v)}')
 
     response = Response(dumps(jrd, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
