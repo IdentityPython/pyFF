@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntitiesDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute" xmlns:mdrpi="urn:oasis:names:tc:SAML:metadata:rpi" xmlns:shibmd="urn:mace:shibboleth:metadata:1.0" xmlns:xrd="http://docs.oasis-open.org/ns/xri/xrd-1.0" xmlns:pyff="http://pyff.io/NS" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ser="http://eidas.europa.eu/metadata/servicelist" xmlns:eidas="http://eidas.europa.eu/saml-extensions" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" xmlns:samla="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:init="urn:oasis:names:tc:SAML:profiles:SSO:request-init" xmlns:idpdisc="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" xmlns:wayf="http://sdss.ac.uk/2006/06/WAYF" xmlns:req-attr="urn:oasis:names:tc:SAML:protcol:ext:req-attr" Name="test">
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" xmlns:mdrpi="urn:oasis:names:tc:SAML:metadata:rpi" xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute" xmlns:samla="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:init="urn:oasis:names:tc:SAML:profiles:SSO:request-init" xmlns:idpdisc="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:shibmd="urn:mace:shibboleth:metadata:1.0" entityID="https://fail.org/shibboleth">
+  <md:Extensions>
+    <mdattr:EntityAttributes>
+      <samla:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" Name="https://refeds.org/entity-selection-profile">
+        <samla:AttributeValue>eyJwcm9maWxlcyI6eyJlZHVnYWluIjp7ImVudGl0aWVzIjpbeyJpbmNsdWRlIjpmYWxzZSwibWF0Y2giOiJyZWdpc3RyYXRpb25BdXRob3JpdHkiLCJzZWxlY3QiOiJodHRwczovL29wZW5hdGhlbnMubmV0In1dLCJzdHJpY3QiOiB0cnVlfX1</samla:AttributeValue>
+      </samla:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <init:RequestInitiator Binding="urn:oasis:names:tc:SAML:profiles:SSO:request-init" Location="https://fail.org/Shibboleth.sso/Login"/>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://fail.org/Shibboleth.sso/Login" index="1"/>
+      <init:RequestInitiator Binding="urn:oasis:names:tc:SAML:profiles:SSO:request-init" Location="https://fail.org/Shibboleth.sso/DS/swamid-test"/>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://fail.org/Shibboleth.sso/DS/swamid-test" index="2"/>
+      <init:RequestInitiator Binding="urn:oasis:names:tc:SAML:profiles:SSO:request-init" Location="https://fail.org/Shibboleth.sso/DS/seamless-access"/>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://fail.org/Shibboleth.sso/DS/seamless-access" index="3"/>
+      <mdui:UIInfo>
+        <mdui:Description xml:lang="en">Fail SP</mdui:Description>
+        <mdui:DisplayName xml:lang="en">Fail SP</mdui:DisplayName>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://fail.org/Shibboleth.sso/Artifact/SOAP" index="1"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://fail.org/Shibboleth.sso/SLO/SOAP"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://fail.org/Shibboleth.sso/SLO/Redirect"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://fail.org/Shibboleth.sso/SLO/POST"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://fail.org/Shibboleth.sso/SLO/Artifact"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://fail.org/Shibboleth.sso/SAML2/POST" index="1"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://fail.org/Shibboleth.sso/SAML2/POST-SimpleSign" index="2"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://fail.org/Shibboleth.sso/SAML2/Artifact" index="3"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:PAOS" Location="https://fail.org/Shibboleth.sso/SAML2/ECP" index="4"/>
+  </md:SPSSODescriptor>
+</md:EntityDescriptor>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" xmlns:mdrpi="urn:oasis:names:tc:SAML:metadata:rpi" xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute" xmlns:samla="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:init="urn:oasis:names:tc:SAML:profiles:SSO:request-init" xmlns:idpdisc="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:shibmd="urn:mace:shibboleth:metadata:1.0" entityID="https://ok.org/shibboleth">
+  <md:Extensions>
+    <mdattr:EntityAttributes>
+      <samla:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri" Name="https://refeds.org/entity-selection-profile">
+        <samla:AttributeValue>eyJwcm9maWxlcyI6eyJlZHVnYWluIjp7ImVudGl0aWVzIjpbeyJpbmNsdWRlIjpmYWxzZSwibWF0Y2giOiJyZWdpc3RyYXRpb25BdXRob3JpdHkiLCJzZWxlY3QiOiJodHRwczovL29wZW5hdGhlbnMubmV0In1dLCJzdHJpY3QiOiB0cnVlfX19</samla:AttributeValue>
+      </samla:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <init:RequestInitiator Binding="urn:oasis:names:tc:SAML:profiles:SSO:request-init" Location="https://ok.org/Shibboleth.sso/Login"/>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://ok.org/Shibboleth.sso/Login" index="1"/>
+      <init:RequestInitiator Binding="urn:oasis:names:tc:SAML:profiles:SSO:request-init" Location="https://ok.org/Shibboleth.sso/DS/swamid-test"/>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://ok.org/Shibboleth.sso/DS/swamid-test" index="2"/>
+      <init:RequestInitiator Binding="urn:oasis:names:tc:SAML:profiles:SSO:request-init" Location="https://ok.org/Shibboleth.sso/DS/seamless-access"/>
+      <idpdisc:DiscoveryResponse Binding="urn:oasis:names:tc:SAML:profiles:SSO:idp-discovery-protocol" Location="https://ok.org/Shibboleth.sso/DS/seamless-access" index="3"/>
+      <mdui:UIInfo>
+        <mdui:Description xml:lang="en">OK SP</mdui:Description>
+        <mdui:DisplayName xml:lang="en">OK SP</mdui:DisplayName>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://ok.org/Shibboleth.sso/Artifact/SOAP" index="1"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://ok.org/Shibboleth.sso/SLO/SOAP"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://ok.org/Shibboleth.sso/SLO/Redirect"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://ok.org/Shibboleth.sso/SLO/POST"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://ok.org/Shibboleth.sso/SLO/Artifact"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://ok.org/Shibboleth.sso/SAML2/POST" index="1"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://ok.org/Shibboleth.sso/SAML2/POST-SimpleSign" index="2"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://ok.org/Shibboleth.sso/SAML2/Artifact" index="3"/>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:PAOS" Location="https://ok.org/Shibboleth.sso/SAML2/ECP" index="4"/>
+  </md:SPSSODescriptor>
+</md:EntityDescriptor>
+</md:EntitiesDescriptor>

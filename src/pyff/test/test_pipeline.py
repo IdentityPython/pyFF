@@ -811,3 +811,31 @@ class SigningTest(PipeLineTest):
                 pass
             finally:
                 shutil.rmtree(tmpdir)
+
+    def test_discojson_sp_trustinfo_in_attr_broken_base64(self):
+        with patch.multiple("sys", exit=self.sys_exit):
+            tmpdir = tempfile.mkdtemp()
+            os.rmdir(tmpdir)  # lets make sure 'store' can recreate it
+            try:
+                self.exec_pipeline(
+                    f"""
+- load:
+   - file://{self.datadir}/metadata/test-sp-trustinfo-in-attr-broken-base64.xml
+- select
+- discojson_sp_attr
+- publish:
+    output: {tmpdir}/disco_sp_attr.json
+    raw: true
+    update_store: false
+"""
+                )
+                fn = f"{tmpdir}/disco_sp_attr.json"
+                assert os.path.exists(fn)
+                with open(fn) as f:
+                    sp_json = json.load(f)
+
+                assert 'https://ok.org/shibboleth' in str(sp_json)
+            except OSError:
+                pass
+            finally:
+                shutil.rmtree(tmpdir)
