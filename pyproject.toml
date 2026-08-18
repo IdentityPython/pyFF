@@ -87,6 +87,15 @@ target-version = "py39"
 #  "UP",
 #  "W",
 #]
+# Pin the rule set explicitly - ruff 0.16 widened its defaults from 2 to 38 rule
+# prefixes, so relying on the defaults makes lint results depend on the ruff version.
+select = [
+  "E4",
+  "E7",
+  "E9",
+  "F",
+  "I",
+]
 ignore = [
 "PLR0915",
 "PLR0912",

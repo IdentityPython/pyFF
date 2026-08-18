@@ -27,9 +27,7 @@ jobs:
         enable-cache: true
         activate-environment: true
     - name: Lint with Ruff
-      run: |
-        uv tool install ruff
-        uv run ruff check --output-format=github .
+      run: uvx ruff check --output-format=github .
       continue-on-error: false
 
     - name: Install dependencies
