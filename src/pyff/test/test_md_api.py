@@ -7,11 +7,13 @@ from urllib.parse import quote as urlescape
 
 import pytest
 import requests
+from lxml import etree
 from mako.lookup import TemplateLookup
 from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
 
 from pyff.api import mkapp
 from pyff.constants import config
+from pyff.samlmd import iter_entities
 from pyff.test import SignerTestCase
 from pyff.test.test_pipeline import PipeLineTest
 
@@ -226,3 +228,83 @@ class PyFFAPITestResources(PipeLineTest):
             assert (last_seen - now).total_seconds() < 60
 
             assert os.path.exists(os.path.join(config.local_copy_dir, urlescape(f'file://{self.test01}')))
+
+
+class PyFFAPITestTrailingSlash(PipeLineTest):
+    """
+    A trailing slash is part of an entityID, except when there is no entityID at all -
+    a bare /entities/ selects everything, just like /entities does.
+    """
+
+    mdx = None
+    app = None
+    idp = 'https://idp.example.com/saml2/idp/metadata.php'
+    sp = 'https://sp.example.com/saml2/metadata/'
+
+    @classmethod
+    def setUpClass(cls):
+        SignerTestCase.setUpClass()
+        config.local_copy_dir = tempfile.mkdtemp()
+        cls.test01 = os.path.join(cls.datadir, 'metadata', 'test01.xml')
+        cls.test04 = os.path.join(cls.datadir, 'metadata', 'test04-trailing-slash-sp.xml')
+        cls.mdx = tempfile.NamedTemporaryFile('w').name
+        with open(cls.mdx, "w") as fd:
+            fd.write(
+                f"""
+- when update:
+    - load:
+        - {cls.test01}
+        - {cls.test04}
+- when request:
+    - select
+    - pipe:
+        - when accept application/xml:
+            - finalize:
+                cacheDuration: PT5H
+                validUntil: P10D
+            - emit application/xml
+            - break
+"""
+            )
+        cls._app = mkapp(cls.mdx)
+        cls.app = lambda *args, **kwargs: cls._app
+
+    @classmethod
+    def tearDownClass(cls):
+        SignerTestCase.tearDownClass()
+        if os.path.exists(cls.mdx):
+            os.unlink(cls.mdx)
+        if os.path.exists(config.local_copy_dir):
+            shutil.rmtree(config.local_copy_dir)
+
+    def _entity_ids(self, url, path):
+        """Return the set of entityIDs the API serves for path"""
+        r = requests.get(f'{url}{path}', headers={'Accept': 'application/xml'})
+        assert r.status_code == 200, f'{path} -> {r.status_code}'
+        t = etree.fromstring(r.content)
+        return {e.get('entityID') for e in iter_entities(t)}
+
+    def test_entities_without_trailing_slash(self):
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            assert requests.post(f'{url}/api/call/update').status_code == 200
+            assert self._entity_ids(url, '/entities') == {self.idp, self.sp}
+
+    def test_entities_with_trailing_slash(self):
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            assert requests.post(f'{url}/api/call/update').status_code == 200
+            assert self._entity_ids(url, '/entities/') == {self.idp, self.sp}
+
+    def test_entity_id_keeps_its_trailing_slash(self):
+        """An entityID ending in a slash must not be truncated - cf. issue #298"""
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            assert requests.post(f'{url}/api/call/update').status_code == 200
+            # the unescaped form - WSGI hands us a single slash after the scheme
+            assert self._entity_ids(url, '/entities/https:/sp.example.com/saml2/metadata/') == {self.sp}
+            # ... and the escaped form
+            assert self._entity_ids(url, f'/entities/{urlescape(self.sp, safe="")}') == {self.sp}
+
+    def test_entity_id_without_trailing_slash_is_not_found(self):
+        """Dropping the slash from an entityID that has one must not match it"""
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            assert requests.post(f'{url}/api/call/update').status_code == 200
+            assert self._entity_ids(url, '/entities/https:/sp.example.com/saml2/metadata') == set()
