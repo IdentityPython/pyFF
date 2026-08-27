@@ -841,7 +841,7 @@ def entity_extended_display(entity, langs=None):
     if info == entity.get('entityID'):
         info = ''
 
-    return display.strip(), info.strip()
+    return (display or '').strip(), (info or '').strip()
 
 
 def entity_display_name(entity: Element, langs=None) -> str:
