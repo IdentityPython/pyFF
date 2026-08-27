@@ -4,6 +4,7 @@ Release HOWTO
 To make a release, 
 
   1) remove dev suffix on version in pyproject.toml
+  1b) uv sync
   2) set release date in NEWS.txt
   2b) update the version in docs/conf.py
   3) commit the changes to pyproject.toml and NEWS.txt
