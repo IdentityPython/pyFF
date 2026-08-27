@@ -193,3 +193,20 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 
 * Switch to uv.lock for reproducable builds.
 * temp dir fix
+
+2.1.6
+-----
+* Release date: Thu 27 Aug 13:01:40 CET 2026
+
+* Dump depends
+
+* Deprecated python 3.9
+
+* Added python 3.13 and 3.14
+
+* Pin ruff rulesets
+
+* Handle URLs with trailing /
+
+* Remove unused namespaces
+
