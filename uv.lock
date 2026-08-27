@@ -1066,7 +1066,7 @@ wheels = [
 
 [[package]]
 name = "pyff"
-version = "2.1.6"
+version = "2.1.7.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "accept-types" },

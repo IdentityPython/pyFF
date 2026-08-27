@@ -210,3 +210,5 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 
 * Remove unused namespaces
 
+2.1.7.dev0
+-----
