@@ -344,6 +344,10 @@ class Config:
         "info_buffer_size", default=10, typeconv=as_int, info="how much history to keep about each metadata URL"
     )
 
+    map_threads = S(
+        "map_threads", typeconv=as_int, info="how many threads to create in map pipe [default: os.process_cpu_count() ]"
+    )
+
     worker_pool_size = S(
         "worker_pool_size", default=1, cmdline=['pyffd'], typeconv=as_int, info="how many gunicorn workers to run"
     )
