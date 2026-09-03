@@ -488,6 +488,12 @@ def entitiesdescriptor(
             ent_insert = deepcopy(ent_insert)
         t.append(ent_insert)
 
+    # clean unused namespaces
+    # Keep xs: and xsi:, as these are crucial - and xs: is used only
+    # in attribute values, so may appear as unused.
+    keep_ns_prefixes = ['xs', 'xsi']
+    etree.cleanup_namespaces(t, keep_ns_prefixes=keep_ns_prefixes)
+
     if config.devel_write_xml_to_file:
         import os
 
