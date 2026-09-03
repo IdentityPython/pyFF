@@ -554,7 +554,10 @@ def publish(req: Plumbing.Request, *opts):
 
     # clean unused namespaces - the working document isn't always XML (eg discojson* produce JSON)
     if isinstance(data, (etree._Element, etree._ElementTree)):
-        etree.cleanup_namespaces(data)
+        # Keep xs: and xsi:, as these are crucial - and xs: is used only
+        # in attribute values, so may appear as unused.
+        keep_ns_prefixes = ['xs', 'xsi']
+        etree.cleanup_namespaces(data, keep_ns_prefixes=keep_ns_prefixes)
 
     if not req.args.get('raw'):
         data = dumptree(req.t, pretty_print=req.args.get('pretty_print'))
