@@ -1,4 +1,5 @@
 import json
+import re
 import traceback
 from base64 import b64decode
 from copy import deepcopy
@@ -438,6 +439,35 @@ def resolve_entities(entities, lookup_fn=None, dedup=True):
     return resolved_entities
 
 
+# A QName is NCName ":" NCName. Requiring a valid NCName local part rejects the
+# far more common URI-shaped attribute values ("https://..." has a '/' local part).
+_QNAME_RE = re.compile(r'^[A-Za-z_][\w.-]*:[A-Za-z_][\w.-]*$')
+
+
+def qname_prefixes(t):
+    """Namespace prefixes referenced from inside QName-valued attributes.
+
+    lxml.etree.cleanup_namespaces only considers prefixes used in element and
+    attribute *names*, so a prefix appearing solely in an attribute *value* -
+    xsi:type="xsd:string" being the common case - looks unused and gets removed,
+    leaving a dangling QName that fails schema validation.
+    """
+    keep = set()
+    match = _QNAME_RE.match
+    for elt in t.iter():
+        values = elt.values()
+        if not values:
+            continue
+        for value in values:
+            if match(value):
+                prefix = value.split(':', 1)[0]
+                # Only keep prefixes actually bound here; anything else is either
+                # not a QName or already-broken metadata.
+                if prefix not in keep and prefix in elt.nsmap:
+                    keep.add(prefix)
+    return keep
+
+
 def entitiesdescriptor(
     entities,
     name,
@@ -487,6 +517,12 @@ def entitiesdescriptor(
         if copy:
             ent_insert = deepcopy(ent_insert)
         t.append(ent_insert)
+
+    # Clean unused namespaces. Prefixes referenced only from QName-valued attributes
+    # (xsi:type="xsd:string") are invisible to lxml's usage tracking, so collect and
+    # preserve them explicitly - see issue #333.
+    keep_ns_prefixes = sorted({'xs', 'xsi'} | qname_prefixes(t))
+    etree.cleanup_namespaces(t, keep_ns_prefixes=keep_ns_prefixes)
 
     if config.devel_write_xml_to_file:
         import os
