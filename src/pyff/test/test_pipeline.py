@@ -754,6 +754,100 @@ class SigningTest(PipeLineTest):
             except OSError:
                 pass
 
+    def test_publish_keeps_xsd_prefix_qname(self):
+        """The xs/xsi hardcoded keep-list is not enough: the XMLSchema namespace can be
+        spelled with any prefix a document author chooses.
+
+        Regression test with real-world metadata: test05-xsd-prefix-idp.xml declares the
+        XMLSchema namespace as 'xsd' (not 'xs') and uses xsi:type="xsd:string". Before this
+        fix, cleanup_namespaces() stripped 'xmlns:xsd' (only 'xs'/'xsi' were hardcoded),
+        schema validation then failed on the dangling QName, and filter_invalid silently
+        dropped the entity from published metadata entirely.
+        """
+        entity = (
+            'https://auth.funktionstjanster.se/id/proxy/saml2/67cacd06db3b47c951eefdfa/'
+            'idp/67cacbb7ef0f342709eefdf6/c/682f0e0f8dc75a89157ed724/authn'
+        )
+        tmpfile = tempfile.NamedTemporaryFile('w').name
+        try:
+            self.exec_pipeline(
+                f"""
+- load:
+   - file://{self.datadir}/metadata/test05-xsd-prefix-idp.xml
+- select
+- publish: {tmpfile}
+"""
+            )
+            t2 = parse_xml(tmpfile)
+            assert t2 is not None
+            entity_elt = t2.find(".//{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entity))
+            assert entity_elt is not None, "entity was dropped - namespace cleanup broke schema validation"
+            assert entity_elt.nsmap.get('xsd') == NS['xs']
+        finally:
+            try:
+                os.unlink(tmpfile)
+            except OSError:
+                pass
+
+    def test_publish_prunes_genuinely_unused_namespace(self):
+        """Guard against 'fixing' future namespace reports by weakening cleanup entirely.
+
+        test06-xs-and-xsd-declared.xml declares both 'xs' and 'xsd' bound to the same
+        XMLSchema URI, but only 'xs' is ever referenced (via xsi:type="xs:string"). The
+        genuinely unused 'xsd' declaration must still be pruned.
+        """
+        entity = 'https://app.comfact.se/pdss/metadata/d70a69a512a2418f'
+        tmpfile = tempfile.NamedTemporaryFile('w').name
+        try:
+            self.exec_pipeline(
+                f"""
+- load:
+   - file://{self.datadir}/metadata/test06-xs-and-xsd-declared.xml
+- select
+- publish: {tmpfile}
+"""
+            )
+            t2 = parse_xml(tmpfile)
+            assert t2 is not None
+            entity_elt = t2.find(".//{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entity))
+            assert entity_elt is not None
+            assert entity_elt.nsmap.get('xs') == NS['xs']
+            assert 'xsd' not in entity_elt.nsmap
+        finally:
+            try:
+                os.unlink(tmpfile)
+            except OSError:
+                pass
+
+    def test_wsfed_type_prefix_survives(self):
+        """A complex-type xsi:type prefix (as opposed to a datatype prefix like xs/xsd)
+        needs no special-casing: real WS-Fed metadata also carries elements in that
+        namespace (e.g. fed:TokenTypesOffered), so lxml already sees the prefix as used.
+        """
+        entity = 'http://idp.chalmers.se/adfs/services/trust'
+        tmpfile = tempfile.NamedTemporaryFile('w').name
+        try:
+            self.exec_pipeline(
+                f"""
+- load:
+   - file://{self.datadir}/metadata/swamid-2.0-test.xml
+- select
+- publish: {tmpfile}
+"""
+            )
+            t2 = parse_xml(tmpfile)
+            assert t2 is not None
+            entity_elt = t2.find(".//{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entity))
+            assert entity_elt is not None
+            role_elt = entity_elt.find("{{{}}}RoleDescriptor".format(NS['md']))
+            assert role_elt is not None
+            assert role_elt.nsmap.get('fed') == 'http://docs.oasis-open.org/wsfed/federation/200706'
+        finally:
+            try:
+                os.unlink(tmpfile)
+            except OSError:
+                pass
+
     def test_discojson_sp(self):
         with patch.multiple("sys", exit=self.sys_exit):
             tmpdir = tempfile.mkdtemp()
