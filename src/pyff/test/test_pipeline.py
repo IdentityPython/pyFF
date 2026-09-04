@@ -10,6 +10,7 @@ import yaml
 from mako.lookup import TemplateLookup
 
 from pyff import builtins
+from pyff.constants import NS
 from pyff.exceptions import MetadataException
 from pyff.parse import ParserException
 from pyff.pipes import PipeException, Plumbing, plumbing
@@ -722,6 +723,36 @@ class SigningTest(PipeLineTest):
         )
         assert "Expected exception from bad namespace in"
         assert md.lookup(entity)
+
+    def test_publish_keeps_xs_xsi_namespace(self):
+        """cleanup_namespaces() must not strip prefixes only used inside attribute values.
+
+        Regression test for https://github.com/IdentityPython/pyFF/issues/333: the 'xs'
+        prefix in swamid-2.0-test.xml is declared on an EntityDescriptor but only referenced
+        from within an xsi:type attribute *value* (e.g. ns3:type="xs:string"), so lxml's
+        cleanup_namespaces() considers it unused and removes it, producing invalid metadata.
+        """
+        entity = 'https://xenosmilus2.umdc.umu.se:8086/coc/sp.xml'
+        tmpfile = tempfile.NamedTemporaryFile('w').name
+        try:
+            self.exec_pipeline(
+                f"""
+- load:
+   - file://{self.datadir}/metadata/swamid-2.0-test.xml
+- select
+- publish: {tmpfile}
+"""
+            )
+            t2 = parse_xml(tmpfile)
+            assert t2 is not None
+            entity_elt = t2.find(".//{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entity))
+            assert entity_elt is not None
+            assert entity_elt.nsmap.get('xs') == NS['xs']
+        finally:
+            try:
+                os.unlink(tmpfile)
+            except OSError:
+                pass
 
     def test_discojson_sp(self):
         with patch.multiple("sys", exit=self.sys_exit):
