@@ -521,7 +521,7 @@ def entitiesdescriptor(
     # Clean unused namespaces. Prefixes referenced only from QName-valued attributes
     # (xsi:type="xsd:string") are invisible to lxml's usage tracking, so collect and
     # preserve them explicitly - see issue #333.
-    keep_ns_prefixes = sorted({'xs', 'xsi'} | qname_prefixes(t))
+    keep_ns_prefixes = qname_prefixes(t)
     etree.cleanup_namespaces(t, keep_ns_prefixes=keep_ns_prefixes)
 
     if config.devel_write_xml_to_file:
