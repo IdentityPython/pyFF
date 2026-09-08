@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute" xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" entityID="https://app.comfact.se/pdss/metadata/d70a69a512a2418f">
+  <md:Extensions>
+    <mdattr:EntityAttributes>
+      <saml:Attribute Name="http://macedir.org/entity-category" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">http://id.elegnamnden.se/st/1.0/sigservice</saml:AttributeValue>
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">http://id.elegnamnden.se/st/1.0/public-sector-sp</saml:AttributeValue>
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">http://id.swedenconnect.se/contract/sc/sweden-connect</saml:AttributeValue>
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">http://id.swedenconnect.se/contract/sc/eid-authorization-system</saml:AttributeValue>
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">http://id.swedenconnect.se/contract/sc/prepaid-auth-2021</saml:AttributeValue>
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">http://id.elegnamnden.se/ec/1.0/loa3-pnr</saml:AttributeValue>
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">http://id.swedenconnect.se/ec/sc/uncertified-loa3-pnr</saml:AttributeValue>
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">http://id.elegnamnden.se/ec/1.0/eidas-naturalperson</saml:AttributeValue>
+      </saml:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor AuthnRequestsSigned="true" WantAssertionsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <mdui:UIInfo>
+        <mdui:DisplayName xml:lang="sv">Kungliga biblioteket</mdui:DisplayName>
+        <mdui:DisplayName xml:lang="en">National Library of Sweden</mdui:DisplayName>
+        <mdui:Description xml:lang="sv">Kungliga bibliotekets e-tjänst för avancerade elektroniska underskrifter.</mdui:Description>
+        <mdui:Description xml:lang="en">The National Library of Sweden's e-service for advanced electronic signatures.</mdui:Description>
+        <mdui:Logo width="281" height="297">https://www.kb.se/images/18.526c3ba718ee55a70f732e/1713273272431/KB-logo-text-black.svg</mdui:Logo>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>
+            MIIGszCCBGegAwIBAgITZgAAAFw0umTVZIhT9gAAAAAAXDBBBgkqhkiG9w0BAQow
+            NKAPMA0GCWCGSAFlAwQCAQUAoRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAQUA
+            ogMCASAwdzELMAkGA1UEBhMCU0UxEzARBgNVBGEMCjU1NjM0MjY2NjYxHTAbBgNV
+            BAsMFENlcnRpZmljYXRlIFNlcnZpY2VzMRMwEQYDVQQKDApDb21mYWN0IEFCMR8w
+            HQYDVQQDDBZDb21mYWN0IFNlcnZpY2VzIENBIEcxMB4XDTI0MTAwMjA2NDI0NFoX
+            DTI2MTAwMjA2NDI0NFowdzELMAkGA1UEBhMCU0UxEzARBgNVBGEMCjU1NjM0MjY2
+            NjYxHTAbBgNVBAsMFENlcnRpZmljYXRlIFNlcnZpY2VzMRMwEQYDVQQKDApDb21m
+            YWN0IEFCMR8wHQYDVQQDDBZDb21mYWN0IERTUyBLQiBTaWduaW5nMIIBojANBgkq
+            hkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAveGOHhhLDVEIgtiVd5EofmauucDu5YwR
+            x2d4H4mOFfNqfaMvCkgEytVN/MjLebnZb6J/Iav7u47Mf0+ePGKvWd+QDvE83Nvp
+            1qpPtLfbcF75U+TVKM/1qOe11UzfcW9Q3mqYBr9mWM1yPHYHmOhsWESf4WGd9wFC
+            80vfQvsHLEW6vbwJKgzj7fGZPiW8hzQm8SJPHRFR9+j/2IgsHQPBuURlKXflp4Yi
+            fyCC0hxP38vlnu5VqRRMMZBrVFHwmBKzh6ah+X1aUQdFQr2pb+cEAMAwCMNmhgln
+            hknudlEPx2OANHrKULgQu+2zPLwHx64vs3yHn5s2+tbdiiJT85h/WJvsrsv4F76Q
+            oiTzHR/VXqkviysJqKqhq1+Cua6/UQDwsgAW4lQhOlR9BM/hxH9meBxY6ELwZcYP
+            iQT37XAo9CcjHQzuqIb2o7yby4w1WMDVrXVOdHa+nxxfvrNIzUzJ0VUEVxozk/bE
+            HIHWksVra/VWxDnrNWU/9iBb4jIyJGC1AgMBAAGjggFOMIIBSjAMBgNVHRMBAf8E
+            AjAAMA4GA1UdDwEB/wQEAwIHgDBFBgNVHSAEPjA8MDoGByqFcIF9CAMwLzAtBggr
+            BgEFBQcCARYhaHR0cHM6Ly93d3cuY29tZmFjdC5zZS9yZXBvc2l0b3J5MB0GA1Ud
+            DgQWBBQelGRvv8HtE6iJEZWoY7/cwAutMjAfBgNVHSMEGDAWgBShC3TWdGLMTBE/
+            i2xnamODhnAEijBHBgNVHR8EQDA+MDygOqA4hjZodHRwOi8vcGtpLmNvbWZhY3Qu
+            Y29tL2NybHMvY29tZmFjdC1zZXJ2aWNlcy1jYS1nMS5jcmwwWgYIKwYBBQUHAQEE
+            TjBMMEoGCCsGAQUFBzAChj5odHRwOi8vcGtpLmNvbWZhY3QuY29tL2NlcnRpZmlj
+            YXRlcy9jb21mYWN0LXNlcnZpY2VzLWNhLWcxLmNlcjBBBgkqhkiG9w0BAQowNKAP
+            MA0GCWCGSAFlAwQCAQUAoRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAQUAogMC
+            ASADggIBADv8b6tHD1tyNx9uY21tPwZ2ugKSupI2B5GzPr6z0gsY5iHoIBRh/WbF
+            Qthg2GUebqYIdj6v6RqwBG+LeQhHxy6DkJMTcY8dLSC40plSx+8s3rBFsAsxqNeu
+            fVuFb3fW9LO6+RzWPXeFP84ORVhV+vA3Dx+mpqPhaiL7kLgR3RH0FR6OzN6IE3GX
+            xDROhvc3wQjUhljK3tWi3duta7CTIDPPr2HKobuzk5orKz0b565CCP3yyVe6HgRK
+            vmN+cxA41LzVcd/WymndFS1W4SBgOR45B8XTEhgk8PFGypfy8SwM6sO2s5sUjS4g
+            5O40649K9okXNdHAovctxYU6Qq5L4EvgSlyQWVPstDglE48ltbRAzLAHUVcCveZ5
+            D6mRtmexoK6u6irCEUkq3CjH59oYK5RhaPNmMd0Ypma8j51JkyjmdkKwHbE+TZ8D
+            TosIyIpVE7crq8uW/WPaGVE7LsAupkfsfdBnqedsZ11/MYTbuNwuim0DGANXXVNY
+            swHUcVthvHmpmKTzpUYK+t4h3IV6zMRAfLbSFW89UbyGWdg0vqE6+3b7neyUoxyy
+            DhwpvVydDi1ws4rA8ecmGhktjPybZxOLyU4p8bwZ9WvLW3jiWDNNhPZ27JNpfJPa
+            p/or5jUu3rw/NaDrZ5rHhZQpipllkcbHT8xadMBQw9mInh8qFGe+
+          </ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="encryption">
+      <ds:KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>
+            MIIGtjCCBGqgAwIBAgITZgAAAFvnJQy/mieHIQAAAAAAWzBBBgkqhkiG9w0BAQow
+            NKAPMA0GCWCGSAFlAwQCAQUAoRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAQUA
+            ogMCASAwdzELMAkGA1UEBhMCU0UxEzARBgNVBGEMCjU1NjM0MjY2NjYxHTAbBgNV
+            BAsMFENlcnRpZmljYXRlIFNlcnZpY2VzMRMwEQYDVQQKDApDb21mYWN0IEFCMR8w
+            HQYDVQQDDBZDb21mYWN0IFNlcnZpY2VzIENBIEcxMB4XDTI0MTAwMjA2NDIyNloX
+            DTI2MTAwMjA2NDIyNlowejELMAkGA1UEBhMCU0UxEzARBgNVBGEMCjU1NjM0MjY2
+            NjYxHTAbBgNVBAsMFENlcnRpZmljYXRlIFNlcnZpY2VzMRMwEQYDVQQKDApDb21m
+            YWN0IEFCMSIwIAYDVQQDDBlDb21mYWN0IERTUyBLQiBFbmNyeXB0aW9uMIIBojAN
+            BgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEArY/Dc1ZvM73VjHgvm3pgICb5wClM
+            h7e8J2l/gXeZhQ/vuO7CornScy3ny2jBzi7OMp9L+OxfCk03v4+Vf0LLfy3BBPLZ
+            WOFw+BThEfUb7GmNH0JxrcTp+NKI4mUKKbMrEZel5Rsb9L7LAERA8gEG+6MJwssv
+            3QUsvWk2a6jQdKnERDsmbAw4/BEy5F/PLTScMs6hBV0T9yvg6eCgRmYiNvmLATaM
+            AQXb6qeC0uKtdsfSugxfAflmfwJZUa6vdmf83CDuhyVbXsxlisJcedkPM/aWcvNo
+            0q6BmpxYr4q2ZAMpzPVqEkKq1EWREAX902YE8qnVyZoDtdLsfEN0OLzdn9dpZ3Si
+            6RTuc1zpAffznEj3aO5NxpHfFgCvDguy48tSNue7+cuR7y7pmd7Ev6FDoTuhst4I
+            82O9kZV2rDGqeb6sh9Kljo1TWfiZ49CnCpzbndVnwhGNPj3yFMw/L2F3iLoV+pCl
+            xKec+47n5AVYEZoRlMGPG/FxW90C2oQ9RWu9AgMBAAGjggFOMIIBSjAMBgNVHRMB
+            Af8EAjAAMA4GA1UdDwEB/wQEAwIFIDBFBgNVHSAEPjA8MDoGByqFcIF9CAMwLzAt
+            BggrBgEFBQcCARYhaHR0cHM6Ly93d3cuY29tZmFjdC5zZS9yZXBvc2l0b3J5MB0G
+            A1UdDgQWBBSRMQwi0YoN3sZWU/VvXEqPHTp7ODAfBgNVHSMEGDAWgBShC3TWdGLM
+            TBE/i2xnamODhnAEijBHBgNVHR8EQDA+MDygOqA4hjZodHRwOi8vcGtpLmNvbWZh
+            Y3QuY29tL2NybHMvY29tZmFjdC1zZXJ2aWNlcy1jYS1nMS5jcmwwWgYIKwYBBQUH
+            AQEETjBMMEoGCCsGAQUFBzAChj5odHRwOi8vcGtpLmNvbWZhY3QuY29tL2NlcnRp
+            ZmljYXRlcy9jb21mYWN0LXNlcnZpY2VzLWNhLWcxLmNlcjBBBgkqhkiG9w0BAQow
+            NKAPMA0GCWCGSAFlAwQCAQUAoRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAQUA
+            ogMCASADggIBAA44+BFE/8tWF/AoC4HlaxT5gwzbQiuBEvRd3TKWIIZnQPSRbr2I
+            bwkA8jVa3VfA8rSvOMdyuRQvKrp/EMjI6FwFgtRfKYXI7npnHTo9WUj+BfU8F3fw
+            7s15bZ4TKhzo40Gqtksrf5xJ6FwgiysF/GdFS5oC6T3jx1oU4A1gYirdIn7Ahl8G
+            v99V0F1zm2iS9oGhH/0aOpjjF4kT2Li4iGttp5gXpCRei3szNPo91VFDgv8ZKac4
+            RgYNk2EHn80Tb1OicPtkuaKw0qw5QpdmXz0nl+v+0NmdA7P9erhGJGhEv7VDsm1f
+            n8jn27h3g23Ab074+HS5vt4Rpkb4xaWJMvDLHSRCkwhF5RS7cQnSSHmEgItKhq78
+            lRa9EuN6u0zyzuOHy9FNK6LCq+rwc09mhy0waJBpkBVPMf5CKnn39Qi+ZtJWViTW
+            Xck2YbOV2yVqplWHhhkRltZc0ZfNJpqNLrbhgziGOf9FPHl20YMhHqWkE5ubiFyo
+            MBGvVfA19aqpRC5eBXoJoiVnxo6d26jZ0k0Z77SXget6DoJMvRFoTEzTQfClp6+S
+            JW68TGQo63TMuMH78gZAs9oIPxynBBbb3rPzGJnlap5BvCEjbzE/d0sSmUBltrpz
+            sRUy5MiIGmSSNik2yYUFkqB1qbnzNMjgQinVUFs5Lmsv04IerXxJw5Dr
+          </ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://app.comfact.se/pdss/mission/acs/d70a69a512a2418f" index="0"/>
+    <md:AttributeConsumingService index="0" isDefault="true">
+      <md:ServiceName xml:lang="sv">Kungliga biblioteket</md:ServiceName>
+      <md:ServiceName xml:lang="en">National Library of Sweden</md:ServiceName>
+      <md:RequestedAttribute Name="urn:oid:1.2.752.201.3.2" isRequired="false"/>
+      <md:RequestedAttribute Name="urn:oid:1.2.752.201.3.13" isRequired="false"/>
+      <md:RequestedAttribute Name="urn:oid:1.2.752.201.3.11" isRequired="false"/>
+    </md:AttributeConsumingService>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:Extensions>
+      <mdorgext:OrganizationNumber xmlns:mdorgext="http://id.swedenconnect.se/authn/1.0/md-org-ext/ns">2021001710</mdorgext:OrganizationNumber>
+    </md:Extensions>
+    <md:OrganizationName xml:lang="sv">Kungliga biblioteket</md:OrganizationName>
+    <md:OrganizationName xml:lang="en">National Library of Sweden</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="sv">Kungliga biblioteket</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="en">National Library of Sweden</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="sv">https://www.kb.se</md:OrganizationURL>
+    <md:OrganizationURL xml:lang="en">https://www.kb.se</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="support">
+    <md:Company>Kungliga biblioteket</md:Company>
+    <md:EmailAddress>ITsupport@kb.se</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="technical">
+    <md:Company>Kungliga biblioteket</md:Company>
+    <md:EmailAddress>ITsupport@kb.se</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor>

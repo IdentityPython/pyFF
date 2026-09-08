@@ -552,10 +552,6 @@ def publish(req: Plumbing.Request, *opts):
     out = output_file
     data = req.t
 
-    # clean unused namespaces - the working document isn't always XML (eg discojson* produce JSON)
-    if isinstance(data, (etree._Element, etree._ElementTree)):
-        etree.cleanup_namespaces(data)
-
     if not req.args.get('raw'):
         data = dumptree(req.t, pretty_print=req.args.get('pretty_print'))
 
