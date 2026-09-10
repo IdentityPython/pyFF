@@ -13,5 +13,6 @@ To make a release,
   6) cd docs && make html
   7) uv build && uv publish
   8) Increase version in pyproject.toml (for next release) with dev suffix
+  8b) uv sync
   9) Create NEWS.txt entry for next release
 
