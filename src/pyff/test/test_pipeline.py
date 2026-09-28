@@ -2,7 +2,9 @@ import json
 import os
 import shutil
 import tempfile
+import threading
 import time
+import weakref
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 from unittest.mock import MagicMock, patch
@@ -377,8 +379,101 @@ class TestPkcs11SigningConfig:
 
     @pytest.fixture(autouse=True)
     def _isolated_provider_cache(self):
-        with patch.object(builtins, '_pkcs11_provider_cache', {}):
+        with (
+            patch.object(builtins, '_pkcs11_provider_cache', {}),
+            patch.object(builtins, '_pkcs11_signing_locks', {}),
+        ):
             yield
+
+    @pytest.mark.parametrize('failure_stage', ['signer', 'sign'])
+    def test_signing_failure_releases_session_with_retained_traceback(self, failure_stage):
+        """A retained error must not keep a token logged in on the next request."""
+        sessions = []
+
+        class Session:
+            pass
+
+        class Provider:
+            slot_id = 7
+
+            def open_session(self, _pin):
+                assert all(reference() is None for reference in sessions)
+                session = Session()
+                sessions.append(weakref.ref(session))
+                return session
+
+        class Signer:
+            def __init__(self, session, _label, _algorithm):
+                self.session = session
+
+        class Context:
+            def __init__(self, _manager):
+                pass
+
+            def set_hsm_signer(self, signer):
+                self.signer = signer
+
+        errors = []
+        # Native call argument errors model a PyO3 exception without adding a
+        # Python mock traceback frame that independently retains its arguments.
+        signer_type = object if failure_stage == 'signer' else Signer
+        with (
+            patch.object(builtins.pybergshamra, 'Pkcs11Signer', signer_type),
+            patch.object(builtins.pybergshamra, 'DsigContext', Context),
+        ):
+            for _ in range(2):
+                try:
+                    builtins._sign_pkcs11(Provider(), '/module.so', 'pin', 'key', '<root/>')
+                except TypeError as error:
+                    errors.append(error)
+                else:
+                    pytest.fail('Expected a native argument error')
+                assert all(reference() is None for reference in sessions)
+        assert len(errors) == len(sessions) == 2
+
+    def test_serializes_login_across_providers_for_same_token(self):
+        """Aliases for one token cannot overlap authenticated signing lifetimes."""
+        sessions = []
+        start = threading.Barrier(2)
+
+        class Session:
+            pass
+
+        class Provider:
+            slot_id = 7
+
+            def open_session(self, _pin):
+                assert all(reference() is None for reference in sessions), 'token already logged in'
+                session = Session()
+                sessions.append(weakref.ref(session))
+                time.sleep(0.05)
+                return session
+
+        class Signer:
+            def __init__(self, session, _label, _algorithm):
+                self.session = session
+
+        class Context:
+            def __init__(self, _manager):
+                pass
+
+            def set_hsm_signer(self, signer):
+                self.signer = signer
+
+        def sign(provider):
+            start.wait(timeout=5)
+            return builtins._sign_pkcs11(provider, '/module.so', 'pin', 'key', '<root/>')
+
+        with (
+            patch.object(builtins.pybergshamra, 'Pkcs11Signer', Signer),
+            patch.object(builtins.pybergshamra, 'DsigContext', Context),
+            patch.object(builtins.pybergshamra, 'sign_enveloped', lambda _ctx, xml, **_kwargs: xml),
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            results = list(executor.map(sign, [Provider(), Provider()]))
+        assert results == ['<root/>', '<root/>']
+        assert len(sessions) == 2
+        assert all(reference() is None for reference in sessions)
 
     def test_parse_absolute_module_path(self):
         """Preserve an absolute module path and read the PIN environment selector."""

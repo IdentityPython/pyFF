@@ -13,7 +13,7 @@ SAML metadata.
 size including edugain.org.
 
 **pyFF** supports producing and validating digital signatures on SAML metadata using
-the pyXMLSecurity package which in turn supports PKCS#11 and other mechanisms for
+the pybergshamra package (0.9.2 or newer), which supports PKCS#11 and other mechanisms for
 talking to HSMs and other cryptographic hardware.
 
 **pyFF** is also a complete implementation of the SAML metadata query protocol as 

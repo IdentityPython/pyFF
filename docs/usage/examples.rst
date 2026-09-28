@@ -242,6 +242,13 @@ a slot selector with ``token_label`` or ``token_serial``. The token label select
 the HSM token; the final URI component (``sctest2`` above) selects the key object
 within that token.
 
+pybergshamra 0.9.2 rejects a new login when the token is already authenticated.
+pyFF serializes signing requests per token within each worker process and
+releases the session and signing objects after each operation, including on
+errors. Providers stay cached to keep the vendor module loaded. Other
+authenticated sessions for the same token in that process must be closed
+before pyFF can log in.
+
 Running this example requires some preparation. Run the 'p11setup.sh' script in the examples directory.
 This results in a SoftHSM token being setup with the PIN 'secret1' and SO_PIN 'secret2'. Now run pyFF (assuming
 you are using a unix-like environment).
@@ -249,4 +256,3 @@ you are using a unix-like environment).
 .. code-block:: bash
 
     # env PYKCS11PIN=secret1 SOFTHSM_CONF=softhsm.conf pyff --loglevel=DEBUG p11.fd
-

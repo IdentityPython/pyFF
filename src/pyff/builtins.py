@@ -74,6 +74,7 @@ log = get_log(__name__)
 # remain short-lived and are opened separately for each signing operation.
 _pkcs11_provider_cache = {}
 _pkcs11_provider_cache_lock = threading.Lock()
+_pkcs11_signing_locks = {}
 
 
 @pipe
@@ -1226,6 +1227,30 @@ def _select_pkcs11_provider(
         return provider
 
 
+def _sign_pkcs11(provider, module_path, pin, label, xml, *, reference_id=None, cert_pem=None):
+    """Serialize token logins and release authenticated objects even on errors."""
+    # Different selectors can resolve to the same token. Lock its actual slot,
+    # rather than the configured label/serial/slot selector or key label.
+    token = (os.path.realpath(module_path), provider.slot_id)
+    with _pkcs11_provider_cache_lock:
+        lock = _pkcs11_signing_locks.setdefault(token, threading.Lock())
+
+    with lock:
+        session = signer = ctx = None
+        try:
+            session = provider.open_session(pin)
+            signer = pybergshamra.Pkcs11Signer(session, label, pybergshamra.Algorithm.RSA_SHA256)
+            ctx = pybergshamra.DsigContext(pybergshamra.KeysManager())
+            ctx.set_hsm_signer(signer)
+            return pybergshamra.sign_enveloped(ctx, xml, reference_id=reference_id, cert_pem=cert_pem)
+        finally:
+            # Exception tracebacks retain Python frames. Clear every local
+            # owner before unlocking so a failed request cannot retain login.
+            ctx = None
+            signer = None
+            session = None
+
+
 @pipe
 def sign(req: Plumbing.Request, *_opts):
     """
@@ -1255,7 +1280,7 @@ def sign(req: Plumbing.Request, *_opts):
 
     The pin parameter can be used to point to an environment variable containing the pin: "env:<ENV variable>".
     By default pin is "env:PYKCS11PIN" which tells sign to use the pin found in the PYKCS11PIN environment
-    variable. This is also the default for PyKCS11 which is used to communicate with the PKCS#11 module.
+    variable. Authentication and signing are serialized per token within the worker process.
 
     **Examples**
 
@@ -1310,9 +1335,6 @@ def sign(req: Plumbing.Request, *_opts):
         with open(cert_file) as fd:
             cert_pem = fd.read()
 
-    mgr = pybergshamra.KeysManager()
-    ctx = pybergshamra.DsigContext(mgr)
-
     is_pkcs11_key = key_file.startswith("pkcs11:")
     if is_pkcs11_key:
         # HSM signing via PKCS#11. The URI form is:
@@ -1334,27 +1356,22 @@ def sign(req: Plumbing.Request, *_opts):
             token_label=req.args.get('token_label'),
             token_serial=req.args.get('token_serial'),
         )
-        session = provider.open_session(pin)
-        signer = pybergshamra.Pkcs11Signer(session, label, pybergshamra.Algorithm.RSA_SHA256)
-        ctx.set_hsm_signer(signer)
+        # Keep HSM signing on an owned XML string. Authentication and all
+        # operation objects must be released before the next token login.
+        xml = etree.tostring(relt, encoding='unicode')
+        signed = _sign_pkcs11(provider, module_path, pin, label, xml, reference_id=idattr, cert_pem=cert_pem)
+        req.t = root(etree.fromstring(signed))
+        return req.t
     else:
         # On-disk private key path.
+        mgr = pybergshamra.KeysManager()
+        ctx = pybergshamra.DsigContext(mgr)
         key = pybergshamra.load_key_file(key_file)
         mgr.add_key(key)
 
-    if not is_pkcs11_key and is_document_root(relt):
-        # Sign the working tree in place through the shared native DOM
-        # (pyuppsala document handle). This avoids serializing the whole
-        # aggregate, the signer's internal re-parses, and the reparse of the
-        # signed result -- downstream pipes keep the very same tree, with the
-        # <ds:Signature> inserted as the root's first child.
-        #
-        # PKCS#11 signing deliberately uses the owned-string path below. In
-        # production, mutating a live pyuppsala aggregate through the native
-        # document capsule while a vendor PKCS#11 module signs has caused
-        # worker SIGSEGVs and partially serialized aggregates. Keeping the HSM
-        # operation on an owned document avoids that unsafe integration
-        # boundary while preserving the native fast path for software keys.
+    if is_document_root(relt):
+        # The document API uses an owned XML handoff and imports the signed
+        # result into the existing document, preserving downstream tree identity.
         #
         # Only valid when ``relt`` is the document root. After ``first`` (an
         # MDQ single-entity request) the working document is an
@@ -1366,7 +1383,7 @@ def sign(req: Plumbing.Request, *_opts):
         pybergshamra.sign_enveloped_document(ctx, doc, reference_id=idattr, cert_pem=cert_pem)
         req.t = relt
     else:
-        # PKCS11 signing, or a subtree of a larger document (small, so the
+        # A subtree of a larger document (small, so the
         # string round trip is cheap): serialize the working document, build
         # the enveloped signature, sign, and reparse so downstream pipes see a
         # standalone pyuppsala element.

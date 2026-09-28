@@ -317,9 +317,8 @@ def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool
 
     relt = root(t)
     if is_document_root(relt):
-        # Verify directly against the shared native DOM (pyuppsala document
-        # handle): no serialization of the working tree and no re-parse
-        # inside the verifier. Only valid when ``relt`` *is* the document --
+        # The document API verifies through an owned XML handoff.
+        # Only valid when ``relt`` *is* the document --
         # for a subtree the native document would be the enclosing aggregate.
         result = pybergshamra.verify_document(ctx, etree.native_document(relt))
     else:
