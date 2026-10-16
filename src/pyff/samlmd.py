@@ -2,6 +2,7 @@ import json
 import re
 import traceback
 from base64 import b64decode
+from copy import deepcopy
 from datetime import datetime, timedelta
 from io import BytesIO
 from itertools import chain
@@ -517,11 +518,20 @@ def entitiesdescriptor(
     if valid_until is not None:
         attrs['validUntil'] = valid_until
     t = etree.Element("{{{}}}EntitiesDescriptor".format(NS['md']), **attrs)
-    # pyuppsala's cross-tree append deep-copies the subtree into the target document (via the
-    # native import_subtree, which also carries inherited namespace declarations) and never
-    # mutates the source, unlike lxml which moves the node. So an explicit deepcopy(entity) here
-    # would be a redundant second clone; extend alone already protects the source.
-    t.extend(entities)
+    # A cross-document append has lxml's move semantics in pyuppsala too: the
+    # subtree is cloned into the target document, but the source's live element
+    # proxies are re-pointed onto the clone and the source node is detached from
+    # its previous parent. The entities handed to us are usually the store's
+    # shared objects, so appending them directly would move them into this
+    # request's aggregate and rip them out of whichever aggregate the previous
+    # request built, which races between pyffd worker threads (observed as
+    # "Already borrowed: PyBorrowMutError" from pyuppsala's repoint_subtree)
+    # and can serve an aggregate with entities missing. Copy first so each
+    # request works on private elements and the store is never touched.
+    if copy:
+        t.extend(deepcopy(entity) for entity in entities)
+    else:
+        t.extend(entities)
 
     # lxml can prune unused namespace declarations after building the aggregate.
     # pyuppsala preserves the declarations needed by imported subtrees but does

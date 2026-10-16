@@ -237,3 +237,55 @@ class TestConfig(TestCase):
         assert len(x) == 2
         assert x[0] == 'a'
         assert x[1] == 'b'
+
+
+class TestEntitiesDescriptor(TestCase):
+    """Aggregates built for one request must not move the shared store entities."""
+
+    MD = NS['md']
+
+    def _entities(self):
+        from pyuppsala import etree
+
+        return [
+            etree.fromstring(
+                f'<md:EntityDescriptor xmlns:md="{self.MD}" entityID="https://e{i}.example.org/sp">'
+                f'<md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"/>'
+                f'</md:EntityDescriptor>'
+            )
+            for i in range(3)
+        ]
+
+    def test_entitiesdescriptor_copies_shared_entities(self):
+        """A second aggregate from the same entities leaves the first one intact.
+
+        pyuppsala's cross-document append has lxml's move semantics for Python
+        proxies: without a copy, request 2 would re-point and detach the entities
+        that request 1 just aggregated, emptying request 1's document and racing
+        between pyffd worker threads (PyBorrowMutError from repoint_subtree).
+        """
+        from pyff.samlmd import entitiesdescriptor
+
+        store = self._entities()
+        first = entitiesdescriptor(store, 'https://md.example.org/first', lookup_fn=None, validate=False)
+        second = entitiesdescriptor(store, 'https://md.example.org/second', lookup_fn=None, validate=False)
+
+        self.assertEqual(3, len(first))
+        self.assertEqual(3, len(second))
+        for entity in store:
+            self.assertIsNone(entity.getparent(), "store entity was moved into a request aggregate")
+            self.assertIs(root(entity), entity)
+        self.assertEqual(
+            [e.get('entityID') for e in store],
+            [e.get('entityID') for e in first],
+        )
+
+    def test_entitiesdescriptor_copy_false_moves(self):
+        """copy=False keeps the historical (lxml) move behaviour for callers that want it."""
+        from pyff.samlmd import entitiesdescriptor
+
+        store = self._entities()
+        first = entitiesdescriptor(store, 'https://md.example.org/first', lookup_fn=None, validate=False, copy=False)
+        self.assertEqual(3, len(first))
+        for entity in store:
+            self.assertIs(entity.getparent(), first)
