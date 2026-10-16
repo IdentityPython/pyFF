@@ -902,11 +902,11 @@ wheels = [
 
 [[package]]
 name = "pybergshamra"
-version = "0.10.0"
+version = "0.11.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a3/d1/98e585964715e5167c4278194fa8ea8cd46c5b908ef4f57b54a8c9e36b94/pybergshamra-0.10.0.tar.gz", hash = "sha256:c26be09eea77b82e15ccf34a5d6d9906a3992689b612074174746678eea89d0a", size = 118181, upload-time = "2026-10-16T06:22:19.531Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/37/462554a206d0cf9dceb88888b3b8735784b37e34aa674ac14b885f1d38d5/pybergshamra-0.11.0.tar.gz", hash = "sha256:f01e3653647f4b5e075b8135d46809367070546d827029caefcecb154727b556", size = 119880, upload-time = "2026-10-16T15:03:06.044Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/41/2c/5e42719d8dae88b2bfcebcac8022c3168fddcfe99668d708397e25900976/pybergshamra-0.10.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:dd50926253a1a52f791145bab6dbf9600307c918448e2da2f29790cbc9ab16ad", size = 2137905, upload-time = "2026-10-16T06:22:18.001Z" },
+    { url = "https://files.pythonhosted.org/packages/22/56/5a13e2a563c1f6bea44966e650653c48d2b09211ebc2d6d9569c829b52a3/pybergshamra-0.11.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:6d8a5faf7699bd0d24cb58e8ffd78a9e9c42abdd26acbd4c58ae930062ab94ce", size = 2543110, upload-time = "2026-10-16T15:03:04.023Z" },
 ]
 
 [[package]]
@@ -1123,7 +1123,7 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "gunicorn", marker = "python_full_version >= '3.10'", specifier = "==25.0.3" },
     { name = "mako", specifier = ">=1.3.10" },
-    { name = "pybergshamra", specifier = ">=0.10.0" },
+    { name = "pybergshamra", specifier = ">=0.11.0" },
     { name = "pyconfig", specifier = ">=3.2.3,<3.3.0" },
     { name = "pydantic", specifier = ">=2.8" },
     { name = "pyramid", specifier = ">=2.0.2" },
