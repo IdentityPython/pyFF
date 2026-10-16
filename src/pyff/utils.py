@@ -716,6 +716,29 @@ def has_tag(t, tag):
     return t.fast_has(tag)
 
 
+def collect_attr(t, key, tag):
+    """Values of attribute ``key`` on every ``tag`` descendant (including ``t``).
+
+    Native single pass on pyuppsala; falls back to iteration on backends
+    without ``fast_collect_attr``. Elements lacking the attribute are skipped.
+    """
+    fast = getattr(t, 'fast_collect_attr', None)
+    if fast is not None:
+        return fast(key, tag)
+    return [v for v in (e.get(key) for e in t.iter(tag)) if v is not None]
+
+
+def collect_text(t, tag):
+    """Stripped leading text of every ``tag`` descendant that has text.
+
+    Native single pass on pyuppsala >= 0.13; falls back to iteration.
+    """
+    fast = getattr(t, 'fast_collect_text', None)
+    if fast is not None:
+        return fast(tag)
+    return [e.text.strip() for e in t.iter(tag) if e.text is not None]
+
+
 def url2host(url):
     (host, sep, _port) = urlparse(url).netloc.partition(':')
     return host

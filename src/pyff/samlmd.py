@@ -21,6 +21,8 @@ from pyff.utils import (
     b2u,
     cert_dict,
     check_signature,
+    collect_attr,
+    collect_text,
     datetime2iso,
     dumptree,
     duration2timedelta,
@@ -366,6 +368,11 @@ def metadata_expiration(t: ElementTree) -> Optional[timedelta]:
 
 def filter_invalids_from_document(t: ElementTree, base_url, validation_errors) -> ElementTree:
     xsd = schema()
+    # Fast path: one native whole-document validation (pyuppsala validates the
+    # DOM in place, no serialization). Only when the document as a whole fails
+    # do we pay for the per-entity pass that pinpoints and removes offenders.
+    if xsd.validate(t):
+        return t
     for e in iter_entities(t):
         if not xsd.validate(e):
             _error = xml_error(xsd.error_log, m=base_url)
@@ -510,12 +517,11 @@ def entitiesdescriptor(
     if valid_until is not None:
         attrs['validUntil'] = valid_until
     t = etree.Element("{{{}}}EntitiesDescriptor".format(NS['md']), **attrs)
-    for entity in entities:
-        # pyuppsala's cross-tree append deep-copies the subtree into the target document (via the
-        # native import_subtree) and never mutates the source, unlike lxml which moves the node.
-        # So the explicit deepcopy(entity) here would be a redundant second clone (serialize +
-        # reparse per entity) on the pyuppsala backend; append alone already protects the source.
-        t.append(entity)
+    # pyuppsala's cross-tree append deep-copies the subtree into the target document (via the
+    # native import_subtree, which also carries inherited namespace declarations) and never
+    # mutates the source, unlike lxml which moves the node. So an explicit deepcopy(entity) here
+    # would be a redundant second clone; extend alone already protects the source.
+    t.extend(entities)
 
     # lxml can prune unused namespace declarations after building the aggregate.
     # pyuppsala preserves the declarations needed by imported subtrees but does
@@ -575,10 +581,12 @@ def find_entity(t, e_id, attr='entityID'):
 # semantics copied from https://github.com/lordal/md-summary/blob/master/md-summary
 # many thanks to Anders Lordahl & Scotty Logan for the idea
 def guess_entity_software(e):
-    for elt in chain(
-        e.findall(".//{{{}}}SingleSignOnService".format(NS['md'])), e.findall(".//{{{}}}AssertionConsumerService".format(NS['md']))
+    # One native pass per service type collecting the Location attributes,
+    # instead of two Python ElementPath scans materializing every endpoint.
+    for location in chain(
+        collect_attr(e, 'Location', "{{{}}}SingleSignOnService".format(NS['md'])),
+        collect_attr(e, 'Location', "{{{}}}AssertionConsumerService".format(NS['md'])),
     ):
-        location = elt.get('Location')
         if location:
             if (
                 'Shibboleth.sso' in location
@@ -652,9 +660,9 @@ def is_aa(entity):
 
 def _domains(entity):
     domains = [url2host(entity.get('entityID'))]
-    for d in entity.iter("{{{}}}DomainHint".format(NS['mdui'])):
-        if d.text not in domains:
-            domains.append(d.text)
+    for d in collect_text(entity, "{{{}}}DomainHint".format(NS['mdui'])):
+        if d not in domains:
+            domains.append(d)
     return domains
 
 
