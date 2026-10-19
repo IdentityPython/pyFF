@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://eidas.pp.dev-franceconnect.fr/EidasNodeConnector/ConnectorMetadata" validUntil="2026-10-20T14:14:54.214Z"><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignedInfo><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><ds:SignatureMethod Algorithm="http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1"/><ds:Reference URI=""><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha512"/><ds:DigestValue>9IwZ4Hqs3F02Vi98eiU+ppmdt+tOtpwGRcc7A0ienvqHUJEZ00bRkBTIJ2S4xPyL3U19ZJ/xqxDagyxXT+Dxag==</ds:DigestValue></ds:Reference></ds:SignedInfo><ds:SignatureValue>zN7GsCzWEcn0iMirU55hDshsqni/NBeCBJ4pT5OG3oKg92PcbsHuSW9mitIT8QzCHYaKHj6iBEA/8i2lOf0mTxWJAOxMakBhGu0JB1kA8TPJrcg6iTOQt/dvBWCsKydJN02KbAj4xXASE5Bf8FM45U+beaehRyvAfOVyH5BYnH1krRuUxWtEhSsR0EMUfwiSULY//zadwDg8IAxDipuIjjinXzSpltoo2ZrizBPTA4pvag0m9/dHFw/NIw0l8VfuDTSenpe5DV/WHL3w0QE5zrGn49JlQTkS12qxUisa546a3TWg5xLY9I9tX3XGQaiTsQJvV0RlMWE0SYCXWmoREgYtf3HArqLiplb4ywKpfdQraDL4A37j2qZu1BErb43Ymfk9XC13P81IRbtbluc1mBsuAQnvUNsBuZ4S6MYDyOW2ZwEhG7GeWxKjRymQjbNT3mLjf8QTN+o/w43GNDU4FpgjYBO0H39JajxkWyvZIyl0bMks7S/B+BRj7xWkhD5v</ds:SignatureValue><ds:KeyInfo><ds:X509Data><ds:X509Certificate>MIIECTCCAnGgAwIBAgIBATANBgkqhkiG9w0BAQsFADAzMQswCQYDVQQGEwJGUjEkMCIGA1UECgwb
+RlItRElOVU0tZUlEQVMtbm9kZS1wcmVwcm9kMB4XDTIyMDkyMjE0NDgwNloXDTMyMDkxOTE0NDgw
+NlowTDELMAkGA1UEBhMCRlIxJDAiBgNVBAoMG0ZSLURJTlVNLWVJREFTLW5vZGUtcHJlcHJvZDEX
+MBUGA1UEAwwOZUlEQVMtbWV0YWRhdGEwggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGKAoIBgQDO
+B8ffvjFTk3rBzcyBiwFFMDlYPxIlj+i1BLdLvvzSJdUHKZhegOhzNuRVCeJfoyvml9vtlwK5tfzD
+iY4znZsFO/qIB1wROxrPVRq8AEw0LiPCfP1Ie1rvK2Ddaw0wUEI6wFn4ViAStP5wI3/yaOqN1cFf
+JceXUbvgVfjRS5ETRVZK7UER5vMeMIPn4ESkf86d+GB0rvZoipNOyymXfgs9RU/dvjd40lrRs5rZ
+Nc/l4dOrFUpxHXq/AfLsWKjmmOGx959qMmYtsK9KcQdEAQs2L/adKM+yLJL0JyHxyNnWuaUJDBwW
+xV5PK/hWnkLkebkgpeB5loF7f7Ra2MnB1uzZlaAa69tSILjycdw0cOcY5+hnH6QFq74JDL4WPDR8
+FzCdcN+TY7/HvG6cTR4lPdW/iY3eZQycQqkEccQiFITAeewwVwZbQddbWhHxdtJE8P73QoZl3iSp
+/TzP33Kr3im+IEX1o2PV6Ur36/cDNmc9WQWsRKTeydoIY+AOmV/odt0CAwEAAaMPMA0wCwYDVR0P
+BAQDAgeAMA0GCSqGSIb3DQEBCwUAA4IBgQB2FpL/Xen8z318X2To+3nEdRthc/9OwPF9ZNzftcce
+QP4Q+lxuwKFacklt5VoXURy/JMsgPtSHhar5kiFZTm2SMXVSEqVDj4UzAobVnUutiZPsFoyPWr/c
+iEsWu0VSthsI31AUOvSTisy0w81rPKjNkRuCU5V+AS1Z5rBqMlkwOEiUxUMci+pZQ4VhH+mqg1oH
+1rMuJ1gysYf/zMjSWGlraSbcHApIMBAjs24uSTH/O6io+9k9jLhZGZv9LpssoeSPVz3wJY6h1LHT
+D5OHZYDtelO4X5ZCVRFx5kCaUpKtb4mvo72oWN9KlGvrqp6SkUF1ogovTl16sEf2FZHoN4r0+5ZN
+/vS/plTsCGbe46QPGuj+FO5yN6KclM+eonmBp0JSyoABfYN1T28a4dRwE8CPWCOgJmzxuwqSOH+P
+XlUbPftbx5nGsE3mRBAU1Jga2S4S+zJPHirc2lfZGh6ggdYG9kkqp7X7kiTyPyPuWU644+YaCOwv
+x7804cuLUcQ8VSQ=</ds:X509Certificate></ds:X509Data></ds:KeyInfo></ds:Signature><md:Extensions><mdattr:EntityAttributes xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute" xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion"><saml2:Attribute Name="http://eidas.europa.eu/entity-attributes/protocol-version" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"><saml2:AttributeValue xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xsd:string">1.4.1</saml2:AttributeValue><saml2:AttributeValue xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xsd:string">1.4</saml2:AttributeValue><saml2:AttributeValue xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xsd:string">1.3</saml2:AttributeValue><saml2:AttributeValue xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xsd:string">1.2</saml2:AttributeValue></saml2:Attribute><saml2:Attribute Name="http://eidas.europa.eu/entity-attributes/application-identifier" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"><saml2:AttributeValue xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xsd:string">eIDAS-ref:3.1.0</saml2:AttributeValue></saml2:Attribute></mdattr:EntityAttributes><eidas:SPType xmlns:eidas="http://eidas.europa.eu/saml-extensions">public</eidas:SPType><alg:DigestMethod xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><alg:DigestMethod xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" Algorithm="http://www.w3.org/2001/04/xmldsig-more#sha384"/><alg:DigestMethod xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" Algorithm="http://www.w3.org/2001/04/xmlenc#sha512"/><alg:SigningMethod xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" Algorithm="http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1"/><alg:SigningMethod xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" Algorithm="http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1"/><alg:SigningMethod xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" Algorithm="http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1"/><alg:SigningMethod xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"/><alg:SigningMethod xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384"/><alg:SigningMethod xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport" Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512"/></md:Extensions><md:SPSSODescriptor AuthnRequestsSigned="true" WantAssertionsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:Extensions><eidas:NodeCountry xmlns:eidas="http://eidas.europa.eu/saml-extensions">FR</eidas:NodeCountry></md:Extensions><md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIECjCCAnKgAwIBAgIBAjANBgkqhkiG9w0BAQsFADAzMQswCQYDVQQGEwJGUjEkMCIGA1UECgwb
+RlItRElOVU0tZUlEQVMtbm9kZS1wcmVwcm9kMB4XDTIyMDkyMjE0NDgwNloXDTMyMDkxOTE0NDgw
+NlowTTELMAkGA1UEBhMCRlIxJDAiBgNVBAoMG0ZSLURJTlVNLWVJREFTLW5vZGUtcHJlcHJvZDEY
+MBYGA1UEAwwPZUlEQVMtc2lnbmF0dXJlMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEA
+zrvQ2dMvG0d2VxHRHQFgfaaDKBZ5/lyqbTjWpGnvmrcmGP5Cn77mYDuJwgAvUeTNOIKgZaofqSqA
+WjWEl5Xa5TP/KqPJqSsaC4ykFb6KPvIFmjiAY1+Qh8y1sKBP43l9nuh7NPYaH1e3rdETegi1uNDR
+yQe3teuGU/Vx4Rlx8YJXvRmAvFJlsKAmPpDUkBBcZgk+VUP6hZAn8nkXRMnQEKZgRp7ChmMpwRiF
+gNhJ32vrCLivoc1fewwbrC4JBzk4qwKqIJVrPXpxHkJmUiXP9seMNtLssg0y4im3mLNqRhALooT0
+2Xgv7HTaRHr1Rm0D2s7UTIyluRfLDEqbFWbNBEYc4+ZQzOP5PSUz2kk0MmLIRb3dI4y4bcKIUtV6
+uk0vrhmTWk8pMlFfRwvCHECNnv32Bm0leevp0pz91w8asDMyE1ezIamkxFl5FqIch0v/76LgG73z
+1hJvUP4gTiHXp03HTZQJPbP77Q78hVPpDLfL8M/HG0Ra7CvxDNP8h7u3AgMBAAGjDzANMAsGA1Ud
+DwQEAwIHgDANBgkqhkiG9w0BAQsFAAOCAYEADB98wvyyn5o0yWfYJRHAqAgDTQ9EvIc+S9x9R+5d
+ifQcfc6MtDDyD8mTtN0BKJoGOsm5uWb63Kesa/YwwXJtUCBbNUxkxJlfJihJFDHNSpQFQbZCIeJI
+gIxancqkd2IIXSkyNKwH8aHUDsK1DNMMzWIy93b5z9QH5snD0PJUwAxoEPx3LajFrNhzoB4fq/1E
+uz9lbbyOoHwhzTxBHX4sZ3fbP9xYEhT7d/1BqYHf6C8/PFVVFvr9J+MQv2Rjnbfp5raLH0NG8oHI
+O3M02F6LoFsdBLsgo4xUG76+VgBhxKK4pRcJFgwckizf25bUR5cUpkChR5onEIdIVHlG7v2lyD8n
+/uu1NSsySWgIV+vdtw11MzOCsVXmmWkjpsZjCSQhg5MEo/LgRtkPpiRmYLK1oNdjiy3d1+J6nEhY
+ZCb2GSE2DetKrre8vBOsrkObEVcd44ts7LLPDbgRc34F63ZhyFjOpG0SHgFx1wU2b6ON6NKKj1JX
+C8fk49m5i9MBatk9</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor><md:KeyDescriptor use="encryption"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIECzCCAnOgAwIBAgIBAzANBgkqhkiG9w0BAQsFADAzMQswCQYDVQQGEwJGUjEkMCIGA1UECgwb
+RlItRElOVU0tZUlEQVMtbm9kZS1wcmVwcm9kMB4XDTIyMDkyMjE0NDgwN1oXDTMyMDkxOTE0NDgw
+N1owTjELMAkGA1UEBhMCRlIxJDAiBgNVBAoMG0ZSLURJTlVNLWVJREFTLW5vZGUtcHJlcHJvZDEZ
+MBcGA1UEAwwQZUlEQVMtZW5jcnlwdGlvbjCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCCAYoCggGB
+AO5oZYfn69C/HPH/zVbACmYosQtcUEUFtv53FrZB/tEuMPRJ8fq2lkGwg8tfDRYhJemZJl9SERel
+fDLITeSwQOk1JOp7/5FO+PLxsxGLAfCCSJHe+gUlpJYmHF1SM8k1cb8CqPilW3ZgMjqABuFZuJgV
+0JDO4Qa9SKJ9gCcPPQAd74bnKaVA0eluc/lcMblKEXyhhUZKwfAS9JhetHL9+3k7ZIlBFIMzwP13
+oA1vIRAgo6aos23X4tvhIfvS2a9m/e28xx7yhoWAjVxXFAQVh/bG7Q5sWSMdseuJXc5GXkYyj/gO
+bMKTCp4vJsJ3wtC4e/37xR/uOEMHHRE799avf0hXueenfDcKDntBbL4jyCFPi1xYfX9ODuf6xer0
+puh5hl6VKXLXPoiewhk9ZJpbl2USYmWoJnt6Rz2jmaICOm4wI85egxp/xNkIKv0+unPICI21R3oh
+5uOeutOWLmIMBPvY8h3hRE9zluSL224y0/uyrlqPFW5JvluOF7XMIlWFRQIDAQABow8wDTALBgNV
+HQ8EBAMCBSAwDQYJKoZIhvcNAQELBQADggGBAAihYRC9geHUpqNwzoeRiR6qj9sXJyTMjRxzixQy
+u/n5wMV4yQHB5bwjPKtqcMk4NQwSsNyCQSqzDzZIICK4RP9F+pjtN3fJhg5yRsVDKOyFnZK2pnKh
+YrNTPvEVN4xEHuyBG7FFw4e5it3c1yoIsHA2TZgWOUaNCZU8AVzhVdrH04jVngH3miA28WR28G4x
+YAmu/SLnQUcfSLFBnR8PJN+NMSbnGnya0o+Xay7kg9Tfrqmt4LJyOF6aDXWcpVHuJzaM0Zxf5FKJ
+/ZGxk/3mKfifGVVbd9QbfPVv8RKE5MGjReosdCM/F/MA1+o6kjW6SQMC2qFBR/YnukYdVFSFVUea
+OpGc+uiouuJ0MZVzPrnKmR+jEDJ0P/flvyy1+egtKJf3ZuMulOkfwtBKZY+PWsk+GHtz1CLvtGzE
+Y+umSZ8/jDYyxz8epIYE263M8gQPmDBDMgweZ882Oz3veqwkrCY+hnDGSXFcai9AQic/NOfo8KsO
+fJ1SFAUT/RySokFAFg==</ds:X509Certificate></ds:X509Data></ds:KeyInfo><md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes256-gcm"/><md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes192-gcm"/><md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes128-gcm"/></md:KeyDescriptor><md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified</md:NameIDFormat><md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat><md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat><md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://eidas.pp.dev-franceconnect.fr/EidasNodeConnector/ColleagueResponse" index="0" isDefault="true"/><md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://eidas.pp.dev-franceconnect.fr/EidasNodeConnector/ColleagueResponse" index="1"/></md:SPSSODescriptor><md:Organization><md:OrganizationName xml:lang="en">FranceConnect</md:OrganizationName><md:OrganizationDisplayName xml:lang="en">French eIDAS Connector</md:OrganizationDisplayName><md:OrganizationURL xml:lang="en">https://franceconnect.gouv.fr</md:OrganizationURL></md:Organization><md:ContactPerson contactType="support"><md:Company>FranceConnect</md:Company><md:GivenName>Customer Support</md:GivenName><md:EmailAddress>support.eidas@franceconnect.gouv.fr</md:EmailAddress></md:ContactPerson><md:ContactPerson contactType="technical"><md:Company>FranceConnect</md:Company><md:GivenName>Technical Support</md:GivenName><md:EmailAddress>support.eidas@franceconnect.gouv.fr</md:EmailAddress></md:ContactPerson></md:EntityDescriptor>
