@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -468,15 +468,6 @@ wheels = [
 ]
 
 [[package]]
-name = "defusedxml"
-version = "0.7.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0f/d5/c66da9b79e5bdb124974bfe172b4daf3c984ebd9c2a06e2b8a4dc7331c72/defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69", size = 75520, upload-time = "2021-03-08T10:59:26.269Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61", size = 25604, upload-time = "2021-03-08T10:59:24.45Z" },
-]
-
-[[package]]
 name = "docutils"
 version = "0.21.2"
 source = { registry = "https://pypi.org/simple" }
@@ -910,6 +901,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pybergshamra"
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/37/462554a206d0cf9dceb88888b3b8735784b37e34aa674ac14b885f1d38d5/pybergshamra-0.11.0.tar.gz", hash = "sha256:f01e3653647f4b5e075b8135d46809367070546d827029caefcecb154727b556", size = 119880, upload-time = "2026-10-16T15:03:06.044Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/22/56/5a13e2a563c1f6bea44966e650653c48d2b09211ebc2d6d9569c829b52a3/pybergshamra-0.11.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:6d8a5faf7699bd0d24cb58e8ffd78a9e9c42abdd26acbd4c58ae930062ab94ce", size = 2543110, upload-time = "2026-10-16T15:03:04.023Z" },
+]
+
+[[package]]
 name = "pyconfig"
 version = "3.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1072,14 +1072,15 @@ dependencies = [
     { name = "accept-types" },
     { name = "apscheduler" },
     { name = "cachetools" },
+    { name = "cryptography" },
     { name = "gunicorn" },
-    { name = "lxml" },
     { name = "mako" },
+    { name = "pybergshamra" },
     { name = "pyconfig" },
     { name = "pydantic" },
     { name = "pyramid" },
     { name = "pytz" },
-    { name = "pyxmlsecurity" },
+    { name = "pyuppsala" },
     { name = "pyyaml" },
     { name = "redis" },
     { name = "redis-collections" },
@@ -1118,16 +1119,16 @@ requires-dist = [
     { name = "accept-types", specifier = ">=0.4.1" },
     { name = "apscheduler", specifier = "==3.6.3" },
     { name = "cachetools", specifier = ">=5.5.2" },
-    { name = "eval-type-backport", marker = "python_full_version == '3.9.*'", specifier = ">=0.2.2" },
+    { name = "cryptography", specifier = ">=42" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "gunicorn", marker = "python_full_version >= '3.10'", specifier = "==25.0.3" },
-    { name = "lxml", specifier = ">=4.1.1" },
     { name = "mako", specifier = ">=1.3.10" },
+    { name = "pybergshamra", specifier = ">=0.11.0" },
     { name = "pyconfig", specifier = ">=3.2.3,<3.3.0" },
     { name = "pydantic", specifier = ">=2.8" },
     { name = "pyramid", specifier = ">=2.0.2" },
     { name = "pytz", specifier = ">=2025.2" },
-    { name = "pyxmlsecurity", specifier = ">=1.0.0" },
+    { name = "pyuppsala", specifier = ">=0.13.0" },
     { name = "pyyaml", specifier = ">=3.10" },
     { name = "redis", specifier = ">=5.3.0" },
     { name = "redis-collections", specifier = ">=0.13.0" },
@@ -1254,18 +1255,16 @@ wheels = [
 ]
 
 [[package]]
-name = "pyxmlsecurity"
-version = "1.0.0"
+name = "pyuppsala"
+version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cryptography" },
-    { name = "defusedxml" },
-    { name = "lxml" },
-    { name = "pyconfig" },
-    { name = "requests" },
-    { name = "six" },
+sdist = { url = "https://files.pythonhosted.org/packages/09/22/a342db6ec60d38dfcf1f54d7efe86aff39a930e6029680d94b86c342fd31/pyuppsala-0.13.0.tar.gz", hash = "sha256:0d1474d65e12ea620be258865390b2c6c36b008b9e29d4815af06d99d43c9bd0", size = 280564, upload-time = "2026-10-15T13:13:52.732Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b6/42/5d2be5b123247d77412493e250604fc494d8a4a53ae7d2f0200a991bcf9f/pyuppsala-0.13.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:d9addcf72c9c2f0bad9d7505572a76ba941155cca9d4fcd3ed4fbf10c0fe4179", size = 1758446, upload-time = "2026-10-15T13:13:44.44Z" },
+    { url = "https://files.pythonhosted.org/packages/94/55/9fded492b6224c3e9c9ac1a39bbde17e73f7d4e2b322e4727dd605c26655/pyuppsala-0.13.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:e5c8b6422d5d8da05e1a4aa0474eaf0893d0c274c77d630626b5b964b875d945", size = 1952800, upload-time = "2026-10-15T13:13:47.038Z" },
+    { url = "https://files.pythonhosted.org/packages/62/45/6ba5531956ebb7c00ee486933b4a3d29a6dc93bd6defb9d5a0268a4bc7df/pyuppsala-0.13.0-cp310-abi3-win_amd64.whl", hash = "sha256:eae3299c6dbd6c8255040b9af7de9235e234b8951038ec1ae7ecd0cb6e18ef84", size = 1931731, upload-time = "2026-10-15T13:13:49.113Z" },
+    { url = "https://files.pythonhosted.org/packages/34/16/5f9c483d273bd183fc295e52501e616ee92a77aa42ed4b7dffc5417ba994/pyuppsala-0.13.0-cp310-abi3-win_arm64.whl", hash = "sha256:7e9860f661fbf895a5db8ac9247edfbf5ec9251de7fc1bbd47cc7aeea6c6c88e", size = 1823505, upload-time = "2026-10-15T13:13:50.917Z" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/37/f1f50c2bb840d97490b45f3fb658ec489d5dacc4d7c9630b67bb380cb748/pyXMLSecurity-1.0.0.tar.gz", hash = "sha256:03398d6c7eef462410c7133d0b8861d721f67678f6a66f45090aba26806d76a3", size = 31342, upload-time = "2023-08-24T12:13:01.23Z" }
 
 [[package]]
 name = "pyyaml"

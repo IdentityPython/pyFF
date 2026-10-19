@@ -10,6 +10,7 @@ import operator
 import os
 import re
 import sys
+import threading
 import traceback
 from copy import deepcopy
 from datetime import datetime
@@ -17,9 +18,9 @@ from io import BytesIO
 from typing import Optional
 from urllib.parse import quote_plus, urlparse
 
-import xmlsec
-from lxml import etree
-from lxml.etree import DocumentInvalid
+import pybergshamra
+from pyuppsala import etree
+from pyuppsala.etree import DocumentInvalid
 from str2bool import str2bool
 
 from pyff.constants import NS
@@ -43,10 +44,13 @@ from pyff.samlmd import (
     sort_entities,
 )
 from pyff.utils import (
+    cert_dict,
+    cert_info,
     datetime2iso,
     dumptree,
     duration2timedelta,
     hash_id,
+    is_document_root,
     iso2datetime,
     parse_xml,
     root,
@@ -62,6 +66,15 @@ __author__ = 'leifj'
 
 FILESPEC_REGEX = r'([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)'
 log = get_log(__name__)
+
+# PKCS#11 providers own the dynamically loaded vendor module. Keep them alive
+# for the worker process lifetime: some modules (including Luna) start native
+# background threads that outlive a provider object, so unloading and loading
+# the module again can leave those threads executing unmapped code. Sessions
+# remain short-lived and are opened separately for each signing operation.
+_pkcs11_provider_cache = {}
+_pkcs11_provider_cache_lock = threading.Lock()
+_pkcs11_signing_locks = {}
 
 
 @pipe
@@ -431,7 +444,7 @@ def info(req: Plumbing.Request, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS, smart_strings=False):
+    for e in iter_entities(req.t):
         print(e.get('entityID'))
     return req.t
 
@@ -707,7 +720,16 @@ def load(req: Plumbing.Request, *opts):
         req.md.rm.add_child(url, child_opts)
 
     log.debug("Refreshing all resources")
-    req.md.rm.reload(fail_on_error=bool(_opts['fail_on_error']))
+    req.md.rm.reload(
+        fail_on_error=bool(_opts['fail_on_error']),
+        max_workers=int(_opts['max_workers']),
+    )
+
+    # Resource trees are only an intermediate representation for loading and
+    # watcher callbacks. The store has its own entity copies after reload; keep
+    # the resource graph/metadata but release large parsed source documents.
+    for resource in req.md.rm.walk():
+        resource.t = None
 
 
 def _select_args(req):
@@ -1109,6 +1131,126 @@ def _discojson_sp_attr(req, *opts):
     return json.dumps(res)
 
 
+def _parse_pkcs11_key_uri(key_uri: str) -> tuple[str, str, str, Optional[int]]:
+    """Parse pyFF's historical PKCS#11 key URI syntax."""
+    if not key_uri.startswith("pkcs11://"):
+        raise PipeException(f"Malformed pkcs11 uri: {key_uri}")
+
+    module_and_slot, separator, label_and_query = key_uri[len("pkcs11://"):].rpartition('/')
+    if not separator or not module_and_slot or not label_and_query:
+        raise PipeException(f"Malformed pkcs11 uri (missing module path or object label): {key_uri}")
+
+    label, _, query = label_and_query.partition('?')
+    if not label:
+        raise PipeException(f"Malformed pkcs11 uri (missing object label): {key_uri}")
+
+    module_path = module_and_slot
+    uri_slot_id = None
+    path_without_slot, colon, slot_text = module_and_slot.rpartition(':')
+    if colon and re.fullmatch(r"-?\d+", slot_text):
+        try:
+            uri_slot_id = int(slot_text)
+        except ValueError as ex:
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_text!r}") from ex
+        if uri_slot_id < 0:
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_text!r}")
+        module_path = path_without_slot
+
+    pin_spec = "env:PYKCS11PIN"
+    if query:
+        for param in query.split('&'):
+            key, _, value = param.partition('=')
+            if key == 'pin':
+                pin_spec = value
+
+    return module_path, label, pin_spec, uri_slot_id
+
+
+def _select_pkcs11_provider(
+    module_path: str,
+    *,
+    uri_slot_id: Optional[int] = None,
+    slot_id=None,
+    token_label=None,
+    token_serial=None,
+):
+    """Get a process-cached provider using exactly one token selector."""
+    configured_slot_id = None
+    if slot_id is not None:
+        if isinstance(slot_id, bool):
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_id!r}")
+        try:
+            configured_slot_id = int(slot_id)
+        except (TypeError, ValueError) as ex:
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_id!r}") from ex
+        if configured_slot_id < 0:
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_id!r}")
+
+    if uri_slot_id is not None and configured_slot_id is not None and uri_slot_id != configured_slot_id:
+        raise PipeException("Conflicting PKCS#11 slot IDs in key URI and sign configuration")
+
+    effective_slot_id = configured_slot_id if configured_slot_id is not None else uri_slot_id
+    if token_serial is not None and token_label is None:
+        raise PipeException("PKCS#11 token_serial requires token_label")
+    if effective_slot_id is not None and (token_label is not None or token_serial is not None):
+        raise PipeException("PKCS#11 slot_id cannot be combined with token_label or token_serial")
+
+    normalized_token_label = None if token_label is None else str(token_label)
+    normalized_token_serial = None if token_serial is None else str(token_serial)
+    cache_key = (
+        os.path.realpath(module_path),
+        effective_slot_id,
+        normalized_token_label,
+        normalized_token_serial,
+    )
+
+    # Hold the lock through construction. functools.lru_cache and a
+    # check-then-create sequence can both invoke the constructor more than once
+    # during concurrent first access, which is precisely what vendor modules
+    # with process-global initialization cannot safely tolerate.
+    with _pkcs11_provider_cache_lock:
+        if cache_key in _pkcs11_provider_cache:
+            return _pkcs11_provider_cache[cache_key]
+
+        if normalized_token_label is not None:
+            provider = pybergshamra.Pkcs11Provider.with_token(
+                module_path,
+                normalized_token_label,
+                token_serial=normalized_token_serial,
+            )
+        elif effective_slot_id is not None:
+            provider = pybergshamra.Pkcs11Provider.with_slot_id(module_path, effective_slot_id)
+        else:
+            provider = pybergshamra.Pkcs11Provider(module_path)
+
+        _pkcs11_provider_cache[cache_key] = provider
+        return provider
+
+
+def _sign_pkcs11(provider, module_path, pin, label, xml, *, reference_id=None, cert_pem=None):
+    """Serialize token logins and release authenticated objects even on errors."""
+    # Different selectors can resolve to the same token. Lock its actual slot,
+    # rather than the configured label/serial/slot selector or key label.
+    token = (os.path.realpath(module_path), provider.slot_id)
+    with _pkcs11_provider_cache_lock:
+        lock = _pkcs11_signing_locks.setdefault(token, threading.Lock())
+
+    with lock:
+        session = signer = ctx = None
+        try:
+            session = provider.open_session(pin)
+            signer = pybergshamra.Pkcs11Signer(session, label, pybergshamra.Algorithm.RSA_SHA256)
+            ctx = pybergshamra.DsigContext(pybergshamra.KeysManager())
+            ctx.set_hsm_signer(signer)
+            return pybergshamra.sign_enveloped(ctx, xml, reference_id=reference_id, cert_pem=cert_pem)
+        finally:
+            # Exception tracebacks retain Python frames. Clear every local
+            # owner before unlocking so a failed request cannot retain login.
+            ctx = None
+            signer = None
+            session = None
+
+
 @pipe
 def sign(req: Plumbing.Request, *_opts):
     """
@@ -1124,26 +1266,34 @@ def sign(req: Plumbing.Request, *_opts):
     The 'cert' argument may be empty in which case the cert is looked up using the PKCS#11 token, or may point
     to a file containing a PEM-encoded X.509 certificate.
 
+    When several initialized tokens are visible, select one with ``token_label`` and optional ``token_serial``,
+    or with ``slot_id``. Token selection requires pybergshamra 0.8.1 or newer. The slot may alternatively be
+    supplied using the historical ``:slot`` suffix in the key URI. Slot and token selectors are mutually exclusive.
+
     **PKCS11 URIs**
 
     A pkcs11 URI has the form
 
-    .. code-block:: xml
+    .. code-block:: text
 
         pkcs11://<absolute path to SO/DLL>[:slot]/<object label>[?pin=<pin>]
 
     The pin parameter can be used to point to an environment variable containing the pin: "env:<ENV variable>".
     By default pin is "env:PYKCS11PIN" which tells sign to use the pin found in the PYKCS11PIN environment
-    variable. This is also the default for PyKCS11 which is used to communicate with the PKCS#11 module.
+    variable. Authentication and signing are serialized per token within the worker process.
 
     **Examples**
 
     .. code-block:: yaml
 
         - sign:
-            key: pkcs11:///usr/lib/libsofthsm.so/signer
+            key: pkcs11:///usr/lib/libCryptoki2_64.so/sctest2
+            token_label: sc_ha
+            token_serial: "11429933786539" # optional when the label is unique
+            cert: /etc/credentials/sc-test-md-signer.crt
 
-    This would sign the document using the key with label 'signer' in slot 0 of the /usr/lib/libsofthsm.so module.
+    This signs with the key-object label ``sctest2`` on the token labelled ``sc_ha``. The PKCS#11 client library
+    still reads vendor connectivity and HA settings from its normal configuration, such as ``/etc/Chrystoki.conf``.
     Note that you may need to run pyff with env PYKCS11PIN=<pin> .... for this to work. Consult the documentation
     of your PKCS#11 module to find out about any other configuration you may need.
 
@@ -1167,16 +1317,79 @@ def sign(req: Plumbing.Request, *_opts):
 
     if key_file is None:
         raise PipeException("Missing key argument for sign pipe")
+    if not isinstance(key_file, str):
+        raise PipeException("The sign pipe key argument must be a string")
 
     if cert_file is None:
         log.info("Attempting to extract certificate from token...")
 
-    opts = dict()
+    # Build the signing context. The reference id (if any) comes from the @ID
+    # attribute on the document root; pybergshamra already treats "ID" as a
+    # default id attribute, so we must NOT call ctx.add_id_attr("ID").
     relt = root(req.t)
     idattr = relt.get('ID')
-    if idattr:
-        opts['reference_uri'] = f'#{idattr}'
-    xmlsec.sign(req.t, key_file, cert_file, **opts)
+
+    # Read the certificate (if provided) as PEM text to embed in X509Data.
+    cert_pem = None
+    if cert_file is not None:
+        with open(cert_file) as fd:
+            cert_pem = fd.read()
+
+    is_pkcs11_key = key_file.startswith("pkcs11:")
+    if is_pkcs11_key:
+        # HSM signing via PKCS#11. The URI form is:
+        #   pkcs11://<module path>[:slot]/<label>[?pin=<pin>]
+        # where pin may be "env:VARNAME" (default env:PYKCS11PIN).
+        module_path, label, pin_spec, uri_slot_id = _parse_pkcs11_key_uri(key_file)
+        if pin_spec.startswith("env:"):
+            env_var = pin_spec[len("env:"):]
+            pin = os.environ.get(env_var)
+            if pin is None:
+                raise PipeException(f"PKCS#11 pin environment variable {env_var} is not set")
+        else:
+            pin = pin_spec
+
+        provider = _select_pkcs11_provider(
+            module_path,
+            uri_slot_id=uri_slot_id,
+            slot_id=req.args.get('slot_id'),
+            token_label=req.args.get('token_label'),
+            token_serial=req.args.get('token_serial'),
+        )
+        # Keep HSM signing on an owned XML string. Authentication and all
+        # operation objects must be released before the next token login.
+        xml = etree.tostring(relt, encoding='unicode')
+        signed = _sign_pkcs11(provider, module_path, pin, label, xml, reference_id=idattr, cert_pem=cert_pem)
+        req.t = root(etree.fromstring(signed))
+        return req.t
+    else:
+        # On-disk private key path.
+        mgr = pybergshamra.KeysManager()
+        ctx = pybergshamra.DsigContext(mgr)
+        key = pybergshamra.load_key_file(key_file)
+        mgr.add_key(key)
+
+    if is_document_root(relt):
+        # The document API uses an owned XML handoff and imports the signed
+        # result into the existing document, preserving downstream tree identity.
+        #
+        # Only valid when ``relt`` is the document root. After ``first`` (an
+        # MDQ single-entity request) the working document is an
+        # EntityDescriptor that is still a child of the loaded aggregate; the
+        # native document would then be the whole aggregate and the signature
+        # would land on the discarded EntitiesDescriptor, leaving the emitted
+        # entity unsigned.
+        doc = etree.native_document(relt)
+        pybergshamra.sign_enveloped_document(ctx, doc, reference_id=idattr, cert_pem=cert_pem)
+        req.t = relt
+    else:
+        # A subtree of a larger document (small, so the
+        # string round trip is cheap): serialize the working document, build
+        # the enveloped signature, sign, and reparse so downstream pipes see a
+        # standalone pyuppsala element.
+        xml = etree.tostring(relt, encoding='unicode')
+        signed = pybergshamra.sign_enveloped(ctx, xml, reference_id=idattr, cert_pem=cert_pem)
+        req.t = root(etree.fromstring(signed))
 
     return req.t
 
@@ -1207,13 +1420,17 @@ def stats(req: Plumbing.Request, *opts):
         raise PipeException("Unable to call stats on non-XML")
 
     if req.t is not None:
-        print("selected:       {:d}".format(len(req.t.xpath("//md:EntityDescriptor", namespaces=NS))))
-        print(
-            "          idps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:IDPSSODescriptor]", namespaces=NS)))
-        )
-        print(
-            "           sps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:SPSSODescriptor]", namespaces=NS)))
-        )
+        idp_descriptor = "{{{}}}IDPSSODescriptor".format(NS['md'])
+        sp_descriptor = "{{{}}}SPSSODescriptor".format(NS['md'])
+        # Native subtree counts avoid creating a Python proxy per entity. Role
+        # descriptor counts equal entities-with-role except for the rare entity
+        # carrying two same-type descriptors.
+        selected = req.t.fast_count("{{{}}}EntityDescriptor".format(NS['md']))
+        idps = req.t.fast_count(idp_descriptor)
+        sps = req.t.fast_count(sp_descriptor)
+        print("selected:       {:d}".format(selected))
+        print("          idps: {:d}".format(idps))
+        print("           sps: {:d}".format(sps))
     print("---")
     return req.t
 
@@ -1428,17 +1645,23 @@ def check_xml_namespaces(req: Plumbing.Request, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    def _verify(elt):
-        if isinstance(elt.tag, str):
-            for _prefix, uri in list(elt.nsmap.items()):
-                if not uri.startswith('urn:'):
-                    u = urlparse(uri)
-                    if u.scheme not in ('http', 'https'):
-                        raise MetadataException(
-                            f"Namespace URIs must be be http(s) URIs ('{uri}' declared on {elt.tag})"
-                        )
+    # The check's intent is O(distinct namespace URIs) (~5 in real metadata), but a naive
+    # per-element walk reads the full in-scope nsmap on every element, so the same handful of
+    # root-inherited namespaces get urlparse-d tens of thousands of times (165k urlparse calls on
+    # the SWAMID corpus). Dedupe: validate each distinct URI exactly once.
+    seen = set()
+    for elt in root(req.t).iter():
+        if not isinstance(elt.tag, str):
+            continue
+        for _prefix, uri in elt.nsmap.items():
+            if uri in seen:
+                continue
+            seen.add(uri)
+            if not uri.startswith('urn:') and urlparse(uri).scheme not in ('http', 'https'):
+                raise MetadataException(
+                    f"Namespace URIs must be http(s) URIs ('{uri}' declared on {elt.tag})"
+                )
 
-    with_tree(root(req.t), _verify)
     return req.t
 
 
@@ -1508,11 +1731,17 @@ def certreport(req: Plumbing.Request, *opts):
     error_bits = int(req.args.get('error_bits', "1024"))
     warning_bits = int(req.args.get('warning_bits', "2048"))
 
+    # One native pass: iterate entities directly and walk each (small) entity
+    # subtree for its certificates. The previous per-entity document-wide
+    # xpath (`md:EntityDescriptor[@entityID=...]//ds:X509Certificate`) was
+    # O(entities * document), and because annotate_entity mutates the tree
+    # between evaluations every xpath re-built the document's XPath indexes --
+    # unusably slow at eduGAIN scale (~10k entities).
+    x509_tag = "{{{}}}X509Certificate".format(NS['ds'])
     seen: dict[str, bool] = {}
-    for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS, smart_strings=False):
-        for cd in req.t.xpath(
-            f"md:EntityDescriptor[@entityID='{eid}']//ds:X509Certificate", namespaces=NS, smart_strings=False
-        ):
+    for entity_elt in iter_entities(req.t):
+        eid = entity_elt.get('entityID')
+        for cd in entity_elt.iter(x509_tag):
             try:
                 cert_pem = cd.text
                 cert_der = base64.b64decode(cert_pem)
@@ -1521,46 +1750,53 @@ def certreport(req: Plumbing.Request, *opts):
                 fp = m.hexdigest()
                 if fp not in seen:
                     seen[fp] = True
-                    entity_elt = cd.getparent().getparent().getparent().getparent().getparent()
-                    cdict = xmlsec.utils.b642cert(cert_pem)
-                    keysize = cdict['modulus'].bit_length()
-                    cert = cdict['cert']
-                    if keysize < error_bits:
+                    # cert_info replaces xmlsec.utils.b642cert and exposes the
+                    # same fields the report needs: keysize (bits), subject, and
+                    # not_after (a datetime instead of the old raw string).
+                    cert = cert_info(cert_pem)
+                    subject = cert.subject
+                    keysize = cert.keysize
+                    if keysize is not None and keysize < error_bits:
                         annotate_entity(
                             entity_elt,
                             "certificate-error",
                             "keysize too small",
-                            f"{cert.getSubject()} has keysize of {keysize} bits (less than {error_bits})",
+                            f"{subject} has keysize of {keysize} bits (less than {error_bits})",
                         )
                         log.error(f"{eid} has keysize of {keysize}")
-                    elif keysize < warning_bits:
+                    elif keysize is not None and keysize < warning_bits:
                         annotate_entity(
                             entity_elt,
                             "certificate-warning",
                             "keysize small",
-                            f"{cert.getSubject()} has keysize of {keysize} bits (less than {warning_bits})",
+                            f"{subject} has keysize of {keysize} bits (less than {warning_bits})",
                         )
                         log.warning(f"{eid} has keysize of {keysize}")
 
-                    notafter = cert.getNotAfter()
+                    notafter = cert.not_after
                     if notafter is None:
                         annotate_entity(
                             entity_elt,
                             "certificate-error",
                             "certificate has no expiration time",
-                            f"{cert.getSubject()} has no expiration time",
+                            f"{subject} has no expiration time",
                         )
                     else:
                         try:
-                            et = datetime.strptime(f"{notafter}", "%y%m%d%H%M%SZ")
-                            now = datetime.now()
-                            dt = et - now
+                            # Compare against a "now" with matching awareness:
+                            # cryptography's not_valid_after_utc is tz-aware UTC,
+                            # while the deprecated not_valid_after is naive.
+                            if notafter.tzinfo is not None:
+                                now = utc_now()
+                            else:
+                                now = datetime.now()
+                            dt = notafter - now
                             if total_seconds(dt) < error_seconds:
                                 annotate_entity(
                                     entity_elt,
                                     "certificate-error",
                                     "certificate has expired",
-                                    f"{cert.getSubject()} expired {-dt} ago",
+                                    f"{subject} expired {-dt} ago",
                                 )
                                 log.error(f"{eid} expired {-dt} ago")
                             elif total_seconds(dt) < warning_seconds:
@@ -1568,15 +1804,15 @@ def certreport(req: Plumbing.Request, *opts):
                                     entity_elt,
                                     "certificate-warning",
                                     "certificate about to expire",
-                                    f"{cert.getSubject()} expires in {dt}",
+                                    f"{subject} expires in {dt}",
                                 )
                                 log.warning(f"{eid} expires in {dt}")
-                        except ValueError:
+                        except (ValueError, TypeError):
                             annotate_entity(
                                 entity_elt,
                                 "certificate-error",
                                 "certificate has unknown expiration time",
-                                f"{cert.getSubject()} unknown expiration time {notafter}",
+                                f"{subject} unknown expiration time {notafter}",
                             )
 
                     req.store.update(entity_elt)
@@ -1655,7 +1891,7 @@ def signcerts(req: Plumbing.Request, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    for fp, _pem in list(xmlsec.crypto.CertDict(req.t).items()):
+    for fp, _pem in list(cert_dict(req.t).items()):
         log.info(f"found signing cert with fingerprint {fp}")
     return req.t
 

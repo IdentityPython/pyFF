@@ -10,6 +10,7 @@ import os
 import traceback
 from collections import defaultdict, deque
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from enum import Enum
 from threading import Condition, Lock
@@ -17,14 +18,24 @@ from typing import TYPE_CHECKING, Any, Callable
 from urllib.parse import quote as urlescape
 
 import requests
-from lxml.etree import ElementTree
 from pydantic import BaseModel, ConfigDict, Field
+from pyuppsala.etree import ElementTree
 from requests.adapters import Response
 
 from pyff.constants import config
 from pyff.exceptions import ResourceException
 from pyff.fetch import make_fetcher
 from pyff.logs import get_log
+
+# Native (Rust, GIL-free) batch fetcher, used by Resource.reload when
+# config.use_native_fetcher is on. Optional: pyuppsala may be built without
+# its "net" feature, in which case the flag silently falls back to requests.
+try:
+    from pyuppsala import fetch_many as _native_fetch_many
+except ImportError:
+    _native_fetch_many = None
+
+from pyff import __version__ as _pyff_version
 from pyff.utils import (
     Watchable,
     hex_digest,
@@ -157,6 +168,40 @@ class ResourceHandler(URLHandler):
             t.info.exception = ex
 
 
+class _CIHeaders(dict):
+    """Response-header dict with case-insensitive ``get`` (the native fetcher
+    lowercases header names; callers ask for e.g. ``'ETag'`` like requests)."""
+
+    def get(self, key, default=None):
+        return super().get(key.lower(), default)
+
+
+class _NativeResponse:
+    """Minimal ``requests.Response`` stand-in over a pyuppsala ``FetchResult``,
+    exposing exactly the attributes ``Resource.load_resource`` reads."""
+
+    __slots__ = ('status_code', 'reason', 'headers', 'encoding', '_body')
+
+    def __init__(self, fr):
+        self.status_code = int(fr.status)
+        self.reason = fr.reason
+        self.headers = _CIHeaders(fr.headers)
+        content_type = self.headers.get('Content-Type', '')
+        self.encoding = None
+        if 'charset=' in content_type:
+            self.encoding = content_type.split('charset=')[-1].split(';')[0].strip() or None
+        self._body = fr.body
+
+    @property
+    def ok(self):
+        # Mirror requests.Response.ok (anything below 400).
+        return self.status_code < 400
+
+    @property
+    def text(self):
+        return self._body.decode(self.encoding or 'utf-8', 'replace')
+
+
 class ResourceOpts(BaseModel):
     alias: str | None = Field(None, alias='as')  # TODO: Rename to 'name'?
     # a certificate (file) or a SHA1 fingerprint to use for signature verification
@@ -285,21 +330,147 @@ class Resource(Watchable):
             self.url if self.url is not None else "(root)", self.expire_time
         ) + ",".join([f"{k}={v}" for k, v in sorted(list(self.opts.model_dump().items()))])
 
-    def reload(self, fail_on_error=False):
+    def reload(self, fail_on_error=False, max_workers=None):
+        """Fetch and parse this resource tree, including discovered children.
+
+        The non-strict path runs ``r.parse(url_get)`` for every resource on a
+        ``ThreadPoolExecutor`` with a dynamic frontier: children discovered by
+        a parse (e.g. per-file resources from a ``dir://`` source, or MDQ
+        sub-resources) are submitted as soon as their parent finishes. Fetching
+        is I/O-bound and pyuppsala releases the GIL during parse/validate, so
+        ``max_workers`` threads genuinely overlap network transfers with
+        multi-core XML parsing (the old single Fetcher master thread parsed
+        every response serially).
+
+        :param fail_on_error: when True, fetch+parse serially and let the
+            first exception propagate (aborts the pipeline).
+        :param max_workers: thread count for the parallel path; defaults to
+            ``config.worker_pool_size``.
+        """
+        if max_workers is None:
+            max_workers = config.worker_pool_size
+        max_workers = max(1, int(max_workers or 1))
         with non_blocking_lock(self.lock):
             if fail_on_error:
                 for r in self.walk():
                     r.parse(url_get)
             else:
-                rp = ResourceHandler(name="Metadata")
-                rp.schedule(self.children)
-                try:
-                    rp.done.acquire()
-                    rp.done.wait()
-                finally:
-                    rp.done.release()
-                rp.fetcher.stop()
-                rp.fetcher.join()
+                # One parse per distinct URL, matching the old ResourceHandler
+                # dedupe (its pending dict was keyed by URL).
+                seen: set[str] = set()
+
+                # Flag-gated native batch fetch: each frontier round's http(s)
+                # URLs are fetched in ONE pyuppsala.fetch_many call (Rust
+                # threads, GIL released for the whole batch) and served to
+                # parse() through a requests-compatible shim. Fetch failures
+                # simply stay out of the map so parse() falls back to url_get,
+                # keeping requests' retry/local-backup error semantics.
+                use_native = bool(config.use_native_fetcher) and _native_fetch_many is not None
+                prefetched: dict[str, _NativeResponse] = {}
+
+                def prefetch(resources: Iterable[Resource]) -> None:
+                    if not use_native:
+                        return
+                    batch = [
+                        r
+                        for r in resources
+                        if r.url
+                        and r.url.startswith(('http://', 'https://'))
+                        and r.url not in seen
+                        and r.url not in prefetched
+                    ]
+                    if not batch:
+                        return
+                    # verify_tls is per-resource; batch per flag value so one
+                    # Agent config covers each group.
+                    for verify in (False, True):
+                        urls = [r.url for r in batch if bool(r.opts.verify_tls) == verify]
+                        if not urls:
+                            continue
+                        results = _native_fetch_many(
+                            urls,
+                            max_threads=max(max_workers, 4),
+                            timeout=float(config.request_timeout),
+                            verify_tls=verify,
+                            retries=3,
+                            retry_backoff=0.5,
+                            user_agent=f"pyFF/{_pyff_version}",
+                        )
+                        for u, res in zip(urls, results):
+                            if isinstance(res, Exception):
+                                log.warning(f'native fetch of {u} failed ({res}); will retry via requests')
+                            else:
+                                prefetched[u] = _NativeResponse(res)
+
+                def getter(url, verify_tls=False):
+                    r = prefetched.pop(url, None)
+                    if r is not None:
+                        return r
+                    return url_get(url, verify_tls)
+
+                def parse_contained(r: Resource) -> deque[Resource]:
+                    """Parse one resource; contain failures (log + record on
+                    the resource, like ResourceHandler.i_handle) and return
+                    its newly discovered children."""
+                    try:
+                        return r.parse(getter)
+                    except BaseException as ex:
+                        log.debug(traceback.format_exc())
+                        log.error(f'Failed handling resource {r.url}: {ex}')
+                        r.info.exception = ex
+                        return deque()
+
+                if max_workers <= 1:
+                    # Serial BFS: with a single worker an executor adds only
+                    # future/queue churn per resource (thousands of resources
+                    # for directory sources), so don't pay for one.
+                    frontier: deque[Resource] = deque(self.children)
+                    prefetch(frontier)
+                    while frontier:
+                        r = frontier.popleft()
+                        if r.url is None or r.url in seen:
+                            continue
+                        seen.add(r.url)
+                        discovered = parse_contained(r)
+                        prefetch(discovered)
+                        frontier.extend(discovered)
+                else:
+                    # Parallel dynamic frontier: children discovered by a
+                    # parse (per-file resources of a dir:// source, MDQ
+                    # sub-resources) are submitted as soon as their parent
+                    # finishes. Fetching is I/O-bound and pyuppsala releases
+                    # the GIL during parse/validate, so the workers genuinely
+                    # overlap network transfers with multi-core XML parsing.
+                    # Completions arrive over a queue (O(1) per completion,
+                    # no re-arming waiters on the whole pending set).
+                    from queue import SimpleQueue
+
+                    done_q: SimpleQueue = SimpleQueue()
+                    outstanding = 0
+                    with ThreadPoolExecutor(
+                        max_workers=max_workers, thread_name_prefix='pyff-load'
+                    ) as pool:
+
+                        def submit(resources: Iterable[Resource]) -> None:
+                            nonlocal outstanding
+                            resources = list(resources)
+                            # Batch-fetch this round's remote URLs before
+                            # handing them to workers (one GIL-free native
+                            # call for the whole round).
+                            prefetch(resources)
+                            for r in resources:
+                                if r.url is not None and r.url not in seen:
+                                    seen.add(r.url)
+                                    outstanding += 1
+                                    fut = pool.submit(parse_contained, r)
+                                    fut.add_done_callback(done_q.put)
+
+                        submit(self.children)
+                        while outstanding:
+                            fut = done_q.get()
+                            outstanding -= 1
+                            # parse_contained never raises, so result() is safe.
+                            submit(fut.result())
             self.notify()
 
     def __len__(self):

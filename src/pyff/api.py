@@ -11,11 +11,11 @@ import pytz
 import requests
 from accept_types import AcceptableType
 from cachetools import TTLCache
-from lxml import etree
 from pyramid.config import Configurator
 from pyramid.events import NewRequest
 from pyramid.request import Request
 from pyramid.response import Response
+from pyuppsala import etree
 
 from pyff import __version__
 from pyff.constants import config

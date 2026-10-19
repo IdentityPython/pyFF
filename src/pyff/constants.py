@@ -348,6 +348,14 @@ class Config:
         "worker_pool_size", default=1, cmdline=['pyffd'], typeconv=as_int, info="how many gunicorn workers to run"
     )
 
+    use_native_fetcher = S(
+        "use_native_fetcher",
+        default=False,
+        typeconv=as_bool,
+        info="fetch http(s) metadata with pyuppsala's native (Rust, GIL-free) batch fetcher instead of requests; "
+        "bypasses the requests_cache body cache",
+    )
+
     threads = S("threads", default=10, cmdline=['pyffd'], typeconv=as_int, info="how many gunicorn threads to run")
 
     store_class = S("store_class", default="pyff.store:MemoryStore", info="the <pyff.store:Store> implementation")

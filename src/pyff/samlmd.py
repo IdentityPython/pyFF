@@ -8,12 +8,10 @@ from io import BytesIO
 from itertools import chain
 from typing import Any, Optional, Union
 
-from lxml import etree
-from lxml.builder import ElementMaker
-from lxml.etree import DocumentInvalid, Element, ElementTree
 from pydantic import Field
+from pyuppsala import etree
+from pyuppsala.etree import DocumentInvalid, Element, ElementTree
 from str2bool import str2bool
-from xmlsec.crypto import CertDict
 
 from pyff.constants import ATTRS, NF_URI, NS, config
 from pyff.exceptions import MetadataException
@@ -22,7 +20,10 @@ from pyff.parse import ParserInfo, PyffParser, add_parser
 from pyff.utils import (
     Lambda,
     b2u,
+    cert_dict,
     check_signature,
+    collect_attr,
+    collect_text,
     datetime2iso,
     dumptree,
     duration2timedelta,
@@ -302,7 +303,7 @@ class MDServiceListParser(PyffParser):
             for ml in mdl.iter("{{{}}}MetadataLocation".format(NS['ser'])):
                 location = ml.get('Location')
                 if location:
-                    certs = CertDict(ml)
+                    certs = cert_dict(ml)
                     fingerprints = list(certs.keys())
                     fp = None
                     if len(fingerprints) > 0:
@@ -368,6 +369,11 @@ def metadata_expiration(t: ElementTree) -> Optional[timedelta]:
 
 def filter_invalids_from_document(t: ElementTree, base_url, validation_errors) -> ElementTree:
     xsd = schema()
+    # Fast path: one native whole-document validation (pyuppsala validates the
+    # DOM in place, no serialization). Only when the document as a whole fails
+    # do we pay for the per-entity pass that pinpoints and removes offenders.
+    if xsd.validate(t):
+        return t
     for e in iter_entities(t):
         if not xsd.validate(e):
             _error = xml_error(xsd.error_log, m=base_url)
@@ -512,17 +518,30 @@ def entitiesdescriptor(
     if valid_until is not None:
         attrs['validUntil'] = valid_until
     t = etree.Element("{{{}}}EntitiesDescriptor".format(NS['md']), **attrs)
-    for entity in entities:
-        ent_insert = entity
-        if copy:
-            ent_insert = deepcopy(ent_insert)
-        t.append(ent_insert)
+    # A cross-document append has lxml's move semantics in pyuppsala too: the
+    # subtree is cloned into the target document, but the source's live element
+    # proxies are re-pointed onto the clone and the source node is detached from
+    # its previous parent. The entities handed to us are usually the store's
+    # shared objects, so appending them directly would move them into this
+    # request's aggregate and rip them out of whichever aggregate the previous
+    # request built, which races between pyffd worker threads (observed as
+    # "Already borrowed: PyBorrowMutError" from pyuppsala's repoint_subtree)
+    # and can serve an aggregate with entities missing. Copy first so each
+    # request works on private elements and the store is never touched.
+    if copy:
+        t.extend(deepcopy(entity) for entity in entities)
+    else:
+        t.extend(entities)
 
-    # Clean unused namespaces. Prefixes referenced only from QName-valued attributes
-    # (xsi:type="xsd:string") are invisible to lxml's usage tracking, so collect and
-    # preserve them explicitly - see issue #333.
-    keep_ns_prefixes = qname_prefixes(t)
-    etree.cleanup_namespaces(t, keep_ns_prefixes=keep_ns_prefixes)
+    # lxml can prune unused namespace declarations after building the aggregate.
+    # pyuppsala preserves the declarations needed by imported subtrees but does
+    # not expose lxml's optional cleanup helper, so only request cleanup from
+    # backends that implement it.
+    cleanup_namespaces = getattr(etree, 'cleanup_namespaces', None)
+    if cleanup_namespaces is not None:
+        # Prefixes referenced only from QName-valued attributes
+        # (xsi:type="xsd:string") are invisible to lxml's usage tracking.
+        cleanup_namespaces(t, keep_ns_prefixes=qname_prefixes(t))
 
     if config.devel_write_xml_to_file:
         import os
@@ -572,10 +591,12 @@ def find_entity(t, e_id, attr='entityID'):
 # semantics copied from https://github.com/lordal/md-summary/blob/master/md-summary
 # many thanks to Anders Lordahl & Scotty Logan for the idea
 def guess_entity_software(e):
-    for elt in chain(
-        e.findall(".//{{{}}}SingleSignOnService".format(NS['md'])), e.findall(".//{{{}}}AssertionConsumerService".format(NS['md']))
+    # One native pass per service type collecting the Location attributes,
+    # instead of two Python ElementPath scans materializing every endpoint.
+    for location in chain(
+        collect_attr(e, 'Location', "{{{}}}SingleSignOnService".format(NS['md'])),
+        collect_attr(e, 'Location', "{{{}}}AssertionConsumerService".format(NS['md'])),
     ):
-        location = elt.get('Location')
         if location:
             if (
                 'Shibboleth.sso' in location
@@ -649,23 +670,22 @@ def is_aa(entity):
 
 def _domains(entity):
     domains = [url2host(entity.get('entityID'))]
-    for d in entity.iter("{{{}}}DomainHint".format(NS['mdui'])):
-        if d.text not in domains:
-            domains.append(d.text)
+    for d in collect_text(entity, "{{{}}}DomainHint".format(NS['mdui'])):
+        if d not in domains:
+            domains.append(d)
     return domains
 
 
 def with_entity_attributes(entity, cb):
-    def _stext(e):
-        if e.text is not None:
-            return e.text.strip()
-
-    for ea in entity.iter("{{{}}}EntityAttributes".format(NS['mdattr'])):
-        for a in ea.iter("{{{}}}Attribute".format(NS['saml'])):
-            an = a.get('Name', None)
-            if a is not None:
-                values = [x for x in [_stext(v) for v in a.iter("{{{}}}AttributeValue".format(NS['saml']))] if x is not None]
-                cb(an, values)
+    # Collect the (Name, [AttributeValue text...]) groups in one native pass
+    # without creating a Python proxy per node.
+    for an, values in entity.fast_collect_grouped_text(
+        "{{{}}}EntityAttributes".format(NS['mdattr']),
+        "{{{}}}Attribute".format(NS['saml']),
+        'Name',
+        "{{{}}}AttributeValue".format(NS['saml']),
+    ):
+        cb(an, values)
 
 
 def _all_domains_and_subdomains(entity):
@@ -1307,12 +1327,30 @@ def annotate_entity(e, category, title, message, source=None):
     if e.tag != "{{{}}}EntityDescriptor".format(NS['md']) and e.tag != "{{{}}}EntitiesDescriptor".format(NS['md']):
         raise MetadataException('I can only annotate EntityDescriptor or EntitiesDescriptor elements')
     subject = e.get('Name', e.get('entityID', None))
-    atom = ElementMaker(nsmap={'atom': 'http://www.w3.org/2005/Atom'}, namespace='http://www.w3.org/2005/Atom')
-    args = [atom.published(f"{datetime.now().isoformat()}"), atom.link(href=subject, rel="saml-metadata-subject")]
+    # Build the ATOM <entry> annotation directly with pyuppsala.etree elements
+    # (replacing lxml.builder.ElementMaker). All elements live in the ATOM
+    # namespace; the entry carries an "atom" prefix declaration via nsmap so the
+    # serialized output stays prefixed. The structure (published, link(s), title,
+    # category, content) mirrors the original ElementMaker construction.
+    atom_ns = 'http://www.w3.org/2005/Atom'
+
+    def _atom(parent, local_name, text=None, **attrib):
+        elt = etree.SubElement(parent, "{{{}}}{}".format(atom_ns, local_name))
+        if text is not None:
+            elt.text = text
+        for k, v in attrib.items():
+            elt.set(k, v)
+        return elt
+
+    entry = etree.Element("{{{}}}entry".format(atom_ns), nsmap={'atom': atom_ns})
+    _atom(entry, 'published', text=f"{datetime.now().isoformat()}")
+    _atom(entry, 'link', href=subject, rel="saml-metadata-subject")
     if source is not None:
-        args.append(atom.link(href=source, rel="saml-metadata-source"))
-    args.extend([atom.title(title), atom.category(term=category), atom.content(message, type="text/plain")])
-    entity_extensions(e).append(atom.entry(*args))
+        _atom(entry, 'link', href=source, rel="saml-metadata-source")
+    _atom(entry, 'title', text=title)
+    _atom(entry, 'category', term=category)
+    _atom(entry, 'content', text=message, type="text/plain")
+    entity_extensions(e).append(entry)
 
 
 def _entity_attributes(e):
@@ -1326,16 +1364,20 @@ def _entity_attributes(e):
 
 def _eattribute(e, attr, nf):
     ea = _entity_attributes(e)
-    a = ea.xpath(
-        f".//saml:Attribute[@NameFormat='{nf}' and @Name='{attr}']", namespaces=NS, smart_strings=False
-    )
-    if a is None or len(a) == 0:
-        a = etree.Element("{{{}}}Attribute".format(NS['saml']))
-        a.set('NameFormat', nf)
-        a.set('Name', attr)
-        ea.append(a)
-    else:
-        a = a[0]
+    # Search the (tiny) EntityAttributes subtree directly instead of via
+    # .xpath(): an XPath evaluation must (re)build document-wide attribute
+    # indexes after every tree mutation, and set_entity_attributes mutates
+    # between calls, so the mutate->xpath->mutate loop over N entities cost
+    # O(N * document) rebuilds. A plain subtree walk is O(subtree) and needs
+    # no index at all.
+    saml_attribute = "{{{}}}Attribute".format(NS['saml'])
+    for a in ea.iter(saml_attribute):
+        if a.get('NameFormat') == nf and a.get('Name') == attr:
+            return a
+    a = etree.Element(saml_attribute)
+    a.set('NameFormat', nf)
+    a.set('Name', attr)
+    ea.append(a)
     return a
 
 
