@@ -1401,7 +1401,7 @@ def set_entity_attributes(e, d, nf=NF_URI):
 
 def set_pubinfo(e, publisher=None, creation_instant=None):
     if e.tag != "{{{}}}EntitiesDescriptor".format(NS['md']):
-        raise MetadataException("I can only set RegistrationAuthority to EntitiesDescriptor elements")
+        raise MetadataException("I can only set PublicationInfo to EntitiesDescriptor elements")
     if publisher is None:
         raise MetadataException("At least publisher must be provided")
 
