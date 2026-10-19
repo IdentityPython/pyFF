@@ -102,8 +102,9 @@ class ParseTest(PipeLineTest):
                 search = "{{{}}}Extensions/{{{}}}EntityAttributes/{{{}}}Attribute[@Name='{}']".format(NS['md'], NS['mdattr'], NS['saml'],'http://macedir.org/entity-category')
                 ecs = with_hide_from_discovery.find(search)
                 assert ecs is not None
-                entityID2 = "https://eidas.pp.dev-franceconnect.fr/EidasNode/ServiceMetadata"
+                entityID2 = "https://eidas.pp.dev-franceconnect.fr/EidasNodeProxy/ServiceMetadata"
                 without_hide_from_discovery = xml.find("{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entityID2))
+                assert without_hide_from_discovery is not None
                 ecs2 = without_hide_from_discovery.find(search)
                 assert ecs2 is None
             except OSError:
