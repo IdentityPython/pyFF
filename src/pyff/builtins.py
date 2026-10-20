@@ -23,7 +23,7 @@ from pyuppsala import etree
 from pyuppsala.etree import DocumentInvalid
 from str2bool import str2bool
 
-from pyff.constants import NS
+from pyff.constants import NS, config
 from pyff.decorators import deprecated
 from pyff.exceptions import MetadataException
 from pyff.logs import get_log
@@ -124,7 +124,7 @@ def _map(req: Plumbing.Request, *opts):
 
     from multiprocessing.pool import ThreadPool
 
-    pool = ThreadPool()
+    pool = ThreadPool(config.map_threads)
     result = pool.map(_p, iter_entities(req.t), chunksize=10)
     log.info(f"processed {len(result)} entities")
 
