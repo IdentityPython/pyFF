@@ -1,17 +1,20 @@
+import json
 import os
 import shutil
 import tempfile
 import unittest
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from urllib.parse import quote as urlescape
 
 import pytest
 import requests
 from lxml import etree
 from mako.lookup import TemplateLookup
+from pyramid.testing import DummyRequest
 from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
 
-from pyff.api import mkapp
+from pyff.api import mkapp, search_handler
 from pyff.constants import config
 from pyff.samlmd import iter_entities
 from pyff.test import SignerTestCase
@@ -147,6 +150,51 @@ class PyFFAPITest(PipeLineTest):
             assert (
                 'https://box-idp.nordu.net/simplesaml/module.php/saml/sp/discoResponse' in info['discovery_responses']
             )
+
+
+class SearchHandlerTest(unittest.TestCase):
+    """
+    The search endpoint streams its result, and WSGI servers such as gunicorn
+    only accept bytes from the response iterator.
+    """
+
+    class _Store:
+        def __init__(self, results):
+            self.results = results
+
+        def search(self, query=None, entity_filter=None, **kwargs):
+            return iter(self.results)
+
+    def _search(self, results, **params):
+        request = DummyRequest(params=params)
+        request.registry = SimpleNamespace(md=SimpleNamespace(store=self._Store(results)))
+        response = search_handler(request)
+        return response, list(response.app_iter)
+
+    def test_chunks_are_bytes(self):
+        results = [
+            {'entityID': 'https://idp1.example.org/idp', 'title': 'Example University'},
+            {'entityID': 'https://idp2.example.org/idp', 'title': 'Östergötland'},
+        ]
+        _response, chunks = self._search(results, q='example')
+        assert chunks
+        assert all(isinstance(chunk, bytes) for chunk in chunks)
+        assert json.loads(b''.join(chunks)) == results
+
+    def test_single_result(self):
+        results = [{'entityID': 'https://idp.example.org/idp', 'title': 'Example University'}]
+        _response, chunks = self._search(results, q='example')
+        assert all(isinstance(chunk, bytes) for chunk in chunks)
+        assert json.loads(b''.join(chunks)) == results
+
+    def test_no_results(self):
+        _response, chunks = self._search([], q='nothing')
+        assert all(isinstance(chunk, bytes) for chunk in chunks)
+        assert b''.join(chunks) == b'[]'
+
+    def test_content_type(self):
+        response, _chunks = self._search([], q='example')
+        assert response.content_type == 'application/json'
 
 
 class PyFFAPITestResources(PipeLineTest):
