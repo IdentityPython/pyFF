@@ -3,6 +3,7 @@ These are the built-in "pipes" - functions that can be used to put together a pr
 """
 
 import base64
+import functools
 import hashlib
 import ipaddress
 import json
@@ -552,7 +553,7 @@ def publish(req: Plumbing.Request, *opts):
 
     enc = _nop
     if req.args.get('urlencode_filenames'):
-        enc = quote
+        enc = functools.partial(quote, safe='')
 
     if output_file is None:
         return req.t

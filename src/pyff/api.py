@@ -395,7 +395,7 @@ def webfinger_handler(request: Request) -> Response:
     aliases = request.registry.aliases
     for a in aliases.keys():
         for v in request.registry.md.store.attribute(aliases[a]):
-            _links(f'{a}/{quote(v)}')
+            _links(f"{a}/{quote(v, safe='')}")
 
     response = Response(dumps(jrd, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
