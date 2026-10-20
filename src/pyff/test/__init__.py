@@ -7,8 +7,6 @@ import sys
 import tempfile
 from unittest import TestCase
 
-from pyff import __version__ as pyffversion
-
 # range of ports where available ports can be found
 PORT_RANGE = [33000, 60000]
 
@@ -52,13 +50,13 @@ def run_cmdline(script, *args):
 import sys
 import coverage
 import os
-from pkg_resources import load_entry_point
+from importlib.metadata import distribution
 if __name__ == '__main__':
     cov = coverage.coverage(cover_pylib=False, source=['pyff'], omit=['test'])
     cov.start()
     rv = 0
     try:
-        rv = load_entry_point('pyFF=={pyffversion}', 'console_scripts', '{script}')()
+        rv = distribution('pyFF').entry_points.select(group='console_scripts', name='{script}')['{script}'].load()()
     except Exception as ex:
         raise ex
     finally:

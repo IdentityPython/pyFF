@@ -22,12 +22,12 @@ from copy import copy
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate
 from itertools import chain
+from pathlib import Path
 from threading import local
 from time import gmtime, strftime
 from typing import Any, BinaryIO, Callable, Optional, Union
 from urllib.parse import urlparse
 
-import pkg_resources
 import pybergshamra
 import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -65,6 +65,9 @@ etree.MAX_XPATH_NODE_VISITS = max(etree.MAX_XPATH_NODE_VISITS, 50_000_000)
 __author__ = 'leifj'
 
 log = get_log(__name__)
+
+# Directory holding the files distributed with the package (XSLT, XSD, ...).
+PACKAGE_DIR = Path(__file__).resolve().parent
 
 thread_data = local()
 
@@ -119,10 +122,10 @@ def resource_string(name: str, pfx: Optional[str] = None) -> Optional[Union[str,
     elif pfx and os.path.exists(os.path.join(pfx, name)):
         with open(os.path.join(pfx, name)) as fd:
             data = fd.read()
-    elif pkg_resources.resource_exists(__name__, name):
-        data = pkg_resources.resource_string(__name__, name)
-    elif pfx and pkg_resources.resource_exists(__name__, f"{pfx}/{name}"):
-        data = pkg_resources.resource_string(__name__, f"{pfx}/{name}")
+    elif (PACKAGE_DIR / name).exists():
+        data = (PACKAGE_DIR / name).read_bytes()
+    elif pfx and (PACKAGE_DIR / pfx / name).exists():
+        data = (PACKAGE_DIR / pfx / name).read_bytes()
 
     return data
 
@@ -148,10 +151,10 @@ def resource_filename(name, pfx=None):
         return name
     elif pfx and os.path.exists(os.path.join(pfx, name)):
         return os.path.join(pfx, name)
-    elif pkg_resources.resource_exists(__name__, name):
-        return pkg_resources.resource_filename(__name__, name)
-    elif pfx and pkg_resources.resource_exists(__name__, f"{pfx}/{name}"):
-        return pkg_resources.resource_filename(__name__, f"{pfx}/{name}")
+    elif (PACKAGE_DIR / name).exists():
+        return str(PACKAGE_DIR / name)
+    elif pfx and (PACKAGE_DIR / pfx / name).exists():
+        return str(PACKAGE_DIR / pfx / name)
 
     return None
 
@@ -234,7 +237,7 @@ def schema():
             # "geo:lat, lon", "mailto: user@host"). Strict/spec XSD rejects those
             # per RFC 3987, which would wrongly drop large numbers of otherwise
             # valid entities; lenient mode accepts them exactly as lxml did.
-            schema_path = pkg_resources.resource_filename(__name__, "schema/schema.xsd")
+            schema_path = str(PACKAGE_DIR / "schema" / "schema.xsd")
             thread_data.schema = etree.XMLSchema(file=schema_path, lenient=True)
         except etree.XMLSchemaParseError as ex:
             traceback.print_exc()
