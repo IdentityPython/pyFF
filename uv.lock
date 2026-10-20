@@ -806,15 +806,15 @@ wheels = [
 
 [[package]]
 name = "pyconfig"
-version = "3.2.3"
+version = "3.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytool" },
-    { name = "six" },
+    { name = "simplejson" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/50/70/8735b55844a482e65daf82827275d3d5867b77fb6413c99061c984dba226/pyconfig-3.2.3.tar.gz", hash = "sha256:89c7580a3111f0b3ab9fe0cac630b9297a7aeedbb4c7eb55e90320bfb90ac649", size = 23915, upload-time = "2017-08-18T06:26:03.067Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/ed/8dad88ac88034a5428a7432325720637a9e7b8423fb7f9b4447d35ce413b/pyconfig-3.3.0.tar.gz", hash = "sha256:197e5eb6e3bdb6dbd9fd944df7e0330af6b166cb558bd9ca41930f4495110e7e", size = 26392, upload-time = "2025-06-20T06:51:36.33Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/3a/e64558856c92d4689e20c3e914069f089801eb45b0862e04fbf3f300275f/pyconfig-3.2.3-py3-none-any.whl", hash = "sha256:797e250a2042927069a19085641bbbe7d975dff2b28dffd68116a0d0239d9c75", size = 17209, upload-time = "2018-08-02T09:40:53.674Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/28/3b93b9d53b5900de055063e7958f70424a9e2fcd21cae3fdd85c36d1f6e6/pyconfig-3.3.0-py3-none-any.whl", hash = "sha256:f056047f832defb4a828004298ec67b5d66303537c194c14a600f791047559e1", size = 18058, upload-time = "2025-06-20T06:51:34.974Z" },
 ]
 
 [[package]]
@@ -995,7 +995,7 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=25.2.0" },
     { name = "mako", specifier = ">=1.3.10" },
     { name = "pybergshamra", specifier = ">=0.11.0" },
-    { name = "pyconfig", specifier = ">=3.2.3,<3.3.0" },
+    { name = "pyconfig", specifier = ">=3.3.0" },
     { name = "pydantic", specifier = ">=2.8" },
     { name = "pyramid", specifier = ">=2.0.2" },
     { name = "pytz", specifier = ">=2025.2" },
