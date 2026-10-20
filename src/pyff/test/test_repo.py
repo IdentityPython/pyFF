@@ -74,6 +74,48 @@ class TestRepo(TestCase):
         assert name == 'Example University'
         assert desc == 'Identity Provider for Example University'
 
+    def test_extended_display_empty_description(self):
+        e = deepcopy(root(self.t))
+        for elt in e.iter("{{{}}}Description".format(NS['mdui'])):
+            elt.text = None
+
+        name, desc = entity_extended_display(e)
+        assert name == 'Example University'
+        assert desc == ''
+
+    def test_extended_display_empty_url_without_description(self):
+        e = deepcopy(root(self.t))
+        for elt in list(e.iter("{{{}}}Description".format(NS['mdui']))):
+            elt.getparent().remove(elt)
+        for elt in e.iter("{{{}}}OrganizationURL".format(NS['md'])):
+            elt.text = None
+
+        name, desc = entity_extended_display(e)
+        assert name == 'Example University'
+        assert desc == ''
+
+    def test_extended_display_url_without_description(self):
+        e = root(parse_xml(os.path.join(self.datadir, 'test04-trailing-slash-sp.xml')))
+
+        name, desc = entity_extended_display(e)
+        assert name == 'Example Service'
+        assert desc == 'https://www.example.com/'
+
+    def test_extended_display_empty_names(self):
+        e = deepcopy(root(self.t))
+        for tag in (
+            "{{{}}}DisplayName".format(NS['mdui']),
+            "{{{}}}OrganizationName".format(NS['md']),
+            "{{{}}}OrganizationDisplayName".format(NS['md']),
+            "{{{}}}ServiceName".format(NS['md']),
+        ):
+            for elt in e.iter(tag):
+                elt.text = None
+
+        name, desc = entity_extended_display(e)
+        assert isinstance(name, str)
+        assert isinstance(desc, str)
+
     def test_utils(self):
         entity_id = root(self.t).get('entityID')
         self.md.store.update(root(self.t), entity_id)
