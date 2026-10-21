@@ -17,14 +17,14 @@ maintainers = [
 ]
 dependencies = [
     "accept-types>=0.4.1",
-    "apscheduler==3.6.3",
+    "apscheduler>=3.11.3",
     "cachetools>=5.5.2",
     "cryptography>=42",
     "gunicorn>=25.2.0",
     "mako>=1.3.10",
     "pyconfig>=3.3.0",
     "pydantic>=2.8",
-    "pyramid>=2.0.2",
+    "pyramid>=2.1",
     "pytz>=2025.2",
     "pyuppsala>=0.13.0",
     "pybergshamra>=0.11.0",
