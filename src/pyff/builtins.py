@@ -922,7 +922,7 @@ def select(req: Plumbing.Request, *opts):
                 try:
                     nets = _ip_networks(elt)
                     for net in nets:
-                        if ipaddress.ip_adress(q) in net:
+                        if ipaddress.ip_address(q) in net:
                             return net
                 except ValueError:
                     pass

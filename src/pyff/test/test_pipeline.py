@@ -20,6 +20,7 @@ from pyff.parse import ParserException
 from pyff.pipes import PipeException, Plumbing, plumbing
 from pyff.repo import MDRepository
 from pyff.resource import ResourceException
+from pyff.samlmd import iter_entities
 from pyff.test import ExitException, SignerTestCase
 from pyff.utils import hash_id, parse_xml, resource_filename, root
 
@@ -105,6 +106,20 @@ class ParseTest(PipeLineTest):
             "removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed"
             in self.captured_log_text
         )
+
+    def test_select_match_ip_hint(self):
+        md = MDRepository()
+        p = yaml.safe_load(
+            StringIO(
+                f"""
+- load:
+    - {self.datadir}/metadata/test01.xml
+- select
+"""
+            )
+        )
+        res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}, 'match': '10.1.2.3'})
+        assert [e.get('entityID') for e in iter_entities(res)] == ['https://idp.example.com/saml2/idp/metadata.php']
 
 
 # To run all LoadErrorTests: ./setup.py test -s pyff.test.test_pipeline.LoadErrorTest
