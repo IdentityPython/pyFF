@@ -111,7 +111,7 @@ def _map(req: Plumbing.Request, *opts):
         - map:
            - ...statements...
 
-    Executes a set of statements in parallell (using a thread pool).
+    Executes a set of statements in parallel (using a thread pool).
 
     """
 
@@ -163,8 +163,10 @@ def _print_t(req: Plumbing.Request, *opts):
 
     .. code-block:: yaml
 
-        - print
-           output: "somewhere.foo"
+        - print:
+            output: "somewhere.foo"
+
+    Without ``output`` the tree is printed on stdout.
 
     """
     fn = None
@@ -192,6 +194,14 @@ def end(req: Plumbing.Request, *opts):
         - end
         - unreachable
 
+    The optional ``code`` and ``message`` arguments set the exit code and a message printed on stdout:
+
+    .. code-block:: yaml
+
+        - end:
+            code: 1
+            message: "no metadata to publish"
+
     **Warning** This is very bad if used with pyffd - the server will stop running. If you just want to
     break out of the pipeline, use break instead.
 
@@ -208,7 +218,7 @@ def end(req: Plumbing.Request, *opts):
 @pipe
 def fork(req: Plumbing.Request, *opts):
     """
-    Make a copy of the working tree and process the arguments as a pipleline. This essentially resets the working
+    Make a copy of the working tree and process the arguments as a pipeline. This essentially resets the working
     tree and allows a new plumbing to run. Useful for producing multiple outputs from a single source.
 
     :param req: The request
@@ -226,7 +236,7 @@ def fork(req: Plumbing.Request, *opts):
                  output: "/tmp/annotated.xml"
         - fork:
             - xslt:
-                 stylesheet: tidy.xml
+                 stylesheet: tidy.xsl
             - publish:
                  output: "/tmp/clean.xml"
 
@@ -235,7 +245,7 @@ def fork(req: Plumbing.Request, *opts):
 
     **Merging**
 
-    Normally the result of the "inner" plumbing is disgarded - unless published or emit:ed to a calling client
+    Normally the result of the "inner" plumbing is discarded - unless published or emit:ed to a calling client
     in the case of the MDX server - but by adding 'merge' to the options with an optional 'merge strategy' the
     behaviour can be changed to merge the result of the inner pipeline back to the parent working document.
 
@@ -280,7 +290,7 @@ def fork(req: Plumbing.Request, *opts):
                  output: "/tmp/annotated.xml"
         - fork:
             - xslt:
-                 stylesheet: tidy.xml
+                 stylesheet: tidy.xsl
             - publish:
                  output: "/tmp/clean.xml"
     """
@@ -351,7 +361,7 @@ def _break(req: Plumbing.Request, *opts):
 @pipe(name='pipe')
 def _pipe(req: Plumbing.Request, *opts):
     """
-    Run the argument list as a pipleine.
+    Run the argument list as a pipeline.
 
     :param req: The request
     :param opts: Options (unused)
@@ -413,9 +423,9 @@ def when(req: Plumbing.Request, condition: str, *values):
 
     .. code-block:: yaml
 
-        - when foo
+        - when foo:
             - something
-        - when bar bill
+        - when bar bill:
             - other
 
     The condition operates on the state: if 'foo' is present in the state (with any value), then the something branch is
@@ -459,17 +469,18 @@ def sort(req: Plumbing.Request, *opts):
     Entities where no value exists for a given xpath are sorted last.
 
     :param req: The request
-    :param opts: Options: <order_by [xpath]> (see bellow)
+    :param opts: Options: <order_by [xpath]> (see below)
     :return: None
 
     Options are put directly after "sort". E.g:
 
     .. code-block:: yaml
 
-        - sort order_by [xpath]
+        - sort order_by ./md:IDPSSODescriptor/md:Extensions/mdui:UIInfo/mdui:DisplayName
 
     **Options**
-    - order_by [xpath] : xpath expression selecting to the value used for sorting the entities.
+
+    - ``order_by <xpath>``: xpath expression selecting the value used for sorting the entities.
     """
     if req.t is None:
         raise PipeException("Unable to sort empty document.")
@@ -490,7 +501,8 @@ def publish(req: Plumbing.Request, *opts):
     :param opts: Options (unused)
     :return: None
 
-     Publish takes one argument: path to a file where the document tree will be written.
+    Publish takes one argument: path to a file where the document tree will be written.
+
     **Examples**
 
     .. code-block:: yaml
@@ -636,7 +648,12 @@ def load(req: Plumbing.Request, *opts):
 
     Supports both remote and local resources. Fetching remote resources is done in parallel using threads.
 
-    Note: When downloading remote files over HTTPS the TLS server certificate is not validated by default
+    .. warning::
+
+        When downloading remote files over HTTPS the TLS server certificate is **not** validated by default
+        (``verify_tls`` is False). Metadata signatures are only checked if a verification is given per
+        resource, see below.
+
     Note: Default behaviour is to ignore metadata files or entities in MD files that cannot be loaded
 
     Options are put directly after "load". E.g:
@@ -649,19 +666,36 @@ def load(req: Plumbing.Request, *opts):
           - /opt/directory_containing_md_files/
 
     **Options**
-    Defaults are marked with (*)
-    - max_workers <5> : Number of parallel threads to use for loading MD files
-    - timeout <120> : Socket timeout when downloading files
-    - validate <True*|False> : When true downloaded metadata files are validated (schema validation)
-    - fail_on_error <True|False*> : Control whether an error during download, parsing or (optional)validation of a MD
-                                    file does not abort processing of the pipeline. When true a failure aborts and
-                                    causes pyff to exit with a non zero exit code. Otherwise errors are logged but
-                                    ignored.
-    - filter_invalid <True*|False> : Controls validation behaviour. When true Entities that fail validation are filtered
-                                     I.e. are not loaded. When false the entire metadata file is either loaded, or not.
-                                     fail_on_error controls whether failure to validating the entire MD file will abort
-                                     processing of the pipeline.
-    - verify_tls <True|False*>     : Controls the validation of the host's TLS certificate on fetching the resources
+
+    Defaults are marked with (*).
+
+    - ``max_workers <5>``: Number of parallel threads to use for loading MD files
+    - ``timeout <120>``: Socket timeout (seconds) when downloading files
+    - ``validate <True*|False>``: When true downloaded metadata files are validated (schema validation)
+    - ``fail_on_error <True|False*>``: Control whether an error during download, parsing or (optional) validation
+      of a MD file aborts processing of the pipeline. When true a failure aborts and causes pyff to exit with a
+      non zero exit code. Otherwise errors are logged but ignored.
+    - ``filter_invalid <True*|False>``: Controls validation behaviour. When true entities that fail validation
+      are filtered, i.e. are not loaded. When false the entire metadata file is either loaded, or not.
+      ``fail_on_error`` controls whether failure to validate the entire MD file will abort processing of the
+      pipeline.
+    - ``verify_tls <True|False*>``: Controls the validation of the host's TLS certificate on fetching the resources
+
+    **Resources**
+
+    Each resource in the list has the form
+
+    .. code-block:: text
+
+        <url or path> [as <alias>] [verify <fingerprint|certificate file>] [via <clause>]* [cleanup <clause>]*
+
+    - ``as``: name the resource, e.g. to refer to it in later pipeline steps.
+    - ``verify``: check the XML signature of the resource, using either a PEM certificate file or a SHA-1
+      fingerprint of the signing certificate. With a fingerprint, the certificate embedded in the signature is
+      used and the fingerprint pins it.
+    - ``via``: name of a ``when`` clause in the same pipeline that is applied to the loaded metadata, for
+      example to remove entities with ``fork merge remove``.
+    - ``cleanup``: name of a ``when`` clause used to pre-process the parsed metadata before it is validated.
     """
     _opts = dict(list(zip(opts[::2], opts[1::2])))
     _opts.setdefault('timeout', 120)
@@ -759,8 +793,7 @@ def select(req: Plumbing.Request, *opts):
     :return: returns the result of the operation as a working document
 
     Select picks and expands elements (with optional filtering) from the active repository you setup using calls
-    to :py:mod:`pyff.pipes.builtins.load`. See :py:mod:`pyff.mdrepo.MDRepository.lookup` for a description of the syntax
-    for selectors.
+    to ``load``. See :py:meth:`pyff.repo.MDRepository.lookup` for a description of the syntax for selectors.
 
     **Examples**
 
@@ -774,8 +807,8 @@ def select(req: Plumbing.Request, *opts):
 
         - select: "/var/local-metadata"
 
-    This would select all entities found in the directory /var/local-metadata. You must have a call to local to load
-    entities from this directory before select statement.
+    This would select all entities found in the directory /var/local-metadata. You must have a call to ``load`` to
+    load entities from this directory before the select statement.
 
     .. code-block:: yaml
 
@@ -792,7 +825,7 @@ def select(req: Plumbing.Request, *opts):
     Select statements are not cumulative - a select followed by another select in the plumbing resets the
     working documents to the result of the second select.
 
-    Most statements except local and remote depend on having a select somewhere in your plumbing and will
+    Most statements except ``load`` depend on having a select somewhere in your plumbing and will
     stop the plumbing if the current working document is empty. For instance, running
 
     .. code-block:: yaml
@@ -809,22 +842,25 @@ def select(req: Plumbing.Request, *opts):
         - select as /foo-2.0 dedup True: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
 
     **Options**
-    Defaults are marked with (*)
-    - as <name> : The 'as' keyword allows a select to be stored as an alias in the local repository. For instance
 
-        .. code-block:: yaml
+    Defaults are marked with (*).
 
-            - select as /foo-2.0: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+    - ``as <name>``: The 'as' keyword allows a select to be stored as an alias in the local repository.
+      For instance
 
-        would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in the current repository.
-        Note that you should not include an extension in your "as foo-bla-something" since that would make your
-        alias invisible for anything except the corresponding mime type.
+      .. code-block:: yaml
 
-    - dedup <True*|False> : Whether to deduplicate the results by entityID.
+          - select as /foo-2.0: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
 
-        Note: When select is used after a load pipe with more than one source, if dedup is set to True
-        and there are entity properties that may differ from one source to another, these will be squashed
-        rather than merged.
+      would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in the current repository.
+      Note that you should not include an extension in your "as foo-bla-something" since that would make your
+      alias invisible for anything except the corresponding mime type.
+
+    - ``dedup <True*|False>``: Whether to deduplicate the results by entityID.
+
+      Note: When select is used after a load pipe with more than one source, if dedup is set to True
+      and there are entity properties that may differ from one source to another, these will be squashed
+      rather than merged.
     """
     opt_names = ('as', 'dedup')
     if len(opts) % 2 == 0:
@@ -886,7 +922,7 @@ def select(req: Plumbing.Request, *opts):
                 try:
                     nets = _ip_networks(elt)
                     for net in nets:
-                        if ipaddress.ip_adress(q) in net:
+                        if ipaddress.ip_address(q) in net:
                             return net
                 except ValueError:
                     pass
@@ -974,7 +1010,7 @@ def pick(req: Plumbing.Request, *opts):
     :param opts: Options (unused)
     :return: returns the result of the operation as a working document
 
-    Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information about selecting the document.
+    Useful for testing. See ``select`` for more information about selecting the document.
 
     """
     args = _select_args(req)
@@ -1021,7 +1057,8 @@ def _discojson(req: Plumbing.Request, *opts):
     Return a discojuice-compatible json representation of the tree
 
     .. code-block:: yaml
-      discojson:
+
+        - discojson
 
     If the config.load_icons directive is set the icons will be returned from a (possibly persistent) local
     cache & converted to data: URIs
@@ -1048,7 +1085,8 @@ def _discojson_sp(req, *opts):
     Return a json representation of the trust information
 
     .. code-block:: yaml
-      discojson_sp:
+
+        - discojson_sp
 
     The returned json doc will have the following structure.
 
@@ -1109,7 +1147,8 @@ def _discojson_sp_attr(req, *opts):
     Return a json representation of the trust information
 
     .. code-block:: yaml
-      discojson_sp_attr:
+
+        - discojson_sp_attr
 
     SP Entities can carry trust information as a base64 encoded json blob
     as an entity attribute with name `https://refeds.org/entity-selection-profile`.
@@ -1506,7 +1545,7 @@ def xslt(req: Plumbing.Request, *opts):
     .. code-block:: yaml
 
         - xslt:
-            sylesheet: foo.xsl
+            stylesheet: foo.xsl
             x: foo
             y: bar
 
@@ -1599,7 +1638,8 @@ def prune(req: Plumbing.Request, *opts):
     :return: The tree with all specified elements removed
 
 
-    ** Examples**
+    **Examples**
+
     .. code-block:: yaml
 
         - prune:
@@ -1612,7 +1652,7 @@ def prune(req: Plumbing.Request, *opts):
         - prune:
             - .//{http://www.w3.org/2000/09/xmldsig#}Signature[1]
 
-    This example would drop the first Signature element only.
+    This example would drop the first Signature element below each parent element.
 
     """
 
@@ -1636,7 +1676,8 @@ def prune(req: Plumbing.Request, *opts):
 @pipe
 def check_xml_namespaces(req: Plumbing.Request, *opts):
     """
-    Ensure that all namespaces are http or httpd scheme URLs.
+    Ensure that all namespaces are http, https or urn URIs. A namespace URI with any other scheme causes a
+    MetadataException.
 
     :param req: The request
     :param opts: Options (not used)
@@ -1669,7 +1710,7 @@ def check_xml_namespaces(req: Plumbing.Request, *opts):
 @pipe
 def drop_xsi_type(req: Plumbing.Request, *opts):
     """
-    Remove all xsi namespaces from the tree.
+    Remove all ``xsi:type`` attributes from the tree.
 
     :param req: The request
     :param opts: Options (not used)
@@ -1919,7 +1960,7 @@ def finalize(req: Plumbing.Request, *opts):
 
     For instance +45d 2m results in a time delta of 45 days and 2 minutes. The '+' sign is optional.
 
-    If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyff.pipes.builtins.first`).
+    If operating on a single EntityDescriptor then @Name is ignored (cf ``first``).
 
     **Examples**
 
@@ -2025,9 +2066,11 @@ def _reginfo(req: Plumbing.Request, *opts):
     .. code-block:: yaml
 
         - reginfo:
-           [policy:
-                <lang>: <registration policy URL>]
-           authority: <registrationAuthority URL>
+            authority: http://registrar.example.org/
+            policy:
+                en: http://registrar.example.org/policy.html
+
+    ``policy`` is optional and maps a language code to the registration policy URL.
 
     """
     if req.t is None:
@@ -2051,15 +2094,17 @@ def _pubinfo(req: Plumbing.Request, *opts):
     :param opts: Options (not used)
     :return: A modified working document
 
-    Transforms the working document by setting the specified attribute on all of the EntityDescriptor
-    elements of the active document.
+    Transforms the working document by adding a PublicationInfo extension to its top-level element. An error is
+    raised if one is already present.
 
     **Examples**
 
     .. code-block:: yaml
 
         - pubinfo:
-           publisher: <publisher URL>
+            publisher: http://publisher.example.org/
+
+    ``creation_instant`` (an ISO 8601 time string) is optional and defaults to the current time.
 
     """
     if req.t is None:
@@ -2092,7 +2137,6 @@ def _setattr(req: Plumbing.Request, *opts):
         - setattr:
             attr1: value1
             attr2: value2
-            ...
 
     Normally this would be combined with the 'merge' feature of fork to add attributes to the working
     document for later processing.
@@ -2126,7 +2170,7 @@ def _nodecountry(req: Plumbing.Request, *opts):
         - nodecountry:
             country: XX
 
-    Normally this would be combined with the 'merge' feature of fork or in a cleanup pipline to add attributes to
+    Normally this would be combined with the 'merge' feature of fork or in a cleanup pipeline to add attributes to
     the working document for later processing.
 
     """
