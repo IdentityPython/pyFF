@@ -57,6 +57,7 @@ from pyff.utils import (
     root,
     safe_write,
     total_seconds,
+    unicode_stream,
     utc_now,
     validate_document,
     with_tree,
@@ -1936,6 +1937,63 @@ def signcerts(req: Plumbing.Request, *opts):
     for fp, _pem in list(cert_dict(req.t).items()):
         log.info(f"found signing cert with fingerprint {fp}")
     return req.t
+
+
+@pipe
+def read_xml(req: Plumbing.Request, *opts):
+    """
+    Make an XML file the working document.
+
+    :param req: The request
+    :param opts: Options (unused)
+    :return: the root element of the file
+
+    Unlike ``load`` this does not put anything in the store and does not split the file into entities, and it does
+    not depend on ``select``: the file is the working document, e.g. for signing a document that is not
+    SAML metadata. The file is parsed as it is and is not modified: xi:include elements are not expanded.
+    Takes a dict with a single key, ``file``, the path to the XML file.
+
+    **Examples**
+
+    .. code-block:: yaml
+
+        - read_xml:
+            file: /opt/metadata/mdsl.xml
+        - sign:
+            key: signer.key
+            cert: signer.crt
+        - emit application/xml
+
+    **Possible extensions**
+
+    - Expand xi:include elements, relative to the file, with an ``xinclude`` option.
+    - Ensure the root element, e.g. with a ``root`` option in ``{namespace}name`` form, to fail early when the file is
+      not the kind of document the rest of the pipeline expects.
+    - Make the working document work with ``finalize`` (and other pipes that assume entity metadata), to support
+      more file types than SAML metadata.
+    - Support ``mdsl`` (eIDAS MetadataServiceList) as a file type. The file type would ensure the root element and
+      tell ``finalize`` which attributes the document has. For an MDSL that is ``IssueDate`` and ``NextUpdate``
+      instead of ``validUntil`` and ``cacheDuration``, which the schema does not allow on this root element.
+      The pipeline could then look like this:
+
+      .. code-block:: yaml
+
+          - read_xml:
+              file: /opt/metadata/mdsl.xml
+              type: mdsl
+          - finalize:
+              validUntil: PT5M    # sets NextUpdate, and IssueDate to the current time
+          - sign:
+              key: signer.key
+              cert: signer.crt
+          - emit application/xml
+
+    """
+    if not isinstance(req.args, dict) or 'file' not in req.args:
+        raise PipeException("usage: read_xml {file: <path>}")
+
+    with open(req.args['file'], encoding='utf-8') as fd:
+        return root(parse_xml(unicode_stream(fd.read())))
 
 
 @pipe

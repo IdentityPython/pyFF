@@ -733,6 +733,43 @@ class SigningTest(PipeLineTest):
         check_signature(published, self.public_keyspec, only_one_signature=True)
         os.unlink(self.output)
 
+    def test_read_xml_and_sign(self):
+        """Read an XML file as the working document and sign it without load/select."""
+        from pyff.constants import NS
+        from pyff.utils import check_signature
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            src = os.path.join(tmpdir, 'mdsl.xml')
+            with open(src, 'w') as fd:
+                fd.write(
+                    f'<ser:MetadataServiceList xmlns:ser="{NS["ser"]}" Version="1">'
+                    '<ser:IssuerName>Test</ser:IssuerName></ser:MetadataServiceList>'
+                )
+            res, _md = self.exec_pipeline(
+                f"""
+- read_xml:
+    file: {src}
+- sign:
+    key: {self.private_keyspec}
+    cert: {self.public_keyspec}
+"""
+            )
+        finally:
+            shutil.rmtree(tmpdir)
+
+        t = root(res)
+        assert t.tag == "{{{}}}MetadataServiceList".format(NS['ser'])
+        assert t.get('Version') == '1'
+        assert t[0].tag == "{{{}}}Signature".format(NS['ds'])
+        check_signature(t, self.public_keyspec, only_one_signature=True)
+
+    def test_read_xml_rejects_bad_arguments(self):
+        with pytest.raises(PipeException, match="usage: read_xml"):
+            self.exec_pipeline("- read_xml:\n    other: value\n")
+        with pytest.raises(OSError):
+            self.exec_pipeline("- read_xml:\n    file: /nonexistent.xml\n")
+
     def test_signing_and_validation(self):
         self.output = tempfile.NamedTemporaryFile('w').name
         _res_s, _md_s, _ctx_s = self.run_pipeline("signer.fd", self)
