@@ -9,9 +9,9 @@ from urllib.parse import quote as urlescape
 
 import pytest
 import requests
-from lxml import etree
 from mako.lookup import TemplateLookup
 from pyramid.testing import DummyRequest
+from pyuppsala import etree
 from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
 
 from pyff.api import mkapp, search_handler
