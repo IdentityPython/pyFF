@@ -934,7 +934,7 @@ wheels = [
 
 [[package]]
 name = "pyff"
-version = "3.0.0"
+version = "3.0.1.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "accept-types" },
@@ -955,6 +955,7 @@ dependencies = [
     { name = "requests" },
     { name = "requests-cache" },
     { name = "requests-file" },
+    { name = "sphinx-rtd-theme" },
     { name = "str2bool" },
     { name = "whoosh" },
     { name = "wsgi-intercept" },
@@ -1000,6 +1001,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.3" },
     { name = "requests-cache", specifier = "==1.2.1" },
     { name = "requests-file", specifier = "==2.1.0" },
+    { name = "sphinx-rtd-theme", specifier = ">=3.1.0" },
     { name = "str2bool", specifier = ">=1.1" },
     { name = "whoosh", specifier = ">=2.7.4" },
     { name = "wsgi-intercept", specifier = ">=1.13.1" },

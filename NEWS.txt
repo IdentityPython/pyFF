@@ -242,3 +242,7 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Require Python 3.11 or later, and drop the direct setuptools dependency
 
 * Remove scripts/csv2xrd.py
+
+3.0.1
+-----
+UNRELEASED
