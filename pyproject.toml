@@ -1,9 +1,9 @@
 [project]
 name = "pyFF"
-version = "2.1.6.dev0"
+version = "3.0.1dev0"
 readme = "README.rst"
 description = "Federation Feeder"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = {file = "LICENSE"}
 
 authors = [
@@ -17,29 +17,28 @@ maintainers = [
 ]
 dependencies = [
     "accept-types>=0.4.1",
-    "apscheduler==3.6.3",
+    "apscheduler>=3.11.3",
     "cachetools>=5.5.2",
-    "eval-type-backport>=0.2.2 ; python_full_version == '3.9.*'",
-    "gunicorn==25.0.3 ; python_full_version >= '3.10'",
-    "gunicorn>=23.0.0",
-    "lxml>=4.1.1",
+    "cryptography>=42",
+    "gunicorn>=25.2.0",
     "mako>=1.3.10",
-    "pyconfig>=3.2.3,<3.3.0",
+    "pyconfig>=3.3.0",
     "pydantic>=2.8",
-    "pyramid>=2.0.2",
+    "pyramid>=2.1",
     "pytz>=2025.2",
-    "pyxmlsecurity>=1.0.0",
+    "pyuppsala>=0.13.0",
+    "pybergshamra>=0.11.0",
     "pyyaml>=3.10",
     "redis>=5.3.0",
     "redis-collections>=0.13.0",
     "requests>=2.32.3",
     "requests-cache==1.2.1",
     "requests-file==2.1.0",
-    "setuptools>=78.1.1,<81",
     "str2bool>=1.1",
     "whoosh>=2.7.4",
     "wsgi-intercept>=1.13.1",
     "xmldiff>=2.7.0",
+    "sphinx-rtd-theme>=3.1.0",
 ]
 
 [dependency-groups]
@@ -87,6 +86,15 @@ target-version = "py39"
 #  "UP",
 #  "W",
 #]
+# Pin the rule set explicitly - ruff 0.16 widened its defaults from 2 to 38 rule
+# prefixes, so relying on the defaults makes lint results depend on the ruff version.
+select = [
+  "E4",
+  "E7",
+  "E9",
+  "F",
+  "I",
+]
 ignore = [
 "PLR0915",
 "PLR0912",

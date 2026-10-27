@@ -7,15 +7,15 @@ Running pyFF in docker
 Building a docker image
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-There is a build environment for docker available at https://github.com/SUNET/docker-pyff. In order to 
+There is a build environment for docker available at https://platform.sunet.se/swamid/docker-pyff. In order to
 build your own docker image, clone this repository and use `make` to build the latest version of pyFF:
 
 .. code-block:: bash
 
-  # git clone https://github.com/SUNET/docker-pyff
+  # git clone https://platform.sunet.se/swamid/docker-pyff
   ...
   # cd docker-pyff
-  # make 
+  # docker build -t pyff .
 
 At the end of this you should be able to run pyff:<version> where <version> will depend on what is
 currently the latest supported version. Sometimes a version of docker is uploaded to dockerhub but
@@ -79,7 +79,7 @@ apropriate for your situation) and modify accordingly.
            - STORAGE_DOMAIN=your.public.domain
            - SEARCH_URL=http://pyff/api/search
      pyff:
-        image: docker.sunet.se/pyff:stable
+        image: platform.sunet.se.se/swamid/pyff:stable
         container_name: pyff-api
 
 

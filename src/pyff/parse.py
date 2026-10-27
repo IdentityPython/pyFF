@@ -5,12 +5,13 @@ from typing import Any, Optional
 from urllib.parse import quote as urlescape
 
 from pydantic import BaseModel, Field
-from xmlsec.crypto import CertDict
 
 from pyff.constants import NS
 from pyff.logs import get_log
 from pyff.resource import Resource, ResourceInfo
-from pyff.utils import find_matching_files, parse_xml, root, unicode_stream, utc_now
+
+# cert_dict replaces xmlsec.crypto.CertDict (fingerprint -> cert mapping).
+from pyff.utils import cert_dict, find_matching_files, parse_xml, root, unicode_stream, utc_now
 
 __author__ = 'leifj'
 
@@ -118,7 +119,7 @@ class XRDParser(PyffParser):
         for xrd in t.iter("{{{}}}XRD".format(NS['xrd'])):
             for link in xrd.findall(".//{{{}}}Link[@rel='{}']".format(NS['xrd'], NS['md'])):
                 link_href = link.get("href")
-                certs = CertDict(link)
+                certs = cert_dict(link)
                 fingerprints = list(certs.keys())
                 fp = None
                 if len(fingerprints) > 0:

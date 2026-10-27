@@ -22,21 +22,22 @@ from copy import copy
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate
 from itertools import chain
+from pathlib import Path
 from threading import local
 from time import gmtime, strftime
 from typing import Any, BinaryIO, Callable, Optional, Union
 from urllib.parse import urlparse
 
-import pkg_resources
+import pybergshamra
 import requests
-import xmlsec
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.jobstores.redis import RedisJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from cachetools import LRUCache
-from lxml import etree
-from lxml.etree import Element, ElementTree
+from cryptography import x509
+from pyuppsala import etree
+from pyuppsala.etree import Element, ElementTree
 from requests import Session
 from requests.adapters import BaseAdapter, HTTPAdapter, Response
 from requests.packages.urllib3.util.retry import Retry
@@ -49,25 +50,43 @@ from pyff.constants import NS, config
 from pyff.exceptions import MetadataException, ResourceException
 from pyff.logs import get_log
 
-etree.set_default_parser(etree.XMLParser(resolve_entities=False))
+# Note: pyuppsala is safe-by-default (entities are not resolved/expanded unless
+# explicitly allowed) and exposes no set_default_parser hook, so the previous
+# call to etree.set_default_parser(...) has been dropped during the migration.
+
+# pyuppsala's default XPath node-visit budget (100k visits per evaluation) is an
+# anti-DoS cap sized for untrusted documents. pyFF evaluates XPath over its own
+# working aggregates, which at eduGAIN scale exceed a million nodes, so a plain
+# //md:EntityDescriptor would trip the default cap. Raise the module budget to a
+# value comfortably above real-world aggregate sizes while still bounding a
+# runaway evaluation.
+etree.MAX_XPATH_NODE_VISITS = max(etree.MAX_XPATH_NODE_VISITS, 50_000_000)
 
 __author__ = 'leifj'
 
 log = get_log(__name__)
 
-sentinel = object()
+# Directory holding the files distributed with the package (XSLT, XSD, ...).
+PACKAGE_DIR = Path(__file__).resolve().parent
+
 thread_data = local()
 
 
 def xml_error(error_log, m=None):
-    def _f(x):
-        if ":WARNING:" in x:
-            return False
-        if m is not None and m not in x:
-            return False
-        return True
-
-    return "\n".join(filter(_f, [f"{e}" for e in error_log]))
+    # pyuppsala's ValidationError renders as just the message (line/column), and
+    # unlike lxml it does not embed the source document in each entry. The old
+    # ``m not in x`` filter therefore dropped *every* pyuppsala error, throwing
+    # away the validation detail. Instead, keep each (non-warning) error and
+    # prefix it with the source so the message still identifies the document.
+    lines = []
+    for e in error_log:
+        s = f"{e}"
+        if ":WARNING:" in s:
+            continue
+        if m is not None and m not in s:
+            s = f"{m}: {s}"
+        lines.append(s)
+    return "\n".join(lines)
 
 
 def debug_observer(e):
@@ -103,10 +122,10 @@ def resource_string(name: str, pfx: Optional[str] = None) -> Optional[Union[str,
     elif pfx and os.path.exists(os.path.join(pfx, name)):
         with open(os.path.join(pfx, name)) as fd:
             data = fd.read()
-    elif pkg_resources.resource_exists(__name__, name):
-        data = pkg_resources.resource_string(__name__, name)
-    elif pfx and pkg_resources.resource_exists(__name__, f"{pfx}/{name}"):
-        data = pkg_resources.resource_string(__name__, f"{pfx}/{name}")
+    elif (PACKAGE_DIR / name).exists():
+        data = (PACKAGE_DIR / name).read_bytes()
+    elif pfx and (PACKAGE_DIR / pfx / name).exists():
+        data = (PACKAGE_DIR / pfx / name).read_bytes()
 
     return data
 
@@ -132,10 +151,10 @@ def resource_filename(name, pfx=None):
         return name
     elif pfx and os.path.exists(os.path.join(pfx, name)):
         return os.path.join(pfx, name)
-    elif pkg_resources.resource_exists(__name__, name):
-        return pkg_resources.resource_filename(__name__, name)
-    elif pfx and pkg_resources.resource_exists(__name__, f"{pfx}/{name}"):
-        return pkg_resources.resource_filename(__name__, f"{pfx}/{name}")
+    elif (PACKAGE_DIR / name).exists():
+        return str(PACKAGE_DIR / name)
+    elif pfx and (PACKAGE_DIR / pfx / name).exists():
+        return str(PACKAGE_DIR / pfx / name)
 
     return None
 
@@ -198,25 +217,6 @@ def first_text(elt, tag, default=None):
     return default
 
 
-class ResourceResolver(etree.Resolver):
-    def __init__(self):
-        super().__init__()
-
-    def resolve(self, system_url, public_id, context):
-        """
-        Resolves URIs using the resource API
-        """
-        # log.debug("resolve SYSTEM URL' %s' for '%s'" % (system_url, public_id))
-        path = system_url.split("/")
-        fn = path[len(path) - 1]
-        if pkg_resources.resource_exists(__name__, fn):
-            return self.resolve_file(pkg_resources.resource_stream(__name__, fn), context)
-        elif pkg_resources.resource_exists(__name__, f"schema/{fn}"):
-            return self.resolve_file(pkg_resources.resource_stream(__name__, f"schema/{fn}"), context)
-        else:
-            raise ValueError(f"Unable to locate {fn}")
-
-
 thread_local_lock = threading.Lock()
 
 
@@ -227,13 +227,21 @@ def schema():
     if thread_data.schema is None:
         try:
             thread_local_lock.acquire(blocking=True)
-            parser = etree.XMLParser()
-            parser.resolvers.add(ResourceResolver())
-            st = etree.parse(pkg_resources.resource_stream(__name__, "schema/schema.xsd"), parser)
-            thread_data.schema = etree.XMLSchema(st)
+            # pyuppsala's XMLSchema resolves xsd:import / xsd:include relative to
+            # the schema file's own directory (base_path) automatically, so the
+            # old lxml ResourceResolver / parser plumbing is no longer needed.
+            #
+            # lenient=True matches libxml2/lxml's built-in datatype validation,
+            # which pyFF has always relied on: real-world SAML metadata carries
+            # anyURI values containing spaces (e.g. mdui:GeolocationHint
+            # "geo:lat, lon", "mailto: user@host"). Strict/spec XSD rejects those
+            # per RFC 3987, which would wrongly drop large numbers of otherwise
+            # valid entities; lenient mode accepts them exactly as lxml did.
+            schema_path = str(PACKAGE_DIR / "schema" / "schema.xsd")
+            thread_data.schema = etree.XMLSchema(file=schema_path, lenient=True)
         except etree.XMLSchemaParseError as ex:
             traceback.print_exc()
-            log.error(xml_error(ex.error_log))
+            log.error(str(ex))
             raise ex
         finally:
             thread_local_lock.release()
@@ -263,27 +271,175 @@ def redis():
     return thread_data.redis
 
 
+def _looks_like_sha1_fingerprint(key: str) -> bool:
+    """Return True if ``key`` looks like a SHA1 certificate fingerprint.
+
+    pyFF accepts the ``verify`` value either as a path to a PEM certificate file
+    or as a SHA1 fingerprint (40 hex digits, optionally colon-separated). A
+    fingerprint is detected by stripping colons/whitespace and checking for
+    exactly 40 hex characters.
+    """
+    candidate = key.replace(':', '').replace(' ', '').strip()
+    return len(candidate) == 40 and all(c in '0123456789abcdefABCDEF' for c in candidate)
+
+
 def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool = False) -> ElementTree:
-    refs = None
-    if key is not None:
-        for k in key:
-            log.debug(f"verifying signature using {k}")
-            try:
-                refs = xmlsec.verified(t, k, drop_signature=True)
-            except xmlsec.exceptions.XMLSigException:
-                continue
-            if refs:
-                if only_one_signature and len(refs) != 1:
-                    raise MetadataException("XML metadata contains %d signatures - exactly 1 is required" % len(refs))
-                t = refs[0]  # prevent wrapping attacks
-                return t
+    """Verify the XML signature on ``t`` using pybergshamra.
 
-        raise MetadataException("No valid signature(s) found")
+    ``key`` is either the path to a PEM-encoded X.509 certificate (the trusted
+    signer) or a SHA1 fingerprint of the expected signing certificate. When a
+    fingerprint is supplied the certificate embedded in the signature's KeyInfo
+    is used to verify, and the fingerprint is checked against it afterwards.
+    """
+    if key is None:
+        return t
 
-    return t
+    log.debug(f"verifying signature using {key}")
+
+    mgr = pybergshamra.KeysManager()
+    ctx = pybergshamra.DsigContext(mgr)
+
+    pinned_fingerprint = None
+    if _looks_like_sha1_fingerprint(key) and not os.path.exists(key):
+        # Fingerprint pinning: trust the cert carried inside the signature's
+        # KeyInfo/X509Data, then compare its SHA1 to the pinned fingerprint.
+        # The fingerprint is the trust anchor here, so PKI chain validation is
+        # disabled (insecure) - the embedded signing cert is typically
+        # self-signed and would otherwise fail to chain to a trusted root.
+        pinned_fingerprint = key.replace(':', '').replace(' ', '').strip().lower()
+        ctx.enabled_key_data_x509 = True
+        ctx.trusted_keys_only = False
+        ctx.insecure = True
+    else:
+        # Trusted-cert path: load the PEM certificate and require it as the
+        # only acceptable signing key (skip inline KeyInfo extraction).
+        with open(key, 'rb') as fd:
+            cert_key = pybergshamra.load_x509_cert_pem(fd.read())
+        mgr.add_key(cert_key)
+        ctx.trusted_keys_only = True
+
+    relt = root(t)
+    if is_document_root(relt):
+        # The document API verifies through an owned XML handoff.
+        # Only valid when ``relt`` *is* the document --
+        # for a subtree the native document would be the enclosing aggregate.
+        result = pybergshamra.verify_document(ctx, etree.native_document(relt))
+    else:
+        # A subtree of a larger document must be rendered and verified on its
+        # own; the native document is the enclosing aggregate.
+        xml = dumptree(relt, xml_declaration=False)
+        if isinstance(xml, bytes):
+            xml = xml.decode('utf-8')
+        result = pybergshamra.verify(ctx, xml)
+    if not result.is_valid:
+        raise MetadataException(f"Signature verification failed: {result.reason}")
+
+    references = result.references or []
+    if only_one_signature and len(references) != 1:
+        raise MetadataException(
+            "XML metadata contains %d signatures - exactly 1 is required" % len(references)
+        )
+
+    if pinned_fingerprint is not None:
+        # Confirm the certificate that actually verified the signature matches
+        # the pinned fingerprint (SHA1 over the DER-encoded leaf certificate).
+        chain = result.key_info.x509_chain if result.key_info is not None else []
+        if not chain:
+            raise MetadataException("No certificate found in signature to match fingerprint")
+        actual_fingerprint = hashlib.sha1(chain[0]).hexdigest().lower()
+        if actual_fingerprint != pinned_fingerprint:
+            raise MetadataException(
+                f"Signing certificate fingerprint {actual_fingerprint} does not match expected {pinned_fingerprint}"
+            )
+
+    # Anti-wrapping: the old code returned the verified reference subtree as the
+    # new working tree. With pybergshamra the enveloped signature covers the
+    # whole document root (reference URI "#<ID>" or ""), and strict_verification
+    # in the context guards against signature-wrapping. We therefore return the
+    # signed document root, which is the element the reference covers.
+    # NOTE: resolved_node_id from the verified reference is not mapped back to a
+    # pyuppsala element via the public etree API; this relies on the reference
+    # covering the document root.
+    return root(t)
 
 def validate_document(t):
     schema().assertValid(t)
+
+
+def cert_dict(t):
+    """Build a dict mapping SHA1 fingerprint -> base64 certificate text.
+
+    Replacement for ``xmlsec.crypto.CertDict``. Iterates over every
+    ``<ds:X509Certificate>`` element found in the tree, base64-decodes it to DER,
+    and computes the SHA1 fingerprint. The fingerprint format mirrors
+    pyXMLSecurity: lowercase hex, colon-separated (eg ``ab:cd:ef:...``), which is
+    also the format pyFF passes on to :func:`check_signature` as the ``verify``
+    value.
+
+    :param t: an Element or ElementTree to scan for certificates
+    :return: dict of {fingerprint: base64-certificate-text}
+    """
+    certs: dict[str, str] = {}
+    for cert_elt in root(t).iter("{{{}}}X509Certificate".format(NS['ds'])):
+        cert_b64 = cert_elt.text
+        if cert_b64 is None:
+            continue
+        cert_b64 = cert_b64.strip()
+        try:
+            cert_der = base64.b64decode(cert_b64)
+        except Exception:
+            continue
+        digest = hashlib.sha1(cert_der).hexdigest().lower()
+        fingerprint = ":".join(digest[i : i + 2] for i in range(0, len(digest), 2))
+        certs[fingerprint] = cert_b64
+    return certs
+
+
+class CertInfo:
+    """Lightweight wrapper around a parsed X.509 certificate.
+
+    Replacement for the dict returned by ``xmlsec.utils.b642cert``. Exposes the
+    handful of fields the certreport pipe consumes (key size, subject, and
+    expiry) backed by the ``cryptography`` library.
+    """
+
+    def __init__(self, cert: "x509.Certificate"):
+        self._cert = cert
+
+    @property
+    def keysize(self) -> Optional[int]:
+        """The public key size in bits, or None if it cannot be determined."""
+        public_key = self._cert.public_key()
+        # RSA/DSA expose key_size directly; EC exposes curve.key_size.
+        size = getattr(public_key, 'key_size', None)
+        if size is None:
+            curve = getattr(public_key, 'curve', None)
+            size = getattr(curve, 'key_size', None)
+        return size
+
+    @property
+    def subject(self) -> str:
+        """The certificate subject as an RFC 4514 string."""
+        return self._cert.subject.rfc4514_string()
+
+    @property
+    def not_after(self) -> Optional[datetime]:
+        """The certificate expiry as a timezone-aware datetime (UTC)."""
+        # cryptography >= 42 exposes not_valid_after_utc; fall back for older.
+        return getattr(self._cert, 'not_valid_after_utc', None) or self._cert.not_valid_after
+
+
+def cert_info(cert_b64: str) -> CertInfo:
+    """Parse a base64-encoded DER X.509 certificate into a :class:`CertInfo`.
+
+    Replacement for ``xmlsec.utils.b642cert``.
+
+    :param cert_b64: the base64 (DER) certificate text, eg from ds:X509Certificate
+    :return: a CertInfo exposing keysize / subject / not_after
+    """
+    cert_der = base64.b64decode(cert_b64)
+    cert = x509.load_der_x509_certificate(cert_der)
+    return CertInfo(cert)
 
 
 def request_vhost(request):
@@ -353,6 +509,28 @@ def root(t):
         return t.getroot()
     else:
         return t
+
+
+def is_document_root(elt) -> bool:
+    """Return True if ``elt`` is the root element of its owning document.
+
+    The working document is frequently a *subtree* of a larger parsed document,
+    e.g. the single EntityDescriptor that ``first`` hands on after an MDQ
+    ``select`` (it is still a child of the loaded EntitiesDescriptor). Anything
+    that reaches the native document through ``etree.native_document(elt)``
+    would then operate on the whole aggregate instead of ``elt``, so callers
+    must only take the document-native shortcut when this returns True. A
+    ``deepcopy``'d element has no parent but is not a document root either,
+    which is why the root-tree identity check is used rather than
+    ``getparent() is None``.
+    """
+    getroottree = getattr(elt, 'getroottree', None)
+    if getroottree is None:
+        return False
+    try:
+        return getroottree().getroot() is elt
+    except Exception:  # pragma: no cover - be conservative, fall back to the string path
+        return False
 
 
 def with_tree(elt, cb):
@@ -453,11 +631,17 @@ def xslt_transform(t, stylesheet, params=None):
         return transform(t, **params)
     except etree.XSLTApplyError as ex:
         for entry in transform.error_log:
-            log.error(f'\tmessage from line {entry.line}, col {entry.column}: {entry.message}')
-            log.error('\tdomain: %s (%d)' % (entry.domain_name, entry.domain))
-            log.error('\ttype: %s (%d)' % (entry.type_name, entry.type))
-            log.error('\tlevel: %s (%d)' % (entry.level_name, entry.level))
-            log.error(f'\tfilename: {entry.filename}')
+            # pyuppsala's XSLT error-log entries expose line/column/message; the
+            # libxml2-specific attributes (domain/type/level/filename) exist as
+            # neutral placeholders but may be missing, so guard the logging.
+            try:
+                log.error(f'\tmessage from line {entry.line}, col {entry.column}: {entry.message}')
+                log.error('\tdomain: %s (%d)' % (entry.domain_name, entry.domain))
+                log.error('\ttype: %s (%d)' % (entry.type_name, entry.type))
+                log.error('\tlevel: %s (%d)' % (entry.level_name, entry.level))
+                log.error(f'\tfilename: {entry.filename}')
+            except AttributeError:
+                log.error(f'\tmessage: {getattr(entry, "message", entry)}')
         raise ex
 
 
@@ -522,14 +706,39 @@ def hex_digest(data, hn='sha1'):
 
 def parse_xml(io: BinaryIO, base_url: Optional[str] = None) -> ElementTree:
     huge_xml = config.huge_xml
-    return etree.parse(
-        io, base_url=base_url, parser=etree.XMLParser(resolve_entities=False, collect_ids=False, huge_tree=huge_xml)
-    )
+    # pyuppsala is safe-by-default: it forbids DTDs/entities rather than expanding
+    # them, so resolve_entities=False (the old lxml hardening) is both unnecessary
+    # and unsupported. collect_ids has no pyuppsala equivalent (IDs are resolved on
+    # demand). huge_tree lifts the depth/expansion caps for large aggregates.
+    return etree.parse(io, base_url=base_url, parser=etree.XMLParser(huge_tree=huge_xml))
 
 
 def has_tag(t, tag):
-    tags = t.iter(tag)
-    return next(tags, sentinel) is not sentinel
+    # Keep the subtree scan in Rust and avoid materializing Python proxies.
+    return t.fast_has(tag)
+
+
+def collect_attr(t, key, tag):
+    """Values of attribute ``key`` on every ``tag`` descendant (including ``t``).
+
+    Native single pass on pyuppsala; falls back to iteration on backends
+    without ``fast_collect_attr``. Elements lacking the attribute are skipped.
+    """
+    fast = getattr(t, 'fast_collect_attr', None)
+    if fast is not None:
+        return fast(key, tag)
+    return [v for v in (e.get(key) for e in t.iter(tag)) if v is not None]
+
+
+def collect_text(t, tag):
+    """Stripped leading text of every ``tag`` descendant that has text.
+
+    Native single pass on pyuppsala >= 0.13; falls back to iteration.
+    """
+    fast = getattr(t, 'fast_collect_text', None)
+    if fast is not None:
+        return fast(tag)
+    return [e.text.strip() for e in t.iter(tag) if e.text is not None]
 
 
 def url2host(url):

@@ -13,7 +13,7 @@ from typing import Any, Callable
 
 import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
-from lxml.etree import Element, ElementTree
+from pyuppsala.etree import Element, ElementTree
 
 from pyff.exceptions import PyffException
 from pyff.logs import get_log

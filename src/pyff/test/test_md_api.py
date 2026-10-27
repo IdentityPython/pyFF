@@ -1,17 +1,22 @@
+import json
 import os
 import shutil
 import tempfile
 import unittest
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from urllib.parse import quote as urlescape
 
 import pytest
 import requests
 from mako.lookup import TemplateLookup
+from pyramid.testing import DummyRequest
+from pyuppsala import etree
 from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
 
-from pyff.api import mkapp
+from pyff.api import mkapp, search_handler
 from pyff.constants import config
+from pyff.samlmd import iter_entities
 from pyff.test import SignerTestCase
 from pyff.test.test_pipeline import PipeLineTest
 
@@ -147,6 +152,51 @@ class PyFFAPITest(PipeLineTest):
             )
 
 
+class SearchHandlerTest(unittest.TestCase):
+    """
+    The search endpoint streams its result, and WSGI servers such as gunicorn
+    only accept bytes from the response iterator.
+    """
+
+    class _Store:
+        def __init__(self, results):
+            self.results = results
+
+        def search(self, query=None, entity_filter=None, **kwargs):
+            return iter(self.results)
+
+    def _search(self, results, **params):
+        request = DummyRequest(params=params)
+        request.registry = SimpleNamespace(md=SimpleNamespace(store=self._Store(results)))
+        response = search_handler(request)
+        return response, list(response.app_iter)
+
+    def test_chunks_are_bytes(self):
+        results = [
+            {'entityID': 'https://idp1.example.org/idp', 'title': 'Example University'},
+            {'entityID': 'https://idp2.example.org/idp', 'title': 'Östergötland'},
+        ]
+        _response, chunks = self._search(results, q='example')
+        assert chunks
+        assert all(isinstance(chunk, bytes) for chunk in chunks)
+        assert json.loads(b''.join(chunks)) == results
+
+    def test_single_result(self):
+        results = [{'entityID': 'https://idp.example.org/idp', 'title': 'Example University'}]
+        _response, chunks = self._search(results, q='example')
+        assert all(isinstance(chunk, bytes) for chunk in chunks)
+        assert json.loads(b''.join(chunks)) == results
+
+    def test_no_results(self):
+        _response, chunks = self._search([], q='nothing')
+        assert all(isinstance(chunk, bytes) for chunk in chunks)
+        assert b''.join(chunks) == b'[]'
+
+    def test_content_type(self):
+        response, _chunks = self._search([], q='example')
+        assert response.content_type == 'application/json'
+
+
 class PyFFAPITestResources(PipeLineTest):
     """
     Runs twill tests using the wsgi-intercept
@@ -226,3 +276,83 @@ class PyFFAPITestResources(PipeLineTest):
             assert (last_seen - now).total_seconds() < 60
 
             assert os.path.exists(os.path.join(config.local_copy_dir, urlescape(f'file://{self.test01}')))
+
+
+class PyFFAPITestTrailingSlash(PipeLineTest):
+    """
+    A trailing slash is part of an entityID, except when there is no entityID at all -
+    a bare /entities/ selects everything, just like /entities does.
+    """
+
+    mdx = None
+    app = None
+    idp = 'https://idp.example.com/saml2/idp/metadata.php'
+    sp = 'https://sp.example.com/saml2/metadata/'
+
+    @classmethod
+    def setUpClass(cls):
+        SignerTestCase.setUpClass()
+        config.local_copy_dir = tempfile.mkdtemp()
+        cls.test01 = os.path.join(cls.datadir, 'metadata', 'test01.xml')
+        cls.test04 = os.path.join(cls.datadir, 'metadata', 'test04-trailing-slash-sp.xml')
+        cls.mdx = tempfile.NamedTemporaryFile('w').name
+        with open(cls.mdx, "w") as fd:
+            fd.write(
+                f"""
+- when update:
+    - load:
+        - {cls.test01}
+        - {cls.test04}
+- when request:
+    - select
+    - pipe:
+        - when accept application/xml:
+            - finalize:
+                cacheDuration: PT5H
+                validUntil: P10D
+            - emit application/xml
+            - break
+"""
+            )
+        cls._app = mkapp(cls.mdx)
+        cls.app = lambda *args, **kwargs: cls._app
+
+    @classmethod
+    def tearDownClass(cls):
+        SignerTestCase.tearDownClass()
+        if os.path.exists(cls.mdx):
+            os.unlink(cls.mdx)
+        if os.path.exists(config.local_copy_dir):
+            shutil.rmtree(config.local_copy_dir)
+
+    def _entity_ids(self, url, path):
+        """Return the set of entityIDs the API serves for path"""
+        r = requests.get(f'{url}{path}', headers={'Accept': 'application/xml'})
+        assert r.status_code == 200, f'{path} -> {r.status_code}'
+        t = etree.fromstring(r.content)
+        return {e.get('entityID') for e in iter_entities(t)}
+
+    def test_entities_without_trailing_slash(self):
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            assert requests.post(f'{url}/api/call/update').status_code == 200
+            assert self._entity_ids(url, '/entities') == {self.idp, self.sp}
+
+    def test_entities_with_trailing_slash(self):
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            assert requests.post(f'{url}/api/call/update').status_code == 200
+            assert self._entity_ids(url, '/entities/') == {self.idp, self.sp}
+
+    def test_entity_id_keeps_its_trailing_slash(self):
+        """An entityID ending in a slash must not be truncated - cf. issue #298"""
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            assert requests.post(f'{url}/api/call/update').status_code == 200
+            # the unescaped form - WSGI hands us a single slash after the scheme
+            assert self._entity_ids(url, '/entities/https:/sp.example.com/saml2/metadata/') == {self.sp}
+            # ... and the escaped form
+            assert self._entity_ids(url, f'/entities/{urlescape(self.sp, safe="")}') == {self.sp}
+
+    def test_entity_id_without_trailing_slash_is_not_found(self):
+        """Dropping the slash from an entityID that has one must not match it"""
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            assert requests.post(f'{url}/api/call/update').status_code == 200
+            assert self._entity_ids(url, '/entities/https:/sp.example.com/saml2/metadata') == set()

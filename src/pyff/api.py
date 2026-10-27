@@ -4,18 +4,18 @@ from collections.abc import Generator, Iterable, Mapping
 from datetime import datetime, timedelta
 from json import dumps
 from typing import Any, Optional
-from urllib.parse import quote_plus
+from urllib.parse import quote
 
 import pyramid.httpexceptions as exc
 import pytz
 import requests
 from accept_types import AcceptableType
 from cachetools import TTLCache
-from lxml import etree
 from pyramid.config import Configurator
 from pyramid.events import NewRequest
 from pyramid.request import Request
 from pyramid.response import Response
+from pyuppsala import etree
 
 from pyff import __version__
 from pyff.constants import config
@@ -205,8 +205,9 @@ def process_handler(request: Request) -> Response:
     # Ugly workaround bc WSGI drops double-slashes.
     path = path.replace(':/', '://')
 
-    # Ugly workaround bc request.matchdict drops trailing slashes which could be part of the entityID
-    if request.path and request.path[-1] == "/":
+    # Ugly workaround bc request.matchdict drops trailing slashes which could be part of the entityID.
+    # Only for a non-empty path - a bare /entities/ means "everything", not the entity named "/".
+    if path and request.path and request.path[-1] == "/":
         path = path + "/"
 
     msg = "handling entry={}, alias={}, path={}"
@@ -394,7 +395,7 @@ def webfinger_handler(request: Request) -> Response:
     aliases = request.registry.aliases
     for a in aliases.keys():
         for v in request.registry.md.store.attribute(aliases[a]):
-            _links(f'{a}/{quote_plus(v)}')
+            _links(f"{a}/{quote(v, safe='')}")
 
     response = Response(dumps(jrd, default=json_serializer))
     response.headers['Content-Type'] = 'application/json'
@@ -466,7 +467,7 @@ def search_handler(request: Request) -> Response:
         for e in entities:
             if in_loop:
                 yield b','
-            yield dumps(e)
+            yield dumps(e).encode('utf-8')
             in_loop = True
         yield b']'
 

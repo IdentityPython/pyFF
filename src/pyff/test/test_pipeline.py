@@ -2,19 +2,25 @@ import json
 import os
 import shutil
 import tempfile
+import threading
+import time
+import weakref
+from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
 from mako.lookup import TemplateLookup
 
 from pyff import builtins
+from pyff.constants import NS
 from pyff.exceptions import MetadataException
 from pyff.parse import ParserException
 from pyff.pipes import PipeException, Plumbing, plumbing
 from pyff.repo import MDRepository
 from pyff.resource import ResourceException
+from pyff.samlmd import iter_entities
 from pyff.test import ExitException, SignerTestCase
 from pyff.utils import hash_id, parse_xml, resource_filename, root
 
@@ -100,6 +106,20 @@ class ParseTest(PipeLineTest):
             "removing 'https://idp.example.com/saml2/idp/metadata.php1': schema validation failed"
             in self.captured_log_text
         )
+
+    def test_select_match_ip_hint(self):
+        md = MDRepository()
+        p = yaml.safe_load(
+            StringIO(
+                f"""
+- load:
+    - {self.datadir}/metadata/test01.xml
+- select
+"""
+            )
+        )
+        res = Plumbing(p, pid="test").process(md, state={'batch': True, 'stats': {}, 'match': '10.1.2.3'})
+        assert [e.get('entityID') for e in iter_entities(res)] == ['https://idp.example.com/saml2/idp/metadata.php']
 
 
 # To run all LoadErrorTests: ./setup.py test -s pyff.test.test_pipeline.LoadErrorTest
@@ -223,7 +243,10 @@ class LoadErrorTest(PipeLineTest):
             )
         except (MetadataException, ParserException) as ex:
             print(ex)
-            assert ":SCHEMASV:" in str(ex)
+            # pyuppsala reports schema-validation failures as pyFF's
+            # "Validation error while parsing ..." MetadataException (lxml's
+            # libxml2-specific ":SCHEMASV:" error code no longer applies).
+            assert "Validation error" in str(ex)
             assert "/metadata/test03-invalid.xml" in str(ex)
             return True
 
@@ -366,15 +389,386 @@ class SortTest(PipeLineTest):
         self._run_sort_test(expected_order, sxp, res, self.captured_log_text)
 
 
+class TestPkcs11SigningConfig:
+    """Verify parsing and validation of PKCS#11 signing selectors."""
+
+    @pytest.fixture(autouse=True)
+    def _isolated_provider_cache(self):
+        with (
+            patch.object(builtins, '_pkcs11_provider_cache', {}),
+            patch.object(builtins, '_pkcs11_signing_locks', {}),
+        ):
+            yield
+
+    @pytest.mark.parametrize('failure_stage', ['signer', 'sign'])
+    def test_signing_failure_releases_session_with_retained_traceback(self, failure_stage):
+        """A retained error must not keep a token logged in on the next request."""
+        sessions = []
+
+        class Session:
+            pass
+
+        class Provider:
+            slot_id = 7
+
+            def open_session(self, _pin):
+                assert all(reference() is None for reference in sessions)
+                session = Session()
+                sessions.append(weakref.ref(session))
+                return session
+
+        class Signer:
+            def __init__(self, session, _label, _algorithm):
+                self.session = session
+
+        class Context:
+            def __init__(self, _manager):
+                pass
+
+            def set_hsm_signer(self, signer):
+                self.signer = signer
+
+        errors = []
+        # Native call argument errors model a PyO3 exception without adding a
+        # Python mock traceback frame that independently retains its arguments.
+        signer_type = object if failure_stage == 'signer' else Signer
+        with (
+            patch.object(builtins.pybergshamra, 'Pkcs11Signer', signer_type),
+            patch.object(builtins.pybergshamra, 'DsigContext', Context),
+        ):
+            for _ in range(2):
+                try:
+                    builtins._sign_pkcs11(Provider(), '/module.so', 'pin', 'key', '<root/>')
+                except TypeError as error:
+                    errors.append(error)
+                else:
+                    pytest.fail('Expected a native argument error')
+                assert all(reference() is None for reference in sessions)
+        assert len(errors) == len(sessions) == 2
+
+    def test_serializes_login_across_providers_for_same_token(self):
+        """Aliases for one token cannot overlap authenticated signing lifetimes."""
+        sessions = []
+        start = threading.Barrier(2)
+
+        class Session:
+            pass
+
+        class Provider:
+            slot_id = 7
+
+            def open_session(self, _pin):
+                assert all(reference() is None for reference in sessions), 'token already logged in'
+                session = Session()
+                sessions.append(weakref.ref(session))
+                time.sleep(0.05)
+                return session
+
+        class Signer:
+            def __init__(self, session, _label, _algorithm):
+                self.session = session
+
+        class Context:
+            def __init__(self, _manager):
+                pass
+
+            def set_hsm_signer(self, signer):
+                self.signer = signer
+
+        def sign(provider):
+            start.wait(timeout=5)
+            return builtins._sign_pkcs11(provider, '/module.so', 'pin', 'key', '<root/>')
+
+        with (
+            patch.object(builtins.pybergshamra, 'Pkcs11Signer', Signer),
+            patch.object(builtins.pybergshamra, 'DsigContext', Context),
+            patch.object(builtins.pybergshamra, 'sign_enveloped', lambda _ctx, xml, **_kwargs: xml),
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            results = list(executor.map(sign, [Provider(), Provider()]))
+        assert results == ['<root/>', '<root/>']
+        assert len(sessions) == 2
+        assert all(reference() is None for reference in sessions)
+
+    def test_parse_absolute_module_path(self):
+        """Preserve an absolute module path and read the PIN environment selector."""
+        module, label, pin, slot_id = builtins._parse_pkcs11_key_uri(
+            "pkcs11:///usr/lib/libCryptoki2_64.so/sctest2?pin=env:LUNA_PIN"
+        )
+
+        assert module == "/usr/lib/libCryptoki2_64.so"
+        assert label == "sctest2"
+        assert pin == "env:LUNA_PIN"
+        assert slot_id is None
+
+    def test_parse_uri_slot_id(self):
+        """Extract a numeric slot ID appended to the module path."""
+        module, label, pin, slot_id = builtins._parse_pkcs11_key_uri(
+            "pkcs11:///usr/lib/libCryptoki2_64.so:17/sctest2"
+        )
+
+        assert module == "/usr/lib/libCryptoki2_64.so"
+        assert label == "sctest2"
+        assert pin == "env:PYKCS11PIN"
+        assert slot_id == 17
+
+    def test_select_token_by_label_and_serial(self):
+        """Select a token using its label and exact serial number."""
+        provider_type = MagicMock()
+        selected_provider = provider_type.with_token.return_value
+
+        with patch.object(builtins.pybergshamra, 'Pkcs11Provider', provider_type):
+            provider = builtins._select_pkcs11_provider(
+                "/usr/lib/libCryptoki2_64.so",
+                token_label="sc_ha",
+                token_serial=11429933786539,
+            )
+
+        assert provider is selected_provider
+        provider_type.with_token.assert_called_once_with(
+            "/usr/lib/libCryptoki2_64.so",
+            "sc_ha",
+            token_serial="11429933786539",
+        )
+
+    def test_select_slot_id(self):
+        """Select a token using an explicitly configured slot ID."""
+        provider_type = MagicMock()
+        selected_provider = provider_type.with_slot_id.return_value
+
+        with patch.object(builtins.pybergshamra, 'Pkcs11Provider', provider_type):
+            provider = builtins._select_pkcs11_provider(
+                "/usr/lib/libCryptoki2_64.so",
+                slot_id="17",
+            )
+
+        assert provider is selected_provider
+        provider_type.with_slot_id.assert_called_once_with("/usr/lib/libCryptoki2_64.so", 17)
+
+    def test_reuses_provider_for_equivalent_selector(self):
+        """Keep the vendor module loaded across repeated signing requests."""
+        provider_type = MagicMock()
+        selected_provider = provider_type.with_token.return_value
+
+        with patch.object(builtins.pybergshamra, 'Pkcs11Provider', provider_type):
+            first = builtins._select_pkcs11_provider(
+                "/usr/lib/libCryptoki2_64.so",
+                token_label="sc_ha",
+                token_serial=11429933786539,
+            )
+            second = builtins._select_pkcs11_provider(
+                "/usr/lib/libCryptoki2_64.so",
+                token_label="sc_ha",
+                token_serial="11429933786539",
+            )
+
+        assert first is selected_provider
+        assert second is selected_provider
+        provider_type.with_token.assert_called_once_with(
+            "/usr/lib/libCryptoki2_64.so",
+            "sc_ha",
+            token_serial="11429933786539",
+        )
+
+    def test_does_not_share_provider_between_selectors(self):
+        """Keep distinct token selections in separate cache entries."""
+        provider_type = MagicMock()
+
+        with patch.object(builtins.pybergshamra, 'Pkcs11Provider', provider_type):
+            builtins._select_pkcs11_provider(
+                "/usr/lib/libCryptoki2_64.so",
+                token_label="token-a",
+            )
+            builtins._select_pkcs11_provider(
+                "/usr/lib/libCryptoki2_64.so",
+                token_label="token-b",
+            )
+
+        assert provider_type.with_token.call_count == 2
+
+    def test_constructs_provider_once_during_concurrent_first_access(self):
+        """Serialize a cold cache so threaded requests cannot load twice."""
+        provider_type = MagicMock()
+        selected_provider = object()
+
+        def create_provider(*_args, **_kwargs):
+            time.sleep(0.05)
+            return selected_provider
+
+        provider_type.with_token.side_effect = create_provider
+
+        def select_provider():
+            return builtins._select_pkcs11_provider(
+                "/usr/lib/libCryptoki2_64.so",
+                token_label="sc_ha",
+                token_serial="11429933786539",
+            )
+
+        with (
+            patch.object(builtins.pybergshamra, 'Pkcs11Provider', provider_type),
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            providers = list(executor.map(lambda _item: select_provider(), range(2)))
+
+        assert providers == [selected_provider, selected_provider]
+        provider_type.with_token.assert_called_once()
+
+    def test_pkcs11_signing_uses_owned_document(self):
+        """Keep PKCS#11 signing away from the shared native document capsule."""
+        from pyuppsala import etree
+
+        xml = """\
+<md:EntitiesDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
+  <md:EntityDescriptor entityID="https://sp.example.org/metadata"/>
+</md:EntitiesDescriptor>
+"""
+        md = MDRepository()
+        req = Plumbing.Request(
+            Plumbing([], pid="pkcs11-owned-document"),
+            md,
+            t=etree.fromstring(xml),
+            args={
+                "key": "pkcs11:///usr/lib/libCryptoki2_64.so/sctest2",
+                "token_label": "sc_ha",
+            },
+        )
+        provider_type = MagicMock()
+
+        with (
+            patch.dict(os.environ, {"PYKCS11PIN": "secret"}),
+            patch.object(builtins.pybergshamra, 'KeysManager', MagicMock()),
+            patch.object(builtins.pybergshamra, 'DsigContext', MagicMock()),
+            patch.object(builtins.pybergshamra, 'Pkcs11Provider', provider_type),
+            patch.object(builtins.pybergshamra, 'Pkcs11Signer', MagicMock()),
+            patch.object(builtins.pybergshamra, 'sign_enveloped', side_effect=lambda _ctx, value, **_kw: value) as sign,
+            patch.object(builtins.pybergshamra, 'sign_enveloped_document') as sign_document,
+        ):
+            result = builtins.sign(req)
+
+        sign.assert_called_once()
+        sign_document.assert_not_called()
+        assert result.find("{urn:oasis:names:tc:SAML:2.0:metadata}EntityDescriptor") is not None
+
+    @pytest.mark.parametrize(
+        "kwargs, message",
+        [
+            ({"token_serial": "serial"}, "token_serial requires token_label"),
+            ({"slot_id": 17, "token_label": "sc_ha"}, "slot_id cannot be combined"),
+            ({"uri_slot_id": 17, "slot_id": 18}, "Conflicting PKCS#11 slot IDs"),
+            ({"slot_id": "not-a-number"}, "Invalid PKCS#11 slot ID"),
+        ],
+    )
+    def test_reject_invalid_or_conflicting_selectors(self, kwargs, message):
+        """Reject incomplete, malformed, or mutually exclusive selectors."""
+        with pytest.raises(PipeException, match=message):
+            builtins._select_pkcs11_provider("/usr/lib/libCryptoki2_64.so", **kwargs)
+
+
 # noinspection PyUnresolvedReferences
 class SigningTest(PipeLineTest):
     def test_signing(self):
+        """Sign and publish an aggregate without losing its entities."""
+        from pyuppsala import etree
+
+        from pyff.constants import NS
+
         self.output = tempfile.NamedTemporaryFile('w').name
-        _res, md, _ctx = self.run_pipeline("signer.fd", self)
+        res, md, _ctx = self.run_pipeline("signer.fd", self)
         eIDs = [e.get('entityID') for e in md.store]
         assert 'https://idp.aco.net/idp/shibboleth' in eIDs
         assert 'https://skriptenforum.net/shibboleth' in eIDs
+
+        entity_tag = "{{{}}}EntityDescriptor".format(NS['md'])
+        signed_tree = root(res)
+        assert len(signed_tree.findall(entity_tag)) == 2
+
+        with open(self.output, 'rb') as fd:
+            published = etree.fromstring(fd.read())
+        assert len(published.findall(entity_tag)) == 2
         os.unlink(self.output)
+
+    def test_signing_single_entity(self):
+        # Regression test for the MDQ single-entity path: after `first` the
+        # working document is an EntityDescriptor that is still a child of the
+        # selected EntitiesDescriptor. `sign` must sign *that* element (and
+        # `publish`/`emit` must carry the signature), not the enclosing
+        # aggregate root that later gets thrown away.
+        from pyuppsala import etree
+
+        from pyff.constants import NS
+        from pyff.utils import check_signature
+
+        self.output = tempfile.NamedTemporaryFile('w').name
+        res, _md = self.exec_pipeline(
+            f"""
+- load:
+    - {self.datadir}/simple-pipeline
+- select:
+    - https://idp.aco.net/idp/shibboleth
+- first
+- finalize:
+    cacheDuration: PT5H
+    validUntil: P10D
+- sign:
+    key: {self.private_keyspec}
+    cert: {self.public_keyspec}
+- publish:
+    output: {self.output}
+"""
+        )
+        entity_tag = "{{{}}}EntityDescriptor".format(NS['md'])
+        signature_tag = "{{{}}}Signature".format(NS['ds'])
+
+        t = root(res)
+        assert t.tag == entity_tag
+        assert t.get('entityID') == 'https://idp.aco.net/idp/shibboleth'
+        assert len(t) > 0 and t[0].tag == signature_tag, "signature must be the entity's first child"
+        assert t.get('ID') is not None
+        check_signature(t, self.public_keyspec, only_one_signature=True)
+
+        with open(self.output, 'rb') as fd:
+            published = etree.fromstring(fd.read())
+        assert published.tag == entity_tag
+        assert published[0].tag == signature_tag, "published single entity must carry its signature"
+        check_signature(published, self.public_keyspec, only_one_signature=True)
+        os.unlink(self.output)
+
+    def test_read_xml_and_sign(self):
+        """Read an XML file as the working document and sign it without load/select."""
+        from pyff.constants import NS
+        from pyff.utils import check_signature
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            src = os.path.join(tmpdir, 'mdsl.xml')
+            with open(src, 'w') as fd:
+                fd.write(
+                    f'<ser:MetadataServiceList xmlns:ser="{NS["ser"]}" Version="1">'
+                    '<ser:IssuerName>Test</ser:IssuerName></ser:MetadataServiceList>'
+                )
+            res, _md = self.exec_pipeline(
+                f"""
+- read_xml:
+    file: {src}
+- sign:
+    key: {self.private_keyspec}
+    cert: {self.public_keyspec}
+"""
+            )
+        finally:
+            shutil.rmtree(tmpdir)
+
+        t = root(res)
+        assert t.tag == "{{{}}}MetadataServiceList".format(NS['ser'])
+        assert t.get('Version') == '1'
+        assert t[0].tag == "{{{}}}Signature".format(NS['ds'])
+        check_signature(t, self.public_keyspec, only_one_signature=True)
+
+    def test_read_xml_rejects_bad_arguments(self):
+        with pytest.raises(PipeException, match="usage: read_xml"):
+            self.exec_pipeline("- read_xml:\n    other: value\n")
+        with pytest.raises(OSError):
+            self.exec_pipeline("- read_xml:\n    file: /nonexistent.xml\n")
 
     def test_signing_and_validation(self):
         self.output = tempfile.NamedTemporaryFile('w').name
@@ -722,6 +1116,144 @@ class SigningTest(PipeLineTest):
         )
         assert "Expected exception from bad namespace in"
         assert md.lookup(entity)
+
+    def test_publish_keeps_xs_xsi_namespace(self):
+        """cleanup_namespaces() must not strip prefixes only used inside attribute values.
+
+        Regression test for https://github.com/IdentityPython/pyFF/issues/333: the 'xs'
+        prefix in swamid-2.0-test.xml is declared on an EntityDescriptor but only referenced
+        from within an xsi:type attribute *value* (e.g. ns3:type="xs:string"), so lxml's
+        cleanup_namespaces() considers it unused and removes it, producing invalid metadata.
+        """
+        entity = 'https://xenosmilus2.umdc.umu.se:8086/coc/sp.xml'
+        tmpfile = tempfile.NamedTemporaryFile('w').name
+        try:
+            self.exec_pipeline(
+                f"""
+- load:
+   - file://{self.datadir}/metadata/swamid-2.0-test.xml
+- select
+- publish: {tmpfile}
+"""
+            )
+            t2 = parse_xml(tmpfile)
+            assert t2 is not None
+            entity_elt = t2.find(".//{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entity))
+            assert entity_elt is not None
+            assert entity_elt.nsmap.get('xs') == NS['xs']
+        finally:
+            try:
+                os.unlink(tmpfile)
+            except OSError:
+                pass
+
+    def test_publish_keeps_xsd_prefix_qname(self):
+        """The xs/xsi hardcoded keep-list is not enough: the XMLSchema namespace can be
+        spelled with any prefix a document author chooses.
+
+        Regression test with real-world metadata: test05-xsd-prefix-idp.xml declares the
+        XMLSchema namespace as 'xsd' (not 'xs') and uses xsi:type="xsd:string". Before this
+        fix, cleanup_namespaces() stripped 'xmlns:xsd' (only 'xs'/'xsi' were hardcoded),
+        schema validation then failed on the dangling QName, and filter_invalid silently
+        dropped the entity from published metadata entirely.
+        """
+        entity = (
+            'https://auth.funktionstjanster.se/id/proxy/saml2/67cacd06db3b47c951eefdfa/'
+            'idp/67cacbb7ef0f342709eefdf6/c/682f0e0f8dc75a89157ed724/authn'
+        )
+        tmpfile = tempfile.NamedTemporaryFile('w').name
+        try:
+            # PKCS11 signing uses the owned-string path rather than the native
+            # document path. Force the same path here without requiring an HSM.
+            with patch.object(builtins, 'is_document_root', return_value=False):
+                self.exec_pipeline(
+                    f"""
+- load:
+   - file://{self.datadir}/metadata/test05-xsd-prefix-idp.xml
+- select
+- finalize:
+    cacheDuration: PT5H
+    validUntil: P10D
+- sign:
+    key: {self.private_keyspec}
+    cert: {self.public_keyspec}
+- publish: {tmpfile}
+"""
+                )
+            t2 = parse_xml(tmpfile)
+            assert t2 is not None
+            entity_elt = t2.find(".//{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entity))
+            assert entity_elt is not None, "entity was dropped - namespace cleanup broke schema validation"
+            assert entity_elt.nsmap.get('xsd') == NS['xs']
+        finally:
+            try:
+                os.unlink(tmpfile)
+            except OSError:
+                pass
+
+    def test_publish_prunes_genuinely_unused_namespace(self):
+        """Guard against 'fixing' future namespace reports by weakening cleanup entirely.
+
+        test06-xs-and-xsd-declared.xml declares both 'xs' and 'xsd' bound to the same
+        XMLSchema URI, but only 'xs' is ever referenced (via xsi:type="xs:string"). The
+        genuinely unused 'xsd' declaration must still be pruned.
+        """
+        from pyuppsala import etree
+
+        if not hasattr(etree, 'cleanup_namespaces'):
+            self.skipTest("the XML backend does not support namespace cleanup")
+
+        entity = 'https://app.comfact.se/pdss/metadata/d70a69a512a2418f'
+        tmpfile = tempfile.NamedTemporaryFile('w').name
+        try:
+            self.exec_pipeline(
+                f"""
+- load:
+   - file://{self.datadir}/metadata/test06-xs-and-xsd-declared.xml
+- select
+- publish: {tmpfile}
+"""
+            )
+            t2 = parse_xml(tmpfile)
+            assert t2 is not None
+            entity_elt = t2.find(".//{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entity))
+            assert entity_elt is not None
+            assert entity_elt.nsmap.get('xs') == NS['xs']
+            assert 'xsd' not in entity_elt.nsmap
+        finally:
+            try:
+                os.unlink(tmpfile)
+            except OSError:
+                pass
+
+    def test_wsfed_type_prefix_survives(self):
+        """A complex-type xsi:type prefix (as opposed to a datatype prefix like xs/xsd)
+        needs no special-casing: real WS-Fed metadata also carries elements in that
+        namespace (e.g. fed:TokenTypesOffered), so lxml already sees the prefix as used.
+        """
+        entity = 'http://idp.chalmers.se/adfs/services/trust'
+        tmpfile = tempfile.NamedTemporaryFile('w').name
+        try:
+            self.exec_pipeline(
+                f"""
+- load:
+   - file://{self.datadir}/metadata/swamid-2.0-test.xml
+- select
+- publish: {tmpfile}
+"""
+            )
+            t2 = parse_xml(tmpfile)
+            assert t2 is not None
+            entity_elt = t2.find(".//{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entity))
+            assert entity_elt is not None
+            role_elt = entity_elt.find("{{{}}}RoleDescriptor".format(NS['md']))
+            assert role_elt is not None
+            assert role_elt.nsmap.get('fed') == 'http://docs.oasis-open.org/wsfed/federation/200706'
+        finally:
+            try:
+                os.unlink(tmpfile)
+            except OSError:
+                pass
 
     def test_discojson_sp(self):
         with patch.multiple("sys", exit=self.sys_exit):

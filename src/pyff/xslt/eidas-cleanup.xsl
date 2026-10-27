@@ -121,6 +121,15 @@
         </xsl:copy>
     </xsl:template>
 
+    <!-- Some eIDAS nodes emit xsi:type="xsd:string" without declaring xsd.
+         Recreate the metadata root with that namespace in scope so the
+         transformed document contains resolvable xsi:type QNames. -->
+    <xsl:template match="md:EntityDescriptor">
+        <md:EntityDescriptor xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <xsl:apply-templates select="node()|@*"/>
+        </md:EntityDescriptor>
+    </xsl:template>
+
     <!-- just copy everything else -->
     <xsl:template match="text()|comment()|@*">
         <xsl:copy/>

@@ -344,8 +344,20 @@ class Config:
         "info_buffer_size", default=10, typeconv=as_int, info="how much history to keep about each metadata URL"
     )
 
+    map_threads = S(
+        "map_threads", typeconv=as_int, info="how many threads to create in map pipe [default: os.process_cpu_count() ]"
+    )
+
     worker_pool_size = S(
         "worker_pool_size", default=1, cmdline=['pyffd'], typeconv=as_int, info="how many gunicorn workers to run"
+    )
+
+    use_native_fetcher = S(
+        "use_native_fetcher",
+        default=False,
+        typeconv=as_bool,
+        info="fetch http(s) metadata with pyuppsala's native (Rust, GIL-free) batch fetcher instead of requests; "
+        "bypasses the requests_cache body cache",
     )
 
     threads = S("threads", default=10, cmdline=['pyffd'], typeconv=as_int, info="how many gunicorn threads to run")

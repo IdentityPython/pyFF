@@ -193,3 +193,56 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 
 * Switch to uv.lock for reproducable builds.
 * temp dir fix
+
+2.1.6
+-----
+* Release date: Thu 27 Aug 13:01:40 CET 2026
+
+* Dump depends
+
+* Deprecated python 3.9
+
+* Added python 3.13 and 3.14
+
+* Pin ruff rulesets
+
+* Handle URLs with trailing /
+
+* Remove unused namespaces
+
+2.1.7
+-----
+* Release date: Tue 8 Sep 14:25:40 CET 2026
+
+* Fix regression in 2.1.6 when removing unused namespaces
+
+3.0.0
+-----
+* Release date: Mon 26 Oct 09:32 CET 2026
+
+* Replace lxml and pyXMLSecurity with pyuppsala (XML parsing, XPath, XSD) and
+  pybergshamra (XML signing). Certificate handling now uses cryptography.
+
+* Large performance and memory improvements for big aggregates (e.g. eduGAIN),
+  such as validation, aggregation and signing
+
+* PKCS#11: select token and slot explicitly, and keep providers cached per
+  worker process (fixes a crash with Luna HSMs)
+
+* New read_xml pipe to sign an XML document that is not SAML metadata
+
+* New map_threads option to set the number of threads in the map pipe
+
+* New use_native_fetcher option (off by default) for parallel metadata fetching
+
+* Allow PublicationInfo on EntityDescriptor
+
+* search_handler fixes
+
+* Require Python 3.11 or later, and drop the direct setuptools dependency
+
+* Remove scripts/csv2xrd.py
+
+3.0.1
+-----
+UNRELEASED

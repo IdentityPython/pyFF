@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
+                     entityID="https://sp.example.com/saml2/metadata/">
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <mdui:UIInfo xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui">
+        <mdui:DisplayName xml:lang="en">Example Service</mdui:DisplayName>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                                 Location="https://sp.example.com/saml2/acs/" index="0"/>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="en">ExampleOrg</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="en">The Example Organisation</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="en">https://www.example.com/</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="technical">
+    <md:Company>Example Organisation</md:Company>
+    <md:SurName>Example helpdesk</md:SurName>
+    <md:EmailAddress>helpdesk@example.com</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor>

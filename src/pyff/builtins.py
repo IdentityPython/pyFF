@@ -3,6 +3,7 @@ These are the built-in "pipes" - functions that can be used to put together a pr
 """
 
 import base64
+import functools
 import hashlib
 import ipaddress
 import json
@@ -10,19 +11,20 @@ import operator
 import os
 import re
 import sys
+import threading
 import traceback
 from copy import deepcopy
 from datetime import datetime
 from io import BytesIO
 from typing import Optional
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import quote, urlparse
 
-import xmlsec
-from lxml import etree
-from lxml.etree import DocumentInvalid
+import pybergshamra
+from pyuppsala import etree
+from pyuppsala.etree import DocumentInvalid
 from str2bool import str2bool
 
-from pyff.constants import NS
+from pyff.constants import NS, config
 from pyff.decorators import deprecated
 from pyff.exceptions import MetadataException
 from pyff.logs import get_log
@@ -43,15 +45,19 @@ from pyff.samlmd import (
     sort_entities,
 )
 from pyff.utils import (
+    cert_dict,
+    cert_info,
     datetime2iso,
     dumptree,
     duration2timedelta,
     hash_id,
+    is_document_root,
     iso2datetime,
     parse_xml,
     root,
     safe_write,
     total_seconds,
+    unicode_stream,
     utc_now,
     validate_document,
     with_tree,
@@ -62,6 +68,15 @@ __author__ = 'leifj'
 
 FILESPEC_REGEX = r'([^ \t\n\r\f\v]+)\s+as\s+([^ \t\n\r\f\v]+)'
 log = get_log(__name__)
+
+# PKCS#11 providers own the dynamically loaded vendor module. Keep them alive
+# for the worker process lifetime: some modules (including Luna) start native
+# background threads that outlive a provider object, so unloading and loading
+# the module again can leave those threads executing unmapped code. Sessions
+# remain short-lived and are opened separately for each signing operation.
+_pkcs11_provider_cache = {}
+_pkcs11_provider_cache_lock = threading.Lock()
+_pkcs11_signing_locks = {}
 
 
 @pipe
@@ -97,7 +112,7 @@ def _map(req: Plumbing.Request, *opts):
         - map:
            - ...statements...
 
-    Executes a set of statements in parallell (using a thread pool).
+    Executes a set of statements in parallel (using a thread pool).
 
     """
 
@@ -111,7 +126,7 @@ def _map(req: Plumbing.Request, *opts):
 
     from multiprocessing.pool import ThreadPool
 
-    pool = ThreadPool()
+    pool = ThreadPool(config.map_threads)
     result = pool.map(_p, iter_entities(req.t), chunksize=10)
     log.info(f"processed {len(result)} entities")
 
@@ -149,8 +164,10 @@ def _print_t(req: Plumbing.Request, *opts):
 
     .. code-block:: yaml
 
-        - print
-           output: "somewhere.foo"
+        - print:
+            output: "somewhere.foo"
+
+    Without ``output`` the tree is printed on stdout.
 
     """
     fn = None
@@ -178,6 +195,14 @@ def end(req: Plumbing.Request, *opts):
         - end
         - unreachable
 
+    The optional ``code`` and ``message`` arguments set the exit code and a message printed on stdout:
+
+    .. code-block:: yaml
+
+        - end:
+            code: 1
+            message: "no metadata to publish"
+
     **Warning** This is very bad if used with pyffd - the server will stop running. If you just want to
     break out of the pipeline, use break instead.
 
@@ -194,7 +219,7 @@ def end(req: Plumbing.Request, *opts):
 @pipe
 def fork(req: Plumbing.Request, *opts):
     """
-    Make a copy of the working tree and process the arguments as a pipleline. This essentially resets the working
+    Make a copy of the working tree and process the arguments as a pipeline. This essentially resets the working
     tree and allows a new plumbing to run. Useful for producing multiple outputs from a single source.
 
     :param req: The request
@@ -212,7 +237,7 @@ def fork(req: Plumbing.Request, *opts):
                  output: "/tmp/annotated.xml"
         - fork:
             - xslt:
-                 stylesheet: tidy.xml
+                 stylesheet: tidy.xsl
             - publish:
                  output: "/tmp/clean.xml"
 
@@ -221,7 +246,7 @@ def fork(req: Plumbing.Request, *opts):
 
     **Merging**
 
-    Normally the result of the "inner" plumbing is disgarded - unless published or emit:ed to a calling client
+    Normally the result of the "inner" plumbing is discarded - unless published or emit:ed to a calling client
     in the case of the MDX server - but by adding 'merge' to the options with an optional 'merge strategy' the
     behaviour can be changed to merge the result of the inner pipeline back to the parent working document.
 
@@ -266,7 +291,7 @@ def fork(req: Plumbing.Request, *opts):
                  output: "/tmp/annotated.xml"
         - fork:
             - xslt:
-                 stylesheet: tidy.xml
+                 stylesheet: tidy.xsl
             - publish:
                  output: "/tmp/clean.xml"
     """
@@ -337,7 +362,7 @@ def _break(req: Plumbing.Request, *opts):
 @pipe(name='pipe')
 def _pipe(req: Plumbing.Request, *opts):
     """
-    Run the argument list as a pipleine.
+    Run the argument list as a pipeline.
 
     :param req: The request
     :param opts: Options (unused)
@@ -399,9 +424,9 @@ def when(req: Plumbing.Request, condition: str, *values):
 
     .. code-block:: yaml
 
-        - when foo
+        - when foo:
             - something
-        - when bar bill
+        - when bar bill:
             - other
 
     The condition operates on the state: if 'foo' is present in the state (with any value), then the something branch is
@@ -431,7 +456,7 @@ def info(req: Plumbing.Request, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    for e in req.t.xpath("//md:EntityDescriptor", namespaces=NS, smart_strings=False):
+    for e in iter_entities(req.t):
         print(e.get('entityID'))
     return req.t
 
@@ -445,17 +470,18 @@ def sort(req: Plumbing.Request, *opts):
     Entities where no value exists for a given xpath are sorted last.
 
     :param req: The request
-    :param opts: Options: <order_by [xpath]> (see bellow)
+    :param opts: Options: <order_by [xpath]> (see below)
     :return: None
 
     Options are put directly after "sort". E.g:
 
     .. code-block:: yaml
 
-        - sort order_by [xpath]
+        - sort order_by ./md:IDPSSODescriptor/md:Extensions/mdui:UIInfo/mdui:DisplayName
 
     **Options**
-    - order_by [xpath] : xpath expression selecting to the value used for sorting the entities.
+
+    - ``order_by <xpath>``: xpath expression selecting the value used for sorting the entities.
     """
     if req.t is None:
         raise PipeException("Unable to sort empty document.")
@@ -476,7 +502,8 @@ def publish(req: Plumbing.Request, *opts):
     :param opts: Options (unused)
     :return: None
 
-     Publish takes one argument: path to a file where the document tree will be written.
+    Publish takes one argument: path to a file where the document tree will be written.
+
     **Examples**
 
     .. code-block:: yaml
@@ -539,7 +566,7 @@ def publish(req: Plumbing.Request, *opts):
 
     enc = _nop
     if req.args.get('urlencode_filenames'):
-        enc = quote_plus
+        enc = functools.partial(quote, safe='')
 
     if output_file is None:
         return req.t
@@ -551,6 +578,7 @@ def publish(req: Plumbing.Request, *opts):
         resource_name = m.group(2)
     out = output_file
     data = req.t
+
     if not req.args.get('raw'):
         data = dumptree(req.t, pretty_print=req.args.get('pretty_print'))
 
@@ -621,7 +649,12 @@ def load(req: Plumbing.Request, *opts):
 
     Supports both remote and local resources. Fetching remote resources is done in parallel using threads.
 
-    Note: When downloading remote files over HTTPS the TLS server certificate is not validated by default
+    .. warning::
+
+        When downloading remote files over HTTPS the TLS server certificate is **not** validated by default
+        (``verify_tls`` is False). Metadata signatures are only checked if a verification is given per
+        resource, see below.
+
     Note: Default behaviour is to ignore metadata files or entities in MD files that cannot be loaded
 
     Options are put directly after "load". E.g:
@@ -634,19 +667,36 @@ def load(req: Plumbing.Request, *opts):
           - /opt/directory_containing_md_files/
 
     **Options**
-    Defaults are marked with (*)
-    - max_workers <5> : Number of parallel threads to use for loading MD files
-    - timeout <120> : Socket timeout when downloading files
-    - validate <True*|False> : When true downloaded metadata files are validated (schema validation)
-    - fail_on_error <True|False*> : Control whether an error during download, parsing or (optional)validation of a MD
-                                    file does not abort processing of the pipeline. When true a failure aborts and
-                                    causes pyff to exit with a non zero exit code. Otherwise errors are logged but
-                                    ignored.
-    - filter_invalid <True*|False> : Controls validation behaviour. When true Entities that fail validation are filtered
-                                     I.e. are not loaded. When false the entire metadata file is either loaded, or not.
-                                     fail_on_error controls whether failure to validating the entire MD file will abort
-                                     processing of the pipeline.
-    - verify_tls <True|False*>     : Controls the validation of the host's TLS certificate on fetching the resources
+
+    Defaults are marked with (*).
+
+    - ``max_workers <5>``: Number of parallel threads to use for loading MD files
+    - ``timeout <120>``: Socket timeout (seconds) when downloading files
+    - ``validate <True*|False>``: When true downloaded metadata files are validated (schema validation)
+    - ``fail_on_error <True|False*>``: Control whether an error during download, parsing or (optional) validation
+      of a MD file aborts processing of the pipeline. When true a failure aborts and causes pyff to exit with a
+      non zero exit code. Otherwise errors are logged but ignored.
+    - ``filter_invalid <True*|False>``: Controls validation behaviour. When true entities that fail validation
+      are filtered, i.e. are not loaded. When false the entire metadata file is either loaded, or not.
+      ``fail_on_error`` controls whether failure to validate the entire MD file will abort processing of the
+      pipeline.
+    - ``verify_tls <True|False*>``: Controls the validation of the host's TLS certificate on fetching the resources
+
+    **Resources**
+
+    Each resource in the list has the form
+
+    .. code-block:: text
+
+        <url or path> [as <alias>] [verify <fingerprint|certificate file>] [via <clause>]* [cleanup <clause>]*
+
+    - ``as``: name the resource, e.g. to refer to it in later pipeline steps.
+    - ``verify``: check the XML signature of the resource, using either a PEM certificate file or a SHA-1
+      fingerprint of the signing certificate. With a fingerprint, the certificate embedded in the signature is
+      used and the fingerprint pins it.
+    - ``via``: name of a ``when`` clause in the same pipeline that is applied to the loaded metadata, for
+      example to remove entities with ``fork merge remove``.
+    - ``cleanup``: name of a ``when`` clause used to pre-process the parsed metadata before it is validated.
     """
     _opts = dict(list(zip(opts[::2], opts[1::2])))
     _opts.setdefault('timeout', 120)
@@ -706,7 +756,16 @@ def load(req: Plumbing.Request, *opts):
         req.md.rm.add_child(url, child_opts)
 
     log.debug("Refreshing all resources")
-    req.md.rm.reload(fail_on_error=bool(_opts['fail_on_error']))
+    req.md.rm.reload(
+        fail_on_error=bool(_opts['fail_on_error']),
+        max_workers=int(_opts['max_workers']),
+    )
+
+    # Resource trees are only an intermediate representation for loading and
+    # watcher callbacks. The store has its own entity copies after reload; keep
+    # the resource graph/metadata but release large parsed source documents.
+    for resource in req.md.rm.walk():
+        resource.t = None
 
 
 def _select_args(req):
@@ -735,8 +794,7 @@ def select(req: Plumbing.Request, *opts):
     :return: returns the result of the operation as a working document
 
     Select picks and expands elements (with optional filtering) from the active repository you setup using calls
-    to :py:mod:`pyff.pipes.builtins.load`. See :py:mod:`pyff.mdrepo.MDRepository.lookup` for a description of the syntax
-    for selectors.
+    to ``load``. See :py:meth:`pyff.repo.MDRepository.lookup` for a description of the syntax for selectors.
 
     **Examples**
 
@@ -750,8 +808,8 @@ def select(req: Plumbing.Request, *opts):
 
         - select: "/var/local-metadata"
 
-    This would select all entities found in the directory /var/local-metadata. You must have a call to local to load
-    entities from this directory before select statement.
+    This would select all entities found in the directory /var/local-metadata. You must have a call to ``load`` to
+    load entities from this directory before the select statement.
 
     .. code-block:: yaml
 
@@ -768,7 +826,7 @@ def select(req: Plumbing.Request, *opts):
     Select statements are not cumulative - a select followed by another select in the plumbing resets the
     working documents to the result of the second select.
 
-    Most statements except local and remote depend on having a select somewhere in your plumbing and will
+    Most statements except ``load`` depend on having a select somewhere in your plumbing and will
     stop the plumbing if the current working document is empty. For instance, running
 
     .. code-block:: yaml
@@ -785,22 +843,25 @@ def select(req: Plumbing.Request, *opts):
         - select as /foo-2.0 dedup True: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
 
     **Options**
-    Defaults are marked with (*)
-    - as <name> : The 'as' keyword allows a select to be stored as an alias in the local repository. For instance
 
-        .. code-block:: yaml
+    Defaults are marked with (*).
 
-            - select as /foo-2.0: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
+    - ``as <name>``: The 'as' keyword allows a select to be stored as an alias in the local repository.
+      For instance
 
-        would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in the current repository.
-        Note that you should not include an extension in your "as foo-bla-something" since that would make your
-        alias invisible for anything except the corresponding mime type.
+      .. code-block:: yaml
 
-    - dedup <True*|False> : Whether to deduplicate the results by entityID.
+          - select as /foo-2.0: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
 
-        Note: When select is used after a load pipe with more than one source, if dedup is set to True
-        and there are entity properties that may differ from one source to another, these will be squashed
-        rather than merged.
+      would allow you to use /foo-2.0.json to refer to the JSON-version of all IdPs in the current repository.
+      Note that you should not include an extension in your "as foo-bla-something" since that would make your
+      alias invisible for anything except the corresponding mime type.
+
+    - ``dedup <True*|False>``: Whether to deduplicate the results by entityID.
+
+      Note: When select is used after a load pipe with more than one source, if dedup is set to True
+      and there are entity properties that may differ from one source to another, these will be squashed
+      rather than merged.
     """
     opt_names = ('as', 'dedup')
     if len(opts) % 2 == 0:
@@ -862,7 +923,7 @@ def select(req: Plumbing.Request, *opts):
                 try:
                     nets = _ip_networks(elt)
                     for net in nets:
-                        if ipaddress.ip_adress(q) in net:
+                        if ipaddress.ip_address(q) in net:
                             return net
                 except ValueError:
                     pass
@@ -950,7 +1011,7 @@ def pick(req: Plumbing.Request, *opts):
     :param opts: Options (unused)
     :return: returns the result of the operation as a working document
 
-    Useful for testing. See py:mod:`pyff.pipes.builtins.pick` for more information about selecting the document.
+    Useful for testing. See ``select`` for more information about selecting the document.
 
     """
     args = _select_args(req)
@@ -997,7 +1058,8 @@ def _discojson(req: Plumbing.Request, *opts):
     Return a discojuice-compatible json representation of the tree
 
     .. code-block:: yaml
-      discojson:
+
+        - discojson
 
     If the config.load_icons directive is set the icons will be returned from a (possibly persistent) local
     cache & converted to data: URIs
@@ -1024,7 +1086,8 @@ def _discojson_sp(req, *opts):
     Return a json representation of the trust information
 
     .. code-block:: yaml
-      discojson_sp:
+
+        - discojson_sp
 
     The returned json doc will have the following structure.
 
@@ -1085,7 +1148,8 @@ def _discojson_sp_attr(req, *opts):
     Return a json representation of the trust information
 
     .. code-block:: yaml
-      discojson_sp_attr:
+
+        - discojson_sp_attr
 
     SP Entities can carry trust information as a base64 encoded json blob
     as an entity attribute with name `https://refeds.org/entity-selection-profile`.
@@ -1108,6 +1172,126 @@ def _discojson_sp_attr(req, *opts):
     return json.dumps(res)
 
 
+def _parse_pkcs11_key_uri(key_uri: str) -> tuple[str, str, str, Optional[int]]:
+    """Parse pyFF's historical PKCS#11 key URI syntax."""
+    if not key_uri.startswith("pkcs11://"):
+        raise PipeException(f"Malformed pkcs11 uri: {key_uri}")
+
+    module_and_slot, separator, label_and_query = key_uri[len("pkcs11://"):].rpartition('/')
+    if not separator or not module_and_slot or not label_and_query:
+        raise PipeException(f"Malformed pkcs11 uri (missing module path or object label): {key_uri}")
+
+    label, _, query = label_and_query.partition('?')
+    if not label:
+        raise PipeException(f"Malformed pkcs11 uri (missing object label): {key_uri}")
+
+    module_path = module_and_slot
+    uri_slot_id = None
+    path_without_slot, colon, slot_text = module_and_slot.rpartition(':')
+    if colon and re.fullmatch(r"-?\d+", slot_text):
+        try:
+            uri_slot_id = int(slot_text)
+        except ValueError as ex:
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_text!r}") from ex
+        if uri_slot_id < 0:
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_text!r}")
+        module_path = path_without_slot
+
+    pin_spec = "env:PYKCS11PIN"
+    if query:
+        for param in query.split('&'):
+            key, _, value = param.partition('=')
+            if key == 'pin':
+                pin_spec = value
+
+    return module_path, label, pin_spec, uri_slot_id
+
+
+def _select_pkcs11_provider(
+    module_path: str,
+    *,
+    uri_slot_id: Optional[int] = None,
+    slot_id=None,
+    token_label=None,
+    token_serial=None,
+):
+    """Get a process-cached provider using exactly one token selector."""
+    configured_slot_id = None
+    if slot_id is not None:
+        if isinstance(slot_id, bool):
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_id!r}")
+        try:
+            configured_slot_id = int(slot_id)
+        except (TypeError, ValueError) as ex:
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_id!r}") from ex
+        if configured_slot_id < 0:
+            raise PipeException(f"Invalid PKCS#11 slot ID {slot_id!r}")
+
+    if uri_slot_id is not None and configured_slot_id is not None and uri_slot_id != configured_slot_id:
+        raise PipeException("Conflicting PKCS#11 slot IDs in key URI and sign configuration")
+
+    effective_slot_id = configured_slot_id if configured_slot_id is not None else uri_slot_id
+    if token_serial is not None and token_label is None:
+        raise PipeException("PKCS#11 token_serial requires token_label")
+    if effective_slot_id is not None and (token_label is not None or token_serial is not None):
+        raise PipeException("PKCS#11 slot_id cannot be combined with token_label or token_serial")
+
+    normalized_token_label = None if token_label is None else str(token_label)
+    normalized_token_serial = None if token_serial is None else str(token_serial)
+    cache_key = (
+        os.path.realpath(module_path),
+        effective_slot_id,
+        normalized_token_label,
+        normalized_token_serial,
+    )
+
+    # Hold the lock through construction. functools.lru_cache and a
+    # check-then-create sequence can both invoke the constructor more than once
+    # during concurrent first access, which is precisely what vendor modules
+    # with process-global initialization cannot safely tolerate.
+    with _pkcs11_provider_cache_lock:
+        if cache_key in _pkcs11_provider_cache:
+            return _pkcs11_provider_cache[cache_key]
+
+        if normalized_token_label is not None:
+            provider = pybergshamra.Pkcs11Provider.with_token(
+                module_path,
+                normalized_token_label,
+                token_serial=normalized_token_serial,
+            )
+        elif effective_slot_id is not None:
+            provider = pybergshamra.Pkcs11Provider.with_slot_id(module_path, effective_slot_id)
+        else:
+            provider = pybergshamra.Pkcs11Provider(module_path)
+
+        _pkcs11_provider_cache[cache_key] = provider
+        return provider
+
+
+def _sign_pkcs11(provider, module_path, pin, label, xml, *, reference_id=None, cert_pem=None):
+    """Serialize token logins and release authenticated objects even on errors."""
+    # Different selectors can resolve to the same token. Lock its actual slot,
+    # rather than the configured label/serial/slot selector or key label.
+    token = (os.path.realpath(module_path), provider.slot_id)
+    with _pkcs11_provider_cache_lock:
+        lock = _pkcs11_signing_locks.setdefault(token, threading.Lock())
+
+    with lock:
+        session = signer = ctx = None
+        try:
+            session = provider.open_session(pin)
+            signer = pybergshamra.Pkcs11Signer(session, label, pybergshamra.Algorithm.RSA_SHA256)
+            ctx = pybergshamra.DsigContext(pybergshamra.KeysManager())
+            ctx.set_hsm_signer(signer)
+            return pybergshamra.sign_enveloped(ctx, xml, reference_id=reference_id, cert_pem=cert_pem)
+        finally:
+            # Exception tracebacks retain Python frames. Clear every local
+            # owner before unlocking so a failed request cannot retain login.
+            ctx = None
+            signer = None
+            session = None
+
+
 @pipe
 def sign(req: Plumbing.Request, *_opts):
     """
@@ -1123,26 +1307,34 @@ def sign(req: Plumbing.Request, *_opts):
     The 'cert' argument may be empty in which case the cert is looked up using the PKCS#11 token, or may point
     to a file containing a PEM-encoded X.509 certificate.
 
+    When several initialized tokens are visible, select one with ``token_label`` and optional ``token_serial``,
+    or with ``slot_id``. Token selection requires pybergshamra 0.8.1 or newer. The slot may alternatively be
+    supplied using the historical ``:slot`` suffix in the key URI. Slot and token selectors are mutually exclusive.
+
     **PKCS11 URIs**
 
     A pkcs11 URI has the form
 
-    .. code-block:: xml
+    .. code-block:: text
 
         pkcs11://<absolute path to SO/DLL>[:slot]/<object label>[?pin=<pin>]
 
     The pin parameter can be used to point to an environment variable containing the pin: "env:<ENV variable>".
     By default pin is "env:PYKCS11PIN" which tells sign to use the pin found in the PYKCS11PIN environment
-    variable. This is also the default for PyKCS11 which is used to communicate with the PKCS#11 module.
+    variable. Authentication and signing are serialized per token within the worker process.
 
     **Examples**
 
     .. code-block:: yaml
 
         - sign:
-            key: pkcs11:///usr/lib/libsofthsm.so/signer
+            key: pkcs11:///usr/lib/libCryptoki2_64.so/sctest2
+            token_label: sc_ha
+            token_serial: "11429933786539" # optional when the label is unique
+            cert: /etc/credentials/sc-test-md-signer.crt
 
-    This would sign the document using the key with label 'signer' in slot 0 of the /usr/lib/libsofthsm.so module.
+    This signs with the key-object label ``sctest2`` on the token labelled ``sc_ha``. The PKCS#11 client library
+    still reads vendor connectivity and HA settings from its normal configuration, such as ``/etc/Chrystoki.conf``.
     Note that you may need to run pyff with env PYKCS11PIN=<pin> .... for this to work. Consult the documentation
     of your PKCS#11 module to find out about any other configuration you may need.
 
@@ -1166,16 +1358,79 @@ def sign(req: Plumbing.Request, *_opts):
 
     if key_file is None:
         raise PipeException("Missing key argument for sign pipe")
+    if not isinstance(key_file, str):
+        raise PipeException("The sign pipe key argument must be a string")
 
     if cert_file is None:
         log.info("Attempting to extract certificate from token...")
 
-    opts = dict()
+    # Build the signing context. The reference id (if any) comes from the @ID
+    # attribute on the document root; pybergshamra already treats "ID" as a
+    # default id attribute, so we must NOT call ctx.add_id_attr("ID").
     relt = root(req.t)
     idattr = relt.get('ID')
-    if idattr:
-        opts['reference_uri'] = f'#{idattr}'
-    xmlsec.sign(req.t, key_file, cert_file, **opts)
+
+    # Read the certificate (if provided) as PEM text to embed in X509Data.
+    cert_pem = None
+    if cert_file is not None:
+        with open(cert_file) as fd:
+            cert_pem = fd.read()
+
+    is_pkcs11_key = key_file.startswith("pkcs11:")
+    if is_pkcs11_key:
+        # HSM signing via PKCS#11. The URI form is:
+        #   pkcs11://<module path>[:slot]/<label>[?pin=<pin>]
+        # where pin may be "env:VARNAME" (default env:PYKCS11PIN).
+        module_path, label, pin_spec, uri_slot_id = _parse_pkcs11_key_uri(key_file)
+        if pin_spec.startswith("env:"):
+            env_var = pin_spec[len("env:"):]
+            pin = os.environ.get(env_var)
+            if pin is None:
+                raise PipeException(f"PKCS#11 pin environment variable {env_var} is not set")
+        else:
+            pin = pin_spec
+
+        provider = _select_pkcs11_provider(
+            module_path,
+            uri_slot_id=uri_slot_id,
+            slot_id=req.args.get('slot_id'),
+            token_label=req.args.get('token_label'),
+            token_serial=req.args.get('token_serial'),
+        )
+        # Keep HSM signing on an owned XML string. Authentication and all
+        # operation objects must be released before the next token login.
+        xml = etree.tostring(relt, encoding='unicode')
+        signed = _sign_pkcs11(provider, module_path, pin, label, xml, reference_id=idattr, cert_pem=cert_pem)
+        req.t = root(etree.fromstring(signed))
+        return req.t
+    else:
+        # On-disk private key path.
+        mgr = pybergshamra.KeysManager()
+        ctx = pybergshamra.DsigContext(mgr)
+        key = pybergshamra.load_key_file(key_file)
+        mgr.add_key(key)
+
+    if is_document_root(relt):
+        # The document API uses an owned XML handoff and imports the signed
+        # result into the existing document, preserving downstream tree identity.
+        #
+        # Only valid when ``relt`` is the document root. After ``first`` (an
+        # MDQ single-entity request) the working document is an
+        # EntityDescriptor that is still a child of the loaded aggregate; the
+        # native document would then be the whole aggregate and the signature
+        # would land on the discarded EntitiesDescriptor, leaving the emitted
+        # entity unsigned.
+        doc = etree.native_document(relt)
+        pybergshamra.sign_enveloped_document(ctx, doc, reference_id=idattr, cert_pem=cert_pem)
+        req.t = relt
+    else:
+        # A subtree of a larger document (small, so the
+        # string round trip is cheap): serialize the working document, build
+        # the enveloped signature, sign, and reparse so downstream pipes see a
+        # standalone pyuppsala element.
+        xml = etree.tostring(relt, encoding='unicode')
+        signed = pybergshamra.sign_enveloped(ctx, xml, reference_id=idattr, cert_pem=cert_pem)
+        req.t = root(etree.fromstring(signed))
 
     return req.t
 
@@ -1206,13 +1461,17 @@ def stats(req: Plumbing.Request, *opts):
         raise PipeException("Unable to call stats on non-XML")
 
     if req.t is not None:
-        print("selected:       {:d}".format(len(req.t.xpath("//md:EntityDescriptor", namespaces=NS))))
-        print(
-            "          idps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:IDPSSODescriptor]", namespaces=NS)))
-        )
-        print(
-            "           sps: {:d}".format(len(req.t.xpath("//md:EntityDescriptor[md:SPSSODescriptor]", namespaces=NS)))
-        )
+        idp_descriptor = "{{{}}}IDPSSODescriptor".format(NS['md'])
+        sp_descriptor = "{{{}}}SPSSODescriptor".format(NS['md'])
+        # Native subtree counts avoid creating a Python proxy per entity. Role
+        # descriptor counts equal entities-with-role except for the rare entity
+        # carrying two same-type descriptors.
+        selected = req.t.fast_count("{{{}}}EntityDescriptor".format(NS['md']))
+        idps = req.t.fast_count(idp_descriptor)
+        sps = req.t.fast_count(sp_descriptor)
+        print("selected:       {:d}".format(selected))
+        print("          idps: {:d}".format(idps))
+        print("           sps: {:d}".format(sps))
     print("---")
     return req.t
 
@@ -1287,7 +1546,7 @@ def xslt(req: Plumbing.Request, *opts):
     .. code-block:: yaml
 
         - xslt:
-            sylesheet: foo.xsl
+            stylesheet: foo.xsl
             x: foo
             y: bar
 
@@ -1380,7 +1639,8 @@ def prune(req: Plumbing.Request, *opts):
     :return: The tree with all specified elements removed
 
 
-    ** Examples**
+    **Examples**
+
     .. code-block:: yaml
 
         - prune:
@@ -1393,7 +1653,7 @@ def prune(req: Plumbing.Request, *opts):
         - prune:
             - .//{http://www.w3.org/2000/09/xmldsig#}Signature[1]
 
-    This example would drop the first Signature element only.
+    This example would drop the first Signature element below each parent element.
 
     """
 
@@ -1417,7 +1677,8 @@ def prune(req: Plumbing.Request, *opts):
 @pipe
 def check_xml_namespaces(req: Plumbing.Request, *opts):
     """
-    Ensure that all namespaces are http or httpd scheme URLs.
+    Ensure that all namespaces are http, https or urn URIs. A namespace URI with any other scheme causes a
+    MetadataException.
 
     :param req: The request
     :param opts: Options (not used)
@@ -1427,24 +1688,30 @@ def check_xml_namespaces(req: Plumbing.Request, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    def _verify(elt):
-        if isinstance(elt.tag, str):
-            for _prefix, uri in list(elt.nsmap.items()):
-                if not uri.startswith('urn:'):
-                    u = urlparse(uri)
-                    if u.scheme not in ('http', 'https'):
-                        raise MetadataException(
-                            f"Namespace URIs must be be http(s) URIs ('{uri}' declared on {elt.tag})"
-                        )
+    # The check's intent is O(distinct namespace URIs) (~5 in real metadata), but a naive
+    # per-element walk reads the full in-scope nsmap on every element, so the same handful of
+    # root-inherited namespaces get urlparse-d tens of thousands of times (165k urlparse calls on
+    # the SWAMID corpus). Dedupe: validate each distinct URI exactly once.
+    seen = set()
+    for elt in root(req.t).iter():
+        if not isinstance(elt.tag, str):
+            continue
+        for _prefix, uri in elt.nsmap.items():
+            if uri in seen:
+                continue
+            seen.add(uri)
+            if not uri.startswith('urn:') and urlparse(uri).scheme not in ('http', 'https'):
+                raise MetadataException(
+                    f"Namespace URIs must be http(s) URIs ('{uri}' declared on {elt.tag})"
+                )
 
-    with_tree(root(req.t), _verify)
     return req.t
 
 
 @pipe
 def drop_xsi_type(req: Plumbing.Request, *opts):
     """
-    Remove all xsi namespaces from the tree.
+    Remove all ``xsi:type`` attributes from the tree.
 
     :param req: The request
     :param opts: Options (not used)
@@ -1507,11 +1774,17 @@ def certreport(req: Plumbing.Request, *opts):
     error_bits = int(req.args.get('error_bits', "1024"))
     warning_bits = int(req.args.get('warning_bits', "2048"))
 
+    # One native pass: iterate entities directly and walk each (small) entity
+    # subtree for its certificates. The previous per-entity document-wide
+    # xpath (`md:EntityDescriptor[@entityID=...]//ds:X509Certificate`) was
+    # O(entities * document), and because annotate_entity mutates the tree
+    # between evaluations every xpath re-built the document's XPath indexes --
+    # unusably slow at eduGAIN scale (~10k entities).
+    x509_tag = "{{{}}}X509Certificate".format(NS['ds'])
     seen: dict[str, bool] = {}
-    for eid in req.t.xpath("//md:EntityDescriptor/@entityID", namespaces=NS, smart_strings=False):
-        for cd in req.t.xpath(
-            f"md:EntityDescriptor[@entityID='{eid}']//ds:X509Certificate", namespaces=NS, smart_strings=False
-        ):
+    for entity_elt in iter_entities(req.t):
+        eid = entity_elt.get('entityID')
+        for cd in entity_elt.iter(x509_tag):
             try:
                 cert_pem = cd.text
                 cert_der = base64.b64decode(cert_pem)
@@ -1520,46 +1793,53 @@ def certreport(req: Plumbing.Request, *opts):
                 fp = m.hexdigest()
                 if fp not in seen:
                     seen[fp] = True
-                    entity_elt = cd.getparent().getparent().getparent().getparent().getparent()
-                    cdict = xmlsec.utils.b642cert(cert_pem)
-                    keysize = cdict['modulus'].bit_length()
-                    cert = cdict['cert']
-                    if keysize < error_bits:
+                    # cert_info replaces xmlsec.utils.b642cert and exposes the
+                    # same fields the report needs: keysize (bits), subject, and
+                    # not_after (a datetime instead of the old raw string).
+                    cert = cert_info(cert_pem)
+                    subject = cert.subject
+                    keysize = cert.keysize
+                    if keysize is not None and keysize < error_bits:
                         annotate_entity(
                             entity_elt,
                             "certificate-error",
                             "keysize too small",
-                            f"{cert.getSubject()} has keysize of {keysize} bits (less than {error_bits})",
+                            f"{subject} has keysize of {keysize} bits (less than {error_bits})",
                         )
                         log.error(f"{eid} has keysize of {keysize}")
-                    elif keysize < warning_bits:
+                    elif keysize is not None and keysize < warning_bits:
                         annotate_entity(
                             entity_elt,
                             "certificate-warning",
                             "keysize small",
-                            f"{cert.getSubject()} has keysize of {keysize} bits (less than {warning_bits})",
+                            f"{subject} has keysize of {keysize} bits (less than {warning_bits})",
                         )
                         log.warning(f"{eid} has keysize of {keysize}")
 
-                    notafter = cert.getNotAfter()
+                    notafter = cert.not_after
                     if notafter is None:
                         annotate_entity(
                             entity_elt,
                             "certificate-error",
                             "certificate has no expiration time",
-                            f"{cert.getSubject()} has no expiration time",
+                            f"{subject} has no expiration time",
                         )
                     else:
                         try:
-                            et = datetime.strptime(f"{notafter}", "%y%m%d%H%M%SZ")
-                            now = datetime.now()
-                            dt = et - now
+                            # Compare against a "now" with matching awareness:
+                            # cryptography's not_valid_after_utc is tz-aware UTC,
+                            # while the deprecated not_valid_after is naive.
+                            if notafter.tzinfo is not None:
+                                now = utc_now()
+                            else:
+                                now = datetime.now()
+                            dt = notafter - now
                             if total_seconds(dt) < error_seconds:
                                 annotate_entity(
                                     entity_elt,
                                     "certificate-error",
                                     "certificate has expired",
-                                    f"{cert.getSubject()} expired {-dt} ago",
+                                    f"{subject} expired {-dt} ago",
                                 )
                                 log.error(f"{eid} expired {-dt} ago")
                             elif total_seconds(dt) < warning_seconds:
@@ -1567,15 +1847,15 @@ def certreport(req: Plumbing.Request, *opts):
                                     entity_elt,
                                     "certificate-warning",
                                     "certificate about to expire",
-                                    f"{cert.getSubject()} expires in {dt}",
+                                    f"{subject} expires in {dt}",
                                 )
                                 log.warning(f"{eid} expires in {dt}")
-                        except ValueError:
+                        except (ValueError, TypeError):
                             annotate_entity(
                                 entity_elt,
                                 "certificate-error",
                                 "certificate has unknown expiration time",
-                                f"{cert.getSubject()} unknown expiration time {notafter}",
+                                f"{subject} unknown expiration time {notafter}",
                             )
 
                     req.store.update(entity_elt)
@@ -1654,9 +1934,66 @@ def signcerts(req: Plumbing.Request, *opts):
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
 
-    for fp, _pem in list(xmlsec.crypto.CertDict(req.t).items()):
+    for fp, _pem in list(cert_dict(req.t).items()):
         log.info(f"found signing cert with fingerprint {fp}")
     return req.t
+
+
+@pipe
+def read_xml(req: Plumbing.Request, *opts):
+    """
+    Make an XML file the working document.
+
+    :param req: The request
+    :param opts: Options (unused)
+    :return: the root element of the file
+
+    Unlike ``load`` this does not put anything in the store and does not split the file into entities, and it does
+    not depend on ``select``: the file is the working document, e.g. for signing a document that is not
+    SAML metadata. The file is parsed as it is and is not modified: xi:include elements are not expanded.
+    Takes a dict with a single key, ``file``, the path to the XML file.
+
+    **Examples**
+
+    .. code-block:: yaml
+
+        - read_xml:
+            file: /opt/metadata/mdsl.xml
+        - sign:
+            key: signer.key
+            cert: signer.crt
+        - emit application/xml
+
+    **Possible extensions**
+
+    - Expand xi:include elements, relative to the file, with an ``xinclude`` option.
+    - Ensure the root element, e.g. with a ``root`` option in ``{namespace}name`` form, to fail early when the file is
+      not the kind of document the rest of the pipeline expects.
+    - Make the working document work with ``finalize`` (and other pipes that assume entity metadata), to support
+      more file types than SAML metadata.
+    - Support ``mdsl`` (eIDAS MetadataServiceList) as a file type. The file type would ensure the root element and
+      tell ``finalize`` which attributes the document has. For an MDSL that is ``IssueDate`` and ``NextUpdate``
+      instead of ``validUntil`` and ``cacheDuration``, which the schema does not allow on this root element.
+      The pipeline could then look like this:
+
+      .. code-block:: yaml
+
+          - read_xml:
+              file: /opt/metadata/mdsl.xml
+              type: mdsl
+          - finalize:
+              validUntil: PT5M    # sets NextUpdate, and IssueDate to the current time
+          - sign:
+              key: signer.key
+              cert: signer.crt
+          - emit application/xml
+
+    """
+    if not isinstance(req.args, dict) or 'file' not in req.args:
+        raise PipeException("usage: read_xml {file: <path>}")
+
+    with open(req.args['file'], encoding='utf-8') as fd:
+        return root(parse_xml(unicode_stream(fd.read())))
 
 
 @pipe
@@ -1681,7 +2018,7 @@ def finalize(req: Plumbing.Request, *opts):
 
     For instance +45d 2m results in a time delta of 45 days and 2 minutes. The '+' sign is optional.
 
-    If operating on a single EntityDescriptor then @Name is ignored (cf :py:mod:`pyff.pipes.builtins.first`).
+    If operating on a single EntityDescriptor then @Name is ignored (cf ``first``).
 
     **Examples**
 
@@ -1787,9 +2124,11 @@ def _reginfo(req: Plumbing.Request, *opts):
     .. code-block:: yaml
 
         - reginfo:
-           [policy:
-                <lang>: <registration policy URL>]
-           authority: <registrationAuthority URL>
+            authority: http://registrar.example.org/
+            policy:
+                en: http://registrar.example.org/policy.html
+
+    ``policy`` is optional and maps a language code to the registration policy URL.
 
     """
     if req.t is None:
@@ -1813,15 +2152,17 @@ def _pubinfo(req: Plumbing.Request, *opts):
     :param opts: Options (not used)
     :return: A modified working document
 
-    Transforms the working document by setting the specified attribute on all of the EntityDescriptor
-    elements of the active document.
+    Transforms the working document by adding a PublicationInfo extension to its top-level element. An error is
+    raised if one is already present.
 
     **Examples**
 
     .. code-block:: yaml
 
         - pubinfo:
-           publisher: <publisher URL>
+            publisher: http://publisher.example.org/
+
+    ``creation_instant`` (an ISO 8601 time string) is optional and defaults to the current time.
 
     """
     if req.t is None:
@@ -1854,7 +2195,6 @@ def _setattr(req: Plumbing.Request, *opts):
         - setattr:
             attr1: value1
             attr2: value2
-            ...
 
     Normally this would be combined with the 'merge' feature of fork to add attributes to the working
     document for later processing.
@@ -1888,7 +2228,7 @@ def _nodecountry(req: Plumbing.Request, *opts):
         - nodecountry:
             country: XX
 
-    Normally this would be combined with the 'merge' feature of fork or in a cleanup pipline to add attributes to
+    Normally this would be combined with the 'merge' feature of fork or in a cleanup pipeline to add attributes to
     the working document for later processing.
 
     """

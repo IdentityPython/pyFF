@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:mdattr="urn:oasis:names:tc:SAML:metadata:attribute" xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:xsd="http://www.w3.org/2001/XMLSchema" entityID="https://auth.funktionstjanster.se/id/proxy/saml2/67cacd06db3b47c951eefdfa/idp/67cacbb7ef0f342709eefdf6/c/682f0e0f8dc75a89157ed724/authn">
+  <md:Extensions>
+    <mdattr:EntityAttributes>
+      <saml2:Attribute Name="http://macedir.org/entity-category" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+        <saml2:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xsd:string">http://id.elegnamnden.se/ec/1.0/loa3-pnr</saml2:AttributeValue>
+        <saml2:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xsd:string">http://id.elegnamnden.se/st/1.0/public-sector-sp</saml2:AttributeValue>
+        <saml2:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xsd:string">http://id.elegnamnden.se/ec/1.0/eidas-naturalperson</saml2:AttributeValue>
+      </saml2:Attribute>
+    </mdattr:EntityAttributes>
+  </md:Extensions>
+  <md:SPSSODescriptor AuthnRequestsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:Extensions>
+      <mdui:UIInfo xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui">
+        <mdui:DisplayName xml:lang="sv">Kronofogdens e-tjänster</mdui:DisplayName>
+        <mdui:DisplayName xml:lang="en">Swedish Enforcement Authority</mdui:DisplayName>
+        <mdui:Description xml:lang="sv">Med hjälp av våra e-tjänster kan du utföra ärenden då det passar dig bäst. Om du har en personlig e-legitimation med personnummer kan du, dygnet runt, logga in och lämna uppgifter till oss.</mdui:Description>
+        <mdui:Description xml:lang="en">With the help of our e-services, you can perform tasks whenever it suits you best. If you have an e-ID with personal identity number (personnummer), you can 24 hours 365 days provide information to us.</mdui:Description>
+        <mdui:Logo height="38" width="247">https://www.kronofogden.se/images/18.4c1b677f134cb6b828f80003907/1371144387972/logotyp-header.png</mdui:Logo>
+      </mdui:UIInfo>
+    </md:Extensions>
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIEljCCAn6gAwIBAgIUUJYcgA6FTGauUb/a7H6GsZ5SyzkwDQYJKoZIhvcNAQELBQAwSDELMAkGA1UEBhMCU0UxFzAVBgNVBAoTDkNHSSBTdmVyaWdlIEFCMSAwHgYDVQQDExdjYS5mdW5rdGlvbnN0amFuc3Rlci5zZTAeFw0yNTAzMDMxMzM0MDBaFw0zMzEyMzEyMzU5MDBaMF4xIjAgBgNVBAMTGWF1dGguZnVua3Rpb25zdGphbnN0ZXIuc2UxFzAVBgNVBAoTDkNHSSBTdmVyaWdlIEFCMQswCQYDVQQGEwJTRTESMBAGA1UECBMJU3RvY2tob2xtMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz/rj9iRa8JOJBXRpH+4tRlwb5xZdy/aot1k6+QAmWvhSuDByMV/S0eijqfuGENq4dKnZ95pI1C074WqkN94q35HbdT+5C8kxe+ydUeVINAvpQVvRGbo0o1rPVRRdbhkj/T/KmU0Xy9gKd1KxFOv69hBe35+0hB0yVzckO6c3vGnIyIgTVbMoxz8gZ98btEyx0Z/m7J2FE7Cg2xfwrxQVEiwUQr9jeMkH5axN6aCxj0Ch14IDLl8NXhzKvJD5KUH2nt5K7tRzdDAv9GnWjRy2INxqYx3QC9AoQcpE0Sc5bhjSYY9skVJCkCD9YtUNTrqYswLbXTJQ1idbmGByQOy5wwIDAQABo2IwYDAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBTxC/j/FcdqYpNS/+QIEERlqocadDALBgNVHQ8EBAMCA+gwJAYDVR0RBB0wG4IZYXV0aC5mdW5rdGlvbnN0amFuc3Rlci5zZTANBgkqhkiG9w0BAQsFAAOCAgEAsWs7B6Z8uSXPTz388OBG+OLo3vBCq5FOdow8IHzBpwbah+Ip/QLlO7q85o5uPSNglna5o5nS2D3LOfUsAhoPKYpA8vOTepEWfTLPVc6ZkyARbR+kqJlWpINjlKHlzp49YjvZhHaMsVae+8BfU1F+YIK0ArN4cBEZKFp7NafYoAb99YzdmCUyEdFRtgujAiBP8SiXLYiy04BqG8oh23OUBcOTV4KHmR9+VBMtoG31768nYzqqZTfGaXWzAsJzSOdSnmhAdRbm78oP25+lM80ZfzH0b+VqEIibCg5F8O9RYZ4aD06497M1J3Mt36nehZbAUFFCWgxOS10n6RMaZxyRtzGpVsZ5EgfFSQqM0k9IqAlm9qiHUIeg4dRI0qNY7NfeaJs8ucsHRDotGUkuJpeJpLjsSMud0eOCLKu5GUg68KOc/lA6FxdxikshA5CeB2Ull/vLk/ONXLZuD0JXhFfoqnUSQfc5zHZCrPf+H9e1LmKYpg3b82jNmHef8uhudg3DV0F0Oxe5mRrr9G0Im9dbK2nOPOw8Min0y7IsmKx+wsNhc5KSKVvGVIdPUCIOOzWmFT39WbKfXeQ3wPbEfk0WMshl69DcScHE6QipVW1e10kzgCxvXx19/yvAN0Gbf/6QAOUdIyp78I4WijMWwU4cWCbghaG0agK754M7ut2Hwnw=</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes256-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p"/>
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="encryption">
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>MIIErDCCApSgAwIBAgIUThRHrydX8KwttHiKNPlrtADt9dAwDQYJKoZIhvcNAQELBQAwSDELMAkGA1UEBhMCU0UxFzAVBgNVBAoTDkNHSSBTdmVyaWdlIEFCMSAwHgYDVQQDExdjYS5mdW5rdGlvbnN0amFuc3Rlci5zZTAeFw0yNTA0MDcwODAwMDBaFw0zMzEyMzEyMzU5MDBaMGkxLTArBgNVBAMTJGVuY3J5cHRpb24uYXV0aC5mdW5rdGlvbnN0amFuc3Rlci5zZTEXMBUGA1UEChMOQ0dJIFN2ZXJpZ2UgQUIxCzAJBgNVBAYTAlNFMRIwEAYDVQQIEwlTdG9ja2hvbG0wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDb+xAFrd+QR7/1cfiqPcLaFqRQVsnPgESQMYkOYbN1It9D18LldPYuSFL3KubWKYYbJ67nR5mS4ACDiwp0CAaVJU2hDO7mxfcblGFmEvd2UpwWIG44vpbEqHVCCuAccU62jj9bW9QL09urWRfy6J8nXtzxpgsrRVbujzj8mAFCXi/waWQu7N3cQQV4cVuBvJUy9RVgZ15gf8uty+cFhmloZYOGnGkPctkG8aC+n5g+OQx36Cs8IGbl6LRbvSlBAyiUCEeTY0erB+FIlkddyWtDVb/pok2RWxJRBm2VmKePKpB2ykcuvYOl4jn2efSlOkU8gqKF1+FH87SvO2WvaI4XAgMBAAGjbTBrMAwGA1UdEwEB/wQCMAAwHQYDVR0OBBYEFHftF0eMUzkskpcB/VKCZPURDDuBMAsGA1UdDwQEAwID6DAvBgNVHREEKDAmgiRlbmNyeXB0aW9uLmF1dGguZnVua3Rpb25zdGphbnN0ZXIuc2UwDQYJKoZIhvcNAQELBQADggIBAF1oFWsnrs69LTsMgcIXlBQClt/xlinWNeSytvXQhQYCgp6h1euLRLeTt4fY/jLTO4BMHppaQ5FPcVf8Se16+LJcxMoxUGeIjbjG8eVKrT1P+ks4fZVmwMevN1z0LMCAZO/N43rLBvBakv9L7wd8atCIRUEKYP8WlyMrb5hC7MD8wdGsBd6GYBGBmdkVdVwJEvmyi5MZnWsHTxJ/DH+vCbHP3kIzZ+6CuB2oGiy5ZIScCzkeMAOzRPoqx+3PETYs2uIr71ibd3AlRRbx/gO1aEze1Lt0qN5J97/l4qi34mrSJHBlbydmepZkZAA9q7lx2hQnxhRS45T6PavzVL5f6tlp4iR99Tqb9SaLOHx5l/q23TwOttRc8rZA3LZZ7kqjq+inQ8y1KHaqgsKZFuaAEzBnJslEfQvJt3/oOzLYPzfqyamBBv+yYwrTVKzZMXurlbjeP8r+ZIDbZsHNa2wJKXpBmcfzhyJ4n66M58jh+KmRPYu2KlKA4r1eiZ/vKYXGrPCsiuY/RItTlNlagyy3+yFJDQO/5MXfL9tuoGI6GkYyZJyc585U5IjGERqcCpNegLgCHSKK29HajafOz+zPeh5Sk2qGlOcG6uehRrFPg4cGDdSqY6WEHq0ZGvYjH0GjMbStgw52KCEoWiRgsqZDhoPgsSpghntXxV+brmGK1eDE</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2009/xmlenc11#aes256-gcm"/>
+      <md:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p"/>
+    </md:KeyDescriptor>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://auth.funktionstjanster.se/id/proxy/saml2/67cacd06db3b47c951eefdfa/idp/67cacbb7ef0f342709eefdf6/c/682f0e0f8dc75a89157ed724/authn/slo/post"/>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://auth.funktionstjanster.se/id/proxy/saml2/67cacd06db3b47c951eefdfa/idp/67cacbb7ef0f342709eefdf6/c/682f0e0f8dc75a89157ed724/authn/sso/post" index="1" isDefault="true"/>
+  </md:SPSSODescriptor>
+  <md:Organization>
+    <md:OrganizationName xml:lang="sv">Kronofogden</md:OrganizationName>
+    <md:OrganizationName xml:lang="en">Swedish Enforcement Authority</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="sv">Kronofogden</md:OrganizationDisplayName>
+    <md:OrganizationDisplayName xml:lang="en">Swedish Enforcement Authority</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="sv">https://www.kronofogden.se/</md:OrganizationURL>
+  </md:Organization>
+  <md:ContactPerson contactType="technical">
+    <md:EmailAddress>digitalatjanster.support@kronofogden.se</md:EmailAddress>
+  </md:ContactPerson>
+  <md:ContactPerson contactType="support">
+    <md:EmailAddress>digitalatjanster.support@kronofogden.se</md:EmailAddress>
+  </md:ContactPerson>
+</md:EntityDescriptor>

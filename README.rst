@@ -41,11 +41,13 @@ Features
 Dependencies
 ============
 
-* pyXMLSecurity
-* PyKCS11 (optional)
+* pybergshamra >= 0.11.0 (XML signatures and PKCS#11 support)
+* pyuppsala >= 0.11.0 (XML processing)
 * pygments
 * gunicorn (for the standalone pyffd server)
-* ... cf requirements.txt
+* ... cf pyproject.toml
+
+``uv sync`` installs pybergshamra from PyPI; no sibling checkout is required.
 
 More information
 ================

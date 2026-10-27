@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import time
+from copy import deepcopy
 from datetime import datetime, timedelta
 from io import BytesIO
 from threading import ThreadError
@@ -880,15 +881,29 @@ class MemoryStore(SAMLStoreBase):
     def collections(self):
         return list(self.md.keys())
 
+    def _stored_entity(self, entity):
+        """Return a compact store-owned entity subtree.
+
+        pyuppsala element proxies keep their owning document alive. Storing an
+        entity directly from a large source aggregate therefore retains the
+        whole parsed feed (and its decoded input buffer). A detached clone keeps
+        only the entity subtree in the in-memory store.
+        """
+        return deepcopy(entity)
+
     def update(self, t, tid=None, etag=None, lazy=True):
         relt = root(t)
         assert relt is not None
         if relt.tag == "{{{}}}EntityDescriptor".format(NS['md']):
-            self._unindex(relt)
-            self._index(relt)
-            self.entities[relt.get('entityID')] = relt  # TODO: merge?
+            stored = self._stored_entity(relt)
+            entity_id = stored.get('entityID')
+            old = self.entities.get(entity_id)
+            if old is not None:
+                self._unindex(old)
+            self._index(stored)
+            self.entities[entity_id] = stored  # TODO: merge?
             if tid is not None:
-                self.md[tid] = [relt.get('entityID')]
+                self.md[tid] = [entity_id]
         elif relt.tag == "{{{}}}EntitiesDescriptor".format(NS['md']):
             if tid is None:
                 tid = relt.get('Name')
