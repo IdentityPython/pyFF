@@ -112,7 +112,18 @@ def parse_saml_metadata(
 
         expire_time_offset = metadata_expiration(t)
 
-        t = check_signature(t, opts.verify)
+        if isinstance(opts.verify, list):
+            # Any one of several trusted signers is acceptable.
+            for key in opts.verify:
+                try:
+                    t = check_signature(t, key)
+                    break
+                except MetadataException:
+                    continue
+            else:
+                raise MetadataException("No valid signature(s) found")
+        else:
+            t = check_signature(t, opts.verify)
 
         trust_info = None
         extensions = t.find('{{{}}}Extensions'.format(NS['md']))
@@ -307,7 +318,7 @@ class MDServiceListParser(PyffParser):
                     fingerprints = list(certs.keys())
                     fp = None
                     if len(fingerprints) > 0:
-                        fp = fingerprints[0]
+                        fp = fingerprints
 
                     ep = ml.find("{{{}}}Endpoint".format(NS['ser']))
                     if ep is not None and fp is not None:

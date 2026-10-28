@@ -205,7 +205,7 @@ class _NativeResponse:
 class ResourceOpts(BaseModel):
     alias: str | None = Field(None, alias='as')  # TODO: Rename to 'name'?
     # a certificate (file) or a SHA1 fingerprint to use for signature verification
-    verify: str | None = None
+    verify: str | list[str] | None = None
     # TODO: move classes to make the correct typing work: Iterable[Union[Lambda, PipelineCallback]] = Field([])
     via: list[Callable] = Field([])
     # A list of callbacks that can be used to pre-process parsed metadata before validation. Use as a clue-bat.

@@ -362,7 +362,6 @@ def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool
     # covering the document root.
     return root(t)
 
-
 def validate_document(t):
     schema().assertValid(t)
 
