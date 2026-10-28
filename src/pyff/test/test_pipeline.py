@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import shutil
@@ -763,6 +764,103 @@ class SigningTest(PipeLineTest):
         assert t.get('Version') == '1'
         assert t[0].tag == "{{{}}}Signature".format(NS['ds'])
         check_signature(t, self.public_keyspec, only_one_signature=True)
+
+    def _signed_entity_bytes(self) -> bytes:
+        output = tempfile.NamedTemporaryFile('w').name
+        self.exec_pipeline(
+            f"""
+- load:
+    - {self.datadir}/simple-pipeline
+- select:
+    - https://idp.aco.net/idp/shibboleth
+- first
+- finalize:
+    cacheDuration: PT5H
+    validUntil: P10D
+- sign:
+    key: {self.private_keyspec}
+    cert: {self.public_keyspec}
+- publish:
+    output: {output}
+"""
+        )
+        try:
+            with open(output, 'rb') as fd:
+                return fd.read()
+        finally:
+            os.unlink(output)
+
+    def _parse_with_verify(self, xml: bytes, verify):
+        from io import BytesIO
+
+        from pyff.resource import ResourceOpts
+        from pyff.samlmd import parse_saml_metadata
+
+        return parse_saml_metadata(BytesIO(xml), ResourceOpts(verify=verify), base_url="test")
+
+    def test_verify_single_key(self):
+        t, _trust, _expire, ex = self._parse_with_verify(self._signed_entity_bytes(), self.public_keyspec)
+        assert ex is None
+        assert t is not None
+
+    def test_verify_multiple_keys_second_matches(self):
+        # A fingerprint that cannot match the signer, followed by the real cert.
+        wrong = "00" * 20
+        t, _trust, _expire, ex = self._parse_with_verify(self._signed_entity_bytes(), [wrong, self.public_keyspec])
+        assert ex is None
+        assert t is not None
+
+    def test_verify_multiple_keys_none_match(self):
+        # MetadataException derives from BaseException, so parse_saml_metadata
+        # lets it propagate regardless of fail_on_error.
+        with pytest.raises(MetadataException, match=r"No valid signature\(s\) found"):
+            self._parse_with_verify(self._signed_entity_bytes(), ["00" * 20, "11" * 20])
+
+    def _load_via_mdsl(self, location_certs: list[str]) -> list[str]:
+        """Load a signed entity through an MDSL MetadataLocation and return the loaded entityIDs.
+
+        ``location_certs`` are the base64 X509Certificate values listed under the
+        MetadataLocation; pyFF turns them into the list of acceptable verify keys.
+        """
+        tmpdir = tempfile.mkdtemp()
+        try:
+            signed = os.path.join(tmpdir, 'signed.xml')
+            with open(signed, 'wb') as fd:
+                fd.write(self._signed_entity_bytes())
+            certs = ''.join(f'<ds:X509Certificate>{c}</ds:X509Certificate>' for c in location_certs)
+            mdsl = os.path.join(tmpdir, 'mdsl.xml')
+            with open(mdsl, 'w') as fd:
+                fd.write(
+                    f'<ser:MetadataServiceList xmlns:ser="{NS["ser"]}" xmlns:ds="{NS["ds"]}" Version="1">'
+                    '<ser:IssuerName>Test</ser:IssuerName>'
+                    '<ser:SchemeIdentifier>test</ser:SchemeIdentifier>'
+                    '<ser:SchemeTerritory>SE</ser:SchemeTerritory>'
+                    '<ser:MetadataList Territory="SE">'
+                    f'<ser:MetadataLocation Location="file://{signed}">'
+                    f'<ser:Endpoint>{certs}</ser:Endpoint>'
+                    '</ser:MetadataLocation>'
+                    '</ser:MetadataList>'
+                    '</ser:MetadataServiceList>'
+                )
+            _res, md = self.exec_pipeline(f"- load:\n    - file://{mdsl}\n- select\n")
+            return [e.get('entityID') for e in md.store]
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def _signer_cert_b64(self) -> str:
+        with open(self.public_keyspec) as fd:
+            return ''.join(line.strip() for line in fd if not line.startswith('-----'))
+
+    def test_mdsl_multiple_certs_second_matches(self):
+        bogus = base64.b64encode(b'not the signer').decode()
+        eids = self._load_via_mdsl([bogus, self._signer_cert_b64()])
+        assert 'https://idp.aco.net/idp/shibboleth' in eids
+
+    def test_mdsl_multiple_certs_none_match(self):
+        bogus_a = base64.b64encode(b'not the signer').decode()
+        bogus_b = base64.b64encode(b'neither is this').decode()
+        eids = self._load_via_mdsl([bogus_a, bogus_b])
+        assert 'https://idp.aco.net/idp/shibboleth' not in eids
 
     def test_read_xml_rejects_bad_arguments(self):
         with pytest.raises(PipeException, match="usage: read_xml"):
