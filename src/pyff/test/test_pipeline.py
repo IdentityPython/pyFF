@@ -770,6 +770,85 @@ class SigningTest(PipeLineTest):
         with pytest.raises(OSError):
             self.exec_pipeline("- read_xml:\n    file: /nonexistent.xml\n")
 
+    def test_verify_with_multiple_certificates_and_fingerprints(self):
+        """A key rollover lists several signers; any one of them must verify."""
+        import datetime
+        import hashlib
+
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
+
+        from pyff.constants import NS
+        from pyff.exceptions import MetadataException
+        from pyff.utils import check_signature
+
+        other_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'other')])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        other_cert = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(other_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now)
+            .not_valid_after(now + datetime.timedelta(days=2))
+            .sign(other_key, hashes.SHA256())
+        )
+
+        with open(self.public_keyspec, 'rb') as fd:
+            signer_cert = x509.load_pem_x509_certificate(fd.read())
+
+        def fingerprint(cert):
+            return hashlib.sha1(cert.public_bytes(serialization.Encoding.DER)).hexdigest()
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            src = os.path.join(tmpdir, 'mdsl.xml')
+            other_pem = os.path.join(tmpdir, 'other.pem')
+            with open(src, 'w') as fd:
+                fd.write(
+                    f'<ser:MetadataServiceList xmlns:ser="{NS["ser"]}" Version="1">'
+                    '<ser:IssuerName>Test</ser:IssuerName></ser:MetadataServiceList>'
+                )
+            with open(other_pem, 'wb') as fd:
+                fd.write(other_cert.public_bytes(serialization.Encoding.PEM))
+            res, _md = self.exec_pipeline(
+                f"""
+- read_xml:
+    file: {src}
+- sign:
+    key: {self.private_keyspec}
+    cert: {self.public_keyspec}
+"""
+            )
+
+            t = root(res)
+            other_pem_text = other_cert.public_bytes(serialization.Encoding.PEM).decode()
+            signer_pem_text = signer_cert.public_bytes(serialization.Encoding.PEM).decode()
+            for keys in (
+                [other_pem, self.public_keyspec],
+                [self.public_keyspec, other_pem],
+                [other_pem_text, signer_pem_text],
+                [signer_pem_text, other_pem_text],
+                [fingerprint(other_cert), fingerprint(signer_cert)],
+                [fingerprint(signer_cert), fingerprint(other_cert)],
+            ):
+                check_signature(t, keys, only_one_signature=True)
+
+            with pytest.raises(MetadataException):
+                check_signature(t, other_pem)
+            with pytest.raises(MetadataException):
+                check_signature(t, [other_pem_text])
+            with pytest.raises(MetadataException, match="does not match"):
+                check_signature(t, fingerprint(other_cert))
+            with pytest.raises(MetadataException, match="cannot be mixed"):
+                check_signature(t, [other_pem, fingerprint(signer_cert)])
+        finally:
+            shutil.rmtree(tmpdir)
+
     def test_signing_and_validation(self):
         self.output = tempfile.NamedTemporaryFile('w').name
         _res_s, _md_s, _ctx_s = self.run_pipeline("signer.fd", self)

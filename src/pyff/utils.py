@@ -17,7 +17,7 @@ import threading
 import time
 import traceback
 from _collections_abc import Mapping, MutableMapping
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from copy import copy
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate
@@ -271,6 +271,9 @@ def redis():
     return thread_data.redis
 
 
+PEM_CERT_PREFIX = '-----BEGIN CERTIFICATE-----'
+
+
 def _looks_like_sha1_fingerprint(key: str) -> bool:
     """Return True if ``key`` looks like a SHA1 certificate fingerprint.
 
@@ -283,39 +286,71 @@ def _looks_like_sha1_fingerprint(key: str) -> bool:
     return len(candidate) == 40 and all(c in '0123456789abcdefABCDEF' for c in candidate)
 
 
-def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool = False) -> ElementTree:
+def check_signature(
+    t: ElementTree,
+    key: Optional[Union[str, Iterable[str]]],
+    only_one_signature: bool = False,
+    source: Optional[str] = None,
+) -> ElementTree:
     """Verify the XML signature on ``t`` using pybergshamra.
 
-    ``key`` is either the path to a PEM-encoded X.509 certificate (the trusted
-    signer) or a SHA1 fingerprint of the expected signing certificate. When a
-    fingerprint is supplied the certificate embedded in the signature's KeyInfo
-    is used to verify, and the fingerprint is checked against it afterwards.
+    ``key`` is one verifier or an iterable of them, which allows key rollovers:
+    the signature is accepted if it was made by any one of them. A verifier is
+    either a path to a PEM-encoded X.509 certificate file, the PEM text of a
+    certificate, or a SHA1 fingerprint of the expected signing certificate.
+    Fingerprints cannot be mixed with certificates.
+
+    Certificates are the trusted signing keys. When fingerprints are supplied
+    the certificate embedded in the signature's KeyInfo is used to verify, and
+    the fingerprint is checked against it afterwards.
+
+    ``source`` (typically the URL) is only used to identify the signed document in log messages.
     """
     if key is None:
         return t
 
-    log.debug(f"verifying signature using {key}")
+    of_source = f" of {source}" if source else ""
+
+    items = [key] if isinstance(key, str) else list(key)
+    items = [item.strip() for item in items if item.strip()]
+    if not items:
+        raise MetadataException("No certificate or fingerprint given to verify the signature")
+
+    log.debug(f"verifying signature{of_source} using {len(items)} verifier(s)")
 
     mgr = pybergshamra.KeysManager()
     ctx = pybergshamra.DsigContext(mgr)
 
-    pinned_fingerprint = None
-    if _looks_like_sha1_fingerprint(key) and not os.path.exists(key):
+    is_fingerprint = [
+        not item.startswith(PEM_CERT_PREFIX) and _looks_like_sha1_fingerprint(item) and not os.path.exists(item)
+        for item in items
+    ]
+    if any(is_fingerprint) and not all(is_fingerprint):
+        raise MetadataException("Certificates and fingerprints cannot be mixed in a single verification")
+
+    pinned_fingerprints: set[str] = set()
+    if all(is_fingerprint):
         # Fingerprint pinning: trust the cert carried inside the signature's
-        # KeyInfo/X509Data, then compare its SHA1 to the pinned fingerprint.
+        # KeyInfo/X509Data, then compare its SHA1 to the pinned fingerprints.
         # The fingerprint is the trust anchor here, so PKI chain validation is
         # disabled (insecure) - the embedded signing cert is typically
         # self-signed and would otherwise fail to chain to a trusted root.
-        pinned_fingerprint = key.replace(':', '').replace(' ', '').strip().lower()
+        pinned_fingerprints = {item.replace(':', '').replace(' ', '').lower() for item in items}
         ctx.enabled_key_data_x509 = True
         ctx.trusted_keys_only = False
         ctx.insecure = True
     else:
-        # Trusted-cert path: load the PEM certificate and require it as the
-        # only acceptable signing key (skip inline KeyInfo extraction).
-        with open(key, 'rb') as fd:
-            cert_key = pybergshamra.load_x509_cert_pem(fd.read())
-        mgr.add_key(cert_key)
+        # Trusted-cert path: load the PEM certificates and require them as the
+        # only acceptable signing keys (skip inline KeyInfo extraction).
+        cert_keys = []
+        for item in items:
+            if item.startswith(PEM_CERT_PREFIX):
+                pem = item.encode()
+            else:
+                with open(item, 'rb') as fd:
+                    pem = fd.read()
+            cert_keys.append(pybergshamra.load_x509_cert_pem(pem))
+        mgr.add_keys(cert_keys)
         ctx.trusted_keys_only = True
 
     relt = root(t)
@@ -340,16 +375,25 @@ def check_signature(t: ElementTree, key: Optional[str], only_one_signature: bool
             "XML metadata contains %d signatures - exactly 1 is required" % len(references)
         )
 
-    if pinned_fingerprint is not None:
+    # The leaf certificate that verified the signature: the matching trusted key
+    # in certificate mode, the one embedded in KeyInfo in fingerprint mode.
+    chain = result.key_info.x509_chain if result.key_info is not None else []
+    actual_fingerprint = hashlib.sha1(chain[0]).hexdigest().lower() if chain else None
+    if actual_fingerprint is not None:
+        log.debug(
+            f"signature{of_source} verified by certificate "
+            + ":".join(actual_fingerprint[i : i + 2] for i in range(0, len(actual_fingerprint), 2))
+        )
+
+    if pinned_fingerprints:
         # Confirm the certificate that actually verified the signature matches
-        # the pinned fingerprint (SHA1 over the DER-encoded leaf certificate).
-        chain = result.key_info.x509_chain if result.key_info is not None else []
-        if not chain:
+        # one of the pinned fingerprints (SHA1 over the DER-encoded leaf certificate).
+        if actual_fingerprint is None:
             raise MetadataException("No certificate found in signature to match fingerprint")
-        actual_fingerprint = hashlib.sha1(chain[0]).hexdigest().lower()
-        if actual_fingerprint != pinned_fingerprint:
+        if actual_fingerprint not in pinned_fingerprints:
             raise MetadataException(
-                f"Signing certificate fingerprint {actual_fingerprint} does not match expected {pinned_fingerprint}"
+                f"Signing certificate fingerprint {actual_fingerprint} does not match expected "
+                f"{', '.join(sorted(pinned_fingerprints))}"
             )
 
     # Anti-wrapping: the old code returned the verified reference subtree as the
@@ -394,6 +438,13 @@ def cert_dict(t):
         fingerprint = ":".join(digest[i : i + 2] for i in range(0, len(digest), 2))
         certs[fingerprint] = cert_b64
     return certs
+
+
+def b64_to_pem(cert_b64: str) -> str:
+    """Wrap the base64 text of a DER certificate (as found in ``X509Certificate``) as PEM."""
+    body = "".join(cert_b64.split())
+    lines = [body[i : i + 64] for i in range(0, len(body), 64)]
+    return "\n".join([PEM_CERT_PREFIX, *lines, "-----END CERTIFICATE-----", ""])
 
 
 class CertInfo:
