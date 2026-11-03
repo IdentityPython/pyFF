@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from urllib.parse import quote as urlescape
 
 import requests
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pyuppsala.etree import ElementTree
 from requests.adapters import Response
 
@@ -204,8 +204,9 @@ class _NativeResponse:
 
 class ResourceOpts(BaseModel):
     alias: str | None = Field(None, alias='as')  # TODO: Rename to 'name'?
-    # a certificate (file) or a SHA1 fingerprint to use for signature verification
-    verify: str | None = None
+    # certificates (file or PEM text) or SHA1 fingerprints to use for signature verification; a signature by any
+    # one of them is accepted, which allows key rollovers
+    verify: list[str] | None = None
     # TODO: move classes to make the correct typing work: Iterable[Union[Lambda, PipelineCallback]] = Field([])
     via: list[Callable] = Field([])
     # A list of callbacks that can be used to pre-process parsed metadata before validation. Use as a clue-bat.
@@ -218,6 +219,11 @@ class ResourceOpts(BaseModel):
     validate_schema: bool = Field(True, alias='validate')
     verify_tls: bool = False
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator('verify', mode='before')
+    @classmethod
+    def _wrap_single_verify(cls, value):
+        return [value] if isinstance(value, str) else value
 
     def to_dict(self) -> dict[str, Any]:
         res = self.model_dump()

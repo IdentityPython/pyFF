@@ -41,7 +41,7 @@ Features
 Dependencies
 ============
 
-* pybergshamra >= 0.11.0 (XML signatures and PKCS#11 support)
+* pybergshamra >= 0.11.1 (XML signatures and PKCS#11 support)
 * pyuppsala >= 0.11.0 (XML processing)
 * pygments
 * gunicorn (for the standalone pyffd server)

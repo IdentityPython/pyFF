@@ -693,7 +693,8 @@ def load(req: Plumbing.Request, *opts):
     - ``as``: name the resource, e.g. to refer to it in later pipeline steps.
     - ``verify``: check the XML signature of the resource, using either a PEM certificate file or a SHA-1
       fingerprint of the signing certificate. With a fingerprint, the certificate embedded in the signature is
-      used and the fingerprint pins it.
+      used and the fingerprint pins it. ``verify`` may be repeated to support key rollovers; a signature by any
+      one of the given certificates (or fingerprints) is accepted. Certificates and fingerprints cannot be mixed.
     - ``via``: name of a ``when`` clause in the same pipeline that is applied to the loaded metadata, for
       example to remove entities with ``fork merge remove``.
     - ``cleanup``: name of a ``when`` clause used to pre-process the parsed metadata before it is validated.
@@ -718,7 +719,7 @@ def load(req: Plumbing.Request, *opts):
         log.debug(f"load parsing '{stripped}'")
         r = stripped.split()
 
-        assert len(r) in range(1, 8), PipeException(
+        assert len(r) in range(1, 12), PipeException(
             "Usage: load resource [as url] [[verify] verification] [via pipeline] [cleanup pipeline]"
         )
 
@@ -736,7 +737,7 @@ def load(req: Plumbing.Request, *opts):
                     if elt == "as":
                         child_opts.alias = value
                     elif elt == "verify":
-                        child_opts.verify = value
+                        child_opts.verify = [*(child_opts.verify or []), value]
                     elif elt == "via":
                         child_opts.via.append(PipelineCallback(value, req, store=req.md.store))
                     elif elt == "cleanup":
@@ -748,7 +749,7 @@ def load(req: Plumbing.Request, *opts):
                         "Usage: load resource [as url] [[verify] verification] [via pipeline]* [cleanup pipeline]*"
                     )
             else:
-                child_opts.verify = elt
+                child_opts.verify = [*(child_opts.verify or []), elt]
 
         # override anything in child_opts with what is in opts
         child_opts = child_opts.model_copy(update=_opts)

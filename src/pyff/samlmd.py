@@ -20,6 +20,7 @@ from pyff.parse import ParserInfo, PyffParser, add_parser
 from pyff.utils import (
     Lambda,
     b2u,
+    b64_to_pem,
     cert_dict,
     check_signature,
     collect_attr,
@@ -112,7 +113,7 @@ def parse_saml_metadata(
 
         expire_time_offset = metadata_expiration(t)
 
-        t = check_signature(t, opts.verify)
+        t = check_signature(t, opts.verify, source=base_url)
 
         trust_info = None
         extensions = t.find('{{{}}}Extensions'.format(NS['md']))
@@ -305,23 +306,22 @@ class MDServiceListParser(PyffParser):
                 if location:
                     certs = cert_dict(ml)
                     fingerprints = list(certs.keys())
-                    fp = None
-                    if len(fingerprints) > 0:
-                        fp = fingerprints[0]
 
                     ep = ml.find("{{{}}}Endpoint".format(NS['ser']))
-                    if ep is not None and fp is not None:
+                    if ep is not None and fingerprints:
                         args = dict(
                             country_code=mdl.get('Territory'),
                             hide_from_discovery=str2bool(ep.get('HideFromDiscovery', 'false')),
                         )
                         log.debug(
                             "MDSL[{}]: {} verified by {} for country {}".format(
-                                info.scheme_territory, location, fp, args.get('country_code')
+                                info.scheme_territory, location, ', '.join(fingerprints), args.get('country_code')
                             )
                         )
                         child_opts = resource.opts.model_copy(update={'alias': None}, deep=True)
-                        child_opts.verify = fp
+                        # The listed certificates are the trusted signers; all of them are accepted so that a
+                        # key rollover can list both the old and the new certificate.
+                        child_opts.verify = [b64_to_pem(cert_b64) for cert_b64 in certs.values()]
                         r = resource.add_child(location, child_opts)
 
                         # this is specific post-processing for MDSL files
