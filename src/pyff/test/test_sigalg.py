@@ -396,11 +396,22 @@ SOFTHSM_MODULE = next(
 )
 
 
+# CI sets PYFF_REQUIRE_SOFTHSM=1 so a missing SoftHSM2 or a failing key type
+# fails the run instead of being skipped silently.
+REQUIRE_SOFTHSM = os.environ.get("PYFF_REQUIRE_SOFTHSM", "").strip().lower() in ("1", "true", "yes")
+
+
+def _softhsm_unavailable(reason):
+    if REQUIRE_SOFTHSM:
+        pytest.fail(f"{reason} (PYFF_REQUIRE_SOFTHSM is set)")
+    pytest.skip(reason)
+
+
 @pytest.fixture(scope="module")
 def softhsm_token(tmp_path_factory):
-    """A SoftHSM2 token with RSA, EC P-256 and Ed25519 keys, and a cert for each."""
+    """An initialized SoftHSM2 token; keys are created per test by ``_softhsm_key``."""
     if SOFTHSM_MODULE is None or not shutil.which("softhsm2-util") or not shutil.which("pkcs11-tool"):
-        pytest.skip("SoftHSM2 and pkcs11-tool are required")
+        _softhsm_unavailable("SoftHSM2 and pkcs11-tool are required")
 
     directory = tmp_path_factory.mktemp("softhsm")
     (directory / "tokens").mkdir()
@@ -408,36 +419,66 @@ def softhsm_token(tmp_path_factory):
     conf.write_text(f"directories.tokendir = {directory / 'tokens'}\nobjectstore.backend = file\n")
     env = {**os.environ, "SOFTHSM2_CONF": str(conf)}
     pin, label = "1234", "pyff-sigalg"
+    try:
+        subprocess.run(
+            ("softhsm2-util", "--init-token", "--free", "--label", label, "--pin", pin, "--so-pin", "5678"),
+            check=True,
+            env=env,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as ex:
+        _softhsm_unavailable(f"Unable to initialize a SoftHSM2 token: {ex.stderr!r}")
 
-    def run(*args):
-        subprocess.run(args, check=True, env=env, capture_output=True)
+    return {
+        "directory": directory,
+        "env": env,
+        "pin": pin,
+        "label": label,
+        "ca": ec.generate_private_key(ec.SECP256R1()),
+        "certs": {},
+    }
 
-    run("softhsm2-util", "--init-token", "--free", "--label", label, "--pin", pin, "--so-pin", "5678")
-    ca = ec.generate_private_key(ec.SECP256R1())
-    certs = {}
-    for key_label, key_type in (("rsa", "rsa:2048"), ("ec", "EC:prime256v1"), ("ed", "EC:edwards25519")):
-        pkcs11 = ("pkcs11-tool", "--module", SOFTHSM_MODULE, "--token-label", label)
-        try:
-            run(*pkcs11, "--login", "--pin", pin, "--keypairgen", "--key-type", key_type, "--label", key_label)
-            pub_path = directory / f"{key_label}.pub"
-            run(*pkcs11, "--read-object", "--type", "pubkey", "--label", key_label, "-o", str(pub_path))
-        except subprocess.CalledProcessError as ex:
-            pytest.skip(f"Unable to create a {key_type} key on SoftHSM2: {ex.stderr!r}")
-        raw = pub_path.read_bytes()
-        # pkcs11-tool writes EdDSA public keys as PEM even when asked for DER.
-        public_key = ser.load_pem_public_key(raw) if raw.startswith(b"-----") else ser.load_der_public_key(raw)
-        cert_path = directory / f"{key_label}.crt"
-        cert_path.write_text(_self_signed(None, cn=key_label, public_key=public_key, issuer_key=ca))
-        certs[key_label] = str(cert_path)
 
-    return {"env": env, "pin": pin, "label": label, "certs": certs}
+def _softhsm_key(token, key_label, key_type):
+    """Generate ``key_type`` on the token once and return the path of a cert for it.
+
+    A key type the installed SoftHSM2 / pkcs11-tool cannot generate skips only
+    the tests for that type (or fails them when PYFF_REQUIRE_SOFTHSM is set).
+    """
+    if key_label in token["certs"]:
+        return token["certs"][key_label]
+
+    directory = token["directory"]
+    pkcs11 = ("pkcs11-tool", "--module", SOFTHSM_MODULE, "--token-label", token["label"])
+    pub_path = directory / f"{key_label}.pub"
+    try:
+        for args in (
+            ("--login", "--pin", token["pin"], "--keypairgen", "--key-type", key_type, "--label", key_label),
+            ("--read-object", "--type", "pubkey", "--label", key_label, "-o", str(pub_path)),
+        ):
+            subprocess.run((*pkcs11, *args), check=True, env=token["env"], capture_output=True)
+    except subprocess.CalledProcessError as ex:
+        _softhsm_unavailable(f"Unable to create a {key_type} key on SoftHSM2: {ex.stderr!r}")
+
+    raw = pub_path.read_bytes()
+    # pkcs11-tool writes EdDSA public keys as PEM even when asked for DER.
+    public_key = ser.load_pem_public_key(raw) if raw.startswith(b"-----") else ser.load_der_public_key(raw)
+    cert_path = directory / f"{key_label}.crt"
+    cert_path.write_text(_self_signed(None, cn=key_label, public_key=public_key, issuer_key=token["ca"]))
+    token["certs"][key_label] = str(cert_path)
+    return token["certs"][key_label]
 
 
 @pytest.mark.parametrize(
-    "key_label, expected", [("rsa", A.RSA_SHA256), ("ec", A.ECDSA_SHA256), ("ed", A.EDDSA_ED25519)]
+    "key_label, key_type, expected",
+    [
+        ("rsa", "rsa:2048", A.RSA_SHA256),
+        ("ec", "EC:prime256v1", A.ECDSA_SHA256),
+        ("ed", "EC:edwards25519", A.EDDSA_ED25519),
+    ],
 )
-def test_softhsm_sign(softhsm_token, key_label, expected):
-    cert = softhsm_token["certs"][key_label]
+def test_softhsm_sign(softhsm_token, key_label, key_type, expected):
+    cert = _softhsm_key(softhsm_token, key_label, key_type)
     args = {
         "key": f"pkcs11://{SOFTHSM_MODULE}/{key_label}",
         "token_label": softhsm_token["label"],
