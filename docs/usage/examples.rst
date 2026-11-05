@@ -256,3 +256,58 @@ you are using a unix-like environment).
 .. code-block:: bash
 
     # env PYKCS11PIN=secret1 SOFTHSM_CONF=softhsm.conf pyff --loglevel=DEBUG p11.fd
+
+Example 5 - Sign with EC, Ed25519 or post-quantum keys
+------------------------------------------------------
+
+The ``sign`` pipe accepts any key type pybergshamra can load, not only RSA. The XML-DSig
+``SignatureMethod`` is chosen from the type of the key:
+
+================  ===============================================================
+Key type          Default signature_method
+================  ===============================================================
+RSA               ``rsa-sha256``
+EC P-256          ``ecdsa-sha256``
+EC P-384          ``ecdsa-sha384``
+EC P-521          ``ecdsa-sha512``
+Ed25519           ``eddsa-ed25519``
+ML-DSA-44/65/87   ``ml-dsa-44`` / ``ml-dsa-65`` / ``ml-dsa-87`` (W3C URI)
+SLH-DSA-SHA2-*    ``slh-dsa-sha2-128s`` ... ``slh-dsa-sha2-256f`` (W3C URI)
+================  ===============================================================
+
+.. code-block:: yaml
+
+    - sign:
+        key: ec-signer.key
+        cert: ec-signer.crt
+
+Use ``signature_method`` to choose another method for the same key type, e.g. ``rsa-pss-sha256`` for an RSA
+key, ``ecdsa-sha384`` for a P-256 key, or ``ml-dsa-65-xmlsec`` to emit the libxmlsec1 URI for ML-DSA instead of
+the W3C one. A full algorithm URI is accepted too. ``digest_method`` selects the Reference digest (``sha256`` by
+default; ``sha384``, ``sha512``, ``sha3-256``, ``sha3-384``, ``sha3-512``).
+
+.. code-block:: yaml
+
+    - sign:
+        key: rsa-signer.key
+        cert: rsa-signer.crt
+        signature_method: rsa-pss-sha256
+        digest_method: sha256
+
+For a PKCS#11 key the key type is read from ``cert``; without a ``cert`` (and without ``signature_method``) pyFF
+signs with ``rsa-sha256`` as before. ECDSA on a token needs the curve, taken from ``cert`` or from ``ec_curve``
+(``P-256``, ``P-384`` or ``P-521``). Tokens support RSA, RSA-PSS, ECDSA and Ed25519 keys; ML-DSA and SLH-DSA
+need an on-disk key.
+
+.. code-block:: yaml
+
+    - sign:
+        key: pkcs11:///usr/lib/softhsm/libsofthsm2.so/ec-signer
+        token_label: mdsigner
+        signature_method: ecdsa-sha256
+        ec_curve: P-256
+
+Before switching the signing key type, check that every metadata consumer can verify the new algorithm: ECDSA is
+widely supported, while Ed25519, ML-DSA and SLH-DSA are not yet. The ``certreport`` pipe checks EC keys against
+``ec_error_bits`` (default 224) and ``ec_warning_bits`` (default 256) rather than the RSA ``error_bits`` /
+``warning_bits`` limits.

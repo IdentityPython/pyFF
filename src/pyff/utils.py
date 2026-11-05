@@ -16,7 +16,6 @@ import tempfile
 import threading
 import time
 import traceback
-from _collections_abc import Mapping, MutableMapping
 from collections.abc import Iterable, Sequence
 from copy import copy
 from datetime import datetime, timedelta, timezone
@@ -30,12 +29,14 @@ from urllib.parse import urlparse
 
 import pybergshamra
 import requests
+from _collections_abc import Mapping, MutableMapping
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.jobstores.redis import RedisJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from cachetools import LRUCache
 from cryptography import x509
+from cryptography.exceptions import UnsupportedAlgorithm
 from pyuppsala import etree
 from pyuppsala.etree import Element, ElementTree
 from requests import Session
@@ -447,6 +448,18 @@ def b64_to_pem(cert_b64: str) -> str:
     return "\n".join([PEM_CERT_PREFIX, *lines, "-----END CERTIFICATE-----", ""])
 
 
+_KEY_FAMILY_BY_OID = {
+    "1.2.840.113549.1.1.1": "rsa",  # rsaEncryption
+    "1.2.840.113549.1.1.10": "rsa",  # RSASSA-PSS
+    "1.2.840.10040.4.1": "dsa",
+    "1.2.840.10045.2.1": "ec",  # id-ecPublicKey
+    "1.3.101.112": "ed25519",
+    "1.3.101.113": "ed448",
+}
+# NIST sigAlgs arc: ML-DSA is .17-.19, SLH-DSA is .20-.31 (FIPS 204 / 205).
+_NIST_SIG_ARC = "2.16.840.1.101.3.4.3."
+
+
 class CertInfo:
     """Lightweight wrapper around a parsed X.509 certificate.
 
@@ -459,9 +472,53 @@ class CertInfo:
         self._cert = cert
 
     @property
+    def key_family(self) -> str:
+        """The public key family: rsa, dsa, ec, ed25519, ed448, ml-dsa, slh-dsa or unknown.
+
+        Based on the SubjectPublicKeyInfo algorithm OID, so it works for key
+        types the installed ``cryptography`` cannot load (e.g. SLH-DSA).
+        """
+        try:
+            oid = self._cert.public_key_algorithm_oid.dotted_string
+        except AttributeError:  # cryptography < 43
+            return self._key_family_from_public_key()
+        family = _KEY_FAMILY_BY_OID.get(oid)
+        if family is not None:
+            return family
+        if oid.startswith(_NIST_SIG_ARC):
+            arc = int(oid[len(_NIST_SIG_ARC) :])
+            if 17 <= arc <= 19:
+                return "ml-dsa"
+            if 20 <= arc <= 31:
+                return "slh-dsa"
+        return "unknown"
+
+    def _key_family_from_public_key(self) -> str:
+        from cryptography.hazmat.primitives.asymmetric import (dsa, ec, ed448,
+                                                               ed25519, rsa)
+
+        try:
+            public_key = self._cert.public_key()
+        except UnsupportedAlgorithm:
+            return "unknown"
+        for family, kind in (
+            ("rsa", rsa.RSAPublicKey),
+            ("dsa", dsa.DSAPublicKey),
+            ("ec", ec.EllipticCurvePublicKey),
+            ("ed25519", ed25519.Ed25519PublicKey),
+            ("ed448", ed448.Ed448PublicKey),
+        ):
+            if isinstance(public_key, kind):
+                return family
+        return "unknown"
+
+    @property
     def keysize(self) -> Optional[int]:
         """The public key size in bits, or None if it cannot be determined."""
-        public_key = self._cert.public_key()
+        try:
+            public_key = self._cert.public_key()
+        except UnsupportedAlgorithm:
+            return None
         # RSA/DSA expose key_size directly; EC exposes curve.key_size.
         size = getattr(public_key, 'key_size', None)
         if size is None:

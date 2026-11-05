@@ -24,6 +24,7 @@ from pyuppsala import etree
 from pyuppsala.etree import DocumentInvalid
 from str2bool import str2bool
 
+from pyff import sigalg
 from pyff.constants import NS, config
 from pyff.decorators import deprecated
 from pyff.exceptions import MetadataException
@@ -1269,7 +1270,19 @@ def _select_pkcs11_provider(
         return provider
 
 
-def _sign_pkcs11(provider, module_path, pin, label, xml, *, reference_id=None, cert_pem=None):
+def _sign_pkcs11(
+    provider,
+    module_path,
+    pin,
+    label,
+    xml,
+    *,
+    reference_id=None,
+    cert_pem=None,
+    signature_method=pybergshamra.Algorithm.RSA_SHA256,
+    digest_method=sigalg.DEFAULT_DIGEST_METHOD,
+    ec_curve=None,
+):
     """Serialize token logins and release authenticated objects even on errors."""
     # Different selectors can resolve to the same token. Lock its actual slot,
     # rather than the configured label/serial/slot selector or key label.
@@ -1281,16 +1294,71 @@ def _sign_pkcs11(provider, module_path, pin, label, xml, *, reference_id=None, c
         session = signer = ctx = None
         try:
             session = provider.open_session(pin)
-            signer = pybergshamra.Pkcs11Signer(session, label, pybergshamra.Algorithm.RSA_SHA256)
+            signer = pybergshamra.Pkcs11Signer(session, label, signature_method, ec_curve=ec_curve)
             ctx = pybergshamra.DsigContext(pybergshamra.KeysManager())
             ctx.set_hsm_signer(signer)
-            return pybergshamra.sign_enveloped(ctx, xml, reference_id=reference_id, cert_pem=cert_pem)
+            return pybergshamra.sign_enveloped(
+                ctx,
+                xml,
+                reference_id=reference_id,
+                cert_pem=cert_pem,
+                signature_method=signature_method,
+                digest_method=digest_method,
+            )
         finally:
             # Exception tracebacks retain Python frames. Clear every local
             # owner before unlocking so a failed request cannot retain login.
             ctx = None
             signer = None
             session = None
+
+
+def _pkcs11_signature_method(method_override, cert_pem, ec_curve) -> tuple[str, Optional[str]]:
+    """Pick the signature method and EC curve for a PKCS#11 key.
+
+    The token key cannot be inspected, so its type comes from the signing
+    certificate when one is configured. Precedence for the method is
+    ``signature_method`` > certificate key type > rsa-sha256; for the curve it
+    is ``ec_curve`` > certificate curve.
+    """
+    cert_key_type = None
+    if cert_pem is not None:
+        try:
+            cert_key_type = pybergshamra.load_x509_cert_pem(cert_pem.encode()).algorithm_name
+        except pybergshamra.BergshamraError as ex:
+            raise PipeException(f"Unable to read the signing certificate: {ex}") from ex
+
+    if method_override is not None:
+        signature_method = method_override
+        if cert_key_type is not None:
+            sigalg.check_compatible(signature_method, cert_key_type)
+    elif cert_key_type is not None:
+        signature_method = sigalg.default_signature_method(cert_key_type)
+    else:
+        signature_method = pybergshamra.Algorithm.RSA_SHA256
+
+    if not sigalg.pkcs11_supported(signature_method):
+        raise PipeException(
+            f"signature_method {signature_method} is not supported by the PKCS#11 signer; "
+            "use RSA, RSA-PSS, ECDSA or Ed25519 keys on a token"
+        )
+
+    if sigalg.method_family(signature_method) != "ecdsa":
+        return signature_method, None
+
+    if ec_curve is None and cert_key_type is not None:
+        ec_curve = sigalg.ec_curve_for(cert_key_type)
+    if ec_curve is None:
+        raise PipeException(
+            "ECDSA signing with a PKCS#11 key needs a cert or the ec_curve argument (P-256, P-384, P-521)"
+        )
+    ec_curve = str(ec_curve).strip().upper()
+    if ec_curve not in ("P-256", "P-384", "P-521"):
+        raise PipeException(f"Unsupported ec_curve {ec_curve!r}; use P-256, P-384 or P-521")
+    cert_curve = sigalg.ec_curve_for(cert_key_type) if cert_key_type is not None else None
+    if cert_curve is not None and cert_curve != ec_curve:
+        raise PipeException(f"ec_curve {ec_curve} does not match the {cert_key_type} signing certificate")
+    return signature_method, ec_curve
 
 
 @pipe
@@ -1304,9 +1372,36 @@ def sign(req: Plumbing.Request, *_opts):
     :return: returns the signed working document
 
     Sign expects a single dict with at least a 'key' key and optionally a 'cert' key. The 'key' argument references
-    either a PKCS#11 uri or the filename containing a PEM-encoded non-password protected private RSA key.
-    The 'cert' argument may be empty in which case the cert is looked up using the PKCS#11 token, or may point
-    to a file containing a PEM-encoded X.509 certificate.
+    either a PKCS#11 uri or the filename containing a non-password protected private key (RSA, EC P-256/P-384/P-521,
+    Ed25519, ML-DSA or SLH-DSA; PEM or DER). The 'cert' argument may be empty in which case the cert is looked up
+    using the PKCS#11 token, or may point to a file containing a PEM-encoded X.509 certificate.
+
+    **Key types and algorithms**
+
+    The XML-DSig SignatureMethod is chosen from the type of the signing key:
+
+    ================  ===============================================================
+    Key type          Default signature_method
+    ================  ===============================================================
+    RSA               ``rsa-sha256``
+    EC P-256          ``ecdsa-sha256``
+    EC P-384          ``ecdsa-sha384``
+    EC P-521          ``ecdsa-sha512``
+    Ed25519           ``eddsa-ed25519``
+    ML-DSA-44/65/87   ``ml-dsa-44`` / ``ml-dsa-65`` / ``ml-dsa-87`` (W3C URI)
+    SLH-DSA-SHA2-*    ``slh-dsa-sha2-128s`` ... ``slh-dsa-sha2-256f`` (W3C URI)
+    ================  ===============================================================
+
+    Set ``signature_method`` to override it, either with one of the short names above, ``rsa-sha384``,
+    ``rsa-sha512``, ``rsa-pss-sha256``, ``rsa-pss-sha384``, ``rsa-pss-sha512``, the libxmlsec1 URIs of the
+    post-quantum algorithms (``ml-dsa-65-xmlsec``, ``slh-dsa-sha2-128s-xmlsec``, ...), or a full algorithm URI.
+    The method must match the key type. ``digest_method`` (default ``sha256``; also ``sha384``, ``sha512``,
+    ``sha3-256``, ``sha3-384``, ``sha3-512`` or a URI) selects the Reference digest.
+
+    For a PKCS#11 key pyFF cannot inspect the private key, so the key type is taken from the 'cert'. Without a
+    'cert' (and without ``signature_method``) ``rsa-sha256`` is used. ECDSA on a token also needs the curve,
+    which comes from the 'cert' or from ``ec_curve`` (``P-256``, ``P-384`` or ``P-521``). PKCS#11 keys support
+    RSA, RSA-PSS, ECDSA and Ed25519; ML-DSA and SLH-DSA require an on-disk key.
 
     When several initialized tokens are visible, select one with ``token_label`` and optional ``token_serial``,
     or with ``slot_id``. Token selection requires pybergshamra 0.8.1 or newer. The slot may alternatively be
@@ -1347,6 +1442,16 @@ def sign(req: Plumbing.Request, *_opts):
 
     This example signs the document using the plain key and cert found in the signer.key and signer.crt files.
 
+    .. code-block:: yaml
+
+        - sign:
+            key: pkcs11:///usr/lib/softhsm/libsofthsm2.so/ec-signer
+            token_label: mdsigner
+            cert: /etc/credentials/ec-signer.crt
+            signature_method: ecdsa-sha384  # optional; ecdsa-sha256 for a P-256 cert by default
+
+    This signs with an EC key on a token; the curve is read from the certificate.
+
     """
     if req.t is None:
         raise PipeException("Your pipeline is missing a select statement.")
@@ -1364,6 +1469,16 @@ def sign(req: Plumbing.Request, *_opts):
 
     if cert_file is None:
         log.info("Attempting to extract certificate from token...")
+
+    # Resolve the algorithm overrides up front so a typo fails before any key
+    # is loaded or any token login happens.
+    method_override = req.args.get('signature_method')
+    if method_override is not None:
+        method_override = sigalg.resolve_signature_method(method_override)
+    digest_method = req.args.get('digest_method')
+    digest_method = (
+        sigalg.DEFAULT_DIGEST_METHOD if digest_method is None else sigalg.resolve_digest_method(digest_method)
+    )
 
     # Build the signing context. The reference id (if any) comes from the @ID
     # attribute on the document root; pybergshamra already treats "ID" as a
@@ -1391,6 +1506,7 @@ def sign(req: Plumbing.Request, *_opts):
         else:
             pin = pin_spec
 
+        signature_method, ec_curve = _pkcs11_signature_method(method_override, cert_pem, req.args.get('ec_curve'))
         provider = _select_pkcs11_provider(
             module_path,
             uri_slot_id=uri_slot_id,
@@ -1401,7 +1517,18 @@ def sign(req: Plumbing.Request, *_opts):
         # Keep HSM signing on an owned XML string. Authentication and all
         # operation objects must be released before the next token login.
         xml = etree.tostring(relt, encoding='unicode')
-        signed = _sign_pkcs11(provider, module_path, pin, label, xml, reference_id=idattr, cert_pem=cert_pem)
+        signed = _sign_pkcs11(
+            provider,
+            module_path,
+            pin,
+            label,
+            xml,
+            reference_id=idattr,
+            cert_pem=cert_pem,
+            signature_method=signature_method,
+            digest_method=digest_method,
+            ec_curve=ec_curve,
+        )
         req.t = root(etree.fromstring(signed))
         return req.t
     else:
@@ -1410,6 +1537,12 @@ def sign(req: Plumbing.Request, *_opts):
         ctx = pybergshamra.DsigContext(mgr)
         key = pybergshamra.load_key_file(key_file)
         mgr.add_key(key)
+        if method_override is None:
+            signature_method = sigalg.default_signature_method(key.algorithm_name)
+        else:
+            sigalg.check_compatible(method_override, key.algorithm_name)
+            signature_method = method_override
+        log.debug(f"signing with a {key.algorithm_name} key using {signature_method}")
 
     if is_document_root(relt):
         # The document API uses an owned XML handoff and imports the signed
@@ -1422,7 +1555,14 @@ def sign(req: Plumbing.Request, *_opts):
         # would land on the discarded EntitiesDescriptor, leaving the emitted
         # entity unsigned.
         doc = etree.native_document(relt)
-        pybergshamra.sign_enveloped_document(ctx, doc, reference_id=idattr, cert_pem=cert_pem)
+        pybergshamra.sign_enveloped_document(
+            ctx,
+            doc,
+            reference_id=idattr,
+            cert_pem=cert_pem,
+            signature_method=signature_method,
+            digest_method=digest_method,
+        )
         req.t = relt
     else:
         # A subtree of a larger document (small, so the
@@ -1430,7 +1570,14 @@ def sign(req: Plumbing.Request, *_opts):
         # the enveloped signature, sign, and reparse so downstream pipes see a
         # standalone pyuppsala element.
         xml = etree.tostring(relt, encoding='unicode')
-        signed = pybergshamra.sign_enveloped(ctx, xml, reference_id=idattr, cert_pem=cert_pem)
+        signed = pybergshamra.sign_enveloped(
+            ctx,
+            xml,
+            reference_id=idattr,
+            cert_pem=cert_pem,
+            signature_method=signature_method,
+            digest_method=digest_method,
+        )
         req.t = root(etree.fromstring(signed))
 
     return req.t
@@ -1750,10 +1897,16 @@ def certreport(req: Plumbing.Request, *opts):
              warning_seconds: 864000
              error_bits: 1024
              warning_bits: 2048
+             ec_error_bits: 224
+             ec_warning_bits: 256
 
     For key size checking this will report keys with a size *less* than the size specified, defaulting to errors
     for keys smaller than 1024 bits and warnings for keys smaller than 2048 bits. It should be understood as the
     minimum key size for each report level, as such everything below will create report entries.
+
+    ``error_bits`` and ``warning_bits`` apply to RSA and DSA keys. EC keys are checked against ``ec_error_bits``
+    (default 224) and ``ec_warning_bits`` (default 256) instead. Ed25519, Ed448, ML-DSA and SLH-DSA keys have a
+    fixed strength and are not checked for size; their expiry is still reported.
 
     Remember that you need a 'publish' or 'emit' call after certreport in your plumbing to get useful output. PyFF
     ships with a couple of xslt transforms that are useful for turning metadata with certreport annotation into
@@ -1774,6 +1927,8 @@ def certreport(req: Plumbing.Request, *opts):
     warning_seconds = int(req.args.get('warning_seconds', "864000"))
     error_bits = int(req.args.get('error_bits', "1024"))
     warning_bits = int(req.args.get('warning_bits', "2048"))
+    ec_error_bits = int(req.args.get('ec_error_bits', "224"))
+    ec_warning_bits = int(req.args.get('ec_warning_bits', "256"))
 
     # One native pass: iterate entities directly and walk each (small) entity
     # subtree for its certificates. The previous per-entity document-wide
@@ -1800,20 +1955,29 @@ def certreport(req: Plumbing.Request, *opts):
                     cert = cert_info(cert_pem)
                     subject = cert.subject
                     keysize = cert.keysize
-                    if keysize is not None and keysize < error_bits:
+                    # Size limits depend on the key family: RSA/DSA bits are not
+                    # comparable to EC bits, and EdDSA / ML-DSA / SLH-DSA have
+                    # fixed strengths, so they are never flagged.
+                    key_family = cert.key_family
+                    min_error, min_warning = error_bits, warning_bits
+                    if key_family == "ec":
+                        min_error, min_warning = ec_error_bits, ec_warning_bits
+                    elif key_family not in ("rsa", "dsa"):
+                        keysize = None
+                    if keysize is not None and keysize < min_error:
                         annotate_entity(
                             entity_elt,
                             "certificate-error",
                             "keysize too small",
-                            f"{subject} has keysize of {keysize} bits (less than {error_bits})",
+                            f"{subject} has keysize of {keysize} bits (less than {min_error})",
                         )
                         log.error(f"{eid} has keysize of {keysize}")
-                    elif keysize is not None and keysize < warning_bits:
+                    elif keysize is not None and keysize < min_warning:
                         annotate_entity(
                             entity_elt,
                             "certificate-warning",
                             "keysize small",
-                            f"{subject} has keysize of {keysize} bits (less than {warning_bits})",
+                            f"{subject} has keysize of {keysize} bits (less than {min_warning})",
                         )
                         log.warning(f"{eid} has keysize of {keysize}")
 
