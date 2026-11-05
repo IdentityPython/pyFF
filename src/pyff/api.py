@@ -173,7 +173,11 @@ def process_handler(request: Request) -> Response:
             (pth, dot, extn) = x.rpartition('.')
             assert dot == '.'
             if extn in _ctypes:
-                return pth, extn
+                hash_prefixes = ("{sha1}", "{sha256}", "{md5}")
+                if any(pth.startswith(prefix) for prefix in hash_prefixes):
+                    return pth, extn
+
+                return x, extn
 
         return x, None
 
@@ -201,6 +205,9 @@ def process_handler(request: Request) -> Response:
 
     alias = path_elem.pop(0)
     path = '/'.join(path_elem)
+
+    if request.path.endswith('/'):
+        path += '/'
 
     # Ugly workaround bc WSGI drops double-slashes.
     path = path.replace(':/', '://')

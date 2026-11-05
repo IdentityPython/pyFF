@@ -6,6 +6,7 @@ import unittest
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from urllib.parse import quote as urlescape
+from xml.etree import ElementTree as ET
 
 import pytest
 import requests
@@ -150,6 +151,20 @@ class PyFFAPITest(PipeLineTest):
             assert (
                 'https://box-idp.nordu.net/simplesaml/module.php/saml/sp/discoResponse' in info['discovery_responses']
             )
+
+            r = requests.get(f"{url}/entities/https%3A%2F%2Fclarino.uib.no%2F", headers={'Accept':'application/json'})
+            assert r.status_code == 200
+            data = r.json()
+            info = data[0]
+            assert (
+                'https://clarino.uib.no/feide/single-login' in info['discovery_responses']
+            )
+
+            r = requests.get(f"{url}/entities/https%3A%2F%2Fshibboleth.mzk.cz%2Fsimplesaml%2Fmetadata.xml", headers={'Accept':'application/xml'})
+            assert r.status_code == 200
+
+            root = ET.fromstring(r.content)
+            assert root.tag.endswith('EntityDescriptor')
 
 
 class SearchHandlerTest(unittest.TestCase):
