@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 import traceback
+from _collections_abc import Mapping, MutableMapping
 from collections.abc import Iterable, Sequence
 from copy import copy
 from datetime import datetime, timedelta, timezone
@@ -29,7 +30,6 @@ from urllib.parse import urlparse
 
 import pybergshamra
 import requests
-from _collections_abc import Mapping, MutableMapping
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.jobstores.redis import RedisJobStore
@@ -494,8 +494,7 @@ class CertInfo:
         return "unknown"
 
     def _key_family_from_public_key(self) -> str:
-        from cryptography.hazmat.primitives.asymmetric import (dsa, ec, ed448,
-                                                               ed25519, rsa)
+        from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed448, ed25519, rsa
 
         try:
             public_key = self._cert.public_key()
