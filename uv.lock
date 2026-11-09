@@ -1298,7 +1298,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.8" },
     { name = "pyramid", specifier = ">=2.1" },
     { name = "pytz", specifier = ">=2025.2" },
-    { name = "pyuppsala", specifier = ">=0.13.0" },
+    { name = "pyuppsala", specifier = ">=0.13.1" },
     { name = "pyyaml", specifier = ">=3.10" },
     { name = "redis", specifier = ">=5.3.0" },
     { name = "redis-collections", specifier = ">=0.13.0" },

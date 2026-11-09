@@ -1305,6 +1305,44 @@ class SigningTest(PipeLineTest):
             except OSError:
                 pass
 
+    def test_xslt_cleanup_keeps_xsi_type_prefixes(self):
+        """XSLT-rewritten metadata must stay well-formed when attributes use xsi:/xsd: prefixes.
+
+        eIDAS middleware metadata (test07-xsi-type-middleware.xml) uses
+        xsi:type="xsd:string". Running it through an xslt step must not produce output
+        with an undeclared prefix ("Undeclared namespace prefix: xsi"), which broke
+        loading in pyuppsala (https://github.com/kushaldas/pyuppsala/issues/36).
+        """
+        entity = 'https://test.demw.eidas.swedenconnect.se/eidas-middleware/Metadata'
+        xsi_type = '{http://www.w3.org/2001/XMLSchema-instance}type'
+        tmpfile = tempfile.NamedTemporaryFile('w').name
+        try:
+            self.exec_pipeline(
+                f"""
+- when clean:
+    - xslt:
+       stylesheet: tidy.xsl
+    - check_xml_namespaces
+    - break
+- load:
+   - file://{self.datadir}/metadata/test07-xsi-type-middleware.xml cleanup clean
+- select
+- publish: {tmpfile}
+"""
+            )
+            t2 = parse_xml(tmpfile)
+            assert t2 is not None
+            entity_elt = t2.find(".//{{{}}}EntityDescriptor[@entityID='{}']".format(NS['md'], entity))
+            assert entity_elt is not None, "entity was dropped after the xslt step"
+            typed = entity_elt.findall(".//*[@{http://www.w3.org/2001/XMLSchema-instance}type]")
+            assert typed, "xsi:type attributes were lost or lost their namespace"
+            assert all(e.get(xsi_type) == 'xsd:string' for e in typed)
+        finally:
+            try:
+                os.unlink(tmpfile)
+            except OSError:
+                pass
+
     def test_wsfed_type_prefix_survives(self):
         """A complex-type xsi:type prefix (as opposed to a datatype prefix like xs/xsd)
         needs no special-casing: real WS-Fed metadata also carries elements in that
