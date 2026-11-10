@@ -280,6 +280,26 @@ class TestEntitiesDescriptor(TestCase):
             [e.get('entityID') for e in first],
         )
 
+    def test_entitiesdescriptor_does_not_declare_xml_prefix(self):
+        """The aggregate root must not carry an explicit xmlns:xml declaration.
+
+        .NET's SignedXml keeps it in the exclusive c14n output, so a signature
+        over such a root fails to verify in ADFSToolkit although libxml2 based
+        verifiers accept it.
+        """
+        from pyuppsala import etree
+
+        from pyff.samlmd import entitiesdescriptor
+
+        t = entitiesdescriptor(self._entities(), 'https://md.example.org/first', lookup_fn=None, validate=False)
+
+        self.assertNotIn('xml', t.nsmap)
+        serialized = etree.tostring(t, encoding='unicode')
+        self.assertNotIn('xmlns:xml=', serialized)
+        # the other pyff prefixes are still declared on the root
+        self.assertEqual(NS['md'], t.nsmap.get('md'))
+        self.assertEqual(NS['ds'], t.nsmap.get('ds'))
+
     def test_entitiesdescriptor_copy_false_moves(self):
         """copy=False keeps the historical (lxml) move behaviour for callers that want it."""
         from pyff.samlmd import entitiesdescriptor

@@ -510,6 +510,12 @@ def entitiesdescriptor(
     for entity in entities:
         nsmap.update(entity.nsmap)
 
+    # The xml prefix is bound by definition and must never be declared. An explicit
+    # xmlns:xml is legal XML, but .NET's exclusive c14n keeps it in the canonical
+    # form, so consumers such as ADFSToolkit compute a different digest and reject
+    # the signature.
+    nsmap.pop('xml', None)
+
     log.debug("selecting %d entities before validation" % len(entities))
 
     attrs = dict(Name=name, nsmap=nsmap)
