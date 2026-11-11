@@ -252,3 +252,7 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Bug: (via dependency) Improved handling of XSLT
 
 * Maintenance: Dependency bumps
+
+3.1.1dev0
+-----
+UNRELEASED
