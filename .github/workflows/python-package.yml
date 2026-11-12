@@ -37,7 +37,16 @@ jobs:
         uv sync --locked --all-extras --dev
 
 
+    - name: Install SoftHSM2 and OpenSC for PKCS#11 signing tests
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y softhsm2 opensc
+
     - name: Run tests
+      env:
+        # Fail instead of skipping the SoftHSM2 signing tests if the token
+        # cannot be set up or a key type cannot be generated.
+        PYFF_REQUIRE_SOFTHSM: "1"
       run: |
         uv run python -m coverage erase
         uv run python -m coverage run -m pytest --cov=src/pyff
