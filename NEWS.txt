@@ -258,3 +258,8 @@ to sign using HSMs. The only mandatory non-python dependency now is lxml.
 * Release date: Wed 16 Nov 15:12 CET 2026
 
 * Bugs: Signed feeds can once again be validated by ADFSToolkit/.NET
+
+3.1.2
+-----
+UNRELEASED
+
