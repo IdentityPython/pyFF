@@ -465,7 +465,7 @@ class TestPkcs11SigningConfig:
                 return session
 
         class Signer:
-            def __init__(self, session, _label, _algorithm):
+            def __init__(self, session, _label, _algorithm, ec_curve=None):
                 self.session = session
 
         class Context:
