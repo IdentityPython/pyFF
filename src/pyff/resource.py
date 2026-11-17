@@ -300,7 +300,8 @@ class Resource(Watchable):
                 if os.path.isdir(pth):
                     self.url = f"dir://{pth}"
                 elif os.path.isfile(pth) or os.path.isabs(self.url):
-                    self.url = f"file://{pth}"
+                    # Escape the path, as for files found in a directory: '#', '?' and '%' are URL syntax.
+                    self.url = f"file://{urlescape(pth)}"
 
             if self.url.startswith('file://') or self.url.startswith('dir://'):
                 self.never_expires = True
