@@ -198,15 +198,20 @@ contains the following:
     </XRDS>
 
 The structure of the file should be fairly self-evident. Only links with @rel="urn:oasis:names:tc:SAML:2.0:metadata"
-will be parsed. If a KeyInfo with a X509Certificate element (usual base64-encoded certificate format) then this
-certificate is used to validate the signature on the downloaded SAML metadata. Note that while 'load' supports validation
-based on certificate fingerprint the XRD format does not and you will have to include Base64-encoded certificates if
-you want validation to work.
+will be parsed. The X509Certificate elements (base64-encoded certificates) in a link's KeyInfo are the trusted signers
+of the metadata it points to: the downloaded metadata is only loaded if it is signed by one of them, so during a key
+rollover a link can list both the old and the new certificate. The certificate is used as such, not via its
+fingerprint, so this also works for metadata whose signature does not carry the signing certificate, as is common for
+MDQ responses.
+
+.. warning::
+
+    A link without a certificate is loaded **without** signature verification.
 
 Example 4 - Sign using a PKCS#11 module
 ---------------------------------------
 
-Fetch SWAMID metadata (and validate the signature using a certificate matching the given SHA256 fingerprint), select
+Fetch SWAMID metadata (and validate the signature using the SWAMID signing certificate in swamid-2.0.crt), select
 the Identity Providers, tidy it up a bit and sign with the key with the label 'signer' in the PKCS#11 module
 /usr/lib/libsofthsm.so. If a certificate is found in the same PKCS#11 object, that certificate is included in
 the Signature object.
@@ -214,7 +219,7 @@ the Signature object.
 .. code-block:: yaml
 
     - load:
-       - http://mds.swamid.se/md/swamid-2.0.xml A6:78:5A:37:C9:C9:0C:25:AD:5F:1F:69:22:EF:76:7B:C9:78:67:67:3A:AF:4F:8B:EA:A1:A7:6D:A3:A8:E5:85
+       - http://mds.swamid.se/md/swamid-2.0.xml verify swamid-2.0.crt
     - select: "!//md:EntityDescriptor[md:IDPSSODescriptor]"
     - xslt:
         stylesheet: tidy.xsl
