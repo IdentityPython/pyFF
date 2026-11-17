@@ -280,6 +280,107 @@ class LoadErrorTest(PipeLineTest):
         assert md.lookup('https://idp.example.com/saml2/idp/metadata.php')
 
 
+class XRDTest(PipeLineTest):
+    """
+    Each XRD Link's certificates are the trusted signers of the metadata it points to: cf. issue #264.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.tmpdir = tempfile.mkdtemp()
+        self.signed = os.path.join(self.tmpdir, 'signed.xml')
+        self.exec_pipeline(
+            f"""
+- load:
+    - {self.datadir}/simple-pipeline
+- select
+- finalize:
+    cacheDuration: PT5H
+    validUntil: P10D
+- sign:
+    key: {self.private_keyspec}
+    cert: {self.public_keyspec}
+- publish:
+    output: {self.signed}
+"""
+        )
+        with open(self.public_keyspec) as fd:
+            self.signer_cert = fd.read()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    @staticmethod
+    def _other_cert():
+        """A self-signed certificate for a key that did not sign the metadata"""
+        import datetime
+
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
+
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'other')])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now)
+            .not_valid_after(now + datetime.timedelta(days=2))
+            .sign(key, hashes.SHA256())
+        )
+        return cert.public_bytes(serialization.Encoding.PEM).decode()
+
+    def _load_via_xrd(self, href, certs):
+        """Load ``href`` through an XRD Link carrying ``certs`` (PEM) and return the loaded entityIDs"""
+        key_infos = "".join(
+            '<ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>'
+            + "".join(pem.strip().splitlines()[1:-1])
+            + '</ds:X509Certificate></ds:X509Data></ds:KeyInfo>'
+            for pem in certs
+        )
+        xrd = os.path.join(self.tmpdir, 'links.xrd')
+        with open(xrd, 'w') as fd:
+            fd.write(
+                f'<XRDS xmlns="{NS["xrd"]}"><XRD><Subject>{href}</Subject>'
+                f'<Link rel="{NS["md"]}" href="{href}"><Title>test</Title>{key_infos}</Link></XRD></XRDS>'
+            )
+        _res, md = self.exec_pipeline(f"- load:\n    - {xrd}\n")
+        return {e.get('entityID') for e in md.store}
+
+    def _signed_url(self):
+        return f'file://{self.signed}'
+
+    def _tampered_url(self):
+        """The signed metadata with one entityID changed after signing"""
+        tampered = os.path.join(self.tmpdir, 'tampered.xml')
+        with open(self.signed) as src, open(tampered, 'w') as dst:
+            dst.write(src.read().replace('https://idp.aco.net/idp/shibboleth', 'https://evil.example.org/idp'))
+        return f'file://{tampered}'
+
+    def test_link_certificate_verifies(self):
+        assert 'https://idp.aco.net/idp/shibboleth' in self._load_via_xrd(self._signed_url(), [self.signer_cert])
+
+    def test_wrong_link_certificate_is_rejected(self):
+        assert self._load_via_xrd(self._signed_url(), [self._other_cert()]) == set()
+
+    def test_tampered_metadata_is_rejected(self):
+        assert self._load_via_xrd(self._tampered_url(), [self.signer_cert]) == set()
+
+    def test_any_link_certificate_verifies(self):
+        """A key rollover lists both the old and the new certificate"""
+        entity_ids = self._load_via_xrd(self._signed_url(), [self._other_cert(), self.signer_cert])
+        assert 'https://idp.aco.net/idp/shibboleth' in entity_ids
+
+    def test_link_without_certificate_is_loaded_unverified(self):
+        """As in pyFF 2.0.0: without a certificate there is nothing to verify against"""
+        assert 'https://evil.example.org/idp' in self._load_via_xrd(self._tampered_url(), [])
+
+
 class SortTest(PipeLineTest):
     EID1 = "https://idp.aco.net/idp/shibboleth"
     EID2 = "https://idp.example.com/saml2/idp/metadata.php"
