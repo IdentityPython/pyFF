@@ -1373,8 +1373,10 @@ def sign(req: Plumbing.Request, *_opts):
 
     Sign expects a single dict with at least a 'key' key and optionally a 'cert' key. The 'key' argument references
     either a PKCS#11 uri or the filename containing a non-password protected private key (RSA, EC P-256/P-384/P-521,
-    Ed25519, ML-DSA or SLH-DSA; PEM or DER). The 'cert' argument may be empty in which case the cert is looked up
-    using the PKCS#11 token, or may point to a file containing a PEM-encoded X.509 certificate.
+    Ed25519, ML-DSA or SLH-DSA; PEM or DER). EC keys must be in PKCS#8 form (``BEGIN PRIVATE KEY``); the SEC1 form
+    (``BEGIN EC PRIVATE KEY``) that ``openssl ecparam -genkey`` writes is not supported yet. Convert it with
+    ``openssl pkcs8 -topk8 -nocrypt -in ec.key -out ec-pkcs8.key``. The 'cert' argument may be empty in which case the
+    cert is looked up using the PKCS#11 token, or may point to a file containing a PEM-encoded X.509 certificate.
 
     **Key types and algorithms**
 
