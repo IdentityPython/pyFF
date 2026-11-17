@@ -1,10 +1,13 @@
+import gc
 import json
 import os
 import shutil
 import tempfile
 import unittest
+import weakref
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest import mock
 from urllib.parse import quote as urlescape
 
 import pytest
@@ -356,3 +359,91 @@ class PyFFAPITestTrailingSlash(PipeLineTest):
         with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
             assert requests.post(f'{url}/api/call/update').status_code == 200
             assert self._entity_ids(url, '/entities/https:/sp.example.com/saml2/metadata') == set()
+
+
+class _PipelineResult(list):
+    """A pipeline result that can be weakly referenced, to observe when it is freed"""
+
+
+class PyFFAPITestErrorResponses(PipeLineTest):
+    """
+    Errors while processing a request must have the right status, and must not keep the pipeline result - often
+    the whole selected metadata tree - alive after the request: cf. issue #283.
+    """
+
+    mdx = None
+    app = None
+
+    @classmethod
+    def setUpClass(cls):
+        SignerTestCase.setUpClass()
+        config.local_copy_dir = tempfile.mkdtemp()
+        cls.mdx = tempfile.NamedTemporaryFile('w').name
+        with open(cls.mdx, "w") as fd:
+            fd.write(
+                f"""
+- when update:
+    - load:
+        - {os.path.join(cls.datadir, 'metadata', 'test01.xml')}
+- when request:
+    - select
+    - pipe:
+        - when accept application/xml:
+            - emit application/xml
+            - break
+"""
+            )
+        cls._app = mkapp(cls.mdx)
+        cls.app = lambda *args, **kwargs: cls._app
+
+    @classmethod
+    def tearDownClass(cls):
+        SignerTestCase.tearDownClass()
+        if os.path.exists(cls.mdx):
+            os.unlink(cls.mdx)
+        if os.path.exists(config.local_copy_dir):
+            shutil.rmtree(config.local_copy_dir)
+
+    def _request_with_pipeline_result(self, url, fail):
+        """
+        GET /entities as text/plain with the pipeline replaced by one producing a weakly referenceable result,
+        then failing if ``fail``. The garbage collector is off, so only reference counting can free the result.
+
+        :return: the HTTP status and whether the result was freed once the request was done
+        """
+        refs = []
+
+        def process(*args, **kwargs):
+            result = _PipelineResult(['<md:EntitiesDescriptor/>'])
+            refs.append(weakref.ref(result))
+            if fail:
+                raise RuntimeError("pipeline failed")
+            return result
+
+        gc.collect()
+        gc.disable()
+        try:
+            with mock.patch.object(self._app.registry.plumbings[0], 'process', process):
+                status = requests.get(f'{url}/entities', headers={'Accept': 'text/plain'}).status_code
+            return status, refs[0]() is None
+        finally:
+            gc.enable()
+
+    def test_unacceptable_type_is_406(self):
+        """No pipeline branch and no format matches text/plain: that is 406 Not Acceptable, not a server error"""
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            assert requests.post(f'{url}/api/call/update').status_code == 200
+            r = requests.get(f'{url}/entities', headers={'Accept': 'text/plain'})
+            assert r.status_code == 406
+
+    def test_406_frees_the_pipeline_result(self):
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            status, freed = self._request_with_pipeline_result(url, fail=False)
+            assert status == 406
+            assert freed, "the pipeline result outlived a 406 response"
+
+    def test_500_frees_the_pipeline_result(self):
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            status, freed = self._request_with_pipeline_result(url, fail=True)
+            assert status == 500
+            assert freed, "the pipeline result outlived a 500 response"

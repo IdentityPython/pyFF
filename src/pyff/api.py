@@ -1,5 +1,6 @@
 import importlib
 import threading
+import traceback
 from collections.abc import Generator, Iterable, Mapping
 from datetime import datetime, timedelta
 from json import dumps
@@ -265,54 +266,72 @@ def process_handler(request: Request) -> Response:
     else:
         q = new_path
 
+    # The pipeline result - often the whole selected metadata tree - only lives in _run_plumbings' frame. Pyramid keeps
+    # an error response's exception on the request, so an error must not reference that frame through its traceback:
+    # request, exception and frame would form a reference cycle, freed only by a full garbage collection (issue #283).
     try:
-        accepter = MediaAccept(accept)
-        for p in request.registry.plumbings:
-            state = {
-                entry: True,
-                'headers': {'Content-Type': None},
-                'accept': accepter,
-                'url': request.current_route_url(),
-                'select': q,
-                'match': match.lower() if match else match,
-                'path': new_path,
-                'stats': {},
-            }
-
-            r = p.process(request.registry.md, state=state, raise_exceptions=True, scheduler=request.registry.scheduler)
-            log.debug(f'Plumbing process result: {r}')
-            if r is None:
-                r = []
-
-            response = Response()
-            _headers = state.get('headers', {})
-            response.headers.update(_headers)
-            ctype = _headers.get('Content-Type', None)
-            if not ctype:
-                r, t = _fmt(r, accepter)
-                ctype = t
-
-            response.text = b2u(r)
-            response.size = len(r)
-            response.content_type = ctype
-            cache_ttl = int(state.get('cache', 0))
-            response.expires = datetime.now() + timedelta(seconds=cache_ttl)
-            return response
+        response = _run_plumbings(request, entry, accept, q, match, new_path)
+    except exc.HTTPException as ex:
+        # An HTTP error from processing, eg 406 from content negotiation, is the response as is.
+        raise ex.with_traceback(None)
     except ResourceException as ex:
-        import traceback
-
         log.debug(traceback.format_exc())
         log.warning(f'Exception from processing pipeline: {ex}')
-        raise exc.exception_response(409)
+        status = 409
     except BaseException as ex:
-        import traceback
-
         log.debug(traceback.format_exc())
         log.error(f'Exception from processing pipeline: {ex}')
-        raise exc.exception_response(500)
+        status = 500
+    else:
+        if response is None and request.method == 'GET':
+            raise exc.exception_response(404)
+        return response
 
-    if request.method == 'GET':
-        raise exc.exception_response(404)
+    # Raised outside the except clauses, so that it does not chain the original exception and its traceback.
+    raise exc.exception_response(status)
+
+
+def _run_plumbings(
+    request: Request, entry: str, accept: str, q: Optional[str], match: Optional[str], new_path: Optional[str]
+) -> Optional[Response]:
+    """
+    Run the request through the plumbings and format the result for the accepted content type.
+
+    :return: the response, or None if there are no plumbings
+    """
+    accepter = MediaAccept(accept)
+    for p in request.registry.plumbings:
+        state = {
+            entry: True,
+            'headers': {'Content-Type': None},
+            'accept': accepter,
+            'url': request.current_route_url(),
+            'select': q,
+            'match': match.lower() if match else match,
+            'path': new_path,
+            'stats': {},
+        }
+
+        r = p.process(request.registry.md, state=state, raise_exceptions=True, scheduler=request.registry.scheduler)
+        log.debug(f'Plumbing process result: {r}')
+        if r is None:
+            r = []
+
+        response = Response()
+        _headers = state.get('headers', {})
+        response.headers.update(_headers)
+        ctype = _headers.get('Content-Type', None)
+        if not ctype:
+            r, t = _fmt(r, accepter)
+            ctype = t
+
+        response.text = b2u(r)
+        response.size = len(r)
+        response.content_type = ctype
+        cache_ttl = int(state.get('cache', 0))
+        response.expires = datetime.now() + timedelta(seconds=cache_ttl)
+        return response
+    return None
 
 
 def webfinger_handler(request: Request) -> Response:
