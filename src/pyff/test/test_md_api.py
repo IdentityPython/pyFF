@@ -13,12 +13,14 @@ from urllib.parse import quote as urlescape
 import pytest
 import requests
 from mako.lookup import TemplateLookup
+from pyramid import httpexceptions as exc
 from pyramid.testing import DummyRequest
 from pyuppsala import etree
 from wsgi_intercept.interceptor import RequestsInterceptor, UrllibInterceptor
 
 from pyff.api import mkapp, search_handler
 from pyff.constants import config
+from pyff.resource import ResourceException
 from pyff.samlmd import iter_entities
 from pyff.test import SignerTestCase
 from pyff.test.test_pipeline import PipeLineTest
@@ -404,10 +406,11 @@ class PyFFAPITestErrorResponses(PipeLineTest):
         if os.path.exists(config.local_copy_dir):
             shutil.rmtree(config.local_copy_dir)
 
-    def _request_with_pipeline_result(self, url, fail):
+    def _request_with_pipeline_result(self, url, fail=False, error=None):
         """
         GET /entities as text/plain with the pipeline replaced by one producing a weakly referenceable result,
-        then failing if ``fail``. The garbage collector is off, so only reference counting can free the result.
+        then failing if ``fail`` (with a RuntimeError) or with the ``error`` factory's exception, raised while a
+        KeyError is being handled. The garbage collector is off, so only reference counting can free the result.
 
         :return: the HTTP status and whether the result was freed once the request was done
         """
@@ -416,6 +419,11 @@ class PyFFAPITestErrorResponses(PipeLineTest):
         def process(*args, **kwargs):
             result = _PipelineResult(['<md:EntitiesDescriptor/>'])
             refs.append(weakref.ref(result))
+            if error is not None:
+                try:
+                    raise KeyError("first failure")
+                except KeyError:
+                    raise error()
             if fail:
                 raise RuntimeError("pipeline failed")
             return result
@@ -447,3 +455,16 @@ class PyFFAPITestErrorResponses(PipeLineTest):
             status, freed = self._request_with_pipeline_result(url, fail=True)
             assert status == 500
             assert freed, "the pipeline result outlived a 500 response"
+
+    def test_http_error_raised_while_handling_another_frees_the_pipeline_result(self):
+        """An HTTP error chained to another exception must not keep the result alive through __context__"""
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            status, freed = self._request_with_pipeline_result(url, error=exc.HTTPNotFound)
+            assert status == 404
+            assert freed, "the pipeline result outlived a chained 404 response"
+
+    def test_409_frees_the_pipeline_result(self):
+        with RequestsInterceptor(self.app, host='127.0.0.1', port=80) as url:
+            status, freed = self._request_with_pipeline_result(url, error=lambda: ResourceException("conflict"))
+            assert status == 409
+            assert freed, "the pipeline result outlived a 409 response"

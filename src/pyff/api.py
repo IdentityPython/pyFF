@@ -272,7 +272,9 @@ def process_handler(request: Request) -> Response:
     try:
         response = _run_plumbings(request, entry, accept, q, match, new_path)
     except exc.HTTPException as ex:
-        # An HTTP error from processing, eg 406 from content negotiation, is the response as is.
+        # An HTTP error from processing, eg 406 from content negotiation, is the response as is. Besides the traceback,
+        # __context__/__cause__ can reference the frame (an error raised while handling another one), so clear them too.
+        ex.__context__ = ex.__cause__ = None
         raise ex.with_traceback(None)
     except ResourceException as ex:
         log.debug(traceback.format_exc())
