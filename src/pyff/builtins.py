@@ -694,11 +694,18 @@ def load(req: Plumbing.Request, *opts):
     - ``as``: name the resource, e.g. to refer to it in later pipeline steps.
     - ``verify``: check the XML signature of the resource, using either a PEM certificate file or a SHA-1
       fingerprint of the signing certificate. With a fingerprint, the certificate embedded in the signature is
-      used and the fingerprint pins it. ``verify`` may be repeated to support key rollovers; a signature by any
-      one of the given certificates (or fingerprints) is accepted. Certificates and fingerprints cannot be mixed.
+      used and the fingerprint pins it, so a document whose signature carries no certificate - common for MDQ
+      responses - can only be verified with the certificate file. Other fingerprints, eg SHA-256, are not
+      supported. ``verify`` may be repeated to support key rollovers; a signature by any one of the given
+      certificates (or fingerprints) is accepted. Certificates and fingerprints cannot be mixed.
     - ``via``: name of a ``when`` clause in the same pipeline that is applied to the loaded metadata, for
       example to remove entities with ``fork merge remove``.
     - ``cleanup``: name of a ``when`` clause used to pre-process the parsed metadata before it is validated.
+
+    A resource may also be an XRD or eIDAS MDSL file listing metadata URLs. Each listed URL is loaded and verified
+    with the certificates given for it in the file, as if with ``verify``; any one of them is accepted, so a key
+    rollover can list both. An XRD link without a certificate is loaded unverified; an MDSL entry without one is
+    skipped.
     """
     _opts = dict(list(zip(opts[::2], opts[1::2])))
     _opts.setdefault('timeout', 120)

@@ -11,7 +11,7 @@ from pyff.logs import get_log
 from pyff.resource import Resource, ResourceInfo
 
 # cert_dict replaces xmlsec.crypto.CertDict (fingerprint -> cert mapping).
-from pyff.utils import cert_dict, find_matching_files, parse_xml, root, unicode_stream, utc_now
+from pyff.utils import b64_to_pem, cert_dict, find_matching_files, parse_xml, root, unicode_stream, utc_now
 
 __author__ = 'leifj'
 
@@ -120,12 +120,16 @@ class XRDParser(PyffParser):
             for link in xrd.findall(".//{{{}}}Link[@rel='{}']".format(NS['xrd'], NS['md'])):
                 link_href = link.get("href")
                 certs = cert_dict(link)
-                fingerprints = list(certs.keys())
-                fp = None
-                if len(fingerprints) > 0:
-                    fp = fingerprints[0]
-                log.debug(f"XRD: {link_href} verified by {fp}")
-                child_opts = resource.opts.model_copy(update={'alias': None})
+                if certs:
+                    log.debug(f"XRD: {link_href} verified by {', '.join(certs.keys())}")
+                else:
+                    log.debug(f"XRD: {link_href} has no certificate, not verified")
+                # The Link's certificates are the trusted signers; all of them are accepted so that a key rollover
+                # can list both the old and the new certificate. Without one the metadata is not verified, rather
+                # than with the verify option of the XRD itself.
+                child_opts = resource.opts.model_copy(
+                    update={'alias': None, 'verify': [b64_to_pem(cert_b64) for cert_b64 in certs.values()] or None}
+                )
                 resource.add_child(link_href, child_opts)
         resource.last_seen = utc_now().replace(microsecond=0)
         resource.expire_time = None
