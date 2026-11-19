@@ -300,6 +300,19 @@ class LoadFileNameTest(PipeLineTest):
         super().setUp()
         self.tmpdir = tempfile.mkdtemp()
 
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_file_name_with_url_special_characters(self):
+        for name in self.NAMES:
+            with self.subTest(name=name):
+                path = os.path.join(self.tmpdir, name)
+                shutil.copy(os.path.join(self.datadir, 'metadata', 'test01.xml'), path)
+                _res, md = self.exec_pipeline(f"- load:\n    - {path}\n")
+                assert md.lookup('https://idp.example.com/saml2/idp/metadata.php'), f"{name} was not loaded"
+                os.unlink(path)
+
+
 class XRDTest(PipeLineTest):
     """
     Each XRD Link's certificates are the trusted signers of the metadata it points to: cf. issue #264.
@@ -329,15 +342,6 @@ class XRDTest(PipeLineTest):
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
-
-    def test_file_name_with_url_special_characters(self):
-        for name in self.NAMES:
-            with self.subTest(name=name):
-                path = os.path.join(self.tmpdir, name)
-                shutil.copy(os.path.join(self.datadir, 'metadata', 'test01.xml'), path)
-                _res, md = self.exec_pipeline(f"- load:\n    - {path}\n")
-                assert md.lookup('https://idp.example.com/saml2/idp/metadata.php'), f"{name} was not loaded"
-                os.unlink(path)
 
     @staticmethod
     def _other_cert():
