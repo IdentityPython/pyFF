@@ -280,6 +280,39 @@ class LoadErrorTest(PipeLineTest):
         assert md.lookup('https://idp.example.com/saml2/idp/metadata.php')
 
 
+class LoadFileNameTest(PipeLineTest):
+    """
+    A metadata file loads whatever characters its name contains, also when it is listed directly rather than found
+    in a directory: cf. issue #291.
+    """
+
+    NAMES = [
+        'plain.xml',
+        'a#b.xml',
+        'a?b.xml',
+        'a%20b.xml',
+        'https%3A%2F%2Fidp.example.com%2Fidp.xml',
+        'åäö.xml',
+        'Räksmörgås#1.xml',
+    ]
+
+    def setUp(self):
+        super().setUp()
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_file_name_with_url_special_characters(self):
+        for name in self.NAMES:
+            with self.subTest(name=name):
+                path = os.path.join(self.tmpdir, name)
+                shutil.copy(os.path.join(self.datadir, 'metadata', 'test01.xml'), path)
+                _res, md = self.exec_pipeline(f"- load:\n    - {path}\n")
+                assert md.lookup('https://idp.example.com/saml2/idp/metadata.php'), f"{name} was not loaded"
+                os.unlink(path)
+
+
 class XRDTest(PipeLineTest):
     """
     Each XRD Link's certificates are the trusted signers of the metadata it points to: cf. issue #264.
