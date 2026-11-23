@@ -300,6 +300,76 @@ class TestEntitiesDescriptor(TestCase):
         self.assertEqual(NS['md'], t.nsmap.get('md'))
         self.assertEqual(NS['ds'], t.nsmap.get('ds'))
 
+    XS = 'http://www.w3.org/2001/XMLSchema'
+    XSI = 'http://www.w3.org/2001/XMLSchema-instance'
+
+    def _xsd_entities(self, declare_xsd):
+        """Entities whose only use of the 'xsd' prefix is inside an xsi:type value."""
+        from pyuppsala import etree
+
+        xsd_decl = f' xmlns:xsd="{self.XS}"' if declare_xsd else ''
+        return [
+            etree.fromstring(
+                f'<md:EntityDescriptor xmlns:md="{self.MD}" xmlns:xsi="{self.XSI}"{xsd_decl} '
+                f'entityID="https://e{i}.example.org/sp">'
+                f'<md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"/>'
+                f'<md:Extensions xsi:type="xsd:string"/>'
+                f'</md:EntityDescriptor>'
+            )
+            for i in range(3)
+        ]
+
+    def _assert_xsd_survives(self, aggregate):
+        """The XMLSchema namespace stays bound to 'xsd' in the aggregate and after a round trip.
+
+        Regression for https://bugs.launchpad.net/lxml/+bug/2119535, where the xmlns:xsd
+        declaration was lost when elements were appended to a new tree, leaving a dangling
+        xsi:type="xsd:string" that fails schema validation.
+        """
+        from pyuppsala import etree
+
+        entities = aggregate.findall('{%s}EntityDescriptor' % self.MD)
+        self.assertEqual(3, len(entities))
+        for entity in entities:
+            self.assertEqual(self.XS, entity.nsmap.get('xsd'))
+
+        reparsed = etree.fromstring(etree.tostring(aggregate, encoding='unicode'))
+        for entity in reparsed.findall('{%s}EntityDescriptor' % self.MD):
+            self.assertEqual(self.XS, entity.nsmap.get('xsd'))
+            ext = entity.find('{%s}Extensions' % self.MD)
+            self.assertEqual('xsd:string', ext.get('{%s}type' % self.XSI))
+
+    def test_entitiesdescriptor_keeps_xsd_declared_on_entities(self):
+        """xmlns:xsd declared on the entities survives aggregation, with and without copying."""
+        from pyff.samlmd import entitiesdescriptor
+
+        for copy_entities in (True, False):
+            with self.subTest(copy=copy_entities):
+                t = entitiesdescriptor(
+                    self._xsd_entities(declare_xsd=True),
+                    'https://md.example.org/first',
+                    lookup_fn=None,
+                    validate=False,
+                    copy=copy_entities,
+                )
+                self._assert_xsd_survives(t)
+
+    def test_entitiesdescriptor_keeps_xsd_declared_via_nsmap(self):
+        """xmlns:xsd passed through the nsmap argument (the reporter's setup) survives aggregation."""
+        from pyff.samlmd import entitiesdescriptor
+
+        for copy_entities in (True, False):
+            with self.subTest(copy=copy_entities):
+                t = entitiesdescriptor(
+                    self._xsd_entities(declare_xsd=False),
+                    'https://md.example.org/first',
+                    lookup_fn=None,
+                    validate=False,
+                    copy=copy_entities,
+                    nsmap={'xsd': self.XS},
+                )
+                self._assert_xsd_survives(t)
+
     def test_entitiesdescriptor_copy_false_moves(self):
         """copy=False keeps the historical (lxml) move behaviour for callers that want it."""
         from pyff.samlmd import entitiesdescriptor
