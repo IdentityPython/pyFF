@@ -418,14 +418,14 @@ class SAMLStoreBase:
         def _strings(elt):
             lst = []
             for attr in [
-                '{{{}}}DisplayName'.format(NS['mdui']),
-                '{{{}}}ServiceName'.format(NS['md']),
-                '{{{}}}OrganizationDisplayName'.format(NS['md']),
-                '{{{}}}OrganizationName'.format(NS['md']),
-                '{{{}}}Keywords'.format(NS['mdui']),
-                '{{{}}}Scope'.format(NS['shibmd']),
+                './/{{{}}}UIInfo/{{{}}}DisplayName'.format(NS['mdui'], NS['mdui']),
+                './/{{{}}}ServiceName'.format(NS['md']),
+                './/{{{}}}OrganizationDisplayName'.format(NS['md']),
+                './/{{{}}}OrganizationName'.format(NS['md']),
+                './/{{{}}}UIInfo/{{{}}}Keywords'.format(NS['mdui'], NS['mdui']),
+                './/{{{}}}Scope'.format(NS['shibmd']),
             ]:
-                lst.extend([s.text for s in elt.iter(attr)])
+                lst.extend([s.text for s in elt.iterfind(attr)])
             lst.append(elt.get('entityID'))
             return [item for item in lst if item is not None]
 
