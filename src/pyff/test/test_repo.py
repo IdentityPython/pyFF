@@ -9,11 +9,15 @@ from pyff.samlmd import (
     entity_display_name,
     entity_domains,
     entity_extended_display,
+    entity_extended_display_i18n,
     entity_icon_url,
+    entity_info,
+    entity_simple_info,
     entity_simple_summary,
     is_idp,
     is_sp,
     metadata_expiration,
+    privacy_statement_url,
     set_entity_attributes,
     sha1_id,
 )
@@ -200,3 +204,53 @@ class TestRepo(TestCase):
             assert False
         except MetadataException:
             pass
+
+
+class TestScopedUIInfo(TestCase):
+    """
+    OpenAthens metadata carries non-standard oaf:ScopedUIInfo elements, with mdui children, ahead of the
+    IdP's own mdui:UIInfo. Only the latter may be used to describe the entity.
+    """
+
+    def setUp(self):
+        datadir = resource_filename('metadata', 'test/data')
+        self.e = root(parse_xml(os.path.join(datadir, 'test-scoped-display-name.xml')))
+
+    def test_display_name(self):
+        assert entity_display_name(self.e) == 'Example University'
+        assert entity_display_name(self.e, langs=['sv']) == 'Example universitet'
+
+    def test_extended_display(self):
+        name, descr = entity_extended_display(self.e)
+        assert name == 'Example University'
+        assert descr == 'Identity Provider for Example University'
+
+    def test_extended_display_i18n(self):
+        names, descrs = entity_extended_display_i18n(self.e)
+        assert names == {'en': 'Example University', 'sv': 'Example universitet'}
+        assert descrs == {
+            'en': 'Identity Provider for Example University',
+            'sv': 'Identity Provider för Example universitet',
+        }
+
+    def test_icon_url(self):
+        for langs in (None, ['en']):
+            icon = entity_icon_url(self.e, langs=langs)
+            assert icon is not None
+            assert 'scoped' not in icon['url']
+
+    def test_privacy_statement_url(self):
+        assert privacy_statement_url(self.e, ['en']) is None
+
+    def test_simple_info(self):
+        info = entity_simple_info(self.e)
+        assert info['title'] == 'Example University'
+        assert info['descr'] == 'Identity Provider for Example University'
+        assert info['keywords'] == 'example'
+
+    def test_info(self):
+        info = entity_info(self.e)
+        assert info['title'] == 'Example University'
+        assert info['descr'] == 'Identity Provider for Example University'
+        assert info['keywords'] == 'example'
+        assert info['privacy_statement_url'] is None

@@ -912,14 +912,14 @@ def select(req: Plumbing.Request, *opts):
         def _strings(elt):
             lst = []
             for attr in [
-                f"{{{NS['mdui']}}}DisplayName",
-                f"{{{NS['md']}}}ServiceName",
-                f"{{{NS['md']}}}OrganizationDisplayName",
-                f"{{{NS['md']}}}OrganizationName",
-                f"{{{NS['mdui']}}}Keywords",
-                f"{{{NS['shibmd']}}}Scope",
+                f".//{{{NS['mdui']}}}UIInfo/{{{NS['mdui']}}}DisplayName",
+                f".//{{{NS['md']}}}ServiceName",
+                f".//{{{NS['md']}}}OrganizationDisplayName",
+                f".//{{{NS['md']}}}OrganizationName",
+                f".//{{{NS['mdui']}}}UIInfo/{{{NS['mdui']}}}Keywords",
+                f".//{{{NS['shibmd']}}}Scope",
             ]:
-                lst.extend([s.text for s in elt.iter(attr)])
+                lst.extend([s.text for s in elt.iterfind(attr)])
             lst.append(elt.get('entityID'))
             return [item for item in lst if item is not None]
 
