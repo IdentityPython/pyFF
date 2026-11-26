@@ -149,6 +149,21 @@ class TestRedisWhooshStore(TestCase):
             assert e[0] is not None
             assert e[0].get('entityID') is not None
 
+    def test_search_scoped_ui_info(self):
+        """Terms found only in non-standard oaf:ScopedUIInfo must not be searchable."""
+        scoped = parse_xml(os.path.join(self.datadir, 'test-scoped-display-name.xml'))
+        entity_id = root(scoped).get('entityID')
+        store = RedisWhooshStore(directory=self.dir, clear=True, name="test", redis=fakeredis.FakeStrictRedis())
+        store.update(scoped, etag='scoped', lazy=False)
+        # terms from the entity's own mdui:UIInfo
+        for q in ('example', 'university'):
+            e = list(store.search(q))
+            assert len(e) == 1
+            assert e[0].get('entityID') == entity_id
+        # terms that only occur in oaf:ScopedUIInfo
+        for q in ('scoped', 'scopednyckelord', 'scopedkeyword'):
+            assert list(store.search(q)) == []
+
 
 class TestMemoryStore(TestCase):
     def setUp(self):
@@ -167,6 +182,21 @@ class TestMemoryStore(TestCase):
         assert len(store.collections()) == 0
         assert str(store)
         assert not store.attributes()
+
+    def test_search_scoped_ui_info(self):
+        """Terms found only in non-standard oaf:ScopedUIInfo must not be searchable."""
+        scoped = parse_xml(os.path.join(self.datadir, 'test-scoped-display-name.xml'))
+        entity_id = root(scoped).get('entityID')
+        store = MemoryStore()
+        store.update(scoped)
+        # terms from the entity's own mdui:UIInfo
+        for q in ('example university', 'universitet', 'exempel', 'example'):
+            e = list(store.search(q))
+            assert len(e) == 1
+            assert e[0].get('entityID') == entity_id
+        # terms that only occur in oaf:ScopedUIInfo
+        for q in ('scoped', 'scopednyckelord', 'scopedkeyword'):
+            assert list(store.search(q)) == []
 
     def test_parse_wayf(self):
         assert self.wayf_source is not None

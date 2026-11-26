@@ -9,6 +9,12 @@
       <oaf:ScopedUIInfo scope="81098135.example.com">
         <mdui:DisplayName xml:lang="sv">Scoped Example Universitet</mdui:DisplayName>
         <mdui:DisplayName xml:lang="en">Scoped Example University</mdui:DisplayName>
+        <mdui:Description xml:lang="sv">Scoped beskrivning</mdui:Description>
+        <mdui:Description xml:lang="en">Scoped description</mdui:Description>
+        <mdui:Keywords xml:lang="sv">scopednyckelord</mdui:Keywords>
+        <mdui:Keywords xml:lang="en">scopedkeyword</mdui:Keywords>
+        <mdui:Logo xml:lang="en" height="63" width="350">https://www.example.com/static/images/scoped_logo.jpg</mdui:Logo>
+        <mdui:PrivacyStatementURL xml:lang="en">https://www.example.com/scoped-privacy</mdui:PrivacyStatementURL>
       </oaf:ScopedUIInfo>
       <mdui:UIInfo>
         <mdui:DisplayName xml:lang="sv">Example universitet</mdui:DisplayName>
