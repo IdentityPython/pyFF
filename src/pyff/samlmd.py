@@ -1112,17 +1112,32 @@ def discojson_sp_attr(e):
     if b64_trustinfos is None:
         return None
 
+    entity_id = e.get('entityID', None)
     sp = {}
-    sp['entityID'] = e.get('entityID', None)
+    sp['entityID'] = entity_id
     sp['profiles'] = {}
+    sp['extra_md'] = {}
 
     for b64_trustinfo in b64_trustinfos:
         try:
             str_trustinfo = b64decode(b64_trustinfo.encode('ascii'))
             trustinfo = json.loads(str_trustinfo.decode('utf8'))
-            sp['profiles'].update(trustinfo['profiles'])
+            for name, profile in trustinfo['profiles'].items():
+                if name in sp['profiles']:
+                    log.warning(f"SP Entity {entity_id} has a duplicate trust profile {name}")
+                else:
+                    sp['profiles'][name] = profile
+            for extra_id, extra in trustinfo.get('extra_md', {}).items():
+                if extra_id in sp['extra_md']:
+                    log.warning(f"SP Entity {entity_id} has a duplicate extra IdP metadata {extra_id}")
+                else:
+                    sp['extra_md'][extra_id] = extra
         except Exception:
-            log.error(f"Error parsing TrustInfo profile for {sp['entityID']}")
+            log.error(f"Error parsing TrustInfo profile for {entity_id}")
+
+    if not sp['profiles']:
+        return None
+
     return sp
 
 
