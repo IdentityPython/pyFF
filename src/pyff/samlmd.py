@@ -128,6 +128,13 @@ def parse_saml_metadata(
 
         t = root(t)
 
+        if opts.inherit_entity_attributes and t.tag == "{{{}}}EntitiesDescriptor".format(NS['md']):
+            added = inherit_entity_attributes(t)  # before validation, so that what is added is validated too
+            log.info(
+                f"{base_url}: inherit_entity_attributes added {added} attribute values "
+                f"to {len(list(iter_entities(t)))} entities"
+            )
+
         filter_invalid = opts.filter_invalid
         if opts.fail_on_error:
             filter_invalid = False
@@ -1315,8 +1322,16 @@ def entity_extensions(e):
     """
     ext = e.find("./{{{}}}Extensions".format(NS['md']))
     if ext is None:
-        ext = etree.Element("{{{}}}Extensions".format(NS['md']))
-        e.insert(0, ext)
+        position = 0
+        for i, child in enumerate(e):
+            if child.tag == "{{{}}}Signature".format(NS['ds']):
+                position = i + 1  # the schema puts Extensions after an enveloped signature
+                break
+        # Create it in place, then move it: an element created on its own is serialized with a
+        # namespace declaration of its own, while one created under its parent reuses the parent's.
+        ext = etree.SubElement(e, "{{{}}}Extensions".format(NS['md']))
+        e.remove(ext)
+        e.insert(position, ext)
     return ext
 
 
@@ -1363,8 +1378,7 @@ def _entity_attributes(e):
     ext = entity_extensions(e)
     ea = ext.find(".//{{{}}}EntityAttributes".format(NS['mdattr']))
     if ea is None:
-        ea = etree.Element("{{{}}}EntityAttributes".format(NS['mdattr']))
-        ext.append(ea)
+        ea = etree.SubElement(ext, "{{{}}}EntityAttributes".format(NS['mdattr']))
     return ea
 
 
@@ -1385,6 +1399,115 @@ def _eattribute(e, attr, nf):
     a.set('Name', attr)
     ea.append(a)
     return a
+
+
+def _group_attributes(group):
+    """The saml:Attribute elements an md:EntitiesDescriptor binds to the entities in it."""
+    ext = group.find("./{{{}}}Extensions".format(NS['md']))
+    if ext is None:
+        return []
+    ea = ext.find("./{{{}}}EntityAttributes".format(NS['mdattr']))
+    if ea is None:
+        return []
+    attribute = "{{{}}}Attribute".format(NS['saml'])
+    assertion = "{{{}}}Assertion".format(NS['saml'])
+    found = []
+    for child in ea:
+        if child.tag == attribute:
+            found.append(child)
+        elif child.tag == assertion:
+            log.warning(f"ignoring saml:Assertion in the Extensions of EntitiesDescriptor {group.get('Name')}")
+    return found
+
+
+def _value_key(value):
+    """What makes two saml:AttributeValue elements the same value."""
+    if len(list(value)) == 0:
+        return value.text or "", tuple(sorted(value.attrib.items()))
+    return dumptree(value, xml_declaration=False)
+
+
+def _merge_attribute(entity, source):
+    """
+    Merge the values of the saml:Attribute ``source`` into the attribute of ``entity`` with the same Name and
+    NameFormat, creating it if the entity has none. Values the entity already has are not added again.
+
+    :return: the number of values added
+    """
+    values = source.findall("./{{{}}}AttributeValue".format(NS['saml']))
+    if not values:
+        return 0
+
+    saml_attribute = "{{{}}}Attribute".format(NS['saml'])
+    saml_value = "{{{}}}AttributeValue".format(NS['saml'])
+    name, nf = source.get('Name'), source.get('NameFormat')
+
+    ea = _entity_attributes(entity)
+    target = None
+    for a in ea.iter(saml_attribute):
+        if a.get('Name') == name and a.get('NameFormat') == nf:
+            target = a
+            break
+
+    present = set() if target is None else {_value_key(v) for v in target.findall(f"./{saml_value}")}
+    added = 0
+    for value in values:
+        key = _value_key(value)
+        if key in present:
+            continue
+        if target is None:
+            target = etree.SubElement(ea, saml_attribute)
+            if name is not None:
+                target.set('Name', name)
+            if nf is not None:
+                target.set('NameFormat', nf)
+        if len(list(value)) == 0 and len(value.attrib) == 0:
+            # A plain value is made in place, which keeps the document small: a copy would repeat
+            # the namespace declarations it was parsed with. Anything else may use a prefix declared
+            # where it was parsed (xsi:type="xs:string"), so it is copied as it is.
+            etree.SubElement(target, saml_value).text = value.text
+        else:
+            target.append(deepcopy(value))
+        present.add(key)
+        added += 1
+    return added
+
+
+def inherit_entity_attributes(t):
+    """
+    Merge the entity attributes of every md:EntitiesDescriptor into the entities below it.
+
+    The attributes in md:EntitiesDescriptor/md:Extensions are bound to each md:EntityDescriptor within the
+    group (sstc-metadata-attr-cs-01, 2.3). The attributes of every enclosing group apply to an entity. For each
+    attribute with the same Name and NameFormat the group's values are added to the entity's own, which stay
+    first; values the entity already has are not repeated. Other attributes are added as they are.
+
+    This copies the group's attributes into every entity, so the document grows by about the size of the
+    attributes times the number of entities.
+
+    :param t: an md:EntitiesDescriptor (or a tree with one as root), modified in place
+    :return: the number of attribute values added to entities
+    """
+    t = root(t)
+    if t.tag != "{{{}}}EntitiesDescriptor".format(NS['md']):
+        return 0
+
+    entity = "{{{}}}EntityDescriptor".format(NS['md'])
+    group = "{{{}}}EntitiesDescriptor".format(NS['md'])
+    added = 0
+
+    def _walk(node, inherited):
+        nonlocal added
+        attributes = inherited + _group_attributes(node)
+        for child in node:
+            if child.tag == entity:
+                for attribute in attributes:
+                    added += _merge_attribute(child, attribute)
+            elif child.tag == group:
+                _walk(child, attributes)
+
+    _walk(t, [])
+    return added
 
 
 def set_entity_attributes(e, d, nf=NF_URI):

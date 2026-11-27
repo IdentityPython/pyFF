@@ -689,7 +689,7 @@ def load(req: Plumbing.Request, *opts):
 
     .. code-block:: text
 
-        <url or path> [as <alias>] [verify <fingerprint|certificate file>] [via <clause>]* [cleanup <clause>]*
+        <url or path> [as <alias>] [verify <fingerprint|certificate file>] [via <clause>]* [cleanup <clause>]* [inherit_entity_attributes]
 
     - ``as``: name the resource, e.g. to refer to it in later pipeline steps.
     - ``verify``: check the XML signature of the resource, using either a PEM certificate file or a SHA-1
@@ -701,6 +701,34 @@ def load(req: Plumbing.Request, *opts):
     - ``via``: name of a ``when`` clause in the same pipeline that is applied to the loaded metadata, for
       example to remove entities with ``fork merge remove``.
     - ``cleanup``: name of a ``when`` clause used to pre-process the parsed metadata before it is validated.
+    - ``inherit_entity_attributes``: a flag, off unless given, and unlike the keywords above it takes no argument.
+      Entity attributes in ``md:EntitiesDescriptor/md:Extensions`` are bound to every entity in that group
+      (sstc-metadata-attr-cs-01, 2.3), but pyFF keeps only the entities, so they are lost by default. With this
+      flag they are merged into each entity as the resource is parsed. For an attribute with the same ``Name``
+      and ``NameFormat`` the group's values are added to the entity's own, which stay first, and values the
+      entity already has are not repeated; other attributes are added as they are. The attributes of every
+      enclosing ``md:EntitiesDescriptor`` apply to an entity, and a ``saml:Assertion`` there, which the
+      specification does not allow, is ignored. It applies to one resource only, so the attributes of one
+      aggregate never reach the entities of another. It is passed on to the resources found by a directory,
+      XRD or MDSL resource, and the word is reserved: it is not a ``verify`` value. For example:
+
+      .. code-block:: yaml
+
+          - load:
+            - http://example.com/aggregate.xml as AGG inherit_entity_attributes
+            - http://example.com/other.xml
+
+      .. warning::
+
+          Every entity gets its own copy of the group's attributes, so the metadata grows by the size of
+          those attributes times the number of entities, plus a small wrapper for each entity that had no
+          entity attributes before. The entities of a large aggregate are many, so the result can be much
+          larger than the input: in a test, 5000 minimal entities and a group attribute with two values grew
+          the published feed from 2.6 MB to 4.7 MB (about 420 bytes per entity). This costs memory in pyFF
+          and time when signing, publishing and fetching, and every consumer has to parse the larger
+          document. Turn it on only for aggregates whose group attributes you need on each entity, keep the
+          group's attributes few and short, and check the size of the result. pyFF logs how many values it
+          added to how many entities.
 
     A resource may also be an XRD or eIDAS MDSL file listing metadata URLs. Each listed URL is loaded and verified
     with the certificates given for it in the file, as if with ``verify``; any one of them is accepted, so a key
@@ -738,7 +766,10 @@ def load(req: Plumbing.Request, *opts):
 
         while len(r) > 0:
             elt = r.pop(0)
-            if elt in ("as", "verify", "via", "cleanup"):
+            if elt == "inherit_entity_attributes":
+                # a flag, so unlike the keywords below it has no argument
+                child_opts.inherit_entity_attributes = True
+            elif elt in ("as", "verify", "via", "cleanup"):
                 # These elements have an argument
                 if len(r) > 0:
                     value = r.pop(0)
