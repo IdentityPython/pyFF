@@ -218,6 +218,8 @@ class ResourceOpts(BaseModel):
     # set to False to turn off all XML schema validation
     validate_schema: bool = Field(True, alias='validate')
     verify_tls: bool = False
+    # merge the entity attributes of md:EntitiesDescriptor/md:Extensions into every entity of the group
+    inherit_entity_attributes: bool = False
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator('verify', mode='before')
